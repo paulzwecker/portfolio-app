@@ -1,0 +1,2148 @@
+{
+  "active_company_count": 92,
+  "active_company_with_listing_count": 82,
+  "active_company_without_listing": [
+    {
+      "company": "Accelleron Industries",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "BONESUPPORT Holding AB",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Exosens",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Fabrinet",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "INVISIO AB",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Medistim ASA",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Meta Platforms",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Nova Ltd",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Rheinmetall AG",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "VINCORION SE",
+      "lifecycle": "WATCHLIST"
+    }
+  ],
+  "company_listing_coverage_by_lifecycle": {
+    "PORTFOLIO": {
+      "total": 21,
+      "with_listing": 21
+    },
+    "WATCHLIST": {
+      "total": 71,
+      "with_listing": 61
+    }
+  },
+  "end_date": "2026-10-05",
+  "fx_batches": [
+    {
+      "accepted_pairs": [
+        {
+          "latest_effective_at": "2026-10-05T13:16:49+00:00",
+          "pair": "AUD/EUR",
+          "provider_symbol": "AUDEUR=X",
+          "rows": 2602
+        },
+        {
+          "latest_effective_at": "2026-10-05T13:14:49+00:00",
+          "pair": "CAD/EUR",
+          "provider_symbol": "CADEUR=X",
+          "rows": 2601
+        },
+        {
+          "latest_effective_at": "2026-10-05T13:16:49+00:00",
+          "pair": "CHF/EUR",
+          "provider_symbol": "CHFEUR=X",
+          "rows": 2601
+        },
+        {
+          "latest_effective_at": "2026-10-05T13:16:49+00:00",
+          "pair": "GBP/EUR",
+          "provider_symbol": "GBPEUR=X",
+          "rows": 2601
+        },
+        {
+          "latest_effective_at": "2026-10-05T13:15:49+00:00",
+          "pair": "JPY/EUR",
+          "provider_symbol": "JPYEUR=X",
+          "rows": 2600
+        },
+        {
+          "latest_effective_at": "2026-10-05T13:14:49+00:00",
+          "pair": "SEK/EUR",
+          "provider_symbol": "SEKEUR=X",
+          "rows": 2600
+        },
+        {
+          "latest_effective_at": "2026-10-05T13:14:49+00:00",
+          "pair": "TWD/EUR",
+          "provider_symbol": "TWDEUR=X",
+          "rows": 2
+        }
+      ],
+      "fx_observation_rows": 15607,
+      "normalizer_version": "yahoo-fx-normalizer-v1",
+      "provider_id": "YAHOO_FINANCE",
+      "provider_schema_version": "yahoo-chart-v8",
+      "query_scope": {
+        "domain": "FX",
+        "end_date": "2026-10-05",
+        "start_date": "2016-10-07",
+        "subjects": [
+          {
+            "base_currency": "AUD",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          },
+          {
+            "base_currency": "CAD",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          },
+          {
+            "base_currency": "CHF",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          },
+          {
+            "base_currency": "GBP",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          },
+          {
+            "base_currency": "JPY",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          },
+          {
+            "base_currency": "SEK",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          },
+          {
+            "base_currency": "TWD",
+            "id": null,
+            "kind": "CURRENCY_PAIR",
+            "quote_currency": "EUR"
+          }
+        ]
+      },
+      "raw_responses": 7,
+      "rejected_pairs": [],
+      "requested_subjects": 7,
+      "source_digest": "7d8ca5135a00db9560ff2119623cf3e6c1699569bbb8e9a29fe774330cd56781"
+    }
+  ],
+  "fx_fetch_failures": [],
+  "fx_pairs_not_due": ["DKK/EUR", "USD/EUR"],
+  "held_listing_count": 22,
+  "lookback_start": "2016-10-07",
+  "market_data_batches": [
+    {
+      "accepted_subjects": 79,
+      "corporate_action_rows": 2,
+      "current_quote_rows": 79,
+      "daily_price_rows": 0,
+      "duplicate_session_bars_collapsed": 0,
+      "in_progress_bar_rows_skipped": 13,
+      "mapped_listings": [
+        {
+          "corporate_actions": 0,
+          "current_quote": "847.5",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "3e5da07b-a0e3-5de4-9c92-fe803ddcfc3d",
+          "missing_close_count": 0,
+          "provider_current_quote": "847.5",
+          "provider_exchange": "Amsterdam",
+          "provider_symbol": "ADYEN.AS",
+          "quote_observed_at": "2026-10-05T13:02:25+00:00",
+          "source_record_id": "LISTING:3e5da07b-a0e3-5de4-9c92-fe803ddcfc3d"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "1651.8",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "86156b66-9f08-5871-b08c-5f4d936244bb",
+          "missing_close_count": 0,
+          "provider_current_quote": "1651.8",
+          "provider_exchange": "Amsterdam",
+          "provider_symbol": "ASML.AS",
+          "quote_observed_at": "2026-10-05T13:02:32+00:00",
+          "source_record_id": "LISTING:86156b66-9f08-5871-b08c-5f4d936244bb"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "201.7",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "efe079cb-0a66-5383-857c-d2c73d235934",
+          "missing_close_count": 0,
+          "provider_current_quote": "201.7",
+          "provider_exchange": "Amsterdam",
+          "provider_symbol": "BESI.AS",
+          "quote_observed_at": "2026-10-05T13:02:32+00:00",
+          "source_record_id": "LISTING:efe079cb-0a66-5383-857c-d2c73d235934"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "246.0",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "1be9053c-2270-5113-af06-ca48c0c9a4ba",
+          "missing_close_count": 0,
+          "provider_current_quote": "246.0",
+          "provider_exchange": "Copenhagen",
+          "provider_symbol": "NOVO-B.CO",
+          "quote_observed_at": "2026-10-05T13:17:25+00:00",
+          "source_record_id": "LISTING:1be9053c-2270-5113-af06-ca48c0c9a4ba"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "62.35",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "ab117d62-df9c-5887-bc1b-574fbc582e18",
+          "missing_close_count": 0,
+          "provider_current_quote": "62.35",
+          "provider_exchange": "XETRA",
+          "provider_symbol": "NEM.DE",
+          "quote_observed_at": "2026-10-05T13:02:17+00:00",
+          "source_record_id": "LISTING:ab117d62-df9c-5887-bc1b-574fbc582e18"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "293.25",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "c23370fe-7d5c-5998-b4a5-9e3cc4c4af07",
+          "missing_close_count": 0,
+          "provider_current_quote": "293.25",
+          "provider_exchange": "XETRA",
+          "provider_symbol": "SPYY.DE",
+          "quote_observed_at": "2026-10-05T12:49:47+00:00",
+          "source_record_id": "LISTING:c23370fe-7d5c-5998-b4a5-9e3cc4c4af07"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "16.68",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "a5388bee-d53f-57fb-8b4e-0a464ff4f1ef",
+          "missing_close_count": 0,
+          "provider_current_quote": "16.68",
+          "provider_exchange": "Helsinki",
+          "provider_symbol": "PUUILO.HE",
+          "quote_observed_at": "2026-10-05T13:15:50+00:00",
+          "source_record_id": "LISTING:a5388bee-d53f-57fb-8b4e-0a464ff4f1ef"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "36.200",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "7d5b22e2-0c98-53fc-8e98-278f8b574df5",
+          "missing_close_count": 0,
+          "provider_current_quote": "3620.0",
+          "provider_exchange": "LSE",
+          "provider_symbol": "JDG.L",
+          "quote_observed_at": "2026-10-05T13:00:16+00:00",
+          "source_record_id": "LISTING:7d5b22e2-0c98-53fc-8e98-278f8b574df5"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "83.27",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "c50b27b8-ddbe-5cf8-8da2-17a36baf4e10",
+          "missing_close_count": 0,
+          "provider_current_quote": "83.27",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "AAON",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:c50b27b8-ddbe-5cf8-8da2-17a36baf4e10"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "162.43",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "7580720e-db42-503e-8815-e4abf2dfe8f1",
+          "missing_close_count": 0,
+          "provider_current_quote": "162.43",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "ABNB",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:7580720e-db42-503e-8815-e4abf2dfe8f1"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "70.77",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "25b88b46-f320-5f2d-b8c6-6838efb2d8b8",
+          "missing_close_count": 0,
+          "provider_current_quote": "70.77",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "AFRM",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:25b88b46-f320-5f2d-b8c6-6838efb2d8b8"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "350.33",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "260d6725-9f30-5c62-9cb0-94074504bcd4",
+          "missing_close_count": 0,
+          "provider_current_quote": "350.33",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "ALAB",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:260d6725-9f30-5c62-9cb0-94074504bcd4"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "633.91",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "15b282f2-30ae-5c17-8a62-d221c44ba1fa",
+          "missing_close_count": 0,
+          "provider_current_quote": "633.91",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "AMD",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:15b282f2-30ae-5c17-8a62-d221c44ba1fa"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "251.52",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "0e0310dd-2a98-5516-a399-b89634587176",
+          "missing_close_count": 0,
+          "provider_current_quote": "251.52",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "AMZN",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:0e0310dd-2a98-5516-a399-b89634587176"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "268.22",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e083fd8c-a95e-5ee1-8614-f750bc7b84c6",
+          "missing_close_count": 0,
+          "provider_current_quote": "268.22",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "APP",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:e083fd8c-a95e-5ee1-8614-f750bc7b84c6"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "202.97",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "9ea2cd3a-2444-5c65-9b5d-6d4579fbb41c",
+          "missing_close_count": 0,
+          "provider_current_quote": "202.97",
+          "provider_exchange": "NasdaqGM",
+          "provider_symbol": "APPF",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:9ea2cd3a-2444-5c65-9b5d-6d4579fbb41c"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "32.26",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "7c011b2b-1400-5f6c-8154-fe860d4b777b",
+          "missing_close_count": 0,
+          "provider_current_quote": "32.26",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "ATAT",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:7c011b2b-1400-5f6c-8154-fe860d4b777b"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "413.35",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "4c909abf-7aaa-5226-b457-ac5c88aee884",
+          "missing_close_count": 0,
+          "provider_current_quote": "413.35",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "AXON",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:4c909abf-7aaa-5226-b457-ac5c88aee884"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "159.02",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "6f381626-22a1-5631-a992-c83125df183f",
+          "missing_close_count": 0,
+          "provider_current_quote": "159.02",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "BKNG",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:6f381626-22a1-5631-a992-c83125df183f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "26.75",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "f1944d26-cd99-5ef4-8583-e77947369459",
+          "missing_close_count": 0,
+          "provider_current_quote": "26.75",
+          "provider_exchange": "NasdaqCM",
+          "provider_symbol": "CELH",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:f1944d26-cd99-5ef4-8583-e77947369459"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "27.22",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "80a33409-b8e9-5188-8dd7-e248c8df6ef2",
+          "missing_close_count": 0,
+          "provider_current_quote": "27.22",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "CPRT",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:80a33409-b8e9-5188-8dd7-e248c8df6ef2"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "270.04",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "8b8d2bec-85a7-5fdc-be48-1fe97303fe6d",
+          "missing_close_count": 0,
+          "provider_current_quote": "270.04",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "CRWD",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:8b8d2bec-85a7-5fdc-be48-1fe97303fe6d"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "189.15",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "534ea280-8145-500e-91b4-b1f960f8230b",
+          "missing_close_count": 0,
+          "provider_current_quote": "189.15",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "DASH",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:534ea280-8145-500e-91b4-b1f960f8230b"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "277.22",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "2ff4d46e-280e-5029-b694-1f40f1df3013",
+          "missing_close_count": 0,
+          "provider_current_quote": "277.22",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "DDOG",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:2ff4d46e-280e-5029-b694-1f40f1df3013"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "13.745",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "c4670e50-799b-52e6-b97f-c03cb6a5e931",
+          "missing_close_count": 0,
+          "provider_current_quote": "13.745",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "DLO",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:c4670e50-799b-52e6-b97f-c03cb6a5e931"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "343.5",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "856b019b-862c-5a8a-b3af-8e46a773ae2c",
+          "missing_close_count": 0,
+          "provider_current_quote": "343.5",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "GOOGL",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:856b019b-862c-5a8a-b3af-8e46a773ae2c"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "3.08",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "caa42f35-8024-5378-b535-13d9e119874e",
+          "missing_close_count": 0,
+          "provider_current_quote": "3.08",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "GRAB",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:caa42f35-8024-5378-b535-13d9e119874e"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "112.74",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "d47b31dc-8b01-576e-8316-752634d91b26",
+          "missing_close_count": 0,
+          "provider_current_quote": "112.74",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "HOOD",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:d47b31dc-8b01-576e-8316-752634d91b26"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "88.3",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e791664e-9aee-5eee-8d55-8266dea2c835",
+          "missing_close_count": 0,
+          "provider_current_quote": "88.3",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "IBKR",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:e791664e-9aee-5eee-8d55-8266dea2c835"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "391.95",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "d9a2a9cc-09df-5343-9d86-0c9c52a2c122",
+          "missing_close_count": 0,
+          "provider_current_quote": "391.95",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "ISRG",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:d9a2a9cc-09df-5343-9d86-0c9c52a2c122"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "206.89",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "bc42c243-747d-5342-a4df-2feadba3c233",
+          "missing_close_count": 0,
+          "provider_current_quote": "206.89",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "KLAC",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:bc42c243-747d-5342-a4df-2feadba3c233"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "43.1",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "439faf7f-dce9-5d2c-8cb8-f6bf1b57efc7",
+          "missing_close_count": 0,
+          "provider_current_quote": "43.1",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "LIF",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:439faf7f-dce9-5d2c-8cb8-f6bf1b57efc7"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "1696.56",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "0a183512-6f80-5529-8d81-f7716f8072d6",
+          "missing_close_count": 0,
+          "provider_current_quote": "1696.56",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "MELI",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:0a183512-6f80-5529-8d81-f7716f8072d6"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "44.62",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "9cf1c113-f0f6-593c-a4fd-73a0ad6fe923",
+          "missing_close_count": 0,
+          "provider_current_quote": "44.62",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "MMYT",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:9cf1c113-f0f6-593c-a4fd-73a0ad6fe923"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "78.8",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "7f7147c7-410f-535e-a1cb-7bbd39761063",
+          "missing_close_count": 0,
+          "provider_current_quote": "78.8",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "MNDY",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:7f7147c7-410f-535e-a1cb-7bbd39761063"
+        },
+        {
+          "corporate_actions": 1,
+          "current_quote": "183.55",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "8ab3edcc-c58d-5e85-be6e-9b3cec131f45",
+          "missing_close_count": 0,
+          "provider_current_quote": "183.55",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "MORN",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:8ab3edcc-c58d-5e85-be6e-9b3cec131f45"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "1439.73",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e6604652-0848-5271-86cd-46953758c0a7",
+          "missing_close_count": 0,
+          "provider_current_quote": "1439.73",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "MPWR",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:e6604652-0848-5271-86cd-46953758c0a7"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "517.53",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "53cd71a8-ad6a-5c37-ae5f-ff8cf49b0607",
+          "missing_close_count": 0,
+          "provider_current_quote": "517.53",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "MSFT",
+          "quote_observed_at": "2026-10-02T20:00:01+00:00",
+          "source_record_id": "LISTING:53cd71a8-ad6a-5c37-ae5f-ff8cf49b0607"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "410.35",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "aba360e0-d2b8-5261-966b-16a590281b3d",
+          "missing_close_count": 0,
+          "provider_current_quote": "410.35",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "NTRA",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:aba360e0-d2b8-5261-966b-16a590281b3d"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "126.49",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "0e0a7e84-901f-5f9c-a609-65f6be6ac5b6",
+          "missing_close_count": 0,
+          "provider_current_quote": "126.49",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "PLMR",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:0e0a7e84-901f-5f9c-a609-65f6be6ac5b6"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "188.75",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "8166066a-cee9-5899-9008-72040400af9f",
+          "missing_close_count": 0,
+          "provider_current_quote": "188.75",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "PLTR",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:8166066a-cee9-5899-9008-72040400af9f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "21.77",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "47cd578d-82a7-5692-925a-f83f9f9b8967",
+          "missing_close_count": 0,
+          "provider_current_quote": "21.77",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "RELY",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:47cd578d-82a7-5692-925a-f83f9f9b8967"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "151.39",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "50f0e336-2985-5c8b-b1e1-e08f3359d729",
+          "missing_close_count": 0,
+          "provider_current_quote": "151.39",
+          "provider_exchange": "NasdaqGS",
+          "provider_symbol": "SHOP",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:50f0e336-2985-5c8b-b1e1-e08f3359d729"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "43.28",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e6918732-3c68-5cb2-9a2a-f6e1783e21d4",
+          "missing_close_count": 0,
+          "provider_current_quote": "43.28",
+          "provider_exchange": "NasdaqGM",
+          "provider_symbol": "SYM",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:e6918732-3c68-5cb2-9a2a-f6e1783e21d4"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "79.795",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e04a1952-200f-5a72-bdd3-da3a10f1b62f",
+          "missing_close_count": 0,
+          "provider_current_quote": "79.795",
+          "provider_exchange": "NasdaqGM",
+          "provider_symbol": "TMDX",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:e04a1952-200f-5a72-bdd3-da3a10f1b62f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "117.55",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "b37019c9-bd73-5d8f-bfdb-91476bda13ef",
+          "missing_close_count": 0,
+          "provider_current_quote": "117.55",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "ARES",
+          "quote_observed_at": "2026-10-02T20:01:00+00:00",
+          "source_record_id": "LISTING:b37019c9-bd73-5d8f-bfdb-91476bda13ef"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "27.17",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "4d3fdcc9-0884-5089-a6eb-deceb82e1211",
+          "missing_close_count": 0,
+          "provider_current_quote": "27.17",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "AS",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:4d3fdcc9-0884-5089-a6eb-deceb82e1211"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "44.85",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "9952ae5b-7ad1-5d27-9f60-b9d31243eba0",
+          "missing_close_count": 0,
+          "provider_current_quote": "44.85",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "BAM",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:9952ae5b-7ad1-5d27-9f60-b9d31243eba0"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "63.77",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "67acae0d-1b2f-52a8-9a43-b0352af15a0c",
+          "missing_close_count": 0,
+          "provider_current_quote": "63.77",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "CVNA",
+          "quote_observed_at": "2026-10-02T20:03:15+00:00",
+          "source_record_id": "LISTING:67acae0d-1b2f-52a8-9a43-b0352af15a0c"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "1728.01",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "f3a035fa-79ce-52f7-8909-ae237d4d3cd3",
+          "missing_close_count": 0,
+          "provider_current_quote": "1728.01",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "FIX",
+          "quote_observed_at": "2026-10-02T20:03:19+00:00",
+          "source_record_id": "LISTING:f3a035fa-79ce-52f7-8909-ae237d4d3cd3"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "988.7",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "b2cb3838-2d21-5f2d-b930-59ceacb67fd9",
+          "missing_close_count": 0,
+          "provider_current_quote": "988.7",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "GEV",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:b2cb3838-2d21-5f2d-b930-59ceacb67fd9"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "152.15",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "89dc3565-36f1-5226-aaa4-c2cef597a78f",
+          "missing_close_count": 0,
+          "provider_current_quote": "152.15",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "GWRE",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:89dc3565-36f1-5226-aaa4-c2cef597a78f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "29.0",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "fee09936-023c-51cd-b04a-3a59e16a36f7",
+          "missing_close_count": 0,
+          "provider_current_quote": "29.0",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "HIMS",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:fee09936-023c-51cd-b04a-3a59e16a36f7"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "41.12",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "3895fc0e-6a65-5d8d-87f8-697ea3f690fa",
+          "missing_close_count": 0,
+          "provider_current_quote": "41.12",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "IOT",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:3895fc0e-6a65-5d8d-87f8-697ea3f690fa"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "329.72",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "08db0582-30ff-54df-9d7c-2803161a4564",
+          "missing_close_count": 0,
+          "provider_current_quote": "329.72",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "KNSL",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:08db0582-30ff-54df-9d7c-2803161a4564"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "15.71",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e9d272ce-b867-5133-9ae8-b3b099dd8ca5",
+          "missing_close_count": 0,
+          "provider_current_quote": "15.71",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "KVYO",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:e9d272ce-b867-5133-9ae8-b3b099dd8ca5"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "552.26",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "37b066aa-0483-59fd-a633-49b378ddadb2",
+          "missing_close_count": 0,
+          "provider_current_quote": "552.26",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "MA",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:37b066aa-0483-59fd-a633-49b378ddadb2"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "535.95",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "789ec62c-ec84-51c2-bf99-26d9c3eff34f",
+          "missing_close_count": 0,
+          "provider_current_quote": "535.95",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "MSCI",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:789ec62c-ec84-51c2-bf99-26d9c3eff34f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "349.07",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "dfa5dc04-d8d7-5dfc-abcd-2ed231370d3f",
+          "missing_close_count": 0,
+          "provider_current_quote": "349.07",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "NET",
+          "quote_observed_at": "2026-10-02T20:03:27+00:00",
+          "source_record_id": "LISTING:dfa5dc04-d8d7-5dfc-abcd-2ed231370d3f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "13.43",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "fe5b53b3-123e-5e82-a352-0618572995d2",
+          "missing_close_count": 0,
+          "provider_current_quote": "13.43",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "NU",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:fe5b53b3-123e-5e82-a352-0618572995d2"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "169.56",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "c61d2b96-bc57-513b-8775-2eb39b98d68e",
+          "missing_close_count": 0,
+          "provider_current_quote": "169.56",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "NVT",
+          "quote_observed_at": "2026-10-02T20:00:36+00:00",
+          "source_record_id": "LISTING:c61d2b96-bc57-513b-8775-2eb39b98d68e"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "30.85",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "14672134-b714-5cfe-b1e0-eb5383e3b97d",
+          "missing_close_count": 0,
+          "provider_current_quote": "30.85",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "ONON",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:14672134-b714-5cfe-b1e0-eb5383e3b97d"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "118.58",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "800736e7-319a-524d-b2c8-78947b324756",
+          "missing_close_count": 0,
+          "provider_current_quote": "118.58",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "RBRK",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:800736e7-319a-524d-b2c8-78947b324756"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "147.86",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e5843906-8765-5588-8e20-efa2ba481cb7",
+          "missing_close_count": 0,
+          "provider_current_quote": "147.86",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "RDDT",
+          "quote_observed_at": "2026-10-02T20:03:51+00:00",
+          "source_record_id": "LISTING:e5843906-8765-5588-8e20-efa2ba481cb7"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "95.19",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "1a83e7c4-0c2a-5018-a790-e7750368c440",
+          "missing_close_count": 0,
+          "provider_current_quote": "95.19",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "SE",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:1a83e7c4-0c2a-5018-a790-e7750368c440"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "341.04",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "ea181a9a-d006-5894-89c4-e8ab3d257643",
+          "missing_close_count": 0,
+          "provider_current_quote": "341.04",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "SNOW",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:ea181a9a-d006-5894-89c4-e8ab3d257643"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "386.27",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "23da4f67-d0ac-54c8-85fc-757b658883c2",
+          "missing_close_count": 0,
+          "provider_current_quote": "386.27",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "SPGI",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:23da4f67-d0ac-54c8-85fc-757b658883c2"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "472.89",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "b1a89767-20ed-5bde-a552-28162a701679",
+          "missing_close_count": 0,
+          "provider_current_quote": "472.89",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "SPOT",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:b1a89767-20ed-5bde-a552-28162a701679"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "29.79",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "2c66a822-40a0-57d6-8208-982341681ed9",
+          "missing_close_count": 0,
+          "provider_current_quote": "29.79",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "TOST",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:2c66a822-40a0-57d6-8208-982341681ed9"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "472.78",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "adcf222b-2033-5626-b601-4eac49460c3f",
+          "missing_close_count": 0,
+          "provider_current_quote": "472.78",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "TSM",
+          "quote_observed_at": "2026-10-02T20:00:02+00:00",
+          "source_record_id": "LISTING:adcf222b-2033-5626-b601-4eac49460c3f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "68.11",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "783e3f0f-158c-5a48-8042-a877c6d6caa7",
+          "missing_close_count": 0,
+          "provider_current_quote": "68.11",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "UBER",
+          "quote_observed_at": "2026-10-02T20:00:03+00:00",
+          "source_record_id": "LISTING:783e3f0f-158c-5a48-8042-a877c6d6caa7"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "273.33",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "e099f87e-8b51-5ed9-ab39-af0e841b32e0",
+          "missing_close_count": 0,
+          "provider_current_quote": "273.33",
+          "provider_exchange": "NYSE",
+          "provider_symbol": "VEEV",
+          "quote_observed_at": "2026-10-02T20:01:14+00:00",
+          "source_record_id": "LISTING:e099f87e-8b51-5ed9-ab39-af0e841b32e0"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "75.75",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "98b5e1ea-d50a-56b6-9f03-dbd62606089f",
+          "missing_close_count": 0,
+          "provider_current_quote": "75.75",
+          "provider_exchange": "Stockholm",
+          "provider_symbol": "DYVOX.ST",
+          "quote_observed_at": "2026-10-05T13:16:10+00:00",
+          "source_record_id": "LISTING:98b5e1ea-d50a-56b6-9f03-dbd62606089f"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "401.6",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "1fd3f2df-ad4f-52a3-82f9-9e57bf193ed2",
+          "missing_close_count": 0,
+          "provider_current_quote": "401.6",
+          "provider_exchange": "Stockholm",
+          "provider_symbol": "MIPS.ST",
+          "quote_observed_at": "2026-10-05T13:15:38+00:00",
+          "source_record_id": "LISTING:1fd3f2df-ad4f-52a3-82f9-9e57bf193ed2"
+        },
+        {
+          "corporate_actions": 1,
+          "current_quote": "626.3",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "37053b97-d6ae-5b36-acef-c1869d3f8103",
+          "missing_close_count": 0,
+          "provider_current_quote": "626.3",
+          "provider_exchange": "Stockholm",
+          "provider_symbol": "SAAB-B.ST",
+          "quote_observed_at": "2026-10-05T13:17:36+00:00",
+          "source_record_id": "LISTING:37053b97-d6ae-5b36-acef-c1869d3f8103"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "295.8",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "ec3732cf-d96e-57ca-b5e5-4312945b5fe3",
+          "missing_close_count": 0,
+          "provider_current_quote": "295.8",
+          "provider_exchange": "Stockholm",
+          "provider_symbol": "SECT-B.ST",
+          "quote_observed_at": "2026-10-05T13:14:18+00:00",
+          "source_record_id": "LISTING:ec3732cf-d96e-57ca-b5e5-4312945b5fe3"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "705.0",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 1,
+          "latest_history_date": null,
+          "listing_id": "a2d41cb9-8ee1-52d2-acd9-b2c4e05c0618",
+          "missing_close_count": 0,
+          "provider_current_quote": "705.0",
+          "provider_exchange": "Swiss",
+          "provider_symbol": "VACN.SW",
+          "quote_observed_at": "2026-10-05T13:00:18+00:00",
+          "source_record_id": "LISTING:a2d41cb9-8ee1-52d2-acd9-b2c4e05c0618"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "2981.21",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "96074e2a-7716-570d-9215-d91f75b96eb2",
+          "missing_close_count": 0,
+          "provider_current_quote": "2981.21",
+          "provider_exchange": "Toronto",
+          "provider_symbol": "CSU.TO",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:96074e2a-7716-570d-9215-d91f75b96eb2"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "175.04",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": null,
+          "history_rows": 0,
+          "in_progress_bar_count": 0,
+          "latest_history_date": null,
+          "listing_id": "75b04170-e0e5-5508-983e-fce1050e2928",
+          "missing_close_count": 0,
+          "provider_current_quote": "175.04",
+          "provider_exchange": "Toronto",
+          "provider_symbol": "KXS.TO",
+          "quote_observed_at": "2026-10-02T20:00:00+00:00",
+          "source_record_id": "LISTING:75b04170-e0e5-5508-983e-fce1050e2928"
+        }
+      ],
+      "normalization_warnings": [],
+      "normalizer_version": "yahoo-chart-normalizer-v4",
+      "provider_id": "YAHOO_FINANCE",
+      "provider_schema_version": "yahoo-chart-v8",
+      "query_scope": {
+        "domain": "MARKET_DATA",
+        "end_date": "2026-10-05",
+        "start_date": "2026-10-03",
+        "subjects": [
+          {
+            "base_currency": null,
+            "id": "3e5da07b-a0e3-5de4-9c92-fe803ddcfc3d",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "86156b66-9f08-5871-b08c-5f4d936244bb",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "efe079cb-0a66-5383-857c-d2c73d235934",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "1be9053c-2270-5113-af06-ca48c0c9a4ba",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "ab117d62-df9c-5887-bc1b-574fbc582e18",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "c23370fe-7d5c-5998-b4a5-9e3cc4c4af07",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "a5388bee-d53f-57fb-8b4e-0a464ff4f1ef",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "7d5b22e2-0c98-53fc-8e98-278f8b574df5",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "c50b27b8-ddbe-5cf8-8da2-17a36baf4e10",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "7580720e-db42-503e-8815-e4abf2dfe8f1",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "25b88b46-f320-5f2d-b8c6-6838efb2d8b8",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "260d6725-9f30-5c62-9cb0-94074504bcd4",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "15b282f2-30ae-5c17-8a62-d221c44ba1fa",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "0e0310dd-2a98-5516-a399-b89634587176",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e083fd8c-a95e-5ee1-8614-f750bc7b84c6",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "9ea2cd3a-2444-5c65-9b5d-6d4579fbb41c",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "7c011b2b-1400-5f6c-8154-fe860d4b777b",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "4c909abf-7aaa-5226-b457-ac5c88aee884",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "6f381626-22a1-5631-a992-c83125df183f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "f1944d26-cd99-5ef4-8583-e77947369459",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "80a33409-b8e9-5188-8dd7-e248c8df6ef2",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "8b8d2bec-85a7-5fdc-be48-1fe97303fe6d",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "534ea280-8145-500e-91b4-b1f960f8230b",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "2ff4d46e-280e-5029-b694-1f40f1df3013",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "c4670e50-799b-52e6-b97f-c03cb6a5e931",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "856b019b-862c-5a8a-b3af-8e46a773ae2c",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "caa42f35-8024-5378-b535-13d9e119874e",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "d47b31dc-8b01-576e-8316-752634d91b26",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e791664e-9aee-5eee-8d55-8266dea2c835",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "d9a2a9cc-09df-5343-9d86-0c9c52a2c122",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "bc42c243-747d-5342-a4df-2feadba3c233",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "439faf7f-dce9-5d2c-8cb8-f6bf1b57efc7",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "0a183512-6f80-5529-8d81-f7716f8072d6",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "9cf1c113-f0f6-593c-a4fd-73a0ad6fe923",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "7f7147c7-410f-535e-a1cb-7bbd39761063",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "8ab3edcc-c58d-5e85-be6e-9b3cec131f45",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e6604652-0848-5271-86cd-46953758c0a7",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "53cd71a8-ad6a-5c37-ae5f-ff8cf49b0607",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "aba360e0-d2b8-5261-966b-16a590281b3d",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "0e0a7e84-901f-5f9c-a609-65f6be6ac5b6",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "8166066a-cee9-5899-9008-72040400af9f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "47cd578d-82a7-5692-925a-f83f9f9b8967",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "50f0e336-2985-5c8b-b1e1-e08f3359d729",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e6918732-3c68-5cb2-9a2a-f6e1783e21d4",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e04a1952-200f-5a72-bdd3-da3a10f1b62f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "b37019c9-bd73-5d8f-bfdb-91476bda13ef",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "4d3fdcc9-0884-5089-a6eb-deceb82e1211",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "9952ae5b-7ad1-5d27-9f60-b9d31243eba0",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "67acae0d-1b2f-52a8-9a43-b0352af15a0c",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "f3a035fa-79ce-52f7-8909-ae237d4d3cd3",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "b2cb3838-2d21-5f2d-b930-59ceacb67fd9",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "89dc3565-36f1-5226-aaa4-c2cef597a78f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "fee09936-023c-51cd-b04a-3a59e16a36f7",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "3895fc0e-6a65-5d8d-87f8-697ea3f690fa",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "08db0582-30ff-54df-9d7c-2803161a4564",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e9d272ce-b867-5133-9ae8-b3b099dd8ca5",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "37b066aa-0483-59fd-a633-49b378ddadb2",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "789ec62c-ec84-51c2-bf99-26d9c3eff34f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "dfa5dc04-d8d7-5dfc-abcd-2ed231370d3f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "fe5b53b3-123e-5e82-a352-0618572995d2",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "c61d2b96-bc57-513b-8775-2eb39b98d68e",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "14672134-b714-5cfe-b1e0-eb5383e3b97d",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "800736e7-319a-524d-b2c8-78947b324756",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e5843906-8765-5588-8e20-efa2ba481cb7",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "1a83e7c4-0c2a-5018-a790-e7750368c440",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "ea181a9a-d006-5894-89c4-e8ab3d257643",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "23da4f67-d0ac-54c8-85fc-757b658883c2",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "b1a89767-20ed-5bde-a552-28162a701679",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "2c66a822-40a0-57d6-8208-982341681ed9",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "adcf222b-2033-5626-b601-4eac49460c3f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "783e3f0f-158c-5a48-8042-a877c6d6caa7",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "e099f87e-8b51-5ed9-ab39-af0e841b32e0",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "98b5e1ea-d50a-56b6-9f03-dbd62606089f",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "1fd3f2df-ad4f-52a3-82f9-9e57bf193ed2",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "37053b97-d6ae-5b36-acef-c1869d3f8103",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "ec3732cf-d96e-57ca-b5e5-4312945b5fe3",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "a2d41cb9-8ee1-52d2-acd9-b2c4e05c0618",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "96074e2a-7716-570d-9215-d91f75b96eb2",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "75b04170-e0e5-5508-983e-fce1050e2928",
+            "kind": "LISTING",
+            "quote_currency": null
+          }
+        ]
+      },
+      "raw_responses": 79,
+      "rejected_subjects": [],
+      "requested_subjects": 79,
+      "source_digest": "87698b6f2d4a208ebd03f2a8b5d16b4f1b8a7c5936b3c6d65a1154fd4ff50a72"
+    },
+    {
+      "accepted_subjects": 5,
+      "corporate_action_rows": 0,
+      "current_quote_rows": 5,
+      "daily_price_rows": 5,
+      "duplicate_session_bars_collapsed": 3,
+      "in_progress_bar_rows_skipped": 0,
+      "mapped_listings": [
+        {
+          "corporate_actions": 0,
+          "current_quote": "64.67",
+          "duplicate_session_bar_count": 1,
+          "earliest_history_date": "2026-10-05",
+          "history_rows": 1,
+          "in_progress_bar_count": 0,
+          "latest_history_date": "2026-10-05",
+          "listing_id": "4c3a0c72-46c3-5da1-8abd-46967131471b",
+          "missing_close_count": 0,
+          "provider_current_quote": "64.67",
+          "provider_exchange": "ASX",
+          "provider_symbol": "HUB.AX",
+          "quote_observed_at": "2026-10-05T05:10:06+00:00",
+          "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "159.25",
+          "duplicate_session_bar_count": 1,
+          "earliest_history_date": "2026-10-05",
+          "history_rows": 1,
+          "in_progress_bar_count": 0,
+          "latest_history_date": "2026-10-05",
+          "listing_id": "c7d138cb-f930-5a0b-8d6b-ff75071e14f3",
+          "missing_close_count": 0,
+          "provider_current_quote": "159.25",
+          "provider_exchange": "ASX",
+          "provider_symbol": "PME.AX",
+          "quote_observed_at": "2026-10-05T05:10:08+00:00",
+          "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "2.72",
+          "duplicate_session_bar_count": 1,
+          "earliest_history_date": "2026-10-05",
+          "history_rows": 1,
+          "in_progress_bar_count": 0,
+          "latest_history_date": "2026-10-05",
+          "listing_id": "3343ba6d-6dbc-5464-80b9-b83b00295287",
+          "missing_close_count": 0,
+          "provider_current_quote": "2.72",
+          "provider_exchange": "ASX",
+          "provider_symbol": "SDR.AX",
+          "quote_observed_at": "2026-10-05T05:10:08+00:00",
+          "source_record_id": "LISTING:3343ba6d-6dbc-5464-80b9-b83b00295287"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "2575.0",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": "2026-10-05",
+          "history_rows": 1,
+          "in_progress_bar_count": 0,
+          "latest_history_date": "2026-10-05",
+          "listing_id": "06e926d6-aa23-59a2-889c-7309bc0a9242",
+          "missing_close_count": 0,
+          "provider_current_quote": "2575.0",
+          "provider_exchange": "Taiwan",
+          "provider_symbol": "2330.TW",
+          "quote_observed_at": "2026-10-05T05:30:11+00:00",
+          "source_record_id": "LISTING:06e926d6-aa23-59a2-889c-7309bc0a9242"
+        },
+        {
+          "corporate_actions": 0,
+          "current_quote": "63730.0",
+          "duplicate_session_bar_count": 0,
+          "earliest_history_date": "2026-10-05",
+          "history_rows": 1,
+          "in_progress_bar_count": 0,
+          "latest_history_date": "2026-10-05",
+          "listing_id": "568aa542-2f6f-5792-9eca-19822c3e4f3c",
+          "missing_close_count": 0,
+          "provider_current_quote": "63730.0",
+          "provider_exchange": "Tokyo",
+          "provider_symbol": "6146.T",
+          "quote_observed_at": "2026-10-05T06:30:00+00:00",
+          "source_record_id": "LISTING:568aa542-2f6f-5792-9eca-19822c3e4f3c"
+        }
+      ],
+      "normalization_warnings": [
+        {
+          "code": "DUPLICATE_SESSION_BARS_COLLAPSED",
+          "message": "Collapsed 1 duplicate Yahoo session bars with identical close and adjusted-close values; conflicting volume remains null.",
+          "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+        },
+        {
+          "code": "DUPLICATE_SESSION_BARS_COLLAPSED",
+          "message": "Collapsed 1 duplicate Yahoo session bars with identical close and adjusted-close values; conflicting volume remains null.",
+          "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+        },
+        {
+          "code": "DUPLICATE_SESSION_BARS_COLLAPSED",
+          "message": "Collapsed 1 duplicate Yahoo session bars with identical close and adjusted-close values; conflicting volume remains null.",
+          "source_record_id": "LISTING:3343ba6d-6dbc-5464-80b9-b83b00295287"
+        }
+      ],
+      "normalizer_version": "yahoo-chart-normalizer-v4",
+      "provider_id": "YAHOO_FINANCE",
+      "provider_schema_version": "yahoo-chart-v8",
+      "query_scope": {
+        "domain": "MARKET_DATA",
+        "end_date": "2026-10-05",
+        "start_date": "2026-10-05",
+        "subjects": [
+          {
+            "base_currency": null,
+            "id": "4c3a0c72-46c3-5da1-8abd-46967131471b",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "c7d138cb-f930-5a0b-8d6b-ff75071e14f3",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "3343ba6d-6dbc-5464-80b9-b83b00295287",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "06e926d6-aa23-59a2-889c-7309bc0a9242",
+            "kind": "LISTING",
+            "quote_currency": null
+          },
+          {
+            "base_currency": null,
+            "id": "568aa542-2f6f-5792-9eca-19822c3e4f3c",
+            "kind": "LISTING",
+            "quote_currency": null
+          }
+        ]
+      },
+      "raw_responses": 5,
+      "rejected_subjects": [],
+      "requested_subjects": 5,
+      "source_digest": "fdf7fcf4872a5e29c1cd71cd7359852affa0cb2fe14afce338623712d9e24f20"
+    }
+  ],
+  "persistence": {
+    "batches": [
+      {
+        "batch_id": "6699ad21-804c-5b00-8e98-a3acc1f1ec4b",
+        "inserted": {
+          "corporate_actions": 0,
+          "fx_observations": 0,
+          "price_observations": 13,
+          "raw_payloads": 79
+        },
+        "source_digest": "87698b6f2d4a208ebd03f2a8b5d16b4f1b8a7c5936b3c6d65a1154fd4ff50a72",
+        "status": "APPLIED"
+      },
+      {
+        "batch_id": "f32ccf23-1222-5117-8f22-314e89fc814a",
+        "inserted": {
+          "corporate_actions": 0,
+          "fx_observations": 0,
+          "price_observations": 0,
+          "raw_payloads": 5
+        },
+        "source_digest": "fdf7fcf4872a5e29c1cd71cd7359852affa0cb2fe14afce338623712d9e24f20",
+        "status": "APPLIED"
+      },
+      {
+        "batch_id": "49d5b682-48f0-5188-9929-dfe68f1584f2",
+        "inserted": {
+          "corporate_actions": 0,
+          "fx_observations": 15607,
+          "price_observations": 0,
+          "raw_payloads": 7
+        },
+        "source_digest": "7d8ca5135a00db9560ff2119623cf3e6c1699569bbb8e9a29fe774330cd56781",
+        "status": "APPLIED"
+      }
+    ],
+    "inserted_totals": {
+      "corporate_actions": 0,
+      "fx_observations": 15607,
+      "price_observations": 13,
+      "raw_payloads": 91
+    }
+  },
+  "planned_batches": 3,
+  "portfolio_base_currency": "EUR",
+  "provider_fetch_failures": [],
+  "provider_id": "YAHOO_FINANCE",
+  "provider_schema_version": "yahoo-chart-v8",
+  "required_fx_pairs": [
+    "AUD/EUR",
+    "CAD/EUR",
+    "CHF/EUR",
+    "DKK/EUR",
+    "GBP/EUR",
+    "JPY/EUR",
+    "SEK/EUR",
+    "TWD/EUR",
+    "USD/EUR"
+  ],
+  "scope": "active",
+  "selected_listing_count": 84,
+  "selection_issues": [],
+  "status": "APPLIED",
+  "unmapped_fx_pairs": [],
+  "unresolved_listings": [],
+  "verified_listing_mapping_count": 84
+}

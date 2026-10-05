@@ -1,0 +1,101 @@
+{
+  "reference": {
+    "workbook": "Portfolio_Watchlist.xlsx",
+    "sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+    "sheet": "P-GOOGL",
+    "methodology": "10-Year Secular Growth Fade UFCF DCF",
+    "currency": "USD",
+    "model_cells": {
+      "current_price": "B4",
+      "scenario_fair_values": ["L202", "M202", "N202"],
+      "weighted_fair_value": "AO7",
+      "weighted_upside": "AO8",
+      "expected_cash_flow_irr": "AA212",
+      "hurdle": "AB212",
+      "expected_excess": "AC212"
+    }
+  },
+  "model_currency": "USD",
+  "market_price": {
+    "price": "343.5",
+    "currency": "USD",
+    "freshness": "FRESH",
+    "effective_at": null,
+    "source": "P-GOOGL!B4 cached value linked to Price Feed!G2"
+  },
+  "expected": {
+    "bear_fv": "226.8117028",
+    "base_fv": "443.5224326",
+    "bull_fv": "633.5590147",
+    "weighted_fv": "462.6722601",
+    "weighted_upside": "0.3469352549",
+    "expected_cash_flow_irr": "0.1268953551",
+    "hurdle": "0.09024514219",
+    "expected_excess": "0.03665021294",
+    "bear_y1_ufcf": "-46.61529",
+    "base_y5_ufcf": "204.0958699",
+    "bull_y10_ufcf": "671.9456334"
+  },
+  "input": {
+    "base_revision_id": null,
+    "source_revision_id": "fixture-P-GOOGL-v1",
+    "actor": "IMPORT",
+    "source": "reference/workbook/Portfolio_Watchlist.xlsx#P-GOOGL",
+    "rationale": "Frozen published DCF inputs and cached outputs for deterministic method parity; this is a test fixture, not a current application model import.",
+    "effective_at": "2026-10-05T00:00:00Z",
+    "base": {
+      "base_revenue": "498",
+      "base_ebit_margin": "0.345",
+      "base_tax_rate": "0.17",
+      "base_da_to_revenue": "0.065",
+      "base_capex_to_revenue": "0.402",
+      "base_nwc_to_revenue": "-0.01",
+      "net_cash_debt": "126.3",
+      "diluted_shares": "12.23"
+    },
+    "scenarios": [
+      {
+        "scenario": "BEAR",
+        "probability": "0.1339636341",
+        "terminal_growth": "0.025",
+        "year10_ufcf_growth": "0.04",
+        "rationale": "Source P-GOOGL Bear case; retain the published scenario inputs.",
+        "years": [
+          {"forecast_year": 1, "revenue_growth": "0.15", "ebit_margin": "0.31", "tax_rate": "0.17", "da_to_revenue": "0.08", "capex_to_revenue": "0.42", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 2, "revenue_growth": "0.09057218479", "ebit_margin": "0.31", "tax_rate": "0.17", "da_to_revenue": "0.09", "capex_to_revenue": "0.39", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 3, "revenue_growth": "0.05051495921", "ebit_margin": "0.31", "tax_rate": "0.17", "da_to_revenue": "0.10", "capex_to_revenue": "0.35", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 4, "revenue_growth": "0.03402300611", "ebit_margin": "0.31", "tax_rate": "0.17", "da_to_revenue": "0.11", "capex_to_revenue": "0.31", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 5, "revenue_growth": "0.02796875107", "ebit_margin": "0.31", "tax_rate": "0.17", "da_to_revenue": "0.115", "capex_to_revenue": "0.27", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"}
+        ]
+      },
+      {
+        "scenario": "BASE",
+        "probability": "0.6125",
+        "terminal_growth": "0.03",
+        "year10_ufcf_growth": "0.0575",
+        "rationale": "Source P-GOOGL Base case; retain the published scenario inputs.",
+        "years": [
+          {"forecast_year": 1, "revenue_growth": "0.20", "ebit_margin": "0.345", "tax_rate": "0.17", "da_to_revenue": "0.08", "capex_to_revenue": "0.38", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 2, "revenue_growth": "0.1593196541", "ebit_margin": "0.35", "tax_rate": "0.17", "da_to_revenue": "0.09", "capex_to_revenue": "0.34", "nwc_to_revenue": "-0.01", "discount_rate": "0.09"},
+          {"forecast_year": 3, "revenue_growth": "0.1368340896", "ebit_margin": "0.352", "tax_rate": "0.17", "da_to_revenue": "0.10", "capex_to_revenue": "0.29", "nwc_to_revenue": "-0.01", "discount_rate": "0.09"},
+          {"forecast_year": 4, "revenue_growth": "0.1204382047", "ebit_margin": "0.356", "tax_rate": "0.17", "da_to_revenue": "0.105", "capex_to_revenue": "0.24", "nwc_to_revenue": "-0.01", "discount_rate": "0.09"},
+          {"forecast_year": 5, "revenue_growth": "0.1027357886", "ebit_margin": "0.36", "tax_rate": "0.17", "da_to_revenue": "0.11", "capex_to_revenue": "0.20", "nwc_to_revenue": "-0.01", "discount_rate": "0.09"}
+        ]
+      },
+      {
+        "scenario": "BULL",
+        "probability": "0.2535363659",
+        "terminal_growth": "0.035",
+        "year10_ufcf_growth": "0.075",
+        "rationale": "Source P-GOOGL Bull case; retain the published scenario inputs.",
+        "years": [
+          {"forecast_year": 1, "revenue_growth": "0.23", "ebit_margin": "0.36", "tax_rate": "0.17", "da_to_revenue": "0.08", "capex_to_revenue": "0.35", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 2, "revenue_growth": "0.21", "ebit_margin": "0.37", "tax_rate": "0.17", "da_to_revenue": "0.09", "capex_to_revenue": "0.30", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 3, "revenue_growth": "0.18", "ebit_margin": "0.379", "tax_rate": "0.17", "da_to_revenue": "0.10", "capex_to_revenue": "0.25", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 4, "revenue_growth": "0.15", "ebit_margin": "0.389", "tax_rate": "0.17", "da_to_revenue": "0.105", "capex_to_revenue": "0.21", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"},
+          {"forecast_year": 5, "revenue_growth": "0.12", "ebit_margin": "0.399", "tax_rate": "0.17", "da_to_revenue": "0.11", "capex_to_revenue": "0.18", "nwc_to_revenue": "-0.01", "discount_rate": "0.090632625"}
+        ]
+      }
+    ]
+  }
+}

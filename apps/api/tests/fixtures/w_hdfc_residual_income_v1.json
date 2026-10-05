@@ -1,0 +1,23 @@
+{
+  "model_key": "W-HDFC",
+  "input": {
+    "base": {"current_book_value_per_share": "318.171", "payout_ratio": "0.2"},
+    "scenarios": [
+      {"scenario": "BEAR", "probability": "0.2775823125", "starting_roe": "0.125", "cost_of_equity": "0.13", "terminal_growth": "0.04", "mature_roe": "0.15", "rationale": "Legacy Bear financial-company case."},
+      {"scenario": "BASE", "probability": "0.5625", "starting_roe": "0.155", "cost_of_equity": "0.115", "terminal_growth": "0.055", "mature_roe": "0.135", "rationale": "Legacy Base financial-company case."},
+      {"scenario": "BULL", "probability": "0.1599176875", "starting_roe": "0.18", "cost_of_equity": "0.105", "terminal_growth": "0.07", "mature_roe": "0.125", "rationale": "Legacy Bull financial-company case."}
+    ]
+  },
+  "market_price": {"price": "721.2", "currency": "INR"},
+  "expected": {
+    "bear_fv": "382.4330748",
+    "base_fv": "534.1039899",
+    "bull_fv": "752.994491",
+    "weighted_fv": "527.0072893",
+    "weighted_upside": "-0.269263326",
+    "expected_cash_flow_irr": "0.07905910008",
+    "hurdle": "0.1175645578",
+    "expected_excess": "-0.03850545773",
+    "base_y5_ending_bvps": "570.8107573"
+  }
+}

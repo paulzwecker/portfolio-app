@@ -1,0 +1,81 @@
+{
+  "model_key": "W-TOST",
+  "input": {
+    "base": {
+      "base_revenue": "6.153",
+      "net_cash": "1.713",
+      "diluted_shares": "0.596"
+    },
+    "scenarios": [
+      {
+        "scenario": "BEAR",
+        "probability": "0.2",
+        "required_return": "0.1125",
+        "terminal_growth": "0.025",
+        "rationale": "Legacy Bear case.",
+        "years": [
+          {"forecast_year": 1, "revenue_growth": "0.17", "owner_cash_flow_margin": "0.03"},
+          {"forecast_year": 2, "revenue_growth": "0.14", "owner_cash_flow_margin": "0.04"},
+          {"forecast_year": 3, "revenue_growth": "0.12", "owner_cash_flow_margin": "0.045"},
+          {"forecast_year": 4, "revenue_growth": "0.1", "owner_cash_flow_margin": "0.05"},
+          {"forecast_year": 5, "revenue_growth": "0.08", "owner_cash_flow_margin": "0.055"},
+          {"forecast_year": 6, "revenue_growth": "0.07", "owner_cash_flow_margin": "0.06"},
+          {"forecast_year": 7, "revenue_growth": "0.06", "owner_cash_flow_margin": "0.065"},
+          {"forecast_year": 8, "revenue_growth": "0.055", "owner_cash_flow_margin": "0.07"},
+          {"forecast_year": 9, "revenue_growth": "0.05", "owner_cash_flow_margin": "0.075"},
+          {"forecast_year": 10, "revenue_growth": "0.045", "owner_cash_flow_margin": "0.08"}
+        ]
+      },
+      {
+        "scenario": "BASE",
+        "probability": "0.6",
+        "required_return": "0.0975",
+        "terminal_growth": "0.035",
+        "rationale": "Legacy Base case.",
+        "years": [
+          {"forecast_year": 1, "revenue_growth": "0.2141", "owner_cash_flow_margin": "0.05"},
+          {"forecast_year": 2, "revenue_growth": "0.1839", "owner_cash_flow_margin": "0.065"},
+          {"forecast_year": 3, "revenue_growth": "0.1734", "owner_cash_flow_margin": "0.075"},
+          {"forecast_year": 4, "revenue_growth": "0.15", "owner_cash_flow_margin": "0.085"},
+          {"forecast_year": 5, "revenue_growth": "0.13", "owner_cash_flow_margin": "0.095"},
+          {"forecast_year": 6, "revenue_growth": "0.115", "owner_cash_flow_margin": "0.1"},
+          {"forecast_year": 7, "revenue_growth": "0.1", "owner_cash_flow_margin": "0.105"},
+          {"forecast_year": 8, "revenue_growth": "0.09", "owner_cash_flow_margin": "0.11"},
+          {"forecast_year": 9, "revenue_growth": "0.08", "owner_cash_flow_margin": "0.115"},
+          {"forecast_year": 10, "revenue_growth": "0.07", "owner_cash_flow_margin": "0.12"}
+        ]
+      },
+      {
+        "scenario": "BULL",
+        "probability": "0.2",
+        "required_return": "0.0825",
+        "terminal_growth": "0.04",
+        "rationale": "Legacy Bull case.",
+        "years": [
+          {"forecast_year": 1, "revenue_growth": "0.25", "owner_cash_flow_margin": "0.07"},
+          {"forecast_year": 2, "revenue_growth": "0.23", "owner_cash_flow_margin": "0.085"},
+          {"forecast_year": 3, "revenue_growth": "0.21", "owner_cash_flow_margin": "0.1"},
+          {"forecast_year": 4, "revenue_growth": "0.19", "owner_cash_flow_margin": "0.115"},
+          {"forecast_year": 5, "revenue_growth": "0.17", "owner_cash_flow_margin": "0.13"},
+          {"forecast_year": 6, "revenue_growth": "0.15", "owner_cash_flow_margin": "0.14"},
+          {"forecast_year": 7, "revenue_growth": "0.14", "owner_cash_flow_margin": "0.15"},
+          {"forecast_year": 8, "revenue_growth": "0.13", "owner_cash_flow_margin": "0.16"},
+          {"forecast_year": 9, "revenue_growth": "0.12", "owner_cash_flow_margin": "0.17"},
+          {"forecast_year": 10, "revenue_growth": "0.11", "owner_cash_flow_margin": "0.18"}
+        ]
+      }
+    ]
+  },
+  "market_price": {"price": "29.79", "currency": "USD"},
+  "expected": {
+    "bear_fv": "16.29582025",
+    "base_fv": "42.9804538",
+    "bull_fv": "125.5736012",
+    "weighted_fv": "54.16215658",
+    "weighted_upside": "0.8181321442",
+    "expected_cash_flow_irr": "0.1627996404",
+    "hurdle": "0.0975",
+    "expected_excess": "0.06529964037",
+    "base_y5_revenue": "13.48586359"
+  }
+}

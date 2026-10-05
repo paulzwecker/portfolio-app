@@ -1,0 +1,55 @@
+{
+  "name": "portfolio-research-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/contracts"
+  ],
+  "engines": {
+    "node": ">=22.16.0",
+    "npm": ">=10"
+  },
+  "packageManager": "npm@11.9.0",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "concurrently --kill-others --names api,web \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "node scripts/uv.mjs run --locked --project apps/api uvicorn portfolio_api.main:app --host 127.0.0.1 --port 8000 --reload --reload-dir apps/api/src",
+    "dev:web": "node scripts/web.mjs dev",
+    "build": "npm run build --workspace @portfolio/web",
+    "start:web": "node scripts/web.mjs start",
+    "db:migrate": "node scripts/uv.mjs run --locked --project apps/api alembic -c apps/api/alembic.ini upgrade head",
+    "db:check": "node scripts/uv.mjs run --locked --project apps/api alembic -c apps/api/alembic.ini check",
+    "db:seed": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.domain.seed",
+    "db:import-workbook": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.legacy_import",
+    "db:import-model-outputs": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_outputs",
+    "db:import-native-models": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_input_migration",
+    "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",
+    "db:sync-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_ingestion",
+    "db:map-market-listings": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_mapping",
+    "db:reconcile-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_reconciliation",
+    "db:sync-reported-fundamentals": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.reported_fundamentals",
+    "db:sync-source-documents": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.source_documents",
+    "db:consensus-estimates": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.consensus_estimates",
+    "db:import-consensus-estimates": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.consensus_estimates import-legacy",
+    "db:map-consensus-estimates": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.consensus_estimates map",
+    "db:sync-consensus-estimates": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.consensus_estimates sync-fmp",
+    "lint": "npm run lint --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api ruff check apps/api",
+    "format": "prettier --write . && node scripts/uv.mjs run --locked --project apps/api ruff format apps/api",
+    "format:check": "prettier --check . && node scripts/uv.mjs run --locked --project apps/api ruff format --check apps/api",
+    "typecheck": "npm run typecheck --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src apps/api/tests",
+    "test": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests",
+    "test:integration": "node scripts/integration.mjs",
+    "browsers:install": "node scripts/browser.mjs install chromium",
+    "test:e2e": "node scripts/browser.mjs test",
+    "test:e2e:api": "node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py",
+    "contracts:generate": "node scripts/contracts.mjs",
+    "contracts:check": "node scripts/contracts.mjs --check",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run contracts:check && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.9"
+  }
+}

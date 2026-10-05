@@ -1,0 +1,714 @@
+{
+  "batch_id": "2fb38651-b2c3-5298-b997-b48038c39756",
+  "candidate_snapshot_count": 344,
+  "counts": {
+    "current_contract_rows_matched": 114,
+    "current_contract_status": {
+      "DATA_CHECK": 1,
+      "NOT_MAPPED": 11,
+      "NO_CONTRACT": 6,
+      "PASS": 96
+    },
+    "current_outputs_published": 96,
+    "legacy_history_invalid_numeric_cells": 40,
+    "legacy_history_rows": 231,
+    "legacy_history_rows_with_unknown_effective_time": 1,
+    "legacy_history_rows_without_output_values": 0,
+    "legacy_history_snapshots": 230,
+    "model_tabs": 116,
+    "source_contract_status": {
+      "NOT_MAPPED": 11,
+      "NO_CONTRACT": 8,
+      "PASS": 97
+    }
+  },
+  "effective_time_policy": "Only the Model Revision History As-of Timestamp is treated as effective time. The current Model Output Contract has no effective timestamp; its observed time is recorded separately and is not substituted for effective time.",
+  "field_reconciliation": {
+    "method": "Exact Decimal comparison of cached contract cells and nine representative native model cells; history fields are ingested as recorded. No formulas evaluated.",
+    "mismatch_details": [],
+    "mismatches": 0,
+    "representative_comparison_count": 9,
+    "representative_comparisons": [
+      {
+        "contract_value": "226.8117028",
+        "field": "bear_fv",
+        "model_key": "P-GOOGL",
+        "native_cell": "E4",
+        "native_value": "226.8117028"
+      },
+      {
+        "contract_value": "443.5224326",
+        "field": "base_fv",
+        "model_key": "P-GOOGL",
+        "native_cell": "F4",
+        "native_value": "443.5224326"
+      },
+      {
+        "contract_value": "633.5590147",
+        "field": "bull_fv",
+        "model_key": "P-GOOGL",
+        "native_cell": "G4",
+        "native_value": "633.5590147"
+      },
+      {
+        "contract_value": "382.4330748",
+        "field": "bear_fv",
+        "model_key": "W-HDFC",
+        "native_cell": "B77",
+        "native_value": "382.4330748"
+      },
+      {
+        "contract_value": "534.1039899",
+        "field": "base_fv",
+        "model_key": "W-HDFC",
+        "native_cell": "C77",
+        "native_value": "534.1039899"
+      },
+      {
+        "contract_value": "752.994491",
+        "field": "bull_fv",
+        "model_key": "W-HDFC",
+        "native_cell": "D77",
+        "native_value": "752.994491"
+      },
+      {
+        "contract_value": "16.29582025",
+        "field": "bear_fv",
+        "model_key": "W-TOST",
+        "native_cell": "M46",
+        "native_value": "16.29582025"
+      },
+      {
+        "contract_value": "42.9804538",
+        "field": "base_fv",
+        "model_key": "W-TOST",
+        "native_cell": "M47",
+        "native_value": "42.9804538"
+      },
+      {
+        "contract_value": "125.5736012",
+        "field": "bull_fv",
+        "model_key": "W-TOST",
+        "native_cell": "M48",
+        "native_value": "125.5736012"
+      }
+    ],
+    "source_issue_count": 97
+  },
+  "identical_snapshots_reused": 0,
+  "mismatches": [],
+  "model_currency_coverage": {
+    "DOCUMENTED": 54,
+    "UNKNOWN": 62
+  },
+  "non_null_output_values": {
+    "base_fv": 221,
+    "base_probability": 96,
+    "bear_fv": 221,
+    "bear_probability": 96,
+    "bull_fv": 221,
+    "bull_probability": 96,
+    "expected_cash_flow_irr": 274,
+    "expected_excess": 273,
+    "forward_fundamental_cagr": 281,
+    "hurdle": 283,
+    "weighted_fv": 220,
+    "weighted_upside": 85
+  },
+  "observed_at": "2026-10-04T23:34:41.130684+00:00",
+  "ownership_exclusions": [
+    "Lifecycle and 10Y Durability / Compounder Quality are read from their canonical domains, not model snapshots.",
+    "Current price, holdings, targets, assumptions and projections are not imported."
+  ],
+  "persisted_output_value_mismatches": 0,
+  "persisted_output_values_compared": 2367,
+  "persisted_snapshots_added": 344,
+  "source": "Portfolio_Watchlist.xlsx",
+  "source_digest": "67cd0cbd8f647be7345ff2a58645af1d940ef42ea787515215d96329b1cfa2c9",
+  "status": "APPLIED",
+  "unresolved_issues": [
+    {
+      "code": "MODEL_COMPANY_UNRESOLVED",
+      "message": "No exact source-to-application identity for 'MELI-SOTP'; no model snapshot was created.",
+      "severity": "WARNING",
+      "source": "P-MELI-SOTP"
+    },
+    {
+      "code": "MODEL_COMPANY_UNRESOLVED",
+      "message": "No exact source-to-application identity for 'SPGI-CIQ'; no model snapshot was created.",
+      "severity": "WARNING",
+      "source": "P-SPGI-CIQ"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-ABNB"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-AFRM"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-ALAB"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-APP"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-APPF"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-AS"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-ATAT"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-AXON"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-CRWD"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-DASH"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-DDOG"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-DLO"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-DYVOX"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-FIX"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-GRAB"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-GWRE"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-HOOD"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-HUB"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-IBKR"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-IOT"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-JDG"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-KNSL"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-KOG"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-KVYO"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-KXS"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-LIF"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-META"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-MIPS"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-MMYT"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-MNDY"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-MPWR"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-NEM"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-NET"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-NTRA"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-NU"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-ONON"
+    },
+    {
+      "code": "CONTRACT_TICKER_MISMATCH",
+      "message": "Published ticker '272.75' does not match model-tab identity 'PLEJD'; numeric contract values were withheld.",
+      "severity": "ERROR",
+      "source": "W-PLEJD!BA3"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-PLMR"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-PLTR"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-PME"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-PUUILO"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-RBRK"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-RDDT"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-RELY"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-SE"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-SECT-B"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-SHOP"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-SNOW"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-SYM"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-TMDX"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-TOST"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-TSM"
+    },
+    {
+      "code": "MODEL_CURRENCY_UNDOCUMENTED",
+      "message": "No explicit model-currency label and code were found; currency remains null.",
+      "severity": "WARNING",
+      "source": "W-VEEV"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value 'Strong retail IoT platform with more than 500m connected ESLs and fast VAS growth, but 2025-26 growth is dominated by the Walmart deployment peak.'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R76"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "hurdle: invalid recorded numeric value 'Walmart concentration; deployment cycle; hardware margin and working-capital volatility; order conversion; acquisition complexity; competition.'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!S76"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value 'PASS - QUALITY / FAIL - NORMALIZED COMPOUNDING'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T76"
+    },
+    {
+      "code": "HISTORY_COMPANY_UNRESOLVED",
+      "message": "No exact source-to-application identity for 'TKO'; row withheld.",
+      "severity": "ERROR",
+      "source": "Model Revision History!A106:Z106"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'PASS \u2014 HOTEL/RETAIL NORMALIZED'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M114"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value 'Run Portfolio Review with elevated China/VIE/governance and retail-product durability scrutiny; no automatic portfolio action.'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R114"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '~12% (11\u201313% normalized range)'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M201"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '15%+ PASS'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M202"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '>=15% PASS'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M203"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '~18% normalized'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1025"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '~18% normalized'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1029"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "hurdle: invalid recorded numeric value '~9.6%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!S1029"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '\u226515% PASS (exact canonical CAGR not populated)'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1033"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value '~0.0%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T1037"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value '~9.0%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R1043"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value '~-1.7%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T1043"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '11.665% ex-div normalized; ~15.4% incl. covered dividend'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1045"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Forward CAGR unchanged / gate unchanged'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1049"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Forward CAGR unchanged / gate unchanged'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1053"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Exact forward CAGR not populated; existing model status remains normalized compounding below 15%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1057"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "hurdle: invalid recorded numeric value '#VALUE!'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!S1063"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Forward CAGR unchanged / gate unchanged'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1069"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "weighted_fv: invalid recorded numeric value '~122.7'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!Q1069"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value '~15.9%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R1069"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "hurdle: invalid recorded numeric value '~9.6%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!S1069"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value '~6.3%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T1069"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '~17% incl dividend'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1076"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value 'DROP'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R1080"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "hurdle: invalid recorded numeric value 'DROP \u2014 EXPERT REVIEWED; COMPOUNDING GATE FAIL + VALUATION BELOW HURDLE'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!S1080"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value 'Operating model unchanged. Corrected forward-compounding assessment to explicit Base UFCF/share ~10.8% Y1\u2013Y10 and moved Watchlist\u2192Drop through Universe Registry.'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T1080"
+    },
+    {
+      "code": "HISTORY_EFFECTIVE_TIME_INVALID",
+      "message": "Invalid or missing source timestamp; effective time remains unknown.",
+      "severity": "WARNING",
+      "source": "Model Revision History!B1080"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value '~2.7%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R1082"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value '~-7.4%'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T1082"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '15%+ PASS (unchanged)'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1085"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '~15% normalized'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1089"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '14.0% owner-value + ~1% dividend gate'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1092"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Forward CAGR/gate unchanged'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1101"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Forward CAGR/gate unchanged'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1105"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_cash_flow_irr: invalid recorded numeric value '13.44% (static contract; not mechanically linked to buyback bridge)'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!R1109"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "expected_excess: invalid recorded numeric value '3.14pp (static contract)'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!T1109"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value 'Forward CAGR/gate unchanged'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1113"
+    },
+    {
+      "code": "HISTORY_OUTPUT_VALUE_INVALID",
+      "message": "forward_fundamental_cagr: invalid recorded numeric value '11.665% ex-div normalized; ~15.4% incl. sustainable covered dividend'; the snapshot field remains null.",
+      "severity": "WARNING",
+      "source": "Model Revision History!M1124"
+    }
+  ],
+  "workbook_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9"
+}

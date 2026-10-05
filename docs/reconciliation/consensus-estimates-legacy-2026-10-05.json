@@ -1,0 +1,39 @@
+{
+  "source_reconciliation": {
+    "source_file": "reference/workbook/Portfolio_Watchlist.xlsx",
+    "source_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+    "source_sheet": "Estimate History",
+    "snapshot_date": "2026-09-12",
+    "company_rows": 79,
+    "resolved_company_count": 79,
+    "observation_count": 67,
+    "unresolved_identity_rows": [],
+    "limitations": [
+      "Provider/vendor identity is absent",
+      "Source currency is absent",
+      "FY+1/FY+2 cannot be safely mapped to absolute fiscal period-end dates",
+      "Estimate Momentum formulas and older approximate source recency notes were excluded"
+    ]
+  },
+  "import_result": {
+    "status": "ALREADY_IMPORTED",
+    "batch_id": "4057da6e-20f2-461a-ba47-8fa06077446e",
+    "value_reconciliation": {
+      "source_value_count": 67,
+      "stored_observation_count": 67,
+      "matched_value_count": 67,
+      "mismatch_count": 0,
+      "mismatches": []
+    },
+    "lifecycle_company_counts": {
+      "PORTFOLIO": 17,
+      "WATCHLIST": 1
+    },
+    "observations_imported": 67,
+    "data_check_count": 67,
+    "company_count": 18,
+    "identity_issues": [],
+    "canonical_unresolved": [],
+    "source_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9"
+  }
+}

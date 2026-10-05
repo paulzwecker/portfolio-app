@@ -1,0 +1,428 @@
+{
+  "generated_at": "2026-10-05T13:18:11.820505+00:00",
+  "history_reconciliation": {
+    "comparison_date": "2026-10-01",
+    "maximum_absolute_difference": "0.0700054932",
+    "maximum_relative_difference_basis_points": "6.229449115375031148766508846",
+    "method": "Exact canonical listing and market date; compare split-adjusted, non-total-return closes.",
+    "overlap_count": 71,
+    "representative_samples": [
+      {
+        "absolute_difference": "0.0700054932",
+        "identity": "NASDAQ:APPF:USD",
+        "provider_close": "204.2400054932",
+        "within_0_0001_currency_units": false,
+        "workbook_close": "204.1700000000"
+      },
+      {
+        "absolute_difference": "0.0499975586",
+        "identity": "NASDAQ:MNDY:USD",
+        "provider_close": "80.3099975586",
+        "within_0_0001_currency_units": false,
+        "workbook_close": "80.2600000000"
+      },
+      {
+        "absolute_difference": "0.0200024414",
+        "identity": "NASDAQ:IBKR:USD",
+        "provider_close": "85.8099975586",
+        "within_0_0001_currency_units": false,
+        "workbook_close": "85.8300000000"
+      },
+      {
+        "absolute_difference": "0.0049969482",
+        "identity": "NASDAQ:DASH:USD",
+        "provider_close": "182.1750030518",
+        "within_0_0001_currency_units": false,
+        "workbook_close": "182.1800000000"
+      },
+      {
+        "absolute_difference": "0.0000390625",
+        "identity": "NYSE:FIX:USD",
+        "provider_close": "1685.2900390625",
+        "within_0_0001_currency_units": true,
+        "workbook_close": "1685.2900000000"
+      },
+      {
+        "absolute_difference": "0.0000244141",
+        "identity": "SWX:VACN:CHF",
+        "provider_close": "680.4000244141",
+        "within_0_0001_currency_units": true,
+        "workbook_close": "680.4000000000"
+      },
+      {
+        "absolute_difference": "0.0000244141",
+        "identity": "AMS:ADYEN:EUR",
+        "provider_close": "855.5999755859",
+        "within_0_0001_currency_units": true,
+        "workbook_close": "855.6000000000"
+      },
+      {
+        "absolute_difference": "0.0000195312",
+        "identity": "NASDAQ:AMD:USD",
+        "provider_close": "615.7299804688",
+        "within_0_0001_currency_units": true,
+        "workbook_close": "615.7300000000"
+      },
+      {
+        "absolute_difference": "0.0000146484",
+        "identity": "NYSE:MSCI:USD",
+        "provider_close": "545.3900146484",
+        "within_0_0001_currency_units": true,
+        "workbook_close": "545.3900000000"
+      },
+      {
+        "absolute_difference": "0.0000122070",
+        "identity": "STO:SAAB-B:SEK",
+        "provider_close": "623.2000122070",
+        "within_0_0001_currency_units": true,
+        "workbook_close": "623.2000000000"
+      }
+    ],
+    "tolerance_currency_units": "0.0001",
+    "within_0_01_currency_units_count": 68,
+    "within_0_10_currency_units_count": 71,
+    "within_tolerance_count": 67
+  },
+  "portfolio_valuation_reconciliation": {
+    "aggregation_difference": "0E-23",
+    "api_base_market_value": "56580.48011570018080498400000",
+    "cash_base_value_sum": "4353.673643113986482000000000",
+    "cash_statuses": {
+      "EUR": "VALUED",
+      "USD": "VALUED"
+    },
+    "currency": "EUR",
+    "position_base_value_sum": "52226.80647258619432298400000",
+    "position_count": 22,
+    "position_native_currencies": {
+      "DKK": 1,
+      "EUR": 3,
+      "USD": 18
+    },
+    "recomputed_components_total": "56580.48011570018080498400000",
+    "status": "VALUED",
+    "valuation_gaps": [],
+    "valued_position_count": 22
+  },
+  "provider": {
+    "corporate_actions": {
+      "DIVIDEND:UNVERIFIED": 856,
+      "STOCK_SPLIT:UNVERIFIED": 22
+    },
+    "duplicate_session_bars_in_raw_responses": [
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v1",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v1",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": true,
+        "normalizer_version": "yahoo-chart-normalizer-v1",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:3343ba6d-6dbc-5464-80b9-b83b00295287"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v2",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v2",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": true,
+        "normalizer_version": "yahoo-chart-normalizer-v2",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:3343ba6d-6dbc-5464-80b9-b83b00295287"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v3",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v3",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:4c3a0c72-46c3-5da1-8abd-46967131471b"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": false,
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:c7d138cb-f930-5a0b-8d6b-ff75071e14f3"
+      },
+      {
+        "bar_count": 2,
+        "identical_price_values": true,
+        "identical_volume_values": true,
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "session_date": "2026-10-05",
+        "source_record_id": "LISTING:3343ba6d-6dbc-5464-80b9-b83b00295287"
+      }
+    ],
+    "fx_pairs": [
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:16:49+02:00",
+        "observations": 2601,
+        "pair": "CHF/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:14:49+02:00",
+        "observations": 2600,
+        "pair": "SEK/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T14:52:48+02:00",
+        "observations": 2606,
+        "pair": "USD/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:16:49+02:00",
+        "observations": 2601,
+        "pair": "GBP/EUR"
+      },
+      {
+        "earliest_effective_at": "2026-10-05T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:14:49+02:00",
+        "observations": 2,
+        "pair": "TWD/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T14:49:48+02:00",
+        "observations": 2605,
+        "pair": "DKK/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:16:49+02:00",
+        "observations": 2602,
+        "pair": "AUD/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:15:49+02:00",
+        "observations": 2600,
+        "pair": "JPY/EUR"
+      },
+      {
+        "earliest_effective_at": "2016-10-06T02:00:00+02:00",
+        "latest_effective_at": "2026-10-05T15:14:49+02:00",
+        "observations": 2601,
+        "pair": "CAD/EUR"
+      }
+    ],
+    "price_quality_counts": {
+      "CURRENT_QUOTE:PASS": 110,
+      "DAILY_CLOSE:PASS": 219223
+    },
+    "prices": {
+      "CURRENT_QUOTE": {
+        "distinct_listings": 84,
+        "earliest": "2026-10-02",
+        "latest": "2026-10-05",
+        "rows": 110
+      },
+      "DAILY_CLOSE": {
+        "distinct_listings": 84,
+        "earliest": "2016-10-07",
+        "latest": "2026-10-05",
+        "rows": 219223
+      }
+    },
+    "provider_batches": [
+      {
+        "id": "fe5ed285-11a0-5fa6-88ea-5e08b1811325",
+        "normalizer_version": "yahoo-chart-normalizer-v1",
+        "raw_payload_count": 84,
+        "recorded_at": "2026-10-05T14:10:18.250477+02:00",
+        "source_digest": "67f626b25d5b65648e6df46bedc05e2d458d0d8c9b182d04f712c9d4902ebfe8"
+      },
+      {
+        "id": "47b718b8-8eca-5829-ad9f-b52499539a6d",
+        "normalizer_version": "yahoo-fx-normalizer-v1",
+        "raw_payload_count": 2,
+        "recorded_at": "2026-10-05T14:10:18.952383+02:00",
+        "source_digest": "8eb8ddcd498ac39253170b872f7425456231af21f4b54740fffc7bd5e6c3d590"
+      },
+      {
+        "id": "7080fdb0-488d-5488-9687-9064b2f5677b",
+        "normalizer_version": "yahoo-chart-normalizer-v2",
+        "raw_payload_count": 84,
+        "recorded_at": "2026-10-05T14:41:17.315973+02:00",
+        "source_digest": "53e166ff7097d0b9feddfd84ab229715aa085e4b85ee8ff38b47e23c08846591"
+      },
+      {
+        "id": "b7f5acd3-62b1-5459-b1c7-ae368f88e944",
+        "normalizer_version": "yahoo-fx-normalizer-v1",
+        "raw_payload_count": 2,
+        "recorded_at": "2026-10-05T14:41:18.095648+02:00",
+        "source_digest": "c41bcc985cc3ee343c3d88ce5e8f0431dc36a0c96fc4cee448fa4622e7463116"
+      },
+      {
+        "id": "08cb590c-62e0-5499-b3f8-eb95906e048d",
+        "normalizer_version": "yahoo-chart-normalizer-v3",
+        "raw_payload_count": 2,
+        "recorded_at": "2026-10-05T14:49:05.743503+02:00",
+        "source_digest": "2780c04630f2bd180a398a4981975b2ff2db1840db9909cab3a4992f84948e1d"
+      },
+      {
+        "id": "331862d2-9b8d-5aba-9e2e-78795f77ac09",
+        "normalizer_version": "yahoo-fx-normalizer-v1",
+        "raw_payload_count": 2,
+        "recorded_at": "2026-10-05T14:49:06.485184+02:00",
+        "source_digest": "ed980e96342a42b4453141241ef8876f56e86804b6a317db218346486980c23b"
+      },
+      {
+        "id": "3fc12fd0-8484-5d44-b073-6463cc6654ee",
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "raw_payload_count": 2,
+        "recorded_at": "2026-10-05T14:53:38.188415+02:00",
+        "source_digest": "18a910e55b6e0b641effd2906ed95bd04c26537f7d9af74ca715f922ed98bd43"
+      },
+      {
+        "id": "9536a39c-0529-5eaf-b4d2-32808b7451d5",
+        "normalizer_version": "yahoo-fx-normalizer-v1",
+        "raw_payload_count": 2,
+        "recorded_at": "2026-10-05T14:53:38.852269+02:00",
+        "source_digest": "c18a9d0258e9e440f86bd7c6f1842b3b032a15e8c4b7c2fc0acb555be3998bb4"
+      },
+      {
+        "id": "6699ad21-804c-5b00-8e98-a3acc1f1ec4b",
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "raw_payload_count": 79,
+        "recorded_at": "2026-10-05T15:17:36.167131+02:00",
+        "source_digest": "87698b6f2d4a208ebd03f2a8b5d16b4f1b8a7c5936b3c6d65a1154fd4ff50a72"
+      },
+      {
+        "id": "f32ccf23-1222-5117-8f22-314e89fc814a",
+        "normalizer_version": "yahoo-chart-normalizer-v4",
+        "raw_payload_count": 5,
+        "recorded_at": "2026-10-05T15:17:36.607787+02:00",
+        "source_digest": "fdf7fcf4872a5e29c1cd71cd7359852affa0cb2fe14afce338623712d9e24f20"
+      },
+      {
+        "id": "49d5b682-48f0-5188-9929-dfe68f1584f2",
+        "normalizer_version": "yahoo-fx-normalizer-v1",
+        "raw_payload_count": 7,
+        "recorded_at": "2026-10-05T15:17:38.151927+02:00",
+        "source_digest": "7d8ca5135a00db9560ff2119623cf3e6c1699569bbb8e9a29fe774330cd56781"
+      }
+    ],
+    "provider_id": "YAHOO_FINANCE",
+    "raw_payload_count": 271
+  },
+  "universe_coverage": {
+    "active_companies": 92,
+    "active_companies_with_listing": 82,
+    "active_company_listings": 83,
+    "held_positions": 22,
+    "portfolio_companies": 21,
+    "unresolved_active_companies": [
+      {
+        "company": "Accelleron Industries",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "BONESUPPORT Holding AB",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "Exosens",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "Fabrinet",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "INVISIO AB",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "Medistim ASA",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "Meta Platforms",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "Nova Ltd",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "Rheinmetall AG",
+        "lifecycle": "WATCHLIST"
+      },
+      {
+        "company": "VINCORION SE",
+        "lifecycle": "WATCHLIST"
+      }
+    ],
+    "watchlist_companies": 71
+  },
+  "workbook_reference": {
+    "as_of": "2026-10-01",
+    "source_digest": "1c478c39625094c63300c3ac00ab6f8fb6b92f3e4cac1e8b9bc22c71b9a65997"
+  }
+}

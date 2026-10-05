@@ -1,0 +1,15 @@
+node_modules
+.next
+.tools
+.cache
+.venv
+apps/api
+reference
+package-lock.json
+packages/contracts/openapi.json
+packages/contracts/schema.d.ts
+playwright-report
+test-results
+coverage
+AGENTS.md
+

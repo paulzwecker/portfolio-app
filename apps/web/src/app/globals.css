@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f0f2ed;
+  --color-secondary-foreground: #35463b;
+  --color-muted: #f0f2ed;
+  --color-muted-foreground: #68716b;
+  --color-accent: #e9eee7;
+  --color-accent-foreground: #244d3b;
+  --color-border: #e2e6de;
+  --color-input: #d5dcd1;
+  --color-ring: #39654b;
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #ffffff;
+  --color-sidebar: #f5f6f1;
+  --color-sidebar-accent: #e7ece2;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+  --font-sans: Arial, Helvetica, sans-serif;
+}
+
+:root {
+  --background: #fafbf8;
+  --foreground: #222e27;
+  --card: #ffffff;
+  --primary: #356047;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: #dce8d8;
+  }
+}
+
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  z-index: 50;
+  transform: translateY(-200%);
+  border-radius: 0.5rem;
+  background: var(--primary);
+  padding: 0.75rem 1rem;
+  color: white;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
