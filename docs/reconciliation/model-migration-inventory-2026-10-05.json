@@ -71,11 +71,11 @@
     "migration_status_counts": {
       "DATA_CHECK": 1,
       "LEGACY_ONLY": 19,
-      "NEEDS_MAPPING": 83,
-      "READY_FOR_NATIVE_IMPORT": 2,
+      "NEEDS_MAPPING": 80,
+      "READY_FOR_NATIVE_IMPORT": 5,
       "UNSUPPORTED_METHOD": 11
     },
-    "active_ready_tabs": ["P-GOOGL", "W-TOST"],
+    "active_ready_tabs": ["P-ASML", "P-GOOGL", "P-ISRG", "P-MA", "W-TOST"],
     "identity_unresolved_tabs": ["P-MELI-SOTP", "P-SPGI-CIQ"],
     "lifecycle_unresolved_tabs": [
       "P-MELI-SOTP",
@@ -95,15 +95,15 @@
     "Methodology family is a first-pass classification from the model-tab title and selected explicit workbook labels, not formula parity acceptance.",
     "The source's PASS/NOT MAPPED labels concern normalized outputs; they do not establish safe assumption import.",
     "P-/W- prefixes are naming hints only. Lifecycle is derived from the Universe Registry rules and cached membership inputs.",
-    "Only P-GOOGL, W-TOST, and W-HDFC have tab-specific native input/output parity fixtures. Dropped W-HDFC remains outside active migration priority.",
+    "P-GOOGL, P-ASML, P-ISRG, P-MA, W-TOST, and W-HDFC have tab-specific native input/output parity fixtures. Dropped W-HDFC remains outside active migration priority.",
     "No tab is classified NOT_RELEVANT; dropped/archived tabs are marked LEGACY_ONLY and retained as evidence."
   ],
   "recommended_batches": [
     {
       "batch_id": "B0_PARITY_BACKED_ACTIVE_IMPORT",
       "sequence": 0,
-      "model_tabs": ["P-GOOGL", "W-TOST"],
-      "objective": "Import only the two active tabs with existing tab-specific native parity fixtures.",
+      "model_tabs": ["P-ASML", "P-GOOGL", "P-ISRG", "P-MA", "W-TOST"],
+      "objective": "Import active tabs with reviewed tab-specific native parity fixtures.",
       "entry_gates": [
         "Preserve source workbook hash and import provenance.",
         "Set effective time to the explicit application acceptance time; retain the original source effective date as unknown.",
@@ -150,12 +150,9 @@
         "P-ADYEN",
         "P-AMD",
         "P-AMZN",
-        "P-ASML",
         "P-BKNG",
         "P-CELH",
         "P-HIMS",
-        "P-ISRG",
-        "P-MA",
         "P-MELI",
         "P-MSCI",
         "P-MSFT"
@@ -468,8 +465,8 @@
       "methodology_variant": null,
       "methodology_evidence": "Model-tab title; not a full formula audit.",
       "assessment_notes": null,
-      "native_method_support": "NATIVE_FAMILY_EXISTS_TAB_PARITY_REQUIRED",
-      "assumption_mapping_status": "NOT_YET_VERIFIED_FOR_THIS_TAB",
+      "native_method_support": "PARITY_PROVEN_FOR_TAB",
+      "assumption_mapping_status": "VERIFIED_BY_REPRESENTATIVE_PARITY_FIXTURE",
       "source_contract_status_raw": "PASS",
       "source_contract_status": "PASS",
       "current_output_status": "PUBLISHED",
@@ -492,9 +489,9 @@
       "currency_evidence": "P-ASML!A15 label and adjacent ISO code",
       "currency_evidence_type": "CONTRACT_CURRENCY_LABEL",
       "contract_currency_status": "DOCUMENTED",
-      "migration_status": "NEEDS_MAPPING",
-      "recommended_batch": "B1_PORTFOLIO_DCF_COHORT",
-      "blockers": ["TAB_SPECIFIC_ASSUMPTION_MAPPING_AND_PARITY_NOT_PROVEN"]
+      "migration_status": "READY_FOR_NATIVE_IMPORT",
+      "recommended_batch": "B0_PARITY_BACKED_ACTIVE_IMPORT",
+      "blockers": ["SOURCE_EFFECTIVE_DATE_UNKNOWN"]
     },
     {
       "model_tab": "P-BKNG",
@@ -726,8 +723,8 @@
       "methodology_variant": null,
       "methodology_evidence": "Model-tab title; not a full formula audit.",
       "assessment_notes": null,
-      "native_method_support": "NATIVE_FAMILY_EXISTS_TAB_PARITY_REQUIRED",
-      "assumption_mapping_status": "NOT_YET_VERIFIED_FOR_THIS_TAB",
+      "native_method_support": "PARITY_PROVEN_FOR_TAB",
+      "assumption_mapping_status": "VERIFIED_BY_REPRESENTATIVE_PARITY_FIXTURE",
       "source_contract_status_raw": "PASS",
       "source_contract_status": "PASS",
       "current_output_status": "PUBLISHED",
@@ -750,9 +747,9 @@
       "currency_evidence": "P-ISRG!A15 label and adjacent ISO code",
       "currency_evidence_type": "CONTRACT_CURRENCY_LABEL",
       "contract_currency_status": "DOCUMENTED",
-      "migration_status": "NEEDS_MAPPING",
-      "recommended_batch": "B1_PORTFOLIO_DCF_COHORT",
-      "blockers": ["TAB_SPECIFIC_ASSUMPTION_MAPPING_AND_PARITY_NOT_PROVEN"]
+      "migration_status": "READY_FOR_NATIVE_IMPORT",
+      "recommended_batch": "B0_PARITY_BACKED_ACTIVE_IMPORT",
+      "blockers": ["SOURCE_EFFECTIVE_DATE_UNKNOWN"]
     },
     {
       "model_tab": "P-MA",
@@ -769,8 +766,8 @@
       "methodology_variant": null,
       "methodology_evidence": "Model-tab title; not a full formula audit.",
       "assessment_notes": null,
-      "native_method_support": "NATIVE_FAMILY_EXISTS_TAB_PARITY_REQUIRED",
-      "assumption_mapping_status": "NOT_YET_VERIFIED_FOR_THIS_TAB",
+      "native_method_support": "PARITY_PROVEN_FOR_TAB",
+      "assumption_mapping_status": "VERIFIED_BY_REPRESENTATIVE_PARITY_FIXTURE",
       "source_contract_status_raw": "PASS",
       "source_contract_status": "PASS",
       "current_output_status": "PUBLISHED",
@@ -793,9 +790,9 @@
       "currency_evidence": "P-MA!A15 label and adjacent ISO code",
       "currency_evidence_type": "CONTRACT_CURRENCY_LABEL",
       "contract_currency_status": "DOCUMENTED",
-      "migration_status": "NEEDS_MAPPING",
-      "recommended_batch": "B1_PORTFOLIO_DCF_COHORT",
-      "blockers": ["TAB_SPECIFIC_ASSUMPTION_MAPPING_AND_PARITY_NOT_PROVEN"]
+      "migration_status": "READY_FOR_NATIVE_IMPORT",
+      "recommended_batch": "B0_PARITY_BACKED_ACTIVE_IMPORT",
+      "blockers": ["SOURCE_EFFECTIVE_DATE_UNKNOWN"]
     },
     {
       "model_tab": "P-MELI",

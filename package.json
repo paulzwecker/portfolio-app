@@ -22,6 +22,7 @@
     "db:check": "node scripts/uv.mjs run --locked --project apps/api alembic -c apps/api/alembic.ini check",
     "db:seed": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.domain.seed",
     "db:import-workbook": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.legacy_import",
+    "db:import-research-priority": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.research_priority_import",
     "db:import-model-outputs": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_outputs",
     "db:import-native-models": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_input_migration",
     "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",

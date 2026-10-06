@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Layers2, PanelLeft } from "lucide-react";
+import { Activity, BookOpen, Layers2, PanelLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ export function Navigation() {
   const items = [
     { href: "/", label: "Workspace", icon: PanelLeft },
     { href: "/portfolio", label: "Portfolio", icon: Layers2 },
+    { href: "/attention", label: "Attention", icon: Activity },
     { href: "/universe", label: "Universe", icon: BookOpen },
   ];
   return (

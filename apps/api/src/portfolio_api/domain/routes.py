@@ -1,7 +1,7 @@
 """Domain-oriented REST operations; session dependency commits each operation atomically."""
 
 from collections.abc import Iterator
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time
 from typing import Annotated, cast
 from uuid import UUID
 
@@ -11,6 +11,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from portfolio_api.attention import attention_feed
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services as operations
@@ -22,9 +23,12 @@ from portfolio_api.domain.models import (
     ScoreDimension,
     SourceDocumentType,
 )
+from portfolio_api.execution_pace import create_execution_pace_run
+from portfolio_api.expected_return_attribution import company_expected_return_attribution
 from portfolio_api.model_migration_status import company_model_migration_status
 from portfolio_api.reported_fundamentals import METRIC_DEFINITIONS
 from portfolio_api.source_documents import create_company_source_document
+from portfolio_api.temporal_alignment import company_temporal_alignment
 
 router = APIRouter(prefix="/v1", tags=["Portfolio research"])
 
@@ -51,6 +55,34 @@ def session_for(request: Request) -> Iterator[Session]:
 
 
 Db = Annotated[Session, Depends(session_for, scope="function")]
+
+
+@router.get("/attention", response_model=s.AttentionFeedRead)
+def get_attention_feed(
+    db: Db,
+    company_id: UUID | None = None,
+    event_type: Annotated[
+        str | None,
+        Query(
+            pattern="^(MODEL_REVISION|MODEL_OUTPUT_IMPORT|EXPECTED_IRR_CHANGE|CONSENSUS_REVISION|NEW_FILING|PRICE_MOVE|RANK_CHANGE|EXECUTION_PACE_CHANGE|DATA_QUALITY)$"
+        ),
+    ] = None,
+    lifecycle: Lifecycle | None = None,
+    severity: Annotated[str | None, Query(pattern="^(HIGH|MEDIUM|LOW)$")] = None,
+    status: Annotated[str | None, Query(pattern="^(REVIEW|INFORMATIONAL)$")] = None,
+    lookback_days: Annotated[int, Query(ge=1, le=365)] = 30,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> s.AttentionFeedRead:
+    return attention_feed(
+        db,
+        company_id=company_id,
+        event_type=event_type,
+        lifecycle=lifecycle,
+        severity=severity,
+        status=status,
+        lookback_days=lookback_days,
+        limit=limit,
+    )
 
 
 def _validate_market_cutoffs(as_of: date | datetime | None, known_at: datetime | None) -> None:
@@ -86,6 +118,18 @@ def get_universe_ranking_summary(
     return q.universe_ranking_summary(db, lifecycle, search)
 
 
+@router.get(
+    "/universe/execution-pace-summary",
+    response_model=list[s.UniverseExecutionPaceSummary],
+)
+def get_universe_execution_pace_summary(
+    db: Db,
+    lifecycle: Lifecycle | None = None,
+    search: Annotated[str | None, Query(max_length=200)] = None,
+) -> list[s.UniverseExecutionPaceSummary]:
+    return q.universe_execution_pace_summary(db, lifecycle, search)
+
+
 @router.get("/universe/market-summary", response_model=list[s.UniverseMarketSummary])
 def get_universe_market_summary(
     db: Db,
@@ -96,6 +140,21 @@ def get_universe_market_summary(
 ) -> list[s.UniverseMarketSummary]:
     _validate_market_cutoffs(as_of, known_at)
     return q.universe_market_summary(db, lifecycle, search, as_of, known_at)
+
+
+@router.get(
+    "/universe/estimate-momentum-summary",
+    response_model=list[s.UniverseEstimateMomentumRead],
+)
+def get_universe_estimate_momentum_summary(
+    db: Db,
+    lifecycle: Lifecycle | None = None,
+    search: Annotated[str | None, Query(max_length=200)] = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> list[s.UniverseEstimateMomentumRead]:
+    _validate_market_cutoffs(as_of, known_at)
+    return q.universe_estimate_momentum(db, lifecycle, search, as_of, known_at)
 
 
 @router.get("/universe/model-output-summary", response_model=list[s.UniverseModelOutputSummary])
@@ -135,6 +194,37 @@ def post_ranking_run(value: s.RankingRunCreate, db: Db) -> s.RankingRunRead:
 @router.get("/ranking-runs/{run_id}", response_model=s.RankingRunDetailRead)
 def get_ranking_run(run_id: UUID, db: Db) -> s.RankingRunDetailRead:
     return q.ranking_run_detail(db, run_id)
+
+
+@router.get("/execution-pace-runs", response_model=list[s.ExecutionPaceRunRead])
+def get_execution_pace_runs(db: Db) -> list[s.ExecutionPaceRunRead]:
+    return q.execution_pace_runs(db)
+
+
+@router.post(
+    "/execution-pace-runs",
+    response_model=s.ExecutionPaceRunRead,
+    status_code=201,
+)
+def post_execution_pace_run(value: s.ExecutionPaceRunCreate, db: Db) -> s.ExecutionPaceRunRead:
+    try:
+        run = create_execution_pace_run(db, value)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from None
+    return q.execution_pace_run_read(db, run)
+
+
+@router.get("/execution-pace-runs/{run_id}", response_model=s.ExecutionPaceRunDetailRead)
+def get_execution_pace_run(run_id: UUID, db: Db) -> s.ExecutionPaceRunDetailRead:
+    return q.execution_pace_run_detail(db, run_id)
+
+
+@router.get(
+    "/companies/{company_id}/execution-pace",
+    response_model=s.CompanyExecutionPaceRead,
+)
+def get_company_execution_pace(company_id: UUID, db: Db) -> s.CompanyExecutionPaceRead:
+    return q.company_execution_pace(db, company_id)
 
 
 @router.get("/companies/{company_id}/rankings", response_model=s.CompanyRankingsRead)
@@ -278,6 +368,50 @@ def get_company_consensus_estimates(
 
 
 @router.get(
+    "/companies/{company_id}/estimate-momentum",
+    response_model=s.CompanyEstimateMomentumRead,
+)
+def get_company_estimate_momentum(
+    company_id: UUID,
+    db: Db,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyEstimateMomentumRead:
+    _validate_market_cutoffs(as_of, known_at)
+    return q.company_estimate_momentum(db, company_id, as_of, known_at)
+
+
+@router.get(
+    "/companies/{company_id}/temporal-alignment",
+    response_model=s.CompanyTemporalAlignmentRead,
+)
+def get_company_temporal_alignment(
+    company_id: UUID,
+    db: Db,
+    fiscal_year: Annotated[int, Query(ge=1800, le=2200)],
+    as_of: date,
+    known_at: datetime | None = None,
+    outcome_known_at: datetime | None = None,
+    horizon_days: Annotated[int, Query(ge=1, le=3650)] = 365,
+) -> s.CompanyTemporalAlignmentRead:
+    for name, value in (("known_at", known_at), ("outcome_known_at", outcome_known_at)):
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise HTTPException(422, f"{name} must include a timezone offset")
+    forecast_cutoff = datetime.combine(as_of, time.max, UTC)
+    if known_at is not None and known_at.astimezone(UTC) > forecast_cutoff:
+        raise HTTPException(422, "known_at cannot be later than the as_of cutoff")
+    return company_temporal_alignment(
+        db,
+        company_id,
+        fiscal_year=fiscal_year,
+        as_of=as_of,
+        known_at=known_at,
+        outcome_known_at=outcome_known_at,
+        horizon_days=horizon_days,
+    )
+
+
+@router.get(
     "/companies/{company_id}/model-outputs/current",
     response_model=s.CompanyModelOutputsCurrentRead,
 )
@@ -295,6 +429,38 @@ def get_model_output_history(
     model_key: Annotated[str | None, Query(max_length=120)] = None,
 ) -> list[s.ModelOutputSnapshotRead]:
     return q.company_model_outputs_history(db, company_id, model_key)
+
+
+@router.get(
+    "/companies/{company_id}/expected-return-history",
+    response_model=s.CompanyExpectedReturnHistoryRead,
+)
+def get_company_expected_return_history(
+    company_id: UUID,
+    db: Db,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyExpectedReturnHistoryRead:
+    _validate_market_cutoffs(as_of, known_at)
+    return q.company_expected_return_history(db, company_id, as_of, known_at)
+
+
+@router.get(
+    "/companies/{company_id}/expected-return-attribution",
+    response_model=s.CompanyExpectedReturnAttributionRead,
+)
+def get_company_expected_return_attribution(
+    company_id: UUID,
+    db: Db,
+    prior_point_id: Annotated[str, Query(min_length=1, max_length=100)],
+    current_point_id: Annotated[str, Query(min_length=1, max_length=100)],
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyExpectedReturnAttributionRead:
+    _validate_market_cutoffs(as_of, known_at)
+    return company_expected_return_attribution(
+        db, company_id, prior_point_id, current_point_id, as_of, known_at
+    )
 
 
 @router.get(

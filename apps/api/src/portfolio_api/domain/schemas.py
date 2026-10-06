@@ -19,6 +19,9 @@ from pydantic import (
 from portfolio_api.domain.models import (
     Actor,
     DcfScenario,
+    ExecutionPace,
+    ExecutionPaceDecisionStatus,
+    ExecutionPaceRunStatus,
     FinancialModelType,
     FundamentalDataQuality,
     FundamentalMetric,
@@ -348,6 +351,246 @@ class CompanyModelOutputsCurrentRead(Contract):
     models: list[ModelOutputCurrentModelRead]
 
 
+class ExpectedReturnEstimateRead(Contract):
+    observation_id: UUID
+    metric: Literal["REVENUE", "EPS"]
+    period_type: Literal["ANNUAL", "QUARTERLY"]
+    forecast_period: str
+    period_end: date | None
+    value: FixedDecimal
+    currency: Currency | None
+    unit: str
+    analyst_count: int | None
+    snapshot_date: date
+    observed_at: datetime | None
+    recorded_at: datetime
+    provider_id: str
+    source_ref: str
+    data_quality: Literal["PASS", "DATA_CHECK", "INVALID"]
+    quality_reason: str | None
+
+
+class ExpectedReturnEstimateContextRead(Contract):
+    status: Literal["AVAILABLE", "NO_MAPPING", "AMBIGUOUS_SOURCE", "NO_OBSERVATIONS", "UNDATED"]
+    provider_id: str | None
+    periods: list[ExpectedReturnEstimateRead]
+
+
+class ExpectedReturnMarketPriceRead(Contract):
+    status: Literal[
+        "AVAILABLE",
+        "STALE",
+        "DATA_CHECK",
+        "NO_DATA",
+        "CURRENCY_MISMATCH",
+        "CURRENCY_UNKNOWN",
+        "LISTING_UNMAPPED",
+        "PRICE_NOT_CAPTURED",
+        "UNDATED",
+    ]
+    listing_id: UUID | None
+    ticker: str | None
+    venue: str | None
+    listing_currency: Currency | None
+    quote: FixedDecimal | None
+    quote_currency: Currency | None
+    model_reference_price: FixedDecimal | None
+    model_currency: Currency | None
+    effective_at: datetime | None
+    observed_at: datetime | None
+    recorded_at: datetime | None
+    provider: str | None
+    adjustment_basis: str | None
+    observation_id: UUID | None
+    source_ref: str | None
+    reason: str | None
+
+
+class ExpectedReturnHistoryPointRead(Contract):
+    point_id: str
+    source_kind: Literal[
+        "IMPORTED_CURRENT_CONTRACT", "IMPORTED_LEGACY_REVISION", "NATIVE_MODEL_REVISION"
+    ]
+    event_status: Literal["DATED", "EFFECTIVE_DATE_UNKNOWN"]
+    effective_at: datetime | None
+    recorded_at: datetime
+    series_id: str
+    model_key: str | None
+    model_id: UUID | None
+    revision_id: UUID | None
+    revision_number: int | None
+    model_type: (
+        Literal["UFCF_DCF_10Y_FADE", "OWNER_CASH_FLOW_10Y", "RESIDUAL_INCOME_10Y_FADE"] | None
+    )
+    methodology_version: str | None
+    model_label: str
+    model_currency: Currency | None
+    currency_status: Literal["DOCUMENTED", "UNKNOWN"]
+    valuation_listing_id: UUID | None
+    valuation_ticker: str | None
+    valuation_venue: str | None
+    valuation_listing_currency: Currency | None
+    is_current_at_cutoff: bool
+    output_status: str | None
+    output_quality: str | None
+    contract_status: str | None
+    return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"]
+    actor: str
+    source_actor: str | None
+    revision_source: str | None
+    revision_type: str | None
+    bear_fv: FixedDecimal | None
+    base_fv: FixedDecimal | None
+    bull_fv: FixedDecimal | None
+    bear_probability: FixedDecimal | None
+    base_probability: FixedDecimal | None
+    bull_probability: FixedDecimal | None
+    weighted_fv: FixedDecimal | None
+    weighted_upside: FixedDecimal | None
+    expected_cash_flow_irr: FixedDecimal | None
+    hurdle: FixedDecimal | None
+    expected_excess: FixedDecimal | None
+    forward_fundamental_cagr: FixedDecimal | None
+    market_price: ExpectedReturnMarketPriceRead
+    estimate_context: ExpectedReturnEstimateContextRead
+    source: str | None
+    source_revision_id: str | None
+    rationale: str | None
+    evidence: str | None
+
+
+class CompanyExpectedReturnHistoryRead(Contract):
+    company_id: UUID
+    as_of: date
+    known_at: datetime
+    status: Literal["AVAILABLE", "PARTIAL", "NO_HISTORY"]
+    history: list[ExpectedReturnHistoryPointRead]
+
+
+class ExpectedReturnAttributionStateRead(Contract):
+    """A source-linked endpoint state used by a derived return comparison."""
+
+    point_id: str
+    source_kind: Literal[
+        "IMPORTED_CURRENT_CONTRACT", "IMPORTED_LEGACY_REVISION", "NATIVE_MODEL_REVISION"
+    ]
+    effective_at: datetime | None
+    recorded_at: datetime
+    series_id: str
+    model_id: UUID | None
+    revision_id: UUID | None
+    revision_number: int | None
+    model_type: (
+        Literal["UFCF_DCF_10Y_FADE", "OWNER_CASH_FLOW_10Y", "RESIDUAL_INCOME_10Y_FADE"] | None
+    )
+    methodology_version: str | None
+    return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"]
+    model_currency: Currency | None
+    expected_cash_flow_irr: FixedDecimal | None
+    hurdle: FixedDecimal | None
+    expected_excess: FixedDecimal | None
+    bear_fv: FixedDecimal | None
+    base_fv: FixedDecimal | None
+    bull_fv: FixedDecimal | None
+    bear_probability: FixedDecimal | None
+    base_probability: FixedDecimal | None
+    bull_probability: FixedDecimal | None
+    weighted_fv: FixedDecimal | None
+    market_price: ExpectedReturnMarketPriceRead
+    estimate_context: ExpectedReturnEstimateContextRead
+    source: str | None
+    source_revision_id: str | None
+    rationale: str | None
+
+
+class ExpectedReturnAttributionDriverRead(Contract):
+    code: Literal[
+        "MARKET_PRICE",
+        "MODEL_ASSUMPTIONS",
+        "REQUIRED_RETURN_ASSUMPTIONS",
+        "SCENARIO_PROBABILITIES",
+    ]
+    label: str
+    effect: FixedDecimal
+    explanation: str
+
+
+class ExpectedReturnAttributionContextChangesRead(Contract):
+    weighted_fv: FixedDecimal | None
+    bear_fv: FixedDecimal | None
+    base_fv: FixedDecimal | None
+    bull_fv: FixedDecimal | None
+    bear_probability: FixedDecimal | None
+    base_probability: FixedDecimal | None
+    bull_probability: FixedDecimal | None
+    hurdle: FixedDecimal | None
+    expected_excess: FixedDecimal | None
+
+
+class CompanyExpectedReturnAttributionRead(Contract):
+    company_id: UUID
+    status: Literal[
+        "ATTRIBUTED",
+        "OUTPUTS_ONLY",
+        "MISSING_RETURN",
+        "RETURN_SEMANTICS_CHANGE",
+        "MODEL_SERIES_CHANGE",
+        "METHODOLOGY_CHANGE",
+        "INPUTS_UNAVAILABLE",
+        "RECALCULATION_MISMATCH",
+        "UNDATED",
+    ]
+    method: Literal[
+        "SYMMETRIC_COUNTERFACTUAL_SHAPLEY",
+        "UNAVAILABLE",
+    ]
+    prior: ExpectedReturnAttributionStateRead
+    current: ExpectedReturnAttributionStateRead
+    expected_irr_change: FixedDecimal | None
+    drivers: list[ExpectedReturnAttributionDriverRead]
+    residual: FixedDecimal | None
+    residual_reason: str | None
+    context_changes: ExpectedReturnAttributionContextChangesRead
+    estimate_context_note: str
+
+    @model_validator(mode="after")
+    def preserve_unavailable_and_residual_semantics(self) -> Self:
+        if self.status in {"MISSING_RETURN", "RETURN_SEMANTICS_CHANGE", "UNDATED"} and (
+            self.expected_irr_change is not None or self.residual is not None or self.drivers
+        ):
+            raise ValueError("Unavailable comparisons cannot contain numeric effects")
+        if self.status == "ATTRIBUTED":
+            if (
+                self.method != "SYMMETRIC_COUNTERFACTUAL_SHAPLEY"
+                or self.expected_irr_change is None
+                or self.residual is None
+                or {item.code for item in self.drivers}
+                != {
+                    "MARKET_PRICE",
+                    "SCENARIO_PROBABILITIES",
+                    "REQUIRED_RETURN_ASSUMPTIONS",
+                    "MODEL_ASSUMPTIONS",
+                }
+            ):
+                raise ValueError("An attributed comparison requires all supported effects")
+            effects = sum((item.effect for item in self.drivers), Decimal(0)) + self.residual
+            if abs(effects - self.expected_irr_change) > Decimal("0.000000000001"):
+                raise ValueError("Attributed effects and residual must reconcile to total change")
+        if self.status in {
+            "OUTPUTS_ONLY",
+            "MODEL_SERIES_CHANGE",
+            "METHODOLOGY_CHANGE",
+            "INPUTS_UNAVAILABLE",
+            "RECALCULATION_MISMATCH",
+        } and (
+            self.expected_irr_change is None
+            or self.residual != self.expected_irr_change
+            or self.drivers
+        ):
+            raise ValueError("Unattributed changes must remain wholly in the residual")
+        return self
+
+
 class CompanyFinancialModelMigrationItemRead(Contract):
     model_key: str
     company_name: str
@@ -620,6 +863,153 @@ class CompanyConsensusEstimatesRead(Contract):
     providers: list[ConsensusEstimateProviderRead]
 
 
+class EstimateMomentumWindowRead(Contract):
+    window: Literal["12M", "6M", "3M"]
+    status: Literal[
+        "AVAILABLE", "MISSING_REFERENCE", "STALE_REFERENCE", "DATA_CHECK", "INVALID_BASELINE"
+    ]
+    reference_value: FixedDecimal | None
+    reference_snapshot_date: date | None
+    reference_days_before_target: int | None
+    revision_fraction: FixedDecimal | None
+    component_score: FixedDecimal | None
+    reason: str | None
+
+
+class EstimateMomentumPeriodRead(Contract):
+    metric: Literal["REVENUE", "EPS"]
+    horizon: Literal["FY+1", "FY+2"]
+    forecast_period: str
+    period_end: date
+    currency: Currency | None
+    unit: str
+    analyst_count: int | None
+    current_value: FixedDecimal | None
+    current_snapshot_date: date | None
+    data_quality: Literal["PASS", "DATA_CHECK", "INVALID"]
+    quality_reason: str | None
+    windows: list[EstimateMomentumWindowRead]
+
+
+class EstimateMomentumSummaryRead(Contract):
+    company_id: UUID
+    methodology_version: str
+    availability: Literal[
+        "AVAILABLE", "DIRECTION_ONLY", "INSUFFICIENT_HISTORY", "NO_MAPPING", "AMBIGUOUS_SOURCE"
+    ]
+    direction: (
+        Literal["POSITIVE", "MILD_POSITIVE", "NEUTRAL_MIXED", "MILD_NEGATIVE", "NEGATIVE"] | None
+    )
+    raw_score: FixedDecimal | None
+    confidence_adjusted_score: FixedDecimal | None
+    confidence: FixedDecimal
+    confidence_band: Literal["HIGH", "MEDIUM", "LOW", "COLLECTING", "NO_DATA"]
+    coverage_fraction: FixedDecimal
+    coverage_count: int
+    coverage_total: int
+    freshness: Literal["FRESH", "STALE", "DATA_CHECK", "NO_DATA"]
+    data_quality: Literal["PASS", "DATA_CHECK", "INVALID", "NO_DATA"]
+    provider_id: str | None
+    latest_snapshot_date: date | None
+    as_of: date
+    known_at: datetime | None
+    reason: str | None
+
+
+class CompanyEstimateMomentumRead(EstimateMomentumSummaryRead):
+    periods: list[EstimateMomentumPeriodRead]
+
+
+class UniverseEstimateMomentumRead(Contract):
+    company: CompanyRead
+    estimate_momentum: EstimateMomentumSummaryRead
+
+
+class TemporalAlignedValueRead(Contract):
+    status: str
+    value: FixedDecimal | None
+    currency: Currency | None
+    unit: str | None
+    source_name: str | None
+    source_reference: str | None
+    source_observation_id: UUID | None
+    period_end: date | None
+    effective_at: datetime | None
+    observed_at: datetime | None
+    recorded_at: datetime | None
+    data_quality: str | None
+    quality_reason: str | None
+    low_value: FixedDecimal | None = None
+    high_value: FixedDecimal | None = None
+    analyst_count: int | None = None
+
+
+class TemporalPriceRead(Contract):
+    status: str
+    listing: ListingRead | None
+    market_date: datetime | None
+    close: FixedDecimal | None
+    total_return_close: FixedDecimal | None
+    currency: Currency | None
+    provider: str | None
+    observed_at: datetime | None
+    recorded_at: datetime | None
+    data_quality: str | None
+    age_days: int | None
+    reason: str | None
+
+
+class TemporalReturnRead(Contract):
+    status: str
+    horizon_days: int
+    target_date: date
+    start_market_date: datetime | None
+    end_market_date: datetime | None
+    start_total_return_close: FixedDecimal | None
+    end_total_return_close: FixedDecimal | None
+    return_fraction: FixedDecimal | None
+    actual_days: int | None
+    basis: str
+    reason: str | None
+
+
+class TemporalModelForecastRead(Contract):
+    model_id: UUID
+    model_name: str
+    model_type: FinancialModelType
+    model_currency: Currency
+    valuation_listing: ListingRead
+    status: str
+    forecast_year: int | None
+    fiscal_year_mapping_basis: str
+    value: FixedDecimal | None
+    unit: str
+    revision_id: UUID | None
+    revision_number: int | None
+    methodology_version: str | None
+    revision_source: str | None
+    rationale: str | None
+    effective_at: datetime | None
+    recorded_at: datetime | None
+    price_at_forecast: TemporalPriceRead
+    subsequent_market_return: TemporalReturnRead
+
+
+class CompanyTemporalAlignmentRead(Contract):
+    company_id: UUID
+    metric: Literal["REVENUE"]
+    fiscal_year: int
+    as_of: date
+    forecast_known_at: datetime
+    outcome_known_at: datetime
+    horizon_days: int
+    fiscal_year_mapping_basis: str
+    comparison_status: str
+    model_forecasts: list[TemporalModelForecastRead]
+    consensus: TemporalAlignedValueRead
+    actual: TemporalAlignedValueRead
+
+
 class SourceDocumentCreate(Contract):
     """Register an issuer-published source reference without uploading its content."""
 
@@ -860,6 +1250,164 @@ class RankingRunRead(Contract):
     ranked_count: int
 
 
+class WatchlistRankScoreSnapshot(Contract):
+    score: ScoreValue | None
+    status: Literal["ASSESSED", "MISSING", "UNAVAILABLE", "INVALID", "NOT_ASSESSED"]
+    assessment_id: UUID | None
+    effective_at: datetime | None
+    recorded_at: datetime | None
+    rationale: str | None
+    source: str | None
+
+
+class WatchlistRankReturnSource(Contract):
+    source_kind: Literal["NATIVE_MODEL_REVISION", "IMPORTED_CURRENT_CONTRACT"]
+    record_id: UUID
+    model_id: UUID | None
+    revision_id: UUID | None
+    revision_number: int | None
+    model_key: str | None
+    model_type: str | None
+    methodology_version: str | None
+    contract_version: str | None
+    source_revision_id: str | None
+    source: str | None
+    effective_at: datetime | None
+    recorded_at: datetime
+    effective_time_status: Literal["KNOWN", "UNKNOWN"]
+    model_currency: Currency | None
+    currency_status: Literal["DOCUMENTED", "UNKNOWN"]
+    output_quality: Literal["COMPLETE", "PARTIAL", "DATA_CHECK", "UNAVAILABLE"]
+    contract_status: (
+        Literal["PASS", "NOT_MAPPED", "NO_CONTRACT", "DATA_CHECK", "HISTORICAL_ONLY"] | None
+    )
+    price_status: (
+        Literal[
+            "FRESH", "STALE", "QUALITY_CHECK", "NO_DATA", "CURRENCY_MISMATCH", "CURRENCY_UNKNOWN"
+        ]
+        | None
+    )
+    price_effective_at: datetime | None
+    price_observation_id: UUID | None
+    listing_id: UUID | None
+    listing_ticker: str | None
+    listing_venue: str | None
+    migration_status: Literal["PARITY_PASS", "PARTIAL_MAPPING", "DATA_CHECK", "BLOCKED"] | None
+
+
+class WatchlistRankInputSnapshot(Contract):
+    context_version: Literal["watchlist-rank-inputs-v1"]
+    expected_irr: FixedDecimal | None
+    return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"]
+    return_source: WatchlistRankReturnSource
+    durability_10y: WatchlistRankScoreSnapshot
+    compounder_quality: WatchlistRankScoreSnapshot
+    forward_fundamental_cagr: FixedDecimal | None
+    weighted_fair_value: FixedDecimal | None
+    hurdle: FixedDecimal | None
+    expected_excess: FixedDecimal | None
+    decision_context: Literal["QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED"]
+    context_note: str
+
+
+class PortfolioRankScoreSnapshot(Contract):
+    score: ScoreValue | None
+    status: Literal["ASSESSED", "MISSING", "UNAVAILABLE", "INVALID", "NOT_ASSESSED"]
+    assessment_id: UUID | None
+    effective_at: datetime | None
+    recorded_at: datetime | None
+    source: str | None
+
+
+class PortfolioRankModelSource(Contract):
+    source_kind: Literal["NATIVE_MODEL_REVISION", "IMPORTED_CURRENT_CONTRACT"]
+    record_id: UUID
+    model_id: UUID | None
+    revision_id: UUID | None
+    revision_number: int | None
+    model_key: str
+    model_type: str | None
+    methodology_version: str | None
+    source: str | None
+    effective_at: datetime | None
+    recorded_at: datetime
+    effective_time_status: Literal["KNOWN", "UNKNOWN"]
+    model_currency: Currency | None
+    currency_status: Literal["DOCUMENTED", "UNKNOWN"]
+    output_quality: Literal["COMPLETE", "PARTIAL", "DATA_CHECK", "UNAVAILABLE"]
+    contract_status: (
+        Literal["PASS", "NOT_MAPPED", "NO_CONTRACT", "DATA_CHECK", "HISTORICAL_ONLY"] | None
+    )
+    price_status: (
+        Literal[
+            "FRESH", "STALE", "QUALITY_CHECK", "NO_DATA", "CURRENCY_MISMATCH", "CURRENCY_UNKNOWN"
+        ]
+        | None
+    )
+    price_effective_at: datetime | None
+    price_observation_id: UUID | None
+    listing_id: UUID | None
+    listing_ticker: str | None
+    listing_venue: str | None
+
+
+class PortfolioRankScoreContributions(Contract):
+    target_underweight: FixedDecimal | None
+    expected_irr: FixedDecimal | None
+    durability_10y: FixedDecimal | None
+    compounder_quality: FixedDecimal | None
+    execution: FixedDecimal | None
+    risk: FixedDecimal | None
+    valuation_uncertainty_penalty: FixedDecimal | None
+    negative_expected_excess_penalty: FixedDecimal | None
+
+
+class PortfolioRankInputSnapshot(Contract):
+    context_version: Literal["portfolio-rank-inputs-v1"]
+    score_formula: Literal["LEGACY_IRR_FIRST_ALLOCATION_V1"]
+    portfolio_score: FixedDecimal | None
+    current_weight: FixedDecimal | None
+    target_weight: FixedDecimal | None
+    target_minus_current_gap: FixedDecimal | None
+    lifecycle: Lifecycle | None
+    allocation_status: Literal[
+        "VALUED", "PRICE_COVERAGE_INCOMPLETE", "FX_UNAVAILABLE", "PORTFOLIO_TOTAL_UNAVAILABLE"
+    ]
+    holding_snapshot_id: UUID | None
+    holding_effective_at: datetime | None
+    target_revision_id: UUID | None
+    target_effective_at: datetime | None
+    expected_irr: FixedDecimal | None
+    expected_excess: FixedDecimal | None
+    hurdle: FixedDecimal | None
+    bear_fair_value: FixedDecimal | None
+    weighted_fair_value: FixedDecimal | None
+    bull_fair_value: FixedDecimal | None
+    valuation_uncertainty: FixedDecimal | None
+    durability_10y: PortfolioRankScoreSnapshot
+    compounder_quality: PortfolioRankScoreSnapshot
+    execution: PortfolioRankScoreSnapshot
+    risk: PortfolioRankScoreSnapshot
+    model_source: PortfolioRankModelSource | None
+    score_contributions: PortfolioRankScoreContributions
+    context_note: str
+
+
+class ResearchRankInputSnapshot(Contract):
+    context_version: Literal["research-rank-inputs-v1"]
+    lifecycle: Lifecycle | None
+    candidate_tier: Literal["HIGH", "LOW"] | None
+    priority_seed: FixedDecimal | None
+    legacy_default_priority_seed: FixedDecimal | None
+    used_legacy_default: bool
+    sort_key: FixedDecimal | None
+    input_quality: Literal["AVAILABLE", "MISSING", "DATA_CHECK"]
+    source_digest: str | None
+    bucket_source_ref: str | None
+    priority_seed_source_ref: str | None
+    context_note: str
+
+
 class RankingEntryRead(Contract):
     id: UUID
     run_id: UUID
@@ -867,6 +1415,9 @@ class RankingEntryRead(Contract):
     position: int | None
     status: RankingEntryStatus
     reason: str
+    input_snapshot: (
+        WatchlistRankInputSnapshot | PortfolioRankInputSnapshot | ResearchRankInputSnapshot | None
+    ) = None
 
 
 class RankingCurrentRead(Contract):
@@ -898,6 +1449,195 @@ class RankingRunDetailRead(Contract):
 class UniverseRankingSummary(Contract):
     company: CompanyRead
     rankings: list[RankingCurrentRead]
+
+
+class ExecutionPaceRunCreate(Contract):
+    actor: Actor
+    reason: Annotated[str, Field(min_length=1, max_length=1000)]
+    source: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
+    as_of: datetime | None = None
+
+    @field_validator("as_of")
+    @classmethod
+    def validate_as_of(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("as_of must include a timezone offset")
+        value = value.astimezone(UTC)
+        if value > datetime.now(UTC):
+            raise ValueError("Future-effective execution assessments are not supported")
+        return value
+
+
+class ExecutionPaceInputSnapshot(Contract):
+    context_version: Literal["execution-pace-inputs-v1"]
+    lifecycle: Lifecycle | None
+    target_revision_id: UUID | None
+    target_effective_at: datetime | None
+    holding_snapshot_id: UUID | None
+    holding_effective_at: datetime | None
+    allocation_status: str | None
+    current_weight: FixedDecimal | None
+    target_weight: FixedDecimal | None
+    allocation_gap: FixedDecimal | None
+    model_source_kind: Literal["NATIVE_MODEL_REVISION", "IMPORTED_CURRENT_CONTRACT"] | None
+    model_source_id: UUID | None
+    model_revision_id: UUID | None
+    model_output_snapshot_id: UUID | None
+    model_key: str | None
+    return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"] | None
+    model_effective_at: datetime | None
+    model_recorded_at: datetime | None
+    model_currency: Currency | None
+    model_output_quality: str | None
+    model_contract_status: str | None
+    model_review_flag: str | None
+    expected_irr: FixedDecimal | None
+    hurdle: FixedDecimal | None
+    valuation_listing_id: UUID | None
+    valuation_ticker: str | None
+    valuation_venue: str | None
+    valuation_currency: Currency | None
+    price_observation_id: UUID | None
+    price_market_date: datetime | None
+    price_recorded_at: datetime | None
+    price_currency: Currency | None
+    price: FixedDecimal | None
+    price_provider: str | None
+    price_quality: str | None
+    price_freshness: Literal["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"]
+    model_price_status: str | None
+    model_price_effective_at: datetime | None
+    model_price_observation_id: UUID | None
+    model_reference_price: FixedDecimal | None
+    model_price_currency: Currency | None
+    weighted_fair_value: FixedDecimal | None
+    weighted_upside: FixedDecimal | None
+    valuation_zone: Literal["DEEP_DISCOUNT", "DISCOUNT", "NEAR_FAIR", "RICH", "VERY_RICH"] | None
+    valuation_range_ratio: FixedDecimal | None
+    estimate_momentum_availability: (
+        Literal[
+            "AVAILABLE",
+            "DIRECTION_ONLY",
+            "INSUFFICIENT_HISTORY",
+            "NO_MAPPING",
+            "AMBIGUOUS_SOURCE",
+        ]
+        | None
+    )
+    estimate_momentum_direction: (
+        Literal["POSITIVE", "MILD_POSITIVE", "NEUTRAL_MIXED", "MILD_NEGATIVE", "NEGATIVE"] | None
+    )
+    estimate_momentum_freshness: Literal["FRESH", "STALE", "DATA_CHECK", "NO_DATA"] | None
+    estimate_momentum_quality: Literal["PASS", "DATA_CHECK", "INVALID", "NO_DATA"] | None
+    estimate_provider_id: str | None
+    estimate_latest_snapshot_date: date | None
+    estimate_momentum_reason: str | None
+    price_regime_source_ref: str | None
+    price_regime_as_of: datetime | None
+    price_regime_quality: Literal["PASS", "DATA_CHECK", "UNSPECIFIED"] | None
+    price_regime_raw: str | None
+    price_regime: str | None
+    price_regime_freshness: Literal["FRESH", "STALE", "DATA_CHECK", "NO_DATA"]
+    context_notes: list[str]
+
+
+class ExecutionPaceDecisionRead(Contract):
+    id: UUID
+    run_id: UUID
+    company_id: UUID
+    target_revision_id: UUID | None
+    holding_snapshot_id: UUID | None
+    model_revision_id: UUID | None
+    model_output_snapshot_id: UUID | None
+    price_observation_id: UUID | None
+    decision_status: ExecutionPaceDecisionStatus
+    pace: ExecutionPace | None
+    reason: str
+    input_snapshot: ExecutionPaceInputSnapshot
+
+
+class ExecutionPaceRunRead(Contract):
+    id: UUID
+    portfolio_id: UUID
+    as_of: datetime
+    recorded_at: datetime
+    methodology_version: str
+    status: ExecutionPaceRunStatus
+    actor: Actor
+    reason: str
+    source: str | None
+    company_count: int
+    available_count: int
+    review_count: int
+    unavailable_count: int
+    not_applicable_count: int
+
+
+class ExecutionPaceHistoryEntry(Contract):
+    run: ExecutionPaceRunRead
+    decision: ExecutionPaceDecisionRead
+
+
+class CompanyExecutionPaceRead(Contract):
+    company_id: UUID
+    current: ExecutionPaceHistoryEntry | None
+    history: list[ExecutionPaceHistoryEntry]
+
+
+class UniverseExecutionPaceSummary(Contract):
+    company: CompanyRead
+    decision: ExecutionPaceHistoryEntry | None
+
+
+class AttentionEventRead(Contract):
+    id: str
+    company_id: UUID | None
+    company_name: str | None
+    lifecycle: Lifecycle | None
+    event_type: Literal[
+        "MODEL_REVISION",
+        "MODEL_OUTPUT_IMPORT",
+        "EXPECTED_IRR_CHANGE",
+        "CONSENSUS_REVISION",
+        "NEW_FILING",
+        "PRICE_MOVE",
+        "RANK_CHANGE",
+        "EXECUTION_PACE_CHANGE",
+        "DATA_QUALITY",
+    ]
+    severity: Literal["HIGH", "MEDIUM", "LOW"]
+    status: Literal["REVIEW", "INFORMATIONAL"]
+    title: str
+    explanation: str
+    effective_at: datetime | None
+    time_precision: Literal["TIMESTAMP", "DATE", "UNKNOWN"]
+    recorded_at: datetime | None
+    source_domain: str
+    source_id: str | None
+    source_reference: str | None
+    href: str | None
+    prior_value: str | None = None
+    current_value: str | None = None
+    unit: str | None = None
+
+
+class AttentionFeedRead(Contract):
+    as_of: datetime
+    lookback_days: int
+    total: int
+    events: list[AttentionEventRead]
+
+
+class ExecutionPaceRunDecisionRead(Contract):
+    company: CompanyRead
+    decision: ExecutionPaceDecisionRead
+
+
+class ExecutionPaceRunDetailRead(Contract):
+    run: ExecutionPaceRunRead
+    decisions: list[ExecutionPaceRunDecisionRead]
 
 
 class DomainErrorRead(Contract):

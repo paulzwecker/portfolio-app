@@ -20,6 +20,12 @@ export type RankingStatus = components["schemas"]["RankingEntryStatus"];
 export type RankingCurrent = components["schemas"]["RankingCurrentRead"];
 export type RankingDefinition = components["schemas"]["RankingDefinitionRead"];
 export type RankingEntryRead = components["schemas"]["RankingEntryRead"];
+export type WatchlistRankInputSnapshot =
+  components["schemas"]["WatchlistRankInputSnapshot"];
+export type PortfolioRankInputSnapshot =
+  components["schemas"]["PortfolioRankInputSnapshot"];
+export type ResearchRankInputSnapshot =
+  components["schemas"]["ResearchRankInputSnapshot"];
 export type RankingHistoryEntry = components["schemas"]["RankingHistoryEntry"];
 export type RankingRun = components["schemas"]["RankingRunRead"];
 export type CompanyRankings = components["schemas"]["CompanyRankingsRead"];
@@ -27,6 +33,22 @@ export type RankingRunEntry = components["schemas"]["RankingRunEntryRead"];
 export type RankingRunDetail = components["schemas"]["RankingRunDetailRead"];
 export type UniverseRankingSummary =
   components["schemas"]["UniverseRankingSummary"];
+export type ExecutionPace = components["schemas"]["ExecutionPace"];
+export type ExecutionPaceInputSnapshot =
+  components["schemas"]["ExecutionPaceInputSnapshot"];
+export type ExecutionPaceDecision =
+  components["schemas"]["ExecutionPaceDecisionRead"];
+export type ExecutionPaceRun = components["schemas"]["ExecutionPaceRunRead"];
+export type ExecutionPaceRunDetail =
+  components["schemas"]["ExecutionPaceRunDetailRead"];
+export type ExecutionPaceHistoryEntry =
+  components["schemas"]["ExecutionPaceHistoryEntry"];
+export type CompanyExecutionPace =
+  components["schemas"]["CompanyExecutionPaceRead"];
+export type UniverseExecutionPaceSummary =
+  components["schemas"]["UniverseExecutionPaceSummary"];
+export type AttentionFeed = components["schemas"]["AttentionFeedRead"];
+export type AttentionEvent = components["schemas"]["AttentionEventRead"];
 export type ListingMarketData = components["schemas"]["ListingMarketData"];
 export type PriceRegime = components["schemas"]["PriceRegimeRead"];
 export type UniverseMarketSummary =
@@ -48,6 +70,42 @@ export type ConsensusEstimateProvider =
   components["schemas"]["ConsensusEstimateProviderRead"];
 export type CompanyConsensusEstimates =
   components["schemas"]["CompanyConsensusEstimatesRead"];
+export type EstimateMomentumWindow =
+  components["schemas"]["EstimateMomentumWindowRead"];
+export type EstimateMomentumPeriod =
+  components["schemas"]["EstimateMomentumPeriodRead"];
+export type EstimateMomentumSummary =
+  components["schemas"]["EstimateMomentumSummaryRead"];
+export type CompanyEstimateMomentum =
+  components["schemas"]["CompanyEstimateMomentumRead"];
+export type UniverseEstimateMomentumSummary =
+  components["schemas"]["UniverseEstimateMomentumRead"];
+export type TemporalAlignedValue =
+  components["schemas"]["TemporalAlignedValueRead"];
+export type TemporalPrice = components["schemas"]["TemporalPriceRead"];
+export type TemporalReturn = components["schemas"]["TemporalReturnRead"];
+export type TemporalModelForecast =
+  components["schemas"]["TemporalModelForecastRead"];
+export type CompanyTemporalAlignment =
+  components["schemas"]["CompanyTemporalAlignmentRead"];
+export type ExpectedReturnEstimate =
+  components["schemas"]["ExpectedReturnEstimateRead"];
+export type ExpectedReturnEstimateContext =
+  components["schemas"]["ExpectedReturnEstimateContextRead"];
+export type ExpectedReturnMarketPrice =
+  components["schemas"]["ExpectedReturnMarketPriceRead"];
+export type ExpectedReturnHistoryPoint =
+  components["schemas"]["ExpectedReturnHistoryPointRead"];
+export type CompanyExpectedReturnHistory =
+  components["schemas"]["CompanyExpectedReturnHistoryRead"];
+export type ExpectedReturnAttributionDriver =
+  components["schemas"]["ExpectedReturnAttributionDriverRead"];
+export type ExpectedReturnAttributionState =
+  components["schemas"]["ExpectedReturnAttributionStateRead"];
+export type ExpectedReturnAttributionContextChanges =
+  components["schemas"]["ExpectedReturnAttributionContextChangesRead"];
+export type CompanyExpectedReturnAttribution =
+  components["schemas"]["CompanyExpectedReturnAttributionRead"];
 export type SourceDocument = components["schemas"]["SourceDocumentRead"];
 export type CompanySourceDocuments =
   components["schemas"]["CompanySourceDocumentsRead"];
@@ -139,6 +197,21 @@ export const rankingTypes: RankingType[] = [
   "PORTFOLIO",
   "WATCHLIST",
   "RESEARCH",
+];
+export const executionPaces: ExecutionPace[] = [
+  "ACCELERATE",
+  "BUILD",
+  "NORMAL_BUILD",
+  "SMALL_LADDER",
+  "LADDER",
+  "HOLD",
+  "SLOW_LIMIT",
+  "WAIT_LIMIT",
+  "PATIENT_TRIM",
+  "TRIM_FASTER",
+  "NORMAL_TRIM",
+  "PATIENT_EXIT",
+  "NORMAL_EXIT",
 ];
 export const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
@@ -633,6 +706,231 @@ export function isRankingRun(v: unknown): v is RankingRun {
   );
 }
 export const isRankingRuns = (v: unknown) => array(v, isRankingRun);
+function isWatchlistRankScore(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    nullableDecimal(v.score) &&
+    ["ASSESSED", "MISSING", "UNAVAILABLE", "INVALID", "NOT_ASSESSED"].includes(
+      v.status as string,
+    ) &&
+    nullableUuid(v.assessment_id) &&
+    (v.effective_at === null || timestamp(v.effective_at)) &&
+    (v.recorded_at === null || timestamp(v.recorded_at)) &&
+    nullableString(v.rationale) &&
+    nullableString(v.source)
+  );
+}
+function isWatchlistRankReturnSource(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    ["NATIVE_MODEL_REVISION", "IMPORTED_CURRENT_CONTRACT"].includes(
+      v.source_kind as string,
+    ) &&
+    uuid(v.record_id) &&
+    nullableUuid(v.model_id) &&
+    nullableUuid(v.revision_id) &&
+    (v.revision_number === null || Number.isInteger(v.revision_number)) &&
+    nullableString(v.model_key) &&
+    nullableString(v.model_type) &&
+    nullableString(v.methodology_version) &&
+    nullableString(v.contract_version) &&
+    nullableString(v.source_revision_id) &&
+    nullableString(v.source) &&
+    (v.effective_at === null || timestamp(v.effective_at)) &&
+    timestamp(v.recorded_at) &&
+    ["KNOWN", "UNKNOWN"].includes(v.effective_time_status as string) &&
+    nullableString(v.model_currency) &&
+    ["DOCUMENTED", "UNKNOWN"].includes(v.currency_status as string) &&
+    ["COMPLETE", "PARTIAL", "DATA_CHECK", "UNAVAILABLE"].includes(
+      v.output_quality as string,
+    ) &&
+    (v.contract_status === null ||
+      [
+        "PASS",
+        "NOT_MAPPED",
+        "NO_CONTRACT",
+        "DATA_CHECK",
+        "HISTORICAL_ONLY",
+      ].includes(v.contract_status as string)) &&
+    (v.price_status === null ||
+      [
+        "FRESH",
+        "STALE",
+        "QUALITY_CHECK",
+        "NO_DATA",
+        "CURRENCY_MISMATCH",
+        "CURRENCY_UNKNOWN",
+      ].includes(v.price_status as string)) &&
+    (v.price_effective_at === null || timestamp(v.price_effective_at)) &&
+    nullableUuid(v.price_observation_id) &&
+    nullableUuid(v.listing_id) &&
+    nullableString(v.listing_ticker) &&
+    nullableString(v.listing_venue) &&
+    (v.migration_status === null ||
+      ["PARITY_PASS", "PARTIAL_MAPPING", "DATA_CHECK", "BLOCKED"].includes(
+        v.migration_status as string,
+      ))
+  );
+}
+export function isWatchlistRankInputSnapshot(
+  v: unknown,
+): v is WatchlistRankInputSnapshot {
+  return (
+    isRecord(v) &&
+    v.context_version === "watchlist-rank-inputs-v1" &&
+    nullableSignedDecimal(v.expected_irr) &&
+    ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"].includes(
+      v.return_semantics as string,
+    ) &&
+    isWatchlistRankReturnSource(v.return_source) &&
+    isWatchlistRankScore(v.durability_10y) &&
+    isWatchlistRankScore(v.compounder_quality) &&
+    nullableSignedDecimal(v.forward_fundamental_cagr) &&
+    nullableSignedDecimal(v.weighted_fair_value) &&
+    nullableSignedDecimal(v.hurdle) &&
+    nullableSignedDecimal(v.expected_excess) &&
+    v.decision_context === "QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED" &&
+    string(v.context_note)
+  );
+}
+function isPortfolioRankScoreSnapshot(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    nullableDecimal(v.score) &&
+    ["ASSESSED", "MISSING", "UNAVAILABLE", "INVALID", "NOT_ASSESSED"].includes(
+      v.status as string,
+    ) &&
+    nullableUuid(v.assessment_id) &&
+    (v.effective_at === null || timestamp(v.effective_at)) &&
+    (v.recorded_at === null || timestamp(v.recorded_at)) &&
+    nullableString(v.source)
+  );
+}
+function isPortfolioRankModelSource(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    ["NATIVE_MODEL_REVISION", "IMPORTED_CURRENT_CONTRACT"].includes(
+      v.source_kind as string,
+    ) &&
+    uuid(v.record_id) &&
+    nullableUuid(v.model_id) &&
+    nullableUuid(v.revision_id) &&
+    (v.revision_number === null || Number.isInteger(v.revision_number)) &&
+    string(v.model_key) &&
+    nullableString(v.model_type) &&
+    nullableString(v.methodology_version) &&
+    nullableString(v.source) &&
+    (v.effective_at === null || timestamp(v.effective_at)) &&
+    timestamp(v.recorded_at) &&
+    ["KNOWN", "UNKNOWN"].includes(v.effective_time_status as string) &&
+    nullableString(v.model_currency) &&
+    ["DOCUMENTED", "UNKNOWN"].includes(v.currency_status as string) &&
+    ["COMPLETE", "PARTIAL", "DATA_CHECK", "UNAVAILABLE"].includes(
+      v.output_quality as string,
+    ) &&
+    (v.contract_status === null ||
+      [
+        "PASS",
+        "NOT_MAPPED",
+        "NO_CONTRACT",
+        "DATA_CHECK",
+        "HISTORICAL_ONLY",
+      ].includes(v.contract_status as string)) &&
+    (v.price_status === null ||
+      [
+        "FRESH",
+        "STALE",
+        "QUALITY_CHECK",
+        "NO_DATA",
+        "CURRENCY_MISMATCH",
+        "CURRENCY_UNKNOWN",
+      ].includes(v.price_status as string)) &&
+    (v.price_effective_at === null || timestamp(v.price_effective_at)) &&
+    nullableUuid(v.price_observation_id) &&
+    nullableUuid(v.listing_id) &&
+    nullableString(v.listing_ticker) &&
+    nullableString(v.listing_venue)
+  );
+}
+function isPortfolioRankContributions(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    nullableSignedDecimal(v.target_underweight) &&
+    nullableSignedDecimal(v.expected_irr) &&
+    nullableSignedDecimal(v.durability_10y) &&
+    nullableSignedDecimal(v.compounder_quality) &&
+    nullableSignedDecimal(v.execution) &&
+    nullableSignedDecimal(v.risk) &&
+    nullableSignedDecimal(v.valuation_uncertainty_penalty) &&
+    nullableSignedDecimal(v.negative_expected_excess_penalty)
+  );
+}
+export function isPortfolioRankInputSnapshot(
+  v: unknown,
+): v is PortfolioRankInputSnapshot {
+  return (
+    isRecord(v) &&
+    v.context_version === "portfolio-rank-inputs-v1" &&
+    v.score_formula === "LEGACY_IRR_FIRST_ALLOCATION_V1" &&
+    nullableSignedDecimal(v.portfolio_score) &&
+    nullableSignedDecimal(v.current_weight) &&
+    nullableSignedDecimal(v.target_weight) &&
+    nullableSignedDecimal(v.target_minus_current_gap) &&
+    [
+      "VALUED",
+      "PRICE_COVERAGE_INCOMPLETE",
+      "FX_UNAVAILABLE",
+      "PORTFOLIO_TOTAL_UNAVAILABLE",
+    ].includes(v.allocation_status as string) &&
+    (v.lifecycle === null ||
+      ["PORTFOLIO", "WATCHLIST", "CANDIDATE", "DROP"].includes(
+        v.lifecycle as string,
+      )) &&
+    nullableUuid(v.holding_snapshot_id) &&
+    (v.holding_effective_at === null || timestamp(v.holding_effective_at)) &&
+    nullableUuid(v.target_revision_id) &&
+    (v.target_effective_at === null || timestamp(v.target_effective_at)) &&
+    nullableSignedDecimal(v.expected_irr) &&
+    nullableSignedDecimal(v.expected_excess) &&
+    nullableSignedDecimal(v.hurdle) &&
+    nullableSignedDecimal(v.bear_fair_value) &&
+    nullableSignedDecimal(v.weighted_fair_value) &&
+    nullableSignedDecimal(v.bull_fair_value) &&
+    nullableSignedDecimal(v.valuation_uncertainty) &&
+    isPortfolioRankScoreSnapshot(v.durability_10y) &&
+    isPortfolioRankScoreSnapshot(v.compounder_quality) &&
+    isPortfolioRankScoreSnapshot(v.execution) &&
+    isPortfolioRankScoreSnapshot(v.risk) &&
+    (v.model_source === null || isPortfolioRankModelSource(v.model_source)) &&
+    isPortfolioRankContributions(v.score_contributions) &&
+    string(v.context_note)
+  );
+}
+export function isResearchRankInputSnapshot(
+  v: unknown,
+): v is ResearchRankInputSnapshot {
+  return (
+    isRecord(v) &&
+    v.context_version === "research-rank-inputs-v1" &&
+    (v.lifecycle === null ||
+      ["PORTFOLIO", "WATCHLIST", "CANDIDATE", "DROP"].includes(
+        v.lifecycle as string,
+      )) &&
+    (v.candidate_tier === null ||
+      ["HIGH", "LOW"].includes(v.candidate_tier as string)) &&
+    nullableSignedDecimal(v.priority_seed) &&
+    nullableSignedDecimal(v.legacy_default_priority_seed) &&
+    typeof v.used_legacy_default === "boolean" &&
+    nullableSignedDecimal(v.sort_key) &&
+    ["AVAILABLE", "MISSING", "DATA_CHECK"].includes(
+      v.input_quality as string,
+    ) &&
+    nullableString(v.source_digest) &&
+    nullableString(v.bucket_source_ref) &&
+    nullableString(v.priority_seed_source_ref) &&
+    string(v.context_note)
+  );
+}
 function isRankingEntry(v: unknown): v is RankingEntryRead {
   return (
     isRecord(v) &&
@@ -645,12 +943,18 @@ function isRankingEntry(v: unknown): v is RankingEntryRead {
       "NOT_ELIGIBLE",
       "EXCLUDED",
       "NOT_MIGRATED",
+      "DATA_CHECK",
     ].includes(v.status as string) &&
     ((v.status === "RANKED" &&
       Number.isInteger(v.position) &&
       Number(v.position) > 0) ||
       (v.status !== "RANKED" && v.position === null)) &&
-    string(v.reason)
+    string(v.reason) &&
+    (v.input_snapshot === null ||
+      v.input_snapshot === undefined ||
+      isWatchlistRankInputSnapshot(v.input_snapshot) ||
+      isPortfolioRankInputSnapshot(v.input_snapshot) ||
+      isResearchRankInputSnapshot(v.input_snapshot))
   );
 }
 export function isRankingCurrent(v: unknown): v is RankingCurrent {
@@ -733,6 +1037,234 @@ export function isRankingRunDetail(v: unknown): v is RankingRunDetail {
     (v.entries as RankingRunEntry[]).every(
       (item) => item.entry.run_id === (v.run as RankingRun).id,
     )
+  );
+}
+
+const executionDecisionStatuses = [
+  "AVAILABLE",
+  "REVIEW",
+  "UNAVAILABLE",
+  "NOT_APPLICABLE",
+] as const;
+
+function isExecutionPaceInputSnapshot(
+  v: unknown,
+): v is ExecutionPaceInputSnapshot {
+  if (!isRecord(v) || v.context_version !== "execution-pace-inputs-v1")
+    return false;
+  const nullableDecimals = [
+    "current_weight",
+    "target_weight",
+    "allocation_gap",
+    "expected_irr",
+    "hurdle",
+    "price",
+    "model_reference_price",
+    "weighted_fair_value",
+    "weighted_upside",
+    "valuation_range_ratio",
+  ];
+  const nullableIds = [
+    "target_revision_id",
+    "holding_snapshot_id",
+    "model_source_id",
+    "model_revision_id",
+    "model_output_snapshot_id",
+    "valuation_listing_id",
+    "price_observation_id",
+    "model_price_observation_id",
+  ];
+  const nullableTimes = [
+    "target_effective_at",
+    "holding_effective_at",
+    "model_effective_at",
+    "model_recorded_at",
+    "price_market_date",
+    "price_recorded_at",
+    "model_price_effective_at",
+    "price_regime_as_of",
+  ];
+  return (
+    (v.lifecycle === null || lifecycle(v.lifecycle)) &&
+    nullableIds.every((key) => nullableUuid(v[key])) &&
+    nullableTimes.every((key) => v[key] === null || timestamp(v[key])) &&
+    nullableDecimals.every((key) => nullableSignedDecimal(v[key])) &&
+    [
+      "allocation_status",
+      "model_key",
+      "model_currency",
+      "model_output_quality",
+      "model_contract_status",
+      "model_review_flag",
+      "valuation_ticker",
+      "valuation_venue",
+      "valuation_currency",
+      "price_currency",
+      "price_provider",
+      "price_quality",
+      "model_price_status",
+      "model_price_currency",
+      "estimate_provider_id",
+      "estimate_momentum_reason",
+      "price_regime_source_ref",
+      "price_regime_raw",
+      "price_regime",
+    ].every((key) => nullableString(v[key])) &&
+    ["NATIVE_MODEL_REVISION", "IMPORTED_CURRENT_CONTRACT", null].includes(
+      v.model_source_kind as string | null,
+    ) &&
+    ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD", null].includes(
+      v.return_semantics as string | null,
+    ) &&
+    ["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"].includes(
+      v.price_freshness as string,
+    ) &&
+    (v.valuation_zone === null ||
+      ["DEEP_DISCOUNT", "DISCOUNT", "NEAR_FAIR", "RICH", "VERY_RICH"].includes(
+        v.valuation_zone as string,
+      )) &&
+    (v.estimate_momentum_availability === null ||
+      [
+        "AVAILABLE",
+        "DIRECTION_ONLY",
+        "INSUFFICIENT_HISTORY",
+        "NO_MAPPING",
+        "AMBIGUOUS_SOURCE",
+      ].includes(v.estimate_momentum_availability as string)) &&
+    (v.estimate_momentum_direction === null ||
+      [
+        "POSITIVE",
+        "MILD_POSITIVE",
+        "NEUTRAL_MIXED",
+        "MILD_NEGATIVE",
+        "NEGATIVE",
+      ].includes(v.estimate_momentum_direction as string)) &&
+    (v.estimate_momentum_freshness === null ||
+      ["FRESH", "STALE", "DATA_CHECK", "NO_DATA"].includes(
+        v.estimate_momentum_freshness as string,
+      )) &&
+    (v.estimate_momentum_quality === null ||
+      ["PASS", "DATA_CHECK", "INVALID", "NO_DATA"].includes(
+        v.estimate_momentum_quality as string,
+      )) &&
+    (v.price_regime_quality === null ||
+      ["PASS", "DATA_CHECK", "UNSPECIFIED"].includes(
+        v.price_regime_quality as string,
+      )) &&
+    ["FRESH", "STALE", "DATA_CHECK", "NO_DATA"].includes(
+      v.price_regime_freshness as string,
+    ) &&
+    (v.estimate_latest_snapshot_date === null ||
+      dateOnly(v.estimate_latest_snapshot_date)) &&
+    Array.isArray(v.context_notes) &&
+    v.context_notes.every(string)
+  );
+}
+
+export function isExecutionPaceDecision(
+  v: unknown,
+): v is ExecutionPaceDecision {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    uuid(v.run_id) &&
+    uuid(v.company_id) &&
+    nullableUuid(v.target_revision_id) &&
+    nullableUuid(v.holding_snapshot_id) &&
+    nullableUuid(v.model_revision_id) &&
+    nullableUuid(v.model_output_snapshot_id) &&
+    nullableUuid(v.price_observation_id) &&
+    executionDecisionStatuses.includes(v.decision_status as never) &&
+    (v.pace === null || executionPaces.includes(v.pace as ExecutionPace)) &&
+    ((v.decision_status === "AVAILABLE" && v.pace !== null) ||
+      (v.decision_status !== "AVAILABLE" && v.pace === null)) &&
+    string(v.reason) &&
+    isExecutionPaceInputSnapshot(v.input_snapshot)
+  );
+}
+
+export function isExecutionPaceRun(v: unknown): v is ExecutionPaceRun {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    uuid(v.portfolio_id) &&
+    timestamp(v.as_of) &&
+    timestamp(v.recorded_at) &&
+    string(v.methodology_version) &&
+    ["COMPLETE", "PARTIAL", "UNAVAILABLE"].includes(v.status as string) &&
+    ["LOCAL_USER", "SYSTEM", "IMPORT"].includes(v.actor as string) &&
+    string(v.reason) &&
+    nullableString(v.source) &&
+    [
+      "company_count",
+      "available_count",
+      "review_count",
+      "unavailable_count",
+      "not_applicable_count",
+    ].every((key) => Number.isInteger(v[key])) &&
+    Number(v.available_count) +
+      Number(v.review_count) +
+      Number(v.unavailable_count) +
+      Number(v.not_applicable_count) ===
+      Number(v.company_count)
+  );
+}
+export const isExecutionPaceRuns = (v: unknown): v is ExecutionPaceRun[] =>
+  array(v, isExecutionPaceRun);
+
+export function isExecutionPaceHistoryEntry(
+  v: unknown,
+): v is ExecutionPaceHistoryEntry {
+  return (
+    isRecord(v) &&
+    isExecutionPaceRun(v.run) &&
+    isExecutionPaceDecision(v.decision) &&
+    v.decision.run_id === v.run.id
+  );
+}
+
+export function isCompanyExecutionPace(v: unknown): v is CompanyExecutionPace {
+  if (
+    !isRecord(v) ||
+    !uuid(v.company_id) ||
+    !(v.current === null || isExecutionPaceHistoryEntry(v.current)) ||
+    !array(v.history, isExecutionPaceHistoryEntry)
+  )
+    return false;
+  const history = v.history as ExecutionPaceHistoryEntry[];
+  return (
+    (v.current === null || v.current.decision.company_id === v.company_id) &&
+    history.every((item) => item.decision.company_id === v.company_id)
+  );
+}
+
+export function isUniverseExecutionPaceSummary(
+  v: unknown,
+): v is UniverseExecutionPaceSummary[] {
+  return array(
+    v,
+    (item) =>
+      isRecord(item) &&
+      isCompany(item.company) &&
+      (item.decision === null ||
+        (isExecutionPaceHistoryEntry(item.decision) &&
+          item.decision.decision.company_id === item.company.id)),
+  );
+}
+
+export function isExecutionPaceRunDetail(
+  v: unknown,
+): v is ExecutionPaceRunDetail {
+  if (!isRecord(v) || !isExecutionPaceRun(v.run)) return false;
+  const run = v.run;
+  return array(
+    v.decisions,
+    (item) =>
+      isRecord(item) &&
+      isCompany(item.company) &&
+      isExecutionPaceDecision(item.decision) &&
+      item.decision.run_id === run.id &&
+      item.decision.company_id === item.company.id,
   );
 }
 export const isPortfolios = (v: unknown): v is Portfolio[] =>
@@ -2094,6 +2626,636 @@ export function isCompanyConsensusEstimates(
       (value.selected_provider_id === null &&
         Array.isArray(value.providers) &&
         value.providers.length === 0))
+  );
+}
+
+function isEstimateMomentumWindow(
+  value: unknown,
+): value is EstimateMomentumWindow {
+  return (
+    isRecord(value) &&
+    ["12M", "6M", "3M"].includes(value.window as string) &&
+    [
+      "AVAILABLE",
+      "MISSING_REFERENCE",
+      "STALE_REFERENCE",
+      "DATA_CHECK",
+      "INVALID_BASELINE",
+    ].includes(value.status as string) &&
+    nullableSignedDecimal(value.reference_value) &&
+    (value.reference_snapshot_date === null ||
+      dateOnly(value.reference_snapshot_date)) &&
+    (value.reference_days_before_target === null ||
+      (Number.isInteger(value.reference_days_before_target) &&
+        Number(value.reference_days_before_target) >= 0)) &&
+    nullableSignedDecimal(value.revision_fraction) &&
+    nullableSignedDecimal(value.component_score) &&
+    nullableString(value.reason)
+  );
+}
+
+function isEstimateMomentumPeriod(
+  value: unknown,
+): value is EstimateMomentumPeriod {
+  return (
+    isRecord(value) &&
+    ["REVENUE", "EPS"].includes(value.metric as string) &&
+    ["FY+1", "FY+2"].includes(value.horizon as string) &&
+    string(value.forecast_period) &&
+    dateOnly(value.period_end) &&
+    (value.currency === null ||
+      (string(value.currency) && /^[A-Z]{3}$/.test(value.currency))) &&
+    string(value.unit) &&
+    (value.analyst_count === null ||
+      (Number.isInteger(value.analyst_count) &&
+        Number(value.analyst_count) >= 0)) &&
+    nullableSignedDecimal(value.current_value) &&
+    (value.current_snapshot_date === null ||
+      dateOnly(value.current_snapshot_date)) &&
+    ["PASS", "DATA_CHECK", "INVALID"].includes(value.data_quality as string) &&
+    nullableString(value.quality_reason) &&
+    array(value.windows, isEstimateMomentumWindow)
+  );
+}
+
+function isEstimateMomentumSummary(
+  value: unknown,
+): value is EstimateMomentumSummary {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    string(value.methodology_version) &&
+    [
+      "AVAILABLE",
+      "DIRECTION_ONLY",
+      "INSUFFICIENT_HISTORY",
+      "NO_MAPPING",
+      "AMBIGUOUS_SOURCE",
+    ].includes(value.availability as string) &&
+    (value.direction === null ||
+      [
+        "POSITIVE",
+        "MILD_POSITIVE",
+        "NEUTRAL_MIXED",
+        "MILD_NEGATIVE",
+        "NEGATIVE",
+      ].includes(value.direction as string)) &&
+    nullableSignedDecimal(value.raw_score) &&
+    nullableSignedDecimal(value.confidence_adjusted_score) &&
+    ((value.raw_score === null &&
+      value.direction === null &&
+      value.confidence_adjusted_score === null) ||
+      (value.raw_score !== null && value.direction !== null)) &&
+    (!["NO_MAPPING", "AMBIGUOUS_SOURCE", "INSUFFICIENT_HISTORY"].includes(
+      value.availability as string,
+    ) ||
+      value.raw_score === null) &&
+    decimal(value.confidence) &&
+    Number(value.confidence) >= 0 &&
+    Number(value.confidence) <= 1 &&
+    ["HIGH", "MEDIUM", "LOW", "COLLECTING", "NO_DATA"].includes(
+      value.confidence_band as string,
+    ) &&
+    decimal(value.coverage_fraction) &&
+    Number(value.coverage_fraction) >= 0 &&
+    Number(value.coverage_fraction) <= 1 &&
+    Number.isInteger(value.coverage_count) &&
+    Number(value.coverage_count) >= 0 &&
+    Number.isInteger(value.coverage_total) &&
+    Number(value.coverage_total) > 0 &&
+    ["FRESH", "STALE", "DATA_CHECK", "NO_DATA"].includes(
+      value.freshness as string,
+    ) &&
+    ["PASS", "DATA_CHECK", "INVALID", "NO_DATA"].includes(
+      value.data_quality as string,
+    ) &&
+    nullableString(value.provider_id) &&
+    (value.latest_snapshot_date === null ||
+      dateOnly(value.latest_snapshot_date)) &&
+    dateOnly(value.as_of) &&
+    (value.known_at === null || timestamp(value.known_at)) &&
+    nullableString(value.reason)
+  );
+}
+
+export function isCompanyEstimateMomentum(
+  value: unknown,
+): value is CompanyEstimateMomentum {
+  const periods = isRecord(value) ? value.periods : undefined;
+  return (
+    isEstimateMomentumSummary(value) && array(periods, isEstimateMomentumPeriod)
+  );
+}
+
+export function isUniverseEstimateMomentumSummary(
+  value: unknown,
+): value is UniverseEstimateMomentumSummary[] {
+  return array(
+    value,
+    (row) =>
+      isRecord(row) &&
+      isCompany(row.company) &&
+      isEstimateMomentumSummary(row.estimate_momentum),
+  );
+}
+
+function isTemporalAlignedValue(value: unknown): value is TemporalAlignedValue {
+  return (
+    isRecord(value) &&
+    string(value.status) &&
+    nullableSignedDecimal(value.value) &&
+    (value.currency === null ||
+      (string(value.currency) && /^[A-Z]{3}$/.test(value.currency))) &&
+    nullableString(value.unit) &&
+    nullableString(value.source_name) &&
+    nullableString(value.source_reference) &&
+    nullableUuid(value.source_observation_id) &&
+    (value.period_end === null || dateOnly(value.period_end)) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    nullableString(value.data_quality) &&
+    nullableString(value.quality_reason) &&
+    (value.low_value === undefined || nullableSignedDecimal(value.low_value)) &&
+    (value.high_value === undefined ||
+      nullableSignedDecimal(value.high_value)) &&
+    (value.analyst_count === undefined ||
+      value.analyst_count === null ||
+      (typeof value.analyst_count === "number" &&
+        Number.isInteger(value.analyst_count) &&
+        value.analyst_count >= 0))
+  );
+}
+
+function isExpectedReturnEstimate(
+  value: unknown,
+): value is ExpectedReturnEstimate {
+  return (
+    isRecord(value) &&
+    uuid(value.observation_id) &&
+    ["REVENUE", "EPS"].includes(value.metric as string) &&
+    ["ANNUAL", "QUARTERLY"].includes(value.period_type as string) &&
+    string(value.forecast_period) &&
+    (value.period_end === null || dateOnly(value.period_end)) &&
+    decimal(value.value) &&
+    (value.currency === null ||
+      (string(value.currency) && /^[A-Z]{3}$/.test(value.currency))) &&
+    string(value.unit) &&
+    (value.analyst_count === null ||
+      (Number.isInteger(value.analyst_count) &&
+        Number(value.analyst_count) >= 0)) &&
+    dateOnly(value.snapshot_date) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    timestamp(value.recorded_at) &&
+    string(value.provider_id) &&
+    string(value.source_ref) &&
+    ["PASS", "DATA_CHECK", "INVALID"].includes(value.data_quality as string) &&
+    nullableString(value.quality_reason)
+  );
+}
+
+function isExpectedReturnEstimateContext(
+  value: unknown,
+): value is ExpectedReturnEstimateContext {
+  return (
+    isRecord(value) &&
+    [
+      "AVAILABLE",
+      "NO_MAPPING",
+      "AMBIGUOUS_SOURCE",
+      "NO_OBSERVATIONS",
+      "UNDATED",
+    ].includes(value.status as string) &&
+    nullableString(value.provider_id) &&
+    array(value.periods, isExpectedReturnEstimate)
+  );
+}
+
+function isExpectedReturnMarketPrice(
+  value: unknown,
+): value is ExpectedReturnMarketPrice {
+  return (
+    isRecord(value) &&
+    [
+      "AVAILABLE",
+      "STALE",
+      "DATA_CHECK",
+      "NO_DATA",
+      "CURRENCY_MISMATCH",
+      "CURRENCY_UNKNOWN",
+      "LISTING_UNMAPPED",
+      "PRICE_NOT_CAPTURED",
+      "UNDATED",
+    ].includes(value.status as string) &&
+    nullableUuid(value.listing_id) &&
+    nullableString(value.ticker) &&
+    nullableString(value.venue) &&
+    (value.listing_currency === null ||
+      (string(value.listing_currency) &&
+        /^[A-Z]{3}$/.test(value.listing_currency))) &&
+    nullableSignedDecimal(value.quote) &&
+    (value.quote_currency === null ||
+      (string(value.quote_currency) &&
+        /^[A-Z]{3}$/.test(value.quote_currency))) &&
+    nullableSignedDecimal(value.model_reference_price) &&
+    (value.model_currency === null ||
+      (string(value.model_currency) &&
+        /^[A-Z]{3}$/.test(value.model_currency))) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    nullableString(value.provider) &&
+    nullableString(value.adjustment_basis) &&
+    nullableUuid(value.observation_id) &&
+    nullableString(value.source_ref) &&
+    nullableString(value.reason)
+  );
+}
+
+function isExpectedReturnHistoryPoint(
+  value: unknown,
+): value is ExpectedReturnHistoryPoint {
+  return (
+    isRecord(value) &&
+    string(value.point_id) &&
+    [
+      "IMPORTED_CURRENT_CONTRACT",
+      "IMPORTED_LEGACY_REVISION",
+      "NATIVE_MODEL_REVISION",
+    ].includes(value.source_kind as string) &&
+    ["DATED", "EFFECTIVE_DATE_UNKNOWN"].includes(
+      value.event_status as string,
+    ) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    timestamp(value.recorded_at) &&
+    string(value.series_id) &&
+    nullableString(value.model_key) &&
+    nullableUuid(value.model_id) &&
+    nullableUuid(value.revision_id) &&
+    (value.revision_number === null ||
+      (Number.isInteger(value.revision_number) &&
+        Number(value.revision_number) > 0)) &&
+    (value.model_type === null ||
+      [
+        "UFCF_DCF_10Y_FADE",
+        "OWNER_CASH_FLOW_10Y",
+        "RESIDUAL_INCOME_10Y_FADE",
+      ].includes(value.model_type as string)) &&
+    nullableString(value.methodology_version) &&
+    string(value.model_label) &&
+    (value.model_currency === null ||
+      (string(value.model_currency) &&
+        /^[A-Z]{3}$/.test(value.model_currency))) &&
+    ["DOCUMENTED", "UNKNOWN"].includes(value.currency_status as string) &&
+    nullableUuid(value.valuation_listing_id) &&
+    nullableString(value.valuation_ticker) &&
+    nullableString(value.valuation_venue) &&
+    (value.valuation_listing_currency === null ||
+      (string(value.valuation_listing_currency) &&
+        /^[A-Z]{3}$/.test(value.valuation_listing_currency))) &&
+    typeof value.is_current_at_cutoff === "boolean" &&
+    nullableString(value.output_status) &&
+    nullableString(value.output_quality) &&
+    nullableString(value.contract_status) &&
+    ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"].includes(
+      value.return_semantics as string,
+    ) &&
+    nullableSignedDecimal(value.bear_fv) &&
+    nullableSignedDecimal(value.base_fv) &&
+    nullableSignedDecimal(value.bull_fv) &&
+    nullableSignedDecimal(value.bear_probability) &&
+    nullableSignedDecimal(value.base_probability) &&
+    nullableSignedDecimal(value.bull_probability) &&
+    nullableSignedDecimal(value.weighted_fv) &&
+    nullableSignedDecimal(value.weighted_upside) &&
+    nullableSignedDecimal(value.expected_cash_flow_irr) &&
+    nullableSignedDecimal(value.hurdle) &&
+    nullableSignedDecimal(value.expected_excess) &&
+    nullableSignedDecimal(value.forward_fundamental_cagr) &&
+    isExpectedReturnMarketPrice(value.market_price) &&
+    isExpectedReturnEstimateContext(value.estimate_context) &&
+    string(value.actor) &&
+    nullableString(value.source_actor) &&
+    nullableString(value.revision_source) &&
+    nullableString(value.revision_type) &&
+    nullableString(value.source) &&
+    nullableString(value.source_revision_id) &&
+    nullableString(value.rationale) &&
+    nullableString(value.evidence)
+  );
+}
+
+export function isCompanyExpectedReturnHistory(
+  value: unknown,
+): value is CompanyExpectedReturnHistory {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    dateOnly(value.as_of) &&
+    timestamp(value.known_at) &&
+    ["AVAILABLE", "PARTIAL", "NO_HISTORY"].includes(value.status as string) &&
+    array(value.history, isExpectedReturnHistoryPoint)
+  );
+}
+
+function isExpectedReturnAttributionState(
+  value: unknown,
+): value is ExpectedReturnAttributionState {
+  return (
+    isRecord(value) &&
+    string(value.point_id) &&
+    [
+      "IMPORTED_CURRENT_CONTRACT",
+      "IMPORTED_LEGACY_REVISION",
+      "NATIVE_MODEL_REVISION",
+    ].includes(value.source_kind as string) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    timestamp(value.recorded_at) &&
+    string(value.series_id) &&
+    nullableUuid(value.model_id) &&
+    nullableUuid(value.revision_id) &&
+    (value.revision_number === null ||
+      (Number.isInteger(value.revision_number) &&
+        Number(value.revision_number) > 0)) &&
+    (value.model_type === null ||
+      [
+        "UFCF_DCF_10Y_FADE",
+        "OWNER_CASH_FLOW_10Y",
+        "RESIDUAL_INCOME_10Y_FADE",
+      ].includes(value.model_type as string)) &&
+    nullableString(value.methodology_version) &&
+    ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"].includes(
+      value.return_semantics as string,
+    ) &&
+    (value.model_currency === null ||
+      (string(value.model_currency) &&
+        /^[A-Z]{3}$/.test(value.model_currency))) &&
+    nullableSignedDecimal(value.expected_cash_flow_irr) &&
+    nullableSignedDecimal(value.hurdle) &&
+    nullableSignedDecimal(value.expected_excess) &&
+    nullableSignedDecimal(value.bear_fv) &&
+    nullableSignedDecimal(value.base_fv) &&
+    nullableSignedDecimal(value.bull_fv) &&
+    nullableSignedDecimal(value.bear_probability) &&
+    nullableSignedDecimal(value.base_probability) &&
+    nullableSignedDecimal(value.bull_probability) &&
+    nullableSignedDecimal(value.weighted_fv) &&
+    isExpectedReturnMarketPrice(value.market_price) &&
+    isExpectedReturnEstimateContext(value.estimate_context) &&
+    nullableString(value.source) &&
+    nullableString(value.source_revision_id) &&
+    nullableString(value.rationale)
+  );
+}
+
+export function isCompanyExpectedReturnAttribution(
+  value: unknown,
+): value is CompanyExpectedReturnAttribution {
+  const valid =
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    [
+      "ATTRIBUTED",
+      "OUTPUTS_ONLY",
+      "MISSING_RETURN",
+      "RETURN_SEMANTICS_CHANGE",
+      "MODEL_SERIES_CHANGE",
+      "METHODOLOGY_CHANGE",
+      "INPUTS_UNAVAILABLE",
+      "RECALCULATION_MISMATCH",
+      "UNDATED",
+    ].includes(value.status as string) &&
+    ["SYMMETRIC_COUNTERFACTUAL_SHAPLEY", "UNAVAILABLE"].includes(
+      value.method as string,
+    ) &&
+    isExpectedReturnAttributionState(value.prior) &&
+    isExpectedReturnAttributionState(value.current) &&
+    nullableSignedDecimal(value.expected_irr_change) &&
+    array(
+      value.drivers,
+      (driver): driver is ExpectedReturnAttributionDriver =>
+        isRecord(driver) &&
+        [
+          "MARKET_PRICE",
+          "MODEL_ASSUMPTIONS",
+          "REQUIRED_RETURN_ASSUMPTIONS",
+          "SCENARIO_PROBABILITIES",
+        ].includes(driver.code as string) &&
+        string(driver.label) &&
+        signedDecimal(driver.effect) &&
+        string(driver.explanation),
+    ) &&
+    nullableSignedDecimal(value.residual) &&
+    nullableString(value.residual_reason) &&
+    isExpectedReturnAttributionContextChanges(value.context_changes) &&
+    string(value.estimate_context_note);
+  if (!valid || !isRecord(value)) return false;
+  if (
+    ["MISSING_RETURN", "RETURN_SEMANTICS_CHANGE", "UNDATED"].includes(
+      value.status as string,
+    )
+  )
+    return (
+      value.expected_irr_change === null &&
+      value.residual === null &&
+      Array.isArray(value.drivers) &&
+      value.drivers.length === 0
+    );
+  if (value.status === "ATTRIBUTED") {
+    if (
+      value.method !== "SYMMETRIC_COUNTERFACTUAL_SHAPLEY" ||
+      value.expected_irr_change === null ||
+      value.residual === null ||
+      !Array.isArray(value.drivers)
+    )
+      return false;
+    const codes = value.drivers.map((driver) =>
+      isRecord(driver) ? driver.code : null,
+    );
+    return (
+      codes.length === 4 &&
+      new Set(codes).size === 4 &&
+      [
+        "MARKET_PRICE",
+        "SCENARIO_PROBABILITIES",
+        "REQUIRED_RETURN_ASSUMPTIONS",
+        "MODEL_ASSUMPTIONS",
+      ].every((code) => codes.includes(code))
+    );
+  }
+  if (
+    [
+      "OUTPUTS_ONLY",
+      "MODEL_SERIES_CHANGE",
+      "METHODOLOGY_CHANGE",
+      "INPUTS_UNAVAILABLE",
+      "RECALCULATION_MISMATCH",
+    ].includes(value.status as string)
+  )
+    return (
+      value.expected_irr_change !== null &&
+      value.residual === value.expected_irr_change &&
+      Array.isArray(value.drivers) &&
+      value.drivers.length === 0
+    );
+  return true;
+}
+
+function isExpectedReturnAttributionContextChanges(
+  value: unknown,
+): value is ExpectedReturnAttributionContextChanges {
+  if (!isRecord(value)) return false;
+  return [
+    "weighted_fv",
+    "bear_fv",
+    "base_fv",
+    "bull_fv",
+    "bear_probability",
+    "base_probability",
+    "bull_probability",
+    "hurdle",
+    "expected_excess",
+  ].every((key) => nullableSignedDecimal(value[key]));
+}
+
+function isTemporalPrice(value: unknown): value is TemporalPrice {
+  return (
+    isRecord(value) &&
+    string(value.status) &&
+    (value.listing === null || isRecord(value.listing)) &&
+    (value.market_date === null || timestamp(value.market_date)) &&
+    nullableSignedDecimal(value.close) &&
+    nullableSignedDecimal(value.total_return_close) &&
+    (value.currency === null ||
+      (string(value.currency) && /^[A-Z]{3}$/.test(value.currency))) &&
+    nullableString(value.provider) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    nullableString(value.data_quality) &&
+    (value.age_days === null ||
+      (typeof value.age_days === "number" &&
+        Number.isInteger(value.age_days) &&
+        value.age_days >= 0)) &&
+    nullableString(value.reason)
+  );
+}
+
+function isTemporalReturn(value: unknown): value is TemporalReturn {
+  return (
+    isRecord(value) &&
+    string(value.status) &&
+    Number.isInteger(value.horizon_days) &&
+    dateOnly(value.target_date) &&
+    (value.start_market_date === null || timestamp(value.start_market_date)) &&
+    (value.end_market_date === null || timestamp(value.end_market_date)) &&
+    nullableSignedDecimal(value.start_total_return_close) &&
+    nullableSignedDecimal(value.end_total_return_close) &&
+    nullableSignedDecimal(value.return_fraction) &&
+    (value.actual_days === null || Number.isInteger(value.actual_days)) &&
+    string(value.basis) &&
+    nullableString(value.reason)
+  );
+}
+
+function isTemporalModelForecast(
+  value: unknown,
+): value is TemporalModelForecast {
+  return (
+    isRecord(value) &&
+    uuid(value.model_id) &&
+    string(value.model_name) &&
+    [
+      "UFCF_DCF_10Y_FADE",
+      "OWNER_CASH_FLOW_10Y",
+      "RESIDUAL_INCOME_10Y_FADE",
+    ].includes(value.model_type as string) &&
+    string(value.model_currency) &&
+    isRecord(value.valuation_listing) &&
+    string(value.status) &&
+    (value.forecast_year === null || Number.isInteger(value.forecast_year)) &&
+    string(value.fiscal_year_mapping_basis) &&
+    nullableSignedDecimal(value.value) &&
+    string(value.unit) &&
+    nullableUuid(value.revision_id) &&
+    (value.revision_number === null ||
+      Number.isInteger(value.revision_number)) &&
+    nullableString(value.methodology_version) &&
+    nullableString(value.revision_source) &&
+    nullableString(value.rationale) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    isTemporalPrice(value.price_at_forecast) &&
+    isTemporalReturn(value.subsequent_market_return)
+  );
+}
+
+export function isCompanyTemporalAlignment(
+  value: unknown,
+): value is CompanyTemporalAlignment {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    value.metric === "REVENUE" &&
+    Number.isInteger(value.fiscal_year) &&
+    dateOnly(value.as_of) &&
+    timestamp(value.forecast_known_at) &&
+    timestamp(value.outcome_known_at) &&
+    Number.isInteger(value.horizon_days) &&
+    string(value.fiscal_year_mapping_basis) &&
+    string(value.comparison_status) &&
+    array(value.model_forecasts, isTemporalModelForecast) &&
+    isTemporalAlignedValue(value.consensus) &&
+    isTemporalAlignedValue(value.actual)
+  );
+}
+
+export function isAttentionFeed(value: unknown): value is AttentionFeed {
+  return (
+    isRecord(value) &&
+    timestamp(value.as_of) &&
+    Number.isInteger(value.lookback_days) &&
+    Number.isInteger(value.total) &&
+    array(value.events, isAttentionEvent)
+  );
+}
+
+function isAttentionEvent(value: unknown): value is AttentionEvent {
+  return (
+    isRecord(value) &&
+    string(value.id) &&
+    nullableUuid(value.company_id) &&
+    nullableString(value.company_name) &&
+    (value.lifecycle === null ||
+      ["PORTFOLIO", "WATCHLIST", "CANDIDATE", "DROP"].includes(
+        value.lifecycle as string,
+      )) &&
+    [
+      "MODEL_REVISION",
+      "MODEL_OUTPUT_IMPORT",
+      "EXPECTED_IRR_CHANGE",
+      "CONSENSUS_REVISION",
+      "NEW_FILING",
+      "PRICE_MOVE",
+      "RANK_CHANGE",
+      "EXECUTION_PACE_CHANGE",
+      "DATA_QUALITY",
+    ].includes(value.event_type as string) &&
+    ["HIGH", "MEDIUM", "LOW"].includes(value.severity as string) &&
+    ["REVIEW", "INFORMATIONAL"].includes(value.status as string) &&
+    string(value.title) &&
+    string(value.explanation) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    ["TIMESTAMP", "DATE", "UNKNOWN"].includes(value.time_precision as string) &&
+    ((value.effective_at === null && value.time_precision === "UNKNOWN") ||
+      (value.effective_at !== null && value.time_precision !== "UNKNOWN")) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    string(value.source_domain) &&
+    nullableString(value.source_id) &&
+    nullableString(value.source_reference) &&
+    nullableString(value.href) &&
+    nullableString(value.prior_value) &&
+    nullableString(value.current_value) &&
+    nullableString(value.unit)
   );
 }
 

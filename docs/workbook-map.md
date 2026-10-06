@@ -1,4 +1,4 @@
-# Workbook reference map
+﻿# Workbook reference map
 
 Status: controlled migration map through Milestone 3D and model-population assessment;
 inspected 2026-10-05.
@@ -23,26 +23,36 @@ where a specific domain behavior is being deliberately migrated.
 
 These rules were taken from the indicated canonical `Universe Registry` formulas
 and associated visible portfolio/watchlist populations. They establish definition
-metadata and population semantics. Cached position observations have now been
-imported as described below; the application still does not calculate ranks.
+metadata and population semantics. Watchlist, Portfolio, and Research ranks now have
+independent canonical implementations and immutable run history. Exact calculation
+details and reconciliation are recorded in their dedicated rank documents.
 
-| Concept        | Workbook evidence                                                                                                     | Documented ordering and population                                                                                                                             | Milestone 1C state                                                                                                                                                                                                  |
-| -------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Portfolio Rank | `Universe Registry!L4`; Portfolio Score in column O; Portfolio view filters positive Current Weight or Target Weight. | Non-empty Portfolio Score descending, ticker ascending for ties. The active decision population includes companies with positive current or target allocation. | Cached source values imported where available: 21 `RANKED`, 5 `INPUTS_UNAVAILABLE`, 193 `NOT_ELIGIBLE`. Portfolio Score and numeric rank generation remain unmigrated; held weights still require market prices/FX. |
-| Watchlist Rank | `Universe Registry!M4`; Expected IRR in column P; Watchlist population uses explicit `WATCHLIST` lifecycle.           | Expected IRR descending, ticker ascending for ties. A blank Expected IRR has no rank.                                                                          | Cached source values imported where unique: 57 `RANKED`, 17 `INPUTS_UNAVAILABLE`, 145 `NOT_ELIGIBLE`. Expected IRR/valuation and numeric rank generation remain unmigrated.                                         |
-| Research Rank  | `Universe Registry!J4`; Research Sort Key in column Q; Research Universe links to the registry ranking.               | Research Sort Key descending, ticker ascending for ties. A blank key has no rank.                                                                              | Cached source values imported where unique: 72 `RANKED`, 26 `INPUTS_UNAVAILABLE`, 121 `NOT_ELIGIBLE`. Research Sort Key and calculated rank generation remain unmigrated.                                           |
+| Concept        | Workbook evidence                                                                                                                                      | Documented ordering and population                                                                                                                                                   | Milestone 1C state                                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Portfolio Rank | `Overview!S2`; cached Portfolio Score in `Universe Registry!O`, rank in `L`; positive current/target portfolio population.                             | Exact documented 100-point Portfolio Score descending; canonical listing ticker ascending for ties.                                                                                  | Definition v2 implements the score from point-in-time portfolio, score, market, and model state. Native and legacy Expected IRR semantics are never mixed. Current run: 3 ranked, 10 data checks, 8 unavailable. See [portfolio-rank.md](portfolio-rank.md). |
+| Watchlist Rank | `Universe Registry!M4`; Expected IRR in column P; Watchlist population uses explicit `WATCHLIST` lifecycle.                                            | Expected IRR descending, ticker ascending for ties. A blank Expected IRR has no rank.                                                                                                | Definition v2 calculates auditable runs from supported canonical model/normalized outputs. Native and legacy normalized return semantics are not mixed. Cached values remain import history only; see `watchlist-rank.md`.                                   |
+| Research Rank  | `Universe Registry!J4` rank and `Q4` Research Sort Key; candidate tier in `C`; persistent priority seed linked by ticker from `Candidate Ranking!A:B`. | For explicit CANDIDATE lifecycle and Candidate High/Low rows: tier base (200000/100000) minus seed, with the documented 50000 blank-seed fallback; descending key, ticker ascending. | Definition v2 implements this Research Sort Key only. Current run: 96 ranked, 5 unavailable lifecycle states, 118 not eligible. Stale cached ordinals are not reused; see [research-rank.md](research-rank.md).                                              |
 
 The `Watchlist` sheet's **Portfolio Candidate Rank** in `Watchlist!A4` is a distinct
 Fit Tier-first ordering followed by Expected IRR. It must not be substituted for the
-canonical IRR-first Watchlist Rank. It is not implemented in this slice.
+canonical IRR-first Watchlist Rank. Candidate Rank remains unimplemented.
 
 The import copies cached positive integer positions where the documented source
-population has an unambiguous unique ordinal. It does not calculate or reconstruct a
-rank. The source has 17 rank-position groups with duplicate cached ordinals despite
-the documented ticker tie-break, plus two malformed cells. Every affected entry is
-unavailable rather than shifted to a different position. Numeric rank-generation
-behavior still requires migration of the documented upstream inputs, source-backed
-fixtures, and reconciliation against the workbook.
+population has an unambiguous unique ordinal. These remain immutable source
+observations and are not inputs to Watchlist Rank v3. The source has 17 rank-position
+groups with duplicate cached ordinals despite the documented ticker tie-break, plus
+two malformed cells. Every affected entry remains unavailable rather than being
+shifted. Current formula comparison is limited: the parsed cached Watchlist formula
+matches the documented Expected IRR/ticker ordering for nine leading entries but
+disagrees on 62 additional positions, with six duplicate cached ranks. Those cached
+positions appear stale or otherwise inconsistent and do not support a full-universe
+parity claim. Details and representative matches are in [watchlist-rank.md](watchlist-rank.md).
+The first current application run covers 71 explicit Watchlist companies: 14 ranked,
+45 `DATA_CHECK` and 12 `INPUTS_UNAVAILABLE`; 148 of the 219 tracked companies are
+outside Watchlist. All 14 ranked returns are legacy normalized fields. The sole
+native Watchlist model is data-check because the accepted output uses an older price
+than a later exact-listing observation. See the run-level breakdown in
+[watchlist-rank.md](watchlist-rank.md).
 
 ## Other migrated domains
 
@@ -79,10 +89,17 @@ The sheet does not identify a consensus vendor, currency, analyst count, or abso
 fiscal-period end for the relative FY+1/FY+2 horizons. Those values therefore remain
 legacy fallback observations with null currency/count/period end and `DATA_CHECK` state.
 No Estimate Momentum output is migrated. The separate `Estimate Momentum` sheet has
-approximate “12M/6M/3M ago” labels/source notes rather than trustworthy per-observation
+approximate â€œ12M/6M/3M agoâ€ labels/source notes rather than trustworthy per-observation
 timestamps, so it cannot establish point-in-time history. See the
 [import reconciliation](reconciliation/consensus-estimates-legacy-2026-10-05.json)
 and [canonical consensus policy](consensus-estimates.md).
+
+The formula structure is now used selectively by the API-owned Estimate Momentum
+derivation, but the cached workbook values remain reference-only. The application
+reconciles a representative GOOGL formula output only for supported revision components;
+the missing persistence/breadth inputs and unreliable historical timestamps prevent full
+point-in-time parity. See [Estimate Momentum methodology](estimate-momentum.md) and the
+[partial formula reconciliation](reconciliation/estimate-momentum-legacy-2026-10-05.json).
 
 ## Map to record during later migrations
 
@@ -99,7 +116,8 @@ For the selected domain or calculation only, retain:
 | Reconciliation    | Code module, regression tests, agreed tolerances, discrepancies, and parity status.                                                                             |
 | Cutover           | Acceptance evidence, canonical owner, and remaining downstream dependencies.                                                                                    |
 
-No ranking calculation has been migrated. Model-output snapshots reconcile at the
+Portfolio and Research Rank now calculate from their documented inputs and have
+dedicated formula/parity reports. Model-output snapshots reconcile at the
 published-output and persistence boundaries only; this is not formula parity. See
 [migration.md](migration.md) for the acceptance sequence and [domain-model.md](domain-model.md)
 for relational boundaries.
@@ -110,7 +128,7 @@ The explicit market-data importer reads `Listings`, `Daily Prices`, `Corporate A
 
 Numeric rolling price-regime outputs reconciled across 852 values with zero mismatches at 1e-7; computed trend and correction states reconciled across 142 values with zero mismatches. The broad Price Regime category is retained as an observed cached output because the source documentation does not specify its complete branching rule. Exact counts, quality groups, unsupported listing identities and the persisted import report are recorded in [market-data.md](market-data.md).
 
-The market workbook contains no FX history. The Portfolio workbook cached USD/EUR figure has no effective timestamp, and its DKK conversion is implicit; neither becomes an FX observation. Price migration does not migrate valuation models, Expected IRR or ranking calculations.
+The market workbook contains no FX history. The Portfolio workbook cached USD/EUR figure has no effective timestamp, and its DKK conversion is implicit; neither becomes an FX observation. The price migration did not migrate valuation models or Expected IRR; Watchlist Rank v3 now consumes only retained canonical outputs and does not alter those models.
 
 ## Milestone 2B model-output snapshots
 
@@ -160,3 +178,15 @@ currency evidence, assumption-mapping readiness and recommended batch. It import
 no model inputs and does not elevate source contract `PASS` to formula parity. See
 [model-migration-inventory.md](model-migration-inventory.md) and its
 [machine-readable record](reconciliation/model-migration-inventory-2026-10-05.json).
+
+## Execution Pace migration
+
+The `Portfolio` sheet's `Execution Pace` and `Pace Rationale` columns (K:L)
+contain the scoped pace rules for current holdings and targets. Their decision
+logic is migrated as `legacy-execution-pace-v1`; workbook target values,
+holdings, company Execution scores, and pace decisions remain independent
+domains. Five formula-cached examples are pinned in
+[`execution-pace.md`](execution-pace.md) and its reconciliation record. The
+five rows on `Decision Signal History` lack sufficient reliable knowledge-time
+provenance to seed canonical history, so they remain reference evidence only.
+No Google Sheets value is read at runtime.

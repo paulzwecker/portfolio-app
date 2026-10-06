@@ -17,12 +17,122 @@ import {
   isCompanyFinancialModelMigration,
   isCompanyReportedFundamentals,
   isCompanyConsensusEstimates,
+  isCompanyEstimateMomentum,
+  isCompanyTemporalAlignment,
+  isCompanyExpectedReturnHistory,
+  isCompanyExpectedReturnAttribution,
+  isPortfolioRankInputSnapshot,
+  isResearchRankInputSnapshot,
   isCompanySourceDocuments,
   isReportedFundamentalDefinitions,
+  isCompanyExecutionPace,
+  isUniverseExecutionPaceSummary,
+  isAttentionFeed,
 } from "@/lib/domain-contracts";
 import { percent, quantity } from "@/lib/display";
 
 const id = "11111111-1111-4111-8111-111111111111";
+const executionPaceSnapshot = {
+  context_version: "execution-pace-inputs-v1",
+  lifecycle: "PORTFOLIO",
+  target_revision_id: id,
+  target_effective_at: "2026-10-05T00:00:00Z",
+  holding_snapshot_id: id,
+  holding_effective_at: "2026-10-05T00:00:00Z",
+  allocation_status: "VALUED",
+  current_weight: "0.02",
+  target_weight: "0.05",
+  allocation_gap: "0.03",
+  model_source_kind: "IMPORTED_CURRENT_CONTRACT",
+  model_source_id: id,
+  model_revision_id: null,
+  model_output_snapshot_id: id,
+  model_key: "P-EXAMPLE",
+  return_semantics: "LEGACY_NORMALIZED_FIELD",
+  model_effective_at: "2026-10-05T00:00:00Z",
+  model_recorded_at: "2026-10-05T00:00:00Z",
+  model_currency: "USD",
+  model_output_quality: "COMPLETE",
+  model_contract_status: "PASS",
+  model_review_flag: "PASS",
+  expected_irr: "0.18",
+  hurdle: "0.09",
+  valuation_listing_id: id,
+  valuation_ticker: "EXM",
+  valuation_venue: "NASDAQ",
+  valuation_currency: "USD",
+  price_observation_id: id,
+  price_market_date: "2026-10-05T00:00:00Z",
+  price_recorded_at: "2026-10-05T00:00:00Z",
+  price_currency: "USD",
+  price: "100",
+  price_provider: "YAHOO_FINANCE",
+  price_quality: "PASS",
+  price_freshness: "FRESH",
+  model_price_status: "AVAILABLE",
+  model_price_effective_at: "2026-10-05T00:00:00Z",
+  model_price_observation_id: id,
+  model_reference_price: "100",
+  model_price_currency: "USD",
+  weighted_fair_value: "130",
+  weighted_upside: "0.3",
+  valuation_zone: "DEEP_DISCOUNT",
+  valuation_range_ratio: "0.8",
+  estimate_momentum_availability: "AVAILABLE",
+  estimate_momentum_direction: "POSITIVE",
+  estimate_momentum_freshness: "FRESH",
+  estimate_momentum_quality: "PASS",
+  estimate_provider_id: "primary_estimates",
+  estimate_latest_snapshot_date: "2026-10-05",
+  estimate_momentum_reason: null,
+  price_regime_source_ref: "regime:example",
+  price_regime_as_of: "2026-10-05T00:00:00Z",
+  price_regime_quality: "PASS",
+  price_regime_raw: "DEEP CORRECTION",
+  price_regime: "DEEP CORR",
+  price_regime_freshness: "FRESH",
+  context_notes: [],
+};
+const executionPaceRun = {
+  id,
+  portfolio_id: id,
+  as_of: "2026-10-05T00:00:00Z",
+  recorded_at: "2026-10-05T00:00:00Z",
+  methodology_version: "legacy-execution-pace-v1",
+  status: "PARTIAL",
+  actor: "LOCAL_USER",
+  reason: "Periodic review.",
+  source: "web",
+  company_count: 1,
+  available_count: 0,
+  review_count: 1,
+  unavailable_count: 0,
+  not_applicable_count: 0,
+};
+const executionPaceHistoryEntry = {
+  run: executionPaceRun,
+  decision: {
+    id: "22222222-2222-4222-8222-222222222222",
+    run_id: id,
+    company_id: id,
+    target_revision_id: id,
+    holding_snapshot_id: id,
+    model_revision_id: null,
+    model_output_snapshot_id: id,
+    price_observation_id: id,
+    decision_status: "REVIEW",
+    pace: null,
+    reason: "Estimate history is insufficient.",
+    input_snapshot: {
+      ...executionPaceSnapshot,
+      estimate_momentum_availability: "INSUFFICIENT_HISTORY",
+      estimate_momentum_direction: null,
+      estimate_momentum_freshness: "NO_DATA",
+      estimate_momentum_quality: "NO_DATA",
+      estimate_latest_snapshot_date: null,
+    },
+  },
+};
 const fundamentalMetrics = [
   "REVENUE",
   "GROSS_PROFIT",
@@ -82,6 +192,337 @@ describe("reported fundamentals contracts", () => {
           description: "Not stored as a reported fact.",
         },
       ]),
+    ).toBe(true);
+  });
+});
+
+describe("Execution Pace contracts", () => {
+  it("preserves review and no-run states without treating them as neutral", () => {
+    expect(
+      isCompanyExecutionPace({
+        company_id: id,
+        current: executionPaceHistoryEntry,
+        history: [executionPaceHistoryEntry],
+      }),
+    ).toBe(true);
+    expect(
+      isCompanyExecutionPace({ company_id: id, current: null, history: [] }),
+    ).toBe(true);
+    expect(
+      isUniverseExecutionPaceSummary([
+        { company, decision: executionPaceHistoryEntry },
+        { company, decision: null },
+      ]),
+    ).toBe(true);
+  });
+
+  it("rejects a result that claims availability without an explicit pace", () => {
+    const malformed = structuredClone(executionPaceHistoryEntry);
+    malformed.decision.decision_status = "AVAILABLE";
+    expect(
+      isCompanyExecutionPace({
+        company_id: id,
+        current: malformed,
+        history: [malformed],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("expected-return history contract", () => {
+  it("accepts an explicit absence without manufacturing a historical value", () => {
+    const noHistory = {
+      company_id: id,
+      as_of: "2026-10-05",
+      known_at: "2026-10-05T12:00:00Z",
+      status: "NO_HISTORY",
+      history: [],
+    };
+    expect(isCompanyExpectedReturnHistory(noHistory)).toBe(true);
+    expect(
+      isCompanyExpectedReturnHistory({
+        ...noHistory,
+        status: "AVAILABLE",
+        history: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps imported output-only history distinct from undated native state", () => {
+    const undated = {
+      point_id: "imported:fixture",
+      source_kind: "IMPORTED_LEGACY_REVISION",
+      event_status: "EFFECTIVE_DATE_UNKNOWN",
+      effective_at: null,
+      recorded_at: "2026-10-05T12:00:00Z",
+      series_id: "legacy:P-EXAMPLE",
+      model_key: "P-EXAMPLE",
+      model_id: null,
+      revision_id: null,
+      revision_number: null,
+      model_type: null,
+      methodology_version: null,
+      model_label: "P-EXAMPLE",
+      model_currency: null,
+      currency_status: "UNKNOWN",
+      valuation_listing_id: null,
+      valuation_ticker: null,
+      valuation_venue: null,
+      valuation_listing_currency: null,
+      is_current_at_cutoff: false,
+      output_status: "COMPLETE",
+      output_quality: "COMPLETE",
+      contract_status: "PASS",
+      return_semantics: "LEGACY_NORMALIZED_FIELD",
+      actor: "IMPORT",
+      source_actor: "Workbook researcher",
+      revision_source: "Workbook",
+      revision_type: "Periodic review",
+      bear_fv: null,
+      base_fv: null,
+      bull_fv: null,
+      bear_probability: null,
+      base_probability: null,
+      bull_probability: null,
+      weighted_fv: null,
+      weighted_upside: null,
+      expected_cash_flow_irr: null,
+      hurdle: null,
+      expected_excess: null,
+      forward_fundamental_cagr: null,
+      market_price: {
+        status: "UNDATED",
+        listing_id: null,
+        ticker: null,
+        venue: null,
+        listing_currency: null,
+        quote: null,
+        quote_currency: null,
+        model_reference_price: null,
+        model_currency: null,
+        effective_at: null,
+        observed_at: null,
+        recorded_at: null,
+        provider: null,
+        adjustment_basis: null,
+        observation_id: null,
+        source_ref: null,
+        reason: "The source snapshot has no effective timestamp.",
+      },
+      estimate_context: {
+        status: "UNDATED",
+        provider_id: null,
+        periods: [],
+      },
+      source: "Workbook",
+      source_revision_id: "legacy-revision",
+      rationale: null,
+      evidence: null,
+    };
+    expect(
+      isCompanyExpectedReturnHistory({
+        company_id: id,
+        as_of: "2026-10-05",
+        known_at: "2026-10-05T12:00:00Z",
+        status: "PARTIAL",
+        history: [undated],
+      }),
+    ).toBe(true);
+  });
+
+  it("preserves null Expected IRR when attribution endpoints are missing", () => {
+    const state = {
+      point_id: "native:fixture",
+      source_kind: "NATIVE_MODEL_REVISION",
+      effective_at: "2026-10-01T12:00:00Z",
+      recorded_at: "2026-10-01T12:00:00Z",
+      series_id: "native:model",
+      model_id: id,
+      revision_id: id,
+      revision_number: 1,
+      model_type: "UFCF_DCF_10Y_FADE",
+      methodology_version: "fixture-v1",
+      return_semantics: "NATIVE_METHOD_OUTPUT",
+      model_currency: "USD",
+      expected_cash_flow_irr: null,
+      hurdle: "0.09",
+      expected_excess: null,
+      bear_fv: "10",
+      base_fv: "20",
+      bull_fv: "30",
+      bear_probability: "0.2",
+      base_probability: "0.6",
+      bull_probability: "0.2",
+      weighted_fv: "20",
+      market_price: {
+        status: "NO_DATA",
+        listing_id: null,
+        ticker: null,
+        venue: null,
+        listing_currency: null,
+        quote: null,
+        quote_currency: null,
+        model_reference_price: null,
+        model_currency: "USD",
+        effective_at: null,
+        observed_at: null,
+        recorded_at: null,
+        provider: null,
+        adjustment_basis: null,
+        observation_id: null,
+        source_ref: null,
+        reason: "No price captured.",
+      },
+      estimate_context: {
+        status: "NO_OBSERVATIONS",
+        provider_id: null,
+        periods: [],
+      },
+      source: "test",
+      source_revision_id: null,
+      rationale: "test fixture",
+    };
+    const missing = {
+      company_id: id,
+      status: "MISSING_RETURN",
+      method: "UNAVAILABLE",
+      prior: state,
+      current: { ...state, point_id: "native:fixture-2", revision_number: 2 },
+      expected_irr_change: null,
+      drivers: [],
+      residual: null,
+      residual_reason: "A model endpoint has no return.",
+      context_changes: {
+        weighted_fv: "0",
+        bear_fv: null,
+        base_fv: null,
+        bull_fv: null,
+        bear_probability: null,
+        base_probability: null,
+        bull_probability: null,
+        hurdle: null,
+        expected_excess: null,
+      },
+      estimate_context_note: "Estimates remain contextual.",
+    };
+    expect(isCompanyExpectedReturnAttribution(missing)).toBe(true);
+    expect(
+      isCompanyExpectedReturnAttribution({
+        ...missing,
+        expected_irr_change: "0",
+      }),
+    ).toBe(false);
+    const attributed = {
+      ...missing,
+      status: "ATTRIBUTED",
+      method: "SYMMETRIC_COUNTERFACTUAL_SHAPLEY",
+      expected_irr_change: "0.02",
+      drivers: [
+        ["MARKET_PRICE", "Market price", "-0.01"],
+        ["SCENARIO_PROBABILITIES", "Probabilities", "0.005"],
+        ["REQUIRED_RETURN_ASSUMPTIONS", "Required return", "0.01"],
+        ["MODEL_ASSUMPTIONS", "Model assumptions", "0.015"],
+      ].map(([code, label, effect]) => ({
+        code,
+        label,
+        effect,
+        explanation: "Fixture driver.",
+      })),
+      residual: "0",
+      residual_reason: null,
+    };
+    expect(isCompanyExpectedReturnAttribution(attributed)).toBe(true);
+  });
+});
+
+describe("active ranking input snapshot contracts", () => {
+  it("keeps Portfolio Rank missing fields null and explicit", () => {
+    const score = {
+      score: null,
+      status: "MISSING",
+      assessment_id: null,
+      effective_at: null,
+      recorded_at: null,
+      source: null,
+    };
+    const missingPortfolioInputs = {
+      context_version: "portfolio-rank-inputs-v1",
+      score_formula: "LEGACY_IRR_FIRST_ALLOCATION_V1",
+      portfolio_score: null,
+      current_weight: null,
+      target_weight: null,
+      target_minus_current_gap: null,
+      lifecycle: "PORTFOLIO",
+      allocation_status: "FX_UNAVAILABLE",
+      holding_snapshot_id: id,
+      holding_effective_at: "2026-10-06T12:00:00Z",
+      target_revision_id: id,
+      target_effective_at: "2026-10-06T12:00:00Z",
+      expected_irr: null,
+      expected_excess: null,
+      hurdle: null,
+      bear_fair_value: null,
+      weighted_fair_value: null,
+      bull_fair_value: null,
+      valuation_uncertainty: null,
+      durability_10y: score,
+      compounder_quality: score,
+      execution: score,
+      risk: score,
+      model_source: null,
+      score_contributions: {
+        target_underweight: null,
+        expected_irr: null,
+        durability_10y: null,
+        compounder_quality: null,
+        execution: null,
+        risk: null,
+        valuation_uncertainty_penalty: null,
+        negative_expected_excess_penalty: null,
+      },
+      context_note: "Missing scores are not zero.",
+    };
+    expect(isPortfolioRankInputSnapshot(missingPortfolioInputs)).toBe(true);
+    expect(
+      isPortfolioRankInputSnapshot({
+        ...missingPortfolioInputs,
+        portfolio_score: "0",
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts an explicit Research Rank missing-input state without an invented key", () => {
+    expect(
+      isResearchRankInputSnapshot({
+        context_version: "research-rank-inputs-v1",
+        lifecycle: "CANDIDATE",
+        candidate_tier: null,
+        priority_seed: null,
+        legacy_default_priority_seed: null,
+        used_legacy_default: false,
+        sort_key: null,
+        input_quality: "MISSING",
+        source_digest: null,
+        bucket_source_ref: null,
+        priority_seed_source_ref: null,
+        context_note: "Candidate tier has not been imported.",
+      }),
+    ).toBe(true);
+    expect(
+      isResearchRankInputSnapshot({
+        context_version: "research-rank-inputs-v1",
+        lifecycle: "CANDIDATE",
+        candidate_tier: "LOW",
+        priority_seed: null,
+        legacy_default_priority_seed: "50000",
+        used_legacy_default: true,
+        sort_key: "50000",
+        input_quality: "AVAILABLE",
+        source_digest: null,
+        bucket_source_ref: "Workbook!C12",
+        priority_seed_source_ref: null,
+        context_note: "The documented source fallback was used.",
+      }),
     ).toBe(true);
   });
 });
@@ -167,6 +608,75 @@ describe("consensus estimate contracts", () => {
         ],
       }),
     ).toBe(true);
+  });
+});
+
+describe("temporal alignment contracts", () => {
+  const emptyValue = {
+    status: "NO_MATCHING_FISCAL_PERIOD",
+    value: null,
+    currency: null,
+    unit: null,
+    source_name: null,
+    source_reference: null,
+    source_observation_id: null,
+    period_end: null,
+    effective_at: null,
+    observed_at: null,
+    recorded_at: null,
+    data_quality: null,
+    quality_reason: null,
+    low_value: null,
+    high_value: null,
+    analyst_count: null,
+  };
+
+  it("accepts explicit unavailable values without treating them as zero", () => {
+    expect(
+      isCompanyTemporalAlignment({
+        company_id: id,
+        metric: "REVENUE",
+        fiscal_year: 2027,
+        as_of: "2026-10-05",
+        forecast_known_at: "2026-10-05T23:59:59.999999Z",
+        outcome_known_at: "2026-10-05T23:59:59Z",
+        horizon_days: 365,
+        fiscal_year_mapping_basis: "NO_EXPLICIT_MODEL_FISCAL_YEAR_ANCHOR",
+        comparison_status: "NO_MODEL_FORECAST",
+        model_forecasts: [],
+        consensus: emptyValue,
+        actual: { ...emptyValue, status: "NOT_REPORTED" },
+      }),
+    ).toBe(true);
+  });
+
+  it("preserves a reported zero and rejects malformed point-in-time cutoffs", () => {
+    const valid = {
+      company_id: id,
+      metric: "REVENUE",
+      fiscal_year: 2027,
+      as_of: "2026-10-05",
+      forecast_known_at: "2026-10-05T23:59:59.999999Z",
+      outcome_known_at: "2026-10-05T23:59:59Z",
+      horizon_days: 365,
+      fiscal_year_mapping_basis: "EXPLICIT_FIXTURE",
+      comparison_status: "INCOMPLETE",
+      model_forecasts: [],
+      consensus: emptyValue,
+      actual: { ...emptyValue, status: "NOT_REPORTED" },
+    };
+    expect(
+      isCompanyTemporalAlignment({
+        ...valid,
+        actual: { ...valid.actual, value: "0" },
+      }),
+    ).toBe(true);
+    expect(
+      isCompanyTemporalAlignment({
+        ...valid,
+        forecast_known_at: "not-a-timestamp",
+      }),
+    ).toBe(false);
   });
 });
 
@@ -332,13 +842,13 @@ const rankingCurrent = rankTypes.map((ranking_type, index) => {
   const definition = {
     id: `22222222-2222-4222-8222-22222222222${index}`,
     ranking_type,
-    version: 1,
+    version: ranking_type === "WATCHLIST" ? 3 : 2,
     title: `${ranking_type} Rank`,
-    methodology: "Documented workbook ordering; source inputs not migrated.",
+    methodology: "Documented, separate ranking methodology.",
     population_rule: "Explicit domain population.",
-    required_inputs: "Source values are not migrated.",
+    required_inputs: "Domain-specific canonical inputs.",
     source_reference: "reference/workbook/Portfolio_Watchlist.xlsx",
-    implementation_status: "NOT_MIGRATED",
+    implementation_status: "READY",
     effective_from: company.created_at,
     status: "ACTIVE",
     recorded_at: company.created_at,
@@ -348,7 +858,7 @@ const rankingCurrent = rankTypes.map((ranking_type, index) => {
     definition,
     as_of: company.created_at,
     recorded_at: company.created_at,
-    status: "UNAVAILABLE",
+    status: "PARTIAL",
     actor: "SYSTEM",
     reason: "Snapshot records input availability.",
     source: "fictional-test",
@@ -360,7 +870,7 @@ const rankingCurrent = rankTypes.map((ranking_type, index) => {
     run_id: run.id,
     company_id: id,
     position: null,
-    status: index === 0 ? "INPUTS_UNAVAILABLE" : "NOT_MIGRATED",
+    status: index === 1 ? "DATA_CHECK" : "INPUTS_UNAVAILABLE",
     reason: "Required ranking inputs are unavailable.",
   };
   return { definition, run, entry };
@@ -582,6 +1092,89 @@ describe("domain display integrity", () => {
       ),
     };
     expect(isCompanyRankings(fabricatedZero)).toBe(false);
+  });
+  it("accepts Watchlist Rank data-checks with source and missing-score context", () => {
+    const run = companyRankings.current.find(
+      (item) => item.definition.ranking_type === "WATCHLIST",
+    );
+    if (!run?.run || !run.entry)
+      throw new Error("ranking fixture is incomplete");
+    const entry = {
+      ...run.entry,
+      status: "DATA_CHECK",
+      position: null,
+      reason: "Native and legacy return semantics are not mixed.",
+      input_snapshot: {
+        context_version: "watchlist-rank-inputs-v1",
+        expected_irr: "0.12",
+        return_semantics: "LEGACY_NORMALIZED_FIELD",
+        return_source: {
+          source_kind: "IMPORTED_CURRENT_CONTRACT",
+          record_id: id,
+          model_id: null,
+          revision_id: null,
+          revision_number: null,
+          model_key: "P-EXAMPLE",
+          model_type: null,
+          methodology_version: null,
+          contract_version: "1.0.0",
+          source_revision_id: "legacy-1",
+          source: "Workbook fixture",
+          effective_at: null,
+          recorded_at: company.created_at,
+          effective_time_status: "UNKNOWN",
+          model_currency: "USD",
+          currency_status: "DOCUMENTED",
+          output_quality: "COMPLETE",
+          contract_status: "PASS",
+          price_status: null,
+          price_effective_at: null,
+          price_observation_id: null,
+          listing_id: id,
+          listing_ticker: "EX",
+          listing_venue: "TEST-X",
+          migration_status: null,
+        },
+        durability_10y: {
+          score: null,
+          status: "NOT_ASSESSED",
+          assessment_id: null,
+          effective_at: null,
+          recorded_at: null,
+          rationale: null,
+          source: null,
+        },
+        compounder_quality: {
+          score: null,
+          status: "NOT_ASSESSED",
+          assessment_id: null,
+          effective_at: null,
+          recorded_at: null,
+          rationale: null,
+          source: null,
+        },
+        forward_fundamental_cagr: null,
+        weighted_fair_value: "20",
+        hurdle: "0.09",
+        expected_excess: "0.03",
+        decision_context: "QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED",
+        context_note: "Missing context remains explicit.",
+      },
+    };
+    const withContext = {
+      ...companyRankings,
+      current: companyRankings.current.map((item) =>
+        item.definition.ranking_type === "WATCHLIST"
+          ? { ...item, entry }
+          : item,
+      ),
+      history: companyRankings.history.map((item) =>
+        item.run.definition.ranking_type === "WATCHLIST"
+          ? { ...item, entry }
+          : item,
+      ),
+    };
+    expect(isCompanyRankings(withContext)).toBe(true);
   });
   it("keeps a real zero model output distinct from an unavailable output", () => {
     expect(isModelOutputSnapshot(modelOutput)).toBe(true);
@@ -963,5 +1556,83 @@ describe("domain display integrity", () => {
       }),
     ).toBe(true);
     expect(isExtendedFinancialModels([])).toBe(true);
+  });
+
+  it("keeps missing Estimate Momentum explicit instead of accepting a neutral score", () => {
+    const missingSignal = {
+      company_id: id,
+      methodology_version: "legacy-estimate-momentum-v2-partial-1",
+      availability: "INSUFFICIENT_HISTORY",
+      direction: null,
+      raw_score: null,
+      confidence_adjusted_score: null,
+      confidence: "0",
+      confidence_band: "NO_DATA",
+      coverage_fraction: "0",
+      coverage_count: 0,
+      coverage_total: 20,
+      freshness: "NO_DATA",
+      data_quality: "NO_DATA",
+      provider_id: "fmp_estimates",
+      latest_snapshot_date: null,
+      as_of: "2026-10-05",
+      known_at: null,
+      reason:
+        "No same-provider point-in-time reference comparison is available.",
+      periods: [],
+    };
+    expect(isCompanyEstimateMomentum(missingSignal)).toBe(true);
+    expect(
+      isCompanyEstimateMomentum({ ...missingSignal, direction: "NEUTRAL" }),
+    ).toBe(false);
+    expect(
+      isCompanyEstimateMomentum({ ...missingSignal, raw_score: "0" }),
+    ).toBe(false);
+  });
+
+  it("accepts an undated attention review without coercing missing values", () => {
+    const event = {
+      id: "model_output_coverage:missing",
+      company_id: id,
+      company_name: "Example business",
+      lifecycle: "PORTFOLIO",
+      event_type: "DATA_QUALITY",
+      severity: "LOW",
+      status: "REVIEW",
+      title: "No complete normalized model output",
+      explanation: "No model output is available.",
+      effective_at: null,
+      time_precision: "UNKNOWN",
+      recorded_at: null,
+      source_domain: "model_output_coverage",
+      source_id: "missing",
+      source_reference: null,
+      href: `/company/${id}`,
+      prior_value: null,
+      current_value: null,
+      unit: null,
+    };
+    expect(
+      isAttentionFeed({
+        as_of: "2026-10-05T12:00:00Z",
+        lookback_days: 30,
+        total: 1,
+        events: [event],
+      }),
+    ).toBe(true);
+    expect(
+      isAttentionFeed({
+        as_of: "2026-10-05T12:00:00Z",
+        lookback_days: 30,
+        total: 1,
+        events: [
+          {
+            ...event,
+            effective_at: "2026-10-05T12:00:00Z",
+            time_precision: "UNKNOWN",
+          },
+        ],
+      }),
+    ).toBe(false);
   });
 });

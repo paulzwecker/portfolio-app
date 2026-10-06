@@ -1,0 +1,194 @@
+{
+  "source": {
+    "path": "reference/workbook/Portfolio_Watchlist.xlsx",
+    "sha256": "27F1889A7185E8759486409490DB4D52C694F0084D0A914B234A1E251AB78CE9",
+    "sheet": "Universe Registry",
+    "documented_formula": "Expected IRR descending; ticker ascending for ties; explicit WATCHLIST lifecycle only"
+  },
+  "formula_reconciliation": {
+    "watchlist_source_rows": 74,
+    "cached_positive_rank_rows": 71,
+    "cached_blank_rank_rows": 3,
+    "numeric_expected_irr_rows": 73,
+    "non_numeric_expected_irr_rows": 1,
+    "cached_positions_matching_formula": 9,
+    "cached_positions_disagreeing_with_formula": 62,
+    "duplicate_cached_positions_within_watchlist": 6,
+    "full_universe_parity": false,
+    "interpretation": "The cached positions beyond the representative leading examples appear stale or depend on undocumented workbook state. They are retained as imported history and are not recalculated or repaired."
+  },
+  "representative_cached_matches": [
+    {
+      "ticker": "ATAT",
+      "expected_irr": "0.19",
+      "cached_position": 1,
+      "calculated_position": 1
+    },
+    {
+      "ticker": "RELY",
+      "expected_irr": "0.1827",
+      "cached_position": 2,
+      "calculated_position": 2
+    },
+    {
+      "ticker": "NU",
+      "expected_irr": "0.1718274344",
+      "cached_position": 3,
+      "calculated_position": 3
+    },
+    {
+      "ticker": "MNDY",
+      "expected_irr": "0.1577",
+      "cached_position": 4,
+      "calculated_position": 4
+    },
+    {
+      "ticker": "GRAB",
+      "expected_irr": "0.1463",
+      "cached_position": 5,
+      "calculated_position": 5
+    },
+    {
+      "ticker": "TOST",
+      "expected_irr": "0.146",
+      "cached_position": 6,
+      "calculated_position": 6
+    },
+    {
+      "ticker": "APP",
+      "expected_irr": "0.1454689327",
+      "cached_position": 7,
+      "calculated_position": 7
+    },
+    {
+      "ticker": "KVYO",
+      "expected_irr": "0.142",
+      "cached_position": 8,
+      "calculated_position": 8
+    },
+    {
+      "ticker": "MEDI",
+      "expected_irr": "0.14",
+      "cached_position": 9,
+      "calculated_position": 9
+    }
+  ],
+  "application_run_coverage": {
+    "run_id": "64ddcdf9-d5be-46b2-be47-c7c6dcf6b4b4",
+    "definition_version": 3,
+    "as_of": "2026-10-05T21:41:07.633101+00:00",
+    "recorded_at": "2026-10-05T21:41:07.966137+00:00",
+    "status": "PARTIAL",
+    "company_count": 219,
+    "watchlist_count": 71,
+    "ranked": 14,
+    "data_check": 45,
+    "inputs_unavailable": 12,
+    "not_eligible": 148,
+    "excluded": 0,
+    "ranked_and_data_check_entries_have_input_snapshots": true,
+    "ranked_return_semantics": {
+      "LEGACY_NORMALIZED_FIELD": 14,
+      "NATIVE_METHOD_OUTPUT": 0
+    },
+    "ranked_entries": [
+      {
+        "position": 1,
+        "company": "SiteMinder",
+        "ticker": "SDR",
+        "expected_irr": "0.1199507894"
+      },
+      {
+        "position": 2,
+        "company": "Constellation Software",
+        "ticker": "CSU",
+        "expected_irr": "0.119"
+      },
+      {
+        "position": 3,
+        "company": "AAON, Inc.",
+        "ticker": "AAON",
+        "expected_irr": "0.1189201293"
+      },
+      {
+        "position": 4,
+        "company": "Ares Management",
+        "ticker": "ARES",
+        "expected_irr": "0.1160548002"
+      },
+      {
+        "position": 5,
+        "company": "GE Vernova",
+        "ticker": "GEV",
+        "expected_irr": "0.09228876581"
+      },
+      {
+        "position": 6,
+        "company": "Brookfield Asset Management",
+        "ticker": "BAM",
+        "expected_irr": "0.08495302698"
+      },
+      {
+        "position": 7,
+        "company": "Spotify",
+        "ticker": "SPOT",
+        "expected_irr": "0.082"
+      },
+      {
+        "position": 8,
+        "company": "DISCO Corporation",
+        "ticker": "6146",
+        "expected_irr": "0.04045911434"
+      },
+      {
+        "position": 9,
+        "company": "Saab",
+        "ticker": "SAAB-B",
+        "expected_irr": "0.03388691544"
+      },
+      {
+        "position": 10,
+        "company": "nVent Electric",
+        "ticker": "NVT",
+        "expected_irr": "0.01005329843"
+      },
+      {
+        "position": 11,
+        "company": "Carvana",
+        "ticker": "CVNA",
+        "expected_irr": "0.003323046906"
+      },
+      {
+        "position": 12,
+        "company": "BE Semiconductor Industries",
+        "ticker": "BESI",
+        "expected_irr": "0.002295792258"
+      },
+      {
+        "position": 13,
+        "company": "KLA Corporation",
+        "ticker": "KLAC",
+        "expected_irr": "-0.01647158417"
+      },
+      {
+        "position": 14,
+        "company": "VAT Group",
+        "ticker": "VACN",
+        "expected_irr": "-0.04860793266"
+      }
+    ],
+    "data_check_reasons": {
+      "unknown_model_currency": 35,
+      "ambiguous_or_missing_listing_mapping": 9,
+      "later_exact_listing_price_than_native_output": 1
+    },
+    "unavailable_reasons": {
+      "missing_numeric_expected_irr": 12
+    },
+    "notes": [
+      "The one native Watchlist model is Toast; a later exact-listing price exists than the accepted output reference price, so the native return is DATA_CHECK.",
+      "Because no valid native return participates, the supported currency-documented legacy normalized-output cohort is ranked separately.",
+      "No ranks, lifecycle states, model assumptions, targets, or holdings were changed by this run."
+    ]
+  }
+}

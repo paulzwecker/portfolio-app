@@ -70,8 +70,12 @@ working-tree document rather than a commit or tracked-file diff.
 
 ## Remaining scope
 
-- Numeric ranking generation remains blocked by unmigrated Portfolio Score, Expected
-  IRR and Research Sort Key inputs.
+This section records the gaps as they stood at the 2026-10-05 audit. Portfolio Rank
+and Research Rank were activated in the follow-on 2026-10-06 slice; see
+[portfolio-rank.md](portfolio-rank.md) and [research-rank.md](research-rank.md).
+
+- Numeric ranking coverage remains limited by data/methodology comparability gaps;
+  the two newly activated ranks preserve explicit unavailable and data-check rows.
 - The legacy portfolio import still has unresolved mappings/source errors; details
   remain in its original reconciliation record.
 - Market data has no runtime refresh provider or dated FX source. Eleven ready legacy

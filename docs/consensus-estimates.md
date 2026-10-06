@@ -119,7 +119,9 @@ values are not imported and no historical consensus is reconstructed from them. 
 
 Consensus values are external observations. They never write native model assumptions,
 financial-model revisions, lifecycle, scores, rankings or targets. Estimate Momentum is
-not implemented by this slice.
+derived separately from one selected provider stream. It does not change consensus facts
+or model state; see [`estimate-momentum.md`](estimate-momentum.md) for its partial legacy
+methodology migration, data coverage and limitations.
 
 ## Coverage and Estimate Momentum readiness (2026-10-05)
 
@@ -132,7 +134,12 @@ analyst-count or absolute fiscal-period coverage. The importer has no duplicate 
 observations on rerun. No FMP provider mappings or FMP observations are configured in the
 current database, so primary-provider coverage is zero.
 
-Estimate Momentum is not ready. It needs repeated point-in-time snapshots from an
-explicitly selected primary provider, stable future-period identities, sufficient
-coverage, and representative legacy comparison. The single legacy baseline is insufficient
-to claim historical revision momentum.
+At the time of this 2026-10-05 coverage audit, Estimate Momentum was not available from
+canonical facts: no FMP mappings were configured and the one legacy baseline had no
+absolute fiscal-period ends. The calculator now exists, but it intentionally returns
+`NO_MAPPING` or `INSUFFICIENT_HISTORY` until an explicitly selected provider has captured
+repeatable point-in-time snapshots with resolved annual periods. The workbook's separate
+formula-derived signal remains excluded from consensus import. Its limited formula
+comparison is recorded in
+[`estimate-momentum-legacy-2026-10-05.json`](reconciliation/estimate-momentum-legacy-2026-10-05.json)
+and does not claim point-in-time parity.

@@ -1,8 +1,8 @@
-# Migration strategy
+﻿# Migration strategy
 
 ## Current scope
 
-Milestone 0 establishes the application shell, API/database connectivity, environment configuration, schema migration mechanism, contracts, and development checks. Milestone 1A adds identity, explicit lifecycle history, observed holdings/cash, and accepted targets. Milestone 1B adds the four versioned score dimensions and append-only assessments. Milestone 1C adds separate versioned Portfolio, Watchlist, and Research ranking definitions plus immutable availability runs. The controlled workbook import now copies supported canonical records for Milestones 1A–1C. Score assessments and cached legacy rank observations are preserved as source data; numeric rank calculations remain disabled and no financial-model calculations are migrated.
+Milestone 0 establishes the application shell, API/database connectivity, environment configuration, schema migration mechanism, contracts, and development checks. Milestone 1A adds identity, explicit lifecycle history, observed holdings/cash, and accepted targets. Milestone 1B adds the four versioned score dimensions and append-only assessments. Milestone 1C adds separate versioned Portfolio, Watchlist, and Research ranking definitions plus immutable runs. All three ranks now calculate their distinct documented rules from canonical point-in-time inputs; cached workbook rank cells remain migration evidence only and are not current calculation inputs.
 
 `npm run db:seed` is an opt-in fictional development demonstration. Its marked
 records are not migration fixtures or accepted real investment state. The seed
@@ -43,22 +43,22 @@ evidence. Defer unrelated dependencies and product domains until their scoped sl
 
 ## Ranking migration boundary
 
-The current workbook evidence defines three independent sorts: Portfolio Score
+The workbook evidence defines three independent sorts: Portfolio Score
 descending for the active positive current/target portfolio population; Expected IRR
 descending for explicit WATCHLIST members; and Research Sort Key descending for the
 Research Universe. Each has ticker-ascending tie order and leaves a blank key
 unranked. Watchlist Candidate Rank, which orders Fit Tier before Expected IRR, is a
 separate concept and must not replace canonical Watchlist Rank.
 
-Milestone 1C persists these definitions and snapshots explicit per-company states.
-The import preserves unique cached workbook positions, but it deliberately does not
-calculate ranks while Portfolio Score, Expected IRR, Research Sort Key, prices, and
-FX inputs remain unmigrated. Duplicate cached positions that conflict with the
-documented ticker tie-break remain unavailable. A future ranking migration must
-identify the supported source values and their effective dates, capture representative
-fixtures, reconcile ordering/ties and missing-input behavior, and only then enable
-application calculation. Historical runs retain their original definition, universe,
-input status, and output; later current-state changes cannot regenerate old results.
+Milestone 1C persists the definitions, cached source observations, and explicit
+per-company states. Watchlist Rank sorts comparable Expected IRR inputs, keeping
+native shareholder-cash-flow and legacy normalized return semantics in separate
+cohorts. Portfolio Rank implements the workbook's IRR-first Portfolio Score and
+also keeps those return semantics separate. Research Rank implements the Candidate
+High/Low tier and persistent-seed Research Sort Key, including its explicit blank
+seed fallback. Each run retains exact inputs, source references, status and output;
+later state cannot regenerate old results. Missing inputs, stale/mismatched prices,
+unknown currency, ambiguous identity, and unsupported cohorts remain explicit.
 Rankings do not own or mutate lifecycle, portfolio targets/holdings, model
 assumptions, or execution.
 
@@ -81,7 +81,14 @@ Downgrades may destroy data once later schema migrations add domain tables. Revi
 
 ## Completion evidence
 
-Record tested code/version, fixture identity, accepted tolerances, reconciliation outcome, regression checks, unresolved limitations, and canonical ownership for each migrated module. The data import reconciles supported records against the parsed source snapshot; it does not establish calculation parity for ranks or any financial model. A cutover is complete only when consumers use the accepted owner and no longer depend on Sheets as the application database for that domain.
+Record tested code/version, fixture identity, accepted tolerances, reconciliation
+outcome, regression checks, unresolved limitations, and canonical ownership for each
+migrated module. The data import reconciles supported records against the parsed
+source snapshot; it does not establish calculation parity for Portfolio Rank,
+Research Rank or any financial model. Watchlist Rank parity is limited to the
+representative workbook cases documented in [watchlist-rank.md](watchlist-rank.md).
+A cutover is complete only when consumers use the accepted owner and no longer
+depend on Sheets as the application database for that domain.
 
 ## Milestone 2A: canonical market facts
 
@@ -132,8 +139,9 @@ machine-readable artifact at
 It separates normalized-output publication from tab-level native assumption
 mapping, records lifecycle, identity and currency evidence, and proposes small
 Portfolio-first batches. The inventory command does not write model state or
-evaluate financial formulas. The first follow-up migration has now accepted the
-parity-proven `P-GOOGL` and `W-TOST` inputs as canonical revisions; see the
+evaluate financial formulas. The first import accepted parity-proven `P-GOOGL` and
+`W-TOST` inputs; the next reviewed Portfolio DCF sub-batch accepted `P-ASML`,
+`P-ISRG` and `P-MA` as canonical revisions. See the
 [native model-input import runbook and reconciliation](native-model-input-migration.md).
 Future batches still require a tab-specific input/output fixture,
 listing/currency validation, immutable revision provenance, and an explicit

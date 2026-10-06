@@ -1,0 +1,46 @@
+{
+  "status": "ACTIVATED",
+  "source": "reference/workbook/Portfolio_Watchlist.xlsx",
+  "source_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+  "source_formula": "Portfolio_Watchlist.xlsx: Overview!S2; cached Portfolio Score in Universe Registry!O; cached rank in Universe Registry!L",
+  "definition": "IRR-first Allocation Score v1; source formula preserved in exact decimal arithmetic; descending score, canonical listing ticker ascending",
+  "workbook_reconciliation": {
+    "input_complete_cases": 18,
+    "formula_tolerance": "1e-8",
+    "formula_matches": 18,
+    "cases_with_missing_source_inputs": 3,
+    "complete_cached_positions_agree_with_cached_score_order": 21,
+    "representative_fixture": {
+      "ticker": "GOOGL",
+      "portfolio_score": "57.66995863"
+    }
+  },
+  "canonical_run": {
+    "run_id": "95224823-e9cb-4050-aad5-df6692f6dc4f",
+    "as_of": "2026-10-06T00:47:01.119444+02:00",
+    "recorded_at": "2026-10-06T00:47:01.554871+02:00",
+    "universe_size": 219,
+    "ranked": 3,
+    "inputs_unavailable": 8,
+    "data_check": 10,
+    "not_eligible": 198,
+    "data_check_reasons": {
+      "legacy_vs_native_expected_irr_semantics_not_mixed": 8,
+      "native_model_uses_older_price_than_later_exact_listing_quote": 1,
+      "legacy_contract_not_complete_pass": 1
+    },
+    "ranked_companies": ["Mastercard", "Intuitive Surgical", "ASML Holding"],
+    "unavailable_reasons": {
+      "missing_target_weight": 5,
+      "missing_assessed_score_dimensions": 3
+    }
+  },
+  "ownership": {
+    "changes_targets": false,
+    "changes_holdings": false,
+    "changes_lifecycle": false,
+    "changes_models": false,
+    "changes_execution_pace": false
+  },
+  "source_formula_parity_does_not_assert_native_legacy_return_semantics_are_identical": true
+}

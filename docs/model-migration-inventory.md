@@ -6,12 +6,15 @@ It describes the committed `Portfolio_Watchlist.xlsx` snapshot (SHA-256
 `27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9`). The
 workbook does not record a trustworthy effective date.
 
-The inventory records the assessed population before model-input migration. It
-contains 116 `P-` / `W-` model tabs alongside 219 registry companies. At that
-assessment point, no real company model-input set had been accepted into the
-canonical model domain. The first controlled native batch has since been migrated;
-see the [native model-input migration report](reconciliation/native-model-input-import-2026-10-05.json)
-and [import runbook](native-model-input-migration.md).
+The inventory contains 116 `P-` / `W-` model tabs alongside 219 registry companies.
+It records source population, identity, lifecycle, currency, output-contract and
+per-tab readiness evidence; accepted application state is recorded separately in
+the import assessments and reconciliation reports. The initial two-model import is
+at [batch 1](reconciliation/native-model-input-import-batch-1-2026-10-05.json), and
+the reviewed Portfolio DCF sub-batch is at
+[batch 2](reconciliation/native-model-input-import-batch-2-2026-10-05.json). See
+the [import runbook](native-model-input-migration.md) for the safety gates and
+current coverage.
 
 ## Rebuild and interpretation
 
@@ -47,7 +50,7 @@ bucket are required. A `P-` / `W-` tab name is not lifecycle authority.
 
 | Source-title methodology family         |   Total | Portfolio | Watchlist |   Drop | Unresolved lifecycle | Native support                                                                                                               |
 | --------------------------------------- | ------: | --------: | --------: | -----: | -------------------: | ---------------------------------------------------------------------------------------------------------------------------- |
-| Secular-growth-fade UFCF DCF            |      24 |        14 |         1 |      9 |                    0 | DCF family exists; only `P-GOOGL` has tab-specific parity proof.                                                             |
+| Secular-growth-fade UFCF DCF            |      24 |        14 |         1 |      9 |                    0 | DCF family exists; `P-GOOGL`, `P-ASML`, `P-ISRG` and `P-MA` have tab-specific parity proof.                                  |
 | Owner-cash / owner-earnings             |      74 |         6 |        58 |      8 |                    2 | Owner-cash family exists; only `W-TOST` has tab-specific parity proof. Financial/business variants need separate review.     |
 | Residual income                         |       2 |         0 |         0 |      2 |                    0 | Native residual-income family exists; `W-HDFC` has parity proof but is Drop. `W-SOFI` is also Drop and is not parity-proven. |
 | SOTP or SOTP hybrid                     |       3 |         1 |         0 |      0 |                    2 | No native SOTP method. `P-SPGI` is the active exact-identity example; the two component tabs lack exact identity.            |
@@ -62,11 +65,12 @@ specializations: `W-AFRM`, `W-ARES`, `W-BAM`, `W-CSU`, `W-HOOD`, `W-IBKR`, `W-JD
 `W-KNSL`, `W-NU` and `W-PLMR`. `P-SPGI` is the eleventh active unsupported method
 case because its published model combines a RemainCo DCF and linked SOTP.
 
-Three existing tab-specific fixtures prove native parity: `P-GOOGL` (Portfolio),
-`W-TOST` (Watchlist) and `W-HDFC` (Drop). Accordingly, only the first two are
-currently `READY_FOR_NATIVE_IMPORT`. `W-HDFC` remains `LEGACY_ONLY` while lifecycle
-is Drop. The three fixtures establish methodology examples; they do not mean those
-company assumptions have been batch imported.
+Five active tab-specific fixtures prove native parity: `P-GOOGL`, `P-ASML`,
+`P-ISRG`, and `P-MA` (Portfolio), plus `W-TOST` (Watchlist). These are
+`READY_FOR_NATIVE_IMPORT`; the first controlled import and the later DCF sub-batch
+are recorded separately in the [migration runbook](native-model-input-migration.md)
+and their reconciliation artifacts. `W-HDFC` remains a parity-proven method example
+but `LEGACY_ONLY` while lifecycle is Drop.
 
 ## Output contract and readiness
 
@@ -78,9 +82,9 @@ company assumptions have been batch imported.
 | No contract                     |    8 | Six are Drop; `P-MELI-SOTP` and `P-SPGI-CIQ` are separate unresolved component tabs.                                                 |
 
 The current contract therefore has 97 raw `PASS` labels, but only 96 published
-rows pass the importer's identity/layout checks. Of the 97 raw rows, only two active
-tabs are ready for native input import. Do not use the output `PASS` rate as a
-coverage or readiness measure.
+rows pass the importer's identity/layout checks. Five active tabs are ready for
+native input import. Do not use the output `PASS` rate as a coverage or readiness
+measure.
 
 The output contract explicitly documents model currency on 54 tabs and leaves 62
 unknown. A separate source-unit review finds a single currency in the model's
@@ -140,15 +144,19 @@ replacing them with the canonical definition.
 
 ## Recommended migration order
 
-1. **Completed:** the two parity-backed active tabs, `P-GOOGL` and `W-TOST`, were
-   imported as new application revisions. Their source dates remain unknown.
+1. **Completed:** `P-GOOGL` and `W-TOST` were imported first; a reviewed Portfolio
+   UFCF DCF sub-batch then imported `P-ASML`, `P-ISRG` and `P-MA`. All accepted
+   workbook source dates remain unknown and revisions use application acceptance
+   time.
 2. Resolve identity, lifecycle and source data checks: the SOTP/component identities,
    `W-ARENIT`, `W-ENGCON-B` and `W-PLEJD`. These are prerequisites, not invented
    assumption imports.
-3. Verify the active Portfolio DCF cohort against the `P-GOOGL` schema in reviewed
-   sub-batches: `P-ADYEN`, `P-AMD`, `P-AMZN`, `P-ASML`, `P-BKNG`, `P-CELH`,
-   `P-HIMS`, `P-ISRG`, `P-MA`, `P-MELI`, `P-MSCI` and `P-MSFT`. Hold `P-NVO` for
-   listing/currency confirmation.
+3. Continue the active DCF work from the [batch-2 screening report](reconciliation/native-model-input-import-batch-2-2026-10-05.json).
+   `P-ADYEN`, `P-AMD`, `P-AMZN`, `P-BKNG`, `P-CELH`, `P-HIMS`, `P-MELI`,
+   `P-MSCI` and `P-MSFT` have explicit parity or input-data failures under the
+   current engine; `W-GEV` lacks a required Base Y10 UFCF growth target. Hold `P-NVO`
+   for exact listing/currency confirmation. Do not import these until their
+   tab-specific blocker is resolved and parity passes.
 4. Map the six active Portfolio owner-cash variants independently:
    `P-CPRT`, `P-MORN`, `P-UBER`, `W-DLO`, `W-RDDT` and `W-TSM`. These are not all
    interchangeable with the Toast model.

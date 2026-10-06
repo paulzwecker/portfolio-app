@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const webPort = process.env.E2E_WEB_PORT ?? "3000";
+const useProductionServer = process.env.E2E_USE_PRODUCTION_SERVER === "1";
+const webServerCommand = useProductionServer
+  ? "node ../../scripts/web.mjs start"
+  : "node ../../scripts/web.mjs dev";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,9 +29,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "node ../../scripts/web.mjs dev",
+    command: webServerCommand,
     url: `http://127.0.0.1:${webPort}`,
-    reuseExistingServer: false,
+    reuseExistingServer: useProductionServer,
     timeout: 120_000,
   },
 });

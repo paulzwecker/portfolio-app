@@ -242,7 +242,11 @@ These are not collapsed into a single opaque score.
 
 ## Portfolio
 
-Current holdings, market values, strategic targets and allocation gaps.
+Portfolio posture, current holdings and market weights, strategic targets and
+gaps, Portfolio and Watchlist Rank, Execution Pace, estimate/model context,
+latest recorded changes, and explicit coverage checks. See
+[Portfolio dashboard](docs/portfolio-dashboard.md) for its source boundaries and
+known limits.
 
 ## Universe
 

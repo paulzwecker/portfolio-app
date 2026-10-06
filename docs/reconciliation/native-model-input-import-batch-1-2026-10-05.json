@@ -1,0 +1,2009 @@
+{
+  "report_version": "1.0.0",
+  "mapping_version": "legacy-native-input-v1",
+  "mode": "APPLIED",
+  "workbook": "reference/workbook/Portfolio_Watchlist.xlsx",
+  "workbook_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+  "source_effective_date": null,
+  "source_effective_date_note": "The workbook has no trustworthy effective date.",
+  "run_at": "2026-10-05T10:56:30.717811+00:00",
+  "input_sets_imported": 0,
+  "input_sets_already_imported": 2,
+  "status_counts": {
+    "PARITY_PASS": 2,
+    "PARTIAL_MAPPING": 0,
+    "DATA_CHECK": 0,
+    "BLOCKED": 0
+  },
+  "models": [
+    {
+      "model_key": "P-GOOGL",
+      "company_name": "Alphabet",
+      "canonical_ticker": "GOOGL",
+      "lifecycle": "PORTFOLIO",
+      "model_type": "UFCF_DCF_10Y_FADE",
+      "methodology_family": "UFCF_DCF_10Y_FADE",
+      "model_currency": "USD",
+      "listing_requirement": {
+        "ticker": "GOOGL",
+        "venue": "NASDAQ",
+        "currency": "USD",
+        "security_type": "COMMON_STOCK"
+      },
+      "units": "Revenue, enterprise cash flows, and net cash/debt are USD billions; shares are billions; valuation and price are USD per GOOGL share.",
+      "source": {
+        "workbook": "reference/workbook/Portfolio_Watchlist.xlsx",
+        "workbook_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+        "tab": "P-GOOGL",
+        "effective_date": null,
+        "effective_date_note": "No trustworthy workbook effective date is recorded."
+      },
+      "input_mapping": {
+        "status": "COMPLETE",
+        "input_digest": "8f38bac3aa02001c3feb210149cacbf2abfdd119e82c5817532e917ea070b61d",
+        "source_cells": {
+          "base.base_revenue": "B17",
+          "base.base_ebit_margin": "B18",
+          "base.base_tax_rate": "B19",
+          "base.base_da_to_revenue": "B20",
+          "base.base_capex_to_revenue": "B21",
+          "base.base_nwc_to_revenue": "B22",
+          "base.net_cash_debt": "B23",
+          "base.diluted_shares": "B24",
+          "scenarios.BEAR.probability": "AO4",
+          "scenarios.BASE.probability": "AO5",
+          "scenarios.BULL.probability": "AO6",
+          "scenarios.BEAR.terminal_growth": "B205",
+          "scenarios.BASE.terminal_growth": "C205",
+          "scenarios.BULL.terminal_growth": "D205",
+          "scenarios.BEAR.year10_ufcf_growth": "E24:I24",
+          "scenarios.BASE.year10_ufcf_growth": "J24:N24",
+          "scenarios.BULL.year10_ufcf_growth": "O24:S24",
+          "model_currency": "B15",
+          "source_price_for_parity_only": "B4",
+          "scenarios.BEAR.years": "E16:I22",
+          "scenarios.BEAR.rationale": "source labels and mapped assumption range",
+          "scenarios.BASE.years": "J16:N22",
+          "scenarios.BASE.rationale": "source labels and mapped assumption range",
+          "scenarios.BULL.years": "O16:S22",
+          "scenarios.BULL.rationale": "source labels and mapped assumption range"
+        },
+        "source_references": {
+          "company_source": "https://www.justice.gov/opa/pr/department-justice-again-wins-substantial-relief-against-google"
+        }
+      },
+      "source_price_for_parity": {
+        "value": "343.5",
+        "currency": "USD",
+        "source_cell": "P-GOOGL!B4",
+        "effective_at": null,
+        "use": "PARITY_ONLY_NOT_STORED_AS_MARKET_DATA"
+      },
+      "legacy_return_semantics": "P-GOOGL legacy Expected Cash-Flow IRR is an enterprise UFCF / terminal-value IRR against implied enterprise cost. It is retained for legacy parity and is not the canonical shareholder-distribution IRR definition.",
+      "projection_reconciliation": {
+        "compared": 30,
+        "passed": 30,
+        "status": "PASS",
+        "comparisons": [
+          {
+            "field": "BEAR.year_1.present_value_ufcf",
+            "source": "P-GOOGL!C40",
+            "actual": "-42.741514357320825607981422708677910676",
+            "expected": "-42.74151436",
+            "absolute_difference": "2.679174392018577291322089324E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_2.present_value_ufcf",
+            "source": "P-GOOGL!D40",
+            "actual": "-21.984793408482225889399130273956052561",
+            "expected": "-21.98479341",
+            "absolute_difference": "1.517774110600869726043947439E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_3.present_value_ufcf",
+            "source": "P-GOOGL!E40",
+            "actual": "3.9352826648399148396699107753548117489",
+            "expected": "3.935282665",
+            "absolute_difference": "1.600851603300892246451882511E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_4.present_value_ufcf",
+            "source": "P-GOOGL!F40",
+            "actual": "27.633853586471160188734165690937501203",
+            "expected": "27.63385359",
+            "absolute_difference": "3.528839811265834309062498797E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_5.present_value_ufcf",
+            "source": "P-GOOGL!G40",
+            "actual": "46.358639680392614736169460885612818677",
+            "expected": "46.35863968",
+            "absolute_difference": "3.92614736169460885612818677E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_6.unlevered_free_cash_flow",
+            "source": "P-GOOGL!G202",
+            "actual": "119.58766361658202598368809840130794184",
+            "expected": "119.5876636",
+            "absolute_difference": "1.658202598368809840130794184E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_7.unlevered_free_cash_flow",
+            "source": "P-GOOGL!G203",
+            "actual": "181.03051757421552311053989666708497444",
+            "expected": "181.0305176",
+            "absolute_difference": "2.578447688946010333291502556E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_8.unlevered_free_cash_flow",
+            "source": "P-GOOGL!G204",
+            "actual": "245.45194498297037547107827741801511651",
+            "expected": "245.451945",
+            "absolute_difference": "1.702962452892172258198488349E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_9.unlevered_free_cash_flow",
+            "source": "P-GOOGL!G205",
+            "actual": "294.03418569396431883579551917396454490",
+            "expected": "294.0341857",
+            "absolute_difference": "6.03568116420448082603545510E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_10.unlevered_free_cash_flow",
+            "source": "P-GOOGL!G206",
+            "actual": "305.79555312172289158922733994092312670",
+            "expected": "305.7955531",
+            "absolute_difference": "2.172289158922733994092312670E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_1.present_value_ufcf",
+            "source": "P-GOOGL!C60",
+            "actual": "-6.5661340361975692777391470386281540037",
+            "expected": "-6.566134036",
+            "absolute_difference": "1.975692777391470386281540037E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_2.present_value_ufcf",
+            "source": "P-GOOGL!D60",
+            "actual": "24.417873897107213197542294419661644643",
+            "expected": "24.4178739",
+            "absolute_difference": "2.892786802457705580338355357E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_3.present_value_ufcf",
+            "source": "P-GOOGL!E60",
+            "actual": "62.863590653535365755209934109583646389",
+            "expected": "62.86359065",
+            "absolute_difference": "3.535365755209934109583646389E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_4.present_value_ufcf",
+            "source": "P-GOOGL!F60",
+            "actual": "100.99804858011912648739349336093167580",
+            "expected": "100.9980486",
+            "absolute_difference": "1.988087351260650663906832420E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_5.present_value_ufcf",
+            "source": "P-GOOGL!G60",
+            "actual": "132.64831167180526124894583877263318642",
+            "expected": "132.6483117",
+            "absolute_difference": "2.819473875105416122736681358E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_6.unlevered_free_cash_flow",
+            "source": "P-GOOGL!H202",
+            "actual": "276.90972408054133452392169792100339105",
+            "expected": "276.9097241",
+            "absolute_difference": "1.945866547607830207899660895E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_7.unlevered_free_cash_flow",
+            "source": "P-GOOGL!H203",
+            "actual": "354.98365859815206508376348814698195522",
+            "expected": "354.9836586",
+            "absolute_difference": "1.84793491623651185301804478E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_8.unlevered_free_cash_flow",
+            "source": "P-GOOGL!H204",
+            "actual": "428.51195569351872189486950992448285801",
+            "expected": "428.5119556",
+            "absolute_difference": "9.351872189486950992448285801E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_9.unlevered_free_cash_flow",
+            "source": "P-GOOGL!H205",
+            "actual": "485.21083614165158759949412095871309643",
+            "expected": "485.2108361",
+            "absolute_difference": "4.165158759949412095871309643E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_10.unlevered_free_cash_flow",
+            "source": "P-GOOGL!H206",
+            "actual": "513.11045921979655388646503291383909947",
+            "expected": "513.1104592",
+            "absolute_difference": "1.979655388646503291383909947E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_1.present_value_ufcf",
+            "source": "P-GOOGL!C80",
+            "actual": "17.225371375627058653228900061558308876",
+            "expected": "17.22537138",
+            "absolute_difference": "4.372941346771099938441691124E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_2.present_value_ufcf",
+            "source": "P-GOOGL!D80",
+            "actual": "61.585146899236949130039166733883556007",
+            "expected": "61.5851469",
+            "absolute_difference": "7.63050869960833266116443993E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_3.present_value_ufcf",
+            "source": "P-GOOGL!E80",
+            "actual": "111.97576647073486507913938177343650277",
+            "expected": "111.9757665",
+            "absolute_difference": "2.926513492086061822656349723E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_4.present_value_ufcf",
+            "source": "P-GOOGL!F80",
+            "actual": "155.80287067004630188333916209542695541",
+            "expected": "155.8028707",
+            "absolute_difference": "2.995369811666083790457304459E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_5.present_value_ufcf",
+            "source": "P-GOOGL!G80",
+            "actual": "191.43730515775744466413048071420365188",
+            "expected": "191.4373052",
+            "absolute_difference": "4.224255533586951928579634812E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_6.unlevered_free_cash_flow",
+            "source": "P-GOOGL!I202",
+            "actual": "380.20533260503733122285319806943449823",
+            "expected": "380.2053326",
+            "absolute_difference": "5.03733122285319806943449823E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_7.unlevered_free_cash_flow",
+            "source": "P-GOOGL!I203",
+            "actual": "469.19083922370623200172029471441022982",
+            "expected": "469.1908392",
+            "absolute_difference": "2.370623200172029471441022982E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_8.unlevered_free_cash_flow",
+            "source": "P-GOOGL!I204",
+            "actual": "554.12874442148629218078045559749331379",
+            "expected": "554.1287444",
+            "absolute_difference": "2.148629218078045559749331379E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_9.unlevered_free_cash_flow",
+            "source": "P-GOOGL!I205",
+            "actual": "625.06570545492752884601676495460794622",
+            "expected": "625.0657055",
+            "absolute_difference": "4.507247115398323504539205378E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_10.unlevered_free_cash_flow",
+            "source": "P-GOOGL!I206",
+            "actual": "671.94563336404709350946802232620354219",
+            "expected": "671.9456334",
+            "absolute_difference": "3.595290649053197767379645781E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          }
+        ]
+      },
+      "output_reconciliation": {
+        "compared": 22,
+        "passed": 22,
+        "status": "PASS",
+        "comparisons": [
+          {
+            "field": "bear_fv",
+            "source": "P-GOOGL!L202",
+            "actual": "226.81170282287096471179555718465590953",
+            "expected": "226.8117028",
+            "absolute_difference": "2.287096471179555718465590953E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "base_fv",
+            "source": "P-GOOGL!M202",
+            "actual": "443.52243260038855687528356231771359985",
+            "expected": "443.5224326",
+            "absolute_difference": "3.8855687528356231771359985E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "bull_fv",
+            "source": "P-GOOGL!N202",
+            "actual": "633.55901465992752820033264585790249083",
+            "expected": "633.5590147",
+            "absolute_difference": "4.007247179966735414209750917E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "bear_probability",
+            "source": "P-GOOGL!AO4",
+            "actual": "0.1339636341",
+            "expected": "0.1339636341",
+            "absolute_difference": "0E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "base_probability",
+            "source": "P-GOOGL!AO5",
+            "actual": "0.6125",
+            "expected": "0.6125",
+            "absolute_difference": "0.0000",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "bull_probability",
+            "source": "P-GOOGL!AO6",
+            "actual": "0.2535363659",
+            "expected": "0.2535363659",
+            "absolute_difference": "0E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "weighted_fv",
+            "source": "P-GOOGL!AO7",
+            "actual": "462.67226009436186397155828009823473563",
+            "expected": "462.6722601",
+            "absolute_difference": "5.63813602844171990176526437E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "weighted_upside",
+            "source": "P-GOOGL!AO8",
+            "actual": "0.3469352550054202735707664631680778330",
+            "expected": "0.3469352549",
+            "absolute_difference": "1.054202735707664631680778330E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "expected_cash_flow_irr",
+            "source": "P-GOOGL!AA212",
+            "actual": "0.12689535512934315470619362857696474846",
+            "expected": "0.1268953551",
+            "absolute_difference": "2.934315470619362857696474846E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "hurdle",
+            "source": "P-GOOGL!AB212",
+            "actual": "0.0902451421875000000",
+            "expected": "0.09024514219",
+            "absolute_difference": "2.5000000E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "expected_excess",
+            "source": "P-GOOGL!AC212",
+            "actual": "0.03665021294184315470619362857696474846",
+            "expected": "0.03665021294",
+            "absolute_difference": "1.84315470619362857696474846E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_0",
+            "source": "P-GOOGL!P212",
+            "actual": "-4074.705",
+            "expected": "-4074.705",
+            "absolute_difference": "0.000",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_1",
+            "source": "P-GOOGL!Q212",
+            "actual": "-5.86793903115401220",
+            "expected": "-5.86793903",
+            "absolute_difference": "1.15401220E-9",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_2",
+            "source": "P-GOOGL!R212",
+            "actual": "32.83857236211908496414439869",
+            "expected": "32.83857236",
+            "absolute_difference": "2.11908496414439869E-9",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_3",
+            "source": "P-GOOGL!S212",
+            "actual": "87.37747376789769177474117282",
+            "expected": "87.37747377",
+            "absolute_difference": "2.10230822525882718E-9",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_4",
+            "source": "P-GOOGL!T212",
+            "actual": "148.4494274555087640838941436",
+            "expected": "148.4494275",
+            "absolute_difference": "4.44912359161058564E-8",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_5",
+            "source": "P-GOOGL!U212",
+            "actual": "209.4880181449994627314700813",
+            "expected": "209.4880181",
+            "absolute_difference": "4.49994627314700813E-8",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_6",
+            "source": "P-GOOGL!V212",
+            "actual": "282.0234823354191896094943279",
+            "expected": "282.0234823",
+            "absolute_difference": "3.54191896094943279E-8",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_7",
+            "source": "P-GOOGL!W212",
+            "actual": "360.6359371989636229872240432",
+            "expected": "360.6359372",
+            "absolute_difference": "1.0363770127759568E-9",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_8",
+            "source": "P-GOOGL!X212",
+            "actual": "435.8369955104657236675353828",
+            "expected": "435.8369955",
+            "absolute_difference": "1.04657236675353828E-8",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_9",
+            "source": "P-GOOGL!Y212",
+            "actual": "495.0584126117214199031509093",
+            "expected": "495.0584126",
+            "absolute_difference": "1.17214199031509093E-8",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_10",
+            "source": "P-GOOGL!Z212",
+            "actual": "10419.72466096487648825442730",
+            "expected": "10419.72466",
+            "absolute_difference": "9.6487648825442730E-7",
+            "tolerance": "0.000001",
+            "status": "PASS"
+          }
+        ]
+      },
+      "status": "PARITY_PASS",
+      "current_application_recalculation": {
+        "status": "COMPLETE",
+        "price_status": "FRESH",
+        "price": "338.240000000000000000",
+        "price_effective_at": "2026-10-01T00:00:00+00:00",
+        "weighted_upside": "0.367881563665923202",
+        "expected_cash_flow_irr": "0.128845792435765963",
+        "expected_excess": "0.038600650248265963",
+        "unavailable_reason": null
+      },
+      "accepted_model": {
+        "model_id": "062694a6-2d4f-4170-8820-8872bcf42908",
+        "revision_id": "6bfae7e5-59d0-45ba-a193-79348e9f51ab",
+        "revision_number": 1,
+        "source_revision_id": "legacy:27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9:P-GOOGL:legacy-native-input-v1",
+        "effective_at": "2026-10-05T10:43:01.252762+00:00",
+        "recorded_at": "2026-10-05T10:43:01.919545+00:00"
+      },
+      "mapping_version": "legacy-native-input-v1",
+      "identity": {
+        "company_id": "1b868296-de3c-51cd-aaac-3dbed336d428",
+        "company_name": "Alphabet",
+        "listing_id": "856b019b-862c-5a8a-b3af-8e46a773ae2c",
+        "ticker": "GOOGL",
+        "venue": "NASDAQ",
+        "currency": "USD"
+      },
+      "apply_status": "ALREADY_IMPORTED"
+    },
+    {
+      "model_key": "W-TOST",
+      "company_name": "Toast",
+      "canonical_ticker": "TOST",
+      "lifecycle": "WATCHLIST",
+      "model_type": "OWNER_CASH_FLOW_10Y",
+      "methodology_family": "OWNER_CASH_FLOW_OR_EARNINGS",
+      "model_currency": "USD",
+      "listing_requirement": {
+        "ticker": "TOST",
+        "venue": "NYSE",
+        "currency": "USD",
+        "security_type": "COMMON_STOCK"
+      },
+      "units": "Revenue, owner cash flow, and net cash are USD billions; diluted shares are billions; per-share values are USD.",
+      "source": {
+        "workbook": "reference/workbook/Portfolio_Watchlist.xlsx",
+        "workbook_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+        "tab": "W-TOST",
+        "effective_date": null,
+        "effective_date_note": "No trustworthy workbook effective date is recorded."
+      },
+      "input_mapping": {
+        "status": "COMPLETE",
+        "input_digest": "8f05f765fc490f8103262ae756a69c70aa958e81bb677ff0eeb7b658713af175",
+        "source_cells": {
+          "base.base_revenue": "B5",
+          "base.diluted_shares": "B8",
+          "base.net_cash": "B17",
+          "scenarios.BEAR.probability": "B46",
+          "scenarios.BASE.probability": "B47",
+          "scenarios.BULL.probability": "B48",
+          "scenarios.BEAR.required_return": "M37",
+          "scenarios.BASE.required_return": "M39",
+          "scenarios.BULL.required_return": "M41",
+          "scenarios.BEAR.terminal_growth": "N37",
+          "scenarios.BASE.terminal_growth": "N39",
+          "scenarios.BULL.terminal_growth": "N41",
+          "model_currency": "C5",
+          "source_price_for_parity_only": "B7",
+          "scenarios.BEAR.revenue_growth": "C37:L37",
+          "scenarios.BEAR.owner_cash_flow_margin": "C38:L38",
+          "scenarios.BEAR.rationale": "A37:N38",
+          "scenarios.BASE.revenue_growth": "C39:L39",
+          "scenarios.BASE.owner_cash_flow_margin": "C40:L40",
+          "scenarios.BASE.rationale": "A39:N40",
+          "scenarios.BULL.revenue_growth": "C41:L41",
+          "scenarios.BULL.owner_cash_flow_margin": "C42:L42",
+          "scenarios.BULL.rationale": "A41:N42"
+        },
+        "source_references": {
+          "base.base_revenue": "https://www.sec.gov/Archives/edgar/data/1650164/000165016426000057/tost-20251231.htm",
+          "base.diluted_shares": "https://www.sec.gov/Archives/edgar/data/1650164/000165016426000164/tost-20260630.htm",
+          "base.net_cash": "https://www.sec.gov/Archives/edgar/data/1650164/000165016426000164/tost-20260630.htm"
+        }
+      },
+      "source_price_for_parity": {
+        "value": "29.79",
+        "currency": "USD",
+        "source_cell": "W-TOST!B7",
+        "effective_at": null,
+        "use": "PARITY_ONLY_NOT_STORED_AS_MARKET_DATA"
+      },
+      "legacy_return_semantics": "W-TOST Expected Cash-Flow IRR is calculated from one probability-weighted owner-cash stream and the legacy terminal-value convention. The source does not document owner cash flow as a guaranteed distribution. Preserve the source label and method.",
+      "projection_reconciliation": {
+        "compared": 123,
+        "passed": 123,
+        "status": "PASS",
+        "comparisons": [
+          {
+            "field": "BEAR.year_1.revenue",
+            "source": "W-TOST!C46",
+            "actual": "7.19901",
+            "expected": "7.19901",
+            "absolute_difference": "0.00000",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_1.owner_cash_flow",
+            "source": "W-TOST!C46*C38",
+            "actual": "0.2159703",
+            "expected": "0.2159703",
+            "absolute_difference": "0E-7",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_1.owner_cash_flow_per_share",
+            "source": "(W-TOST!C46*C38)/W-TOST!B8",
+            "actual": "0.36236627516778523489932885906040268456",
+            "expected": "0.3623662751677852348993288591",
+            "absolute_difference": "3.959731544E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_1.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^1",
+            "actual": "0.32572249453284066058366639016665409848",
+            "expected": "0.3257224945328406605836663902",
+            "absolute_difference": "3.334590152E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_2.revenue",
+            "source": "W-TOST!D46",
+            "actual": "8.2068714",
+            "expected": "8.2068714",
+            "absolute_difference": "0E-7",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_2.owner_cash_flow",
+            "source": "W-TOST!D46*D38",
+            "actual": "0.328274856",
+            "expected": "0.328274856",
+            "absolute_difference": "0E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_2.owner_cash_flow_per_share",
+            "source": "(W-TOST!D46*D38)/W-TOST!B8",
+            "actual": "0.55079673825503355704697986577181208054",
+            "expected": "0.5507967382550335570469798658",
+            "absolute_difference": "2.818791946E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_2.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^2",
+            "actual": "0.44503208241790364412330149487938357726",
+            "expected": "0.4450320824179036441233014949",
+            "absolute_difference": "2.061642274E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_3.revenue",
+            "source": "W-TOST!E46",
+            "actual": "9.191695968",
+            "expected": "9.191695968",
+            "absolute_difference": "0E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_3.owner_cash_flow",
+            "source": "W-TOST!E46*E38",
+            "actual": "0.413626318560",
+            "expected": "0.413626318560",
+            "absolute_difference": "0E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_3.owner_cash_flow_per_share",
+            "source": "(W-TOST!E46*E38)/W-TOST!B8",
+            "actual": "0.69400389020134228187919463087248322148",
+            "expected": "0.6940038902013422818791946309",
+            "absolute_difference": "2.751677852E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_3.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^3",
+            "actual": "0.50403633604185041941155944588586364705",
+            "expected": "0.5040363360418504194115594459",
+            "absolute_difference": "1.413635295E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_4.revenue",
+            "source": "W-TOST!F46",
+            "actual": "10.1108655648",
+            "expected": "10.11086556",
+            "absolute_difference": "4.8E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_4.owner_cash_flow",
+            "source": "W-TOST!F46*F38",
+            "actual": "0.505543278240",
+            "expected": "0.5055432780",
+            "absolute_difference": "2.40E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_4.owner_cash_flow_per_share",
+            "source": "(W-TOST!F46*F38)/W-TOST!B8",
+            "actual": "0.84822697691275167785234899328859060403",
+            "expected": "0.8482269765100671140939597315",
+            "absolute_difference": "4.026845637583892617885906040E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_4.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^4",
+            "actual": "0.55374778491489184654453472207186018652",
+            "expected": "0.5537477846520073931259259707",
+            "absolute_difference": "2.628844534186087513718601865E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_5.revenue",
+            "source": "W-TOST!G46",
+            "actual": "10.919734809984",
+            "expected": "10.91973481",
+            "absolute_difference": "1.6E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_5.owner_cash_flow",
+            "source": "W-TOST!G46*G38",
+            "actual": "0.600585414549120",
+            "expected": "0.60058541455",
+            "absolute_difference": "8.80E-13",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_5.owner_cash_flow_per_share",
+            "source": "(W-TOST!G46*G38)/W-TOST!B8",
+            "actual": "1.0076936485723489932885906040268456376",
+            "expected": "1.007693648573825503355704698",
+            "absolute_difference": "1.4765100671140939731543624E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_5.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^5",
+            "actual": "0.59132797166641933815272561781696170930",
+            "expected": "0.5913279716672857738044423808",
+            "absolute_difference": "8.6643565171676298303829070E-13",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_6.revenue",
+            "source": "W-TOST!H46",
+            "actual": "11.68411624668288",
+            "expected": "11.68411625",
+            "absolute_difference": "3.31712E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_6.owner_cash_flow",
+            "source": "W-TOST!H46*H38",
+            "actual": "0.7010469748009728",
+            "expected": "0.7010469750",
+            "absolute_difference": "1.990272E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_6.owner_cash_flow_per_share",
+            "source": "(W-TOST!H46*H38)/W-TOST!B8",
+            "actual": "1.1762533134244510067114093959731543624",
+            "expected": "1.176253313758389261744966443",
+            "absolute_difference": "3.339382550335570470268456376E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_6.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^6",
+            "actual": "0.62044136107839217992898851340304705595",
+            "expected": "0.6204413612545354503491749467",
+            "absolute_difference": "1.761432704201864332969529440E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_7.revenue",
+            "source": "W-TOST!I46",
+            "actual": "12.3851632214838528",
+            "expected": "12.38516322",
+            "absolute_difference": "1.4838528E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_7.owner_cash_flow",
+            "source": "W-TOST!I46*I38",
+            "actual": "0.8050356093964504320",
+            "expected": "0.80503560930",
+            "absolute_difference": "9.64504320E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_7.owner_cash_flow_per_share",
+            "source": "(W-TOST!I46*I38)/W-TOST!B8",
+            "actual": "1.3507308882490779060402684563758389262",
+            "expected": "1.350730888087248322147651007",
+            "absolute_difference": "1.618295838926174493758389262E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_7.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^7",
+            "actual": "0.64042561465619807036864881758007403980",
+            "expected": "0.6404256145794693810082298388",
+            "absolute_difference": "7.672868936041897878007403980E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_8.revenue",
+            "source": "W-TOST!J46",
+            "actual": "13.0663471986654647040",
+            "expected": "13.0663472",
+            "absolute_difference": "1.3345352960E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_8.owner_cash_flow",
+            "source": "W-TOST!J46*J38",
+            "actual": "0.914644303906582529280",
+            "expected": "0.914644304",
+            "absolute_difference": "9.3417470720E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_8.owner_cash_flow_per_share",
+            "source": "(W-TOST!J46*J38)/W-TOST!B8",
+            "actual": "1.5346380938029908209395973154362416107",
+            "expected": "1.534638093959731543624161074",
+            "absolute_difference": "1.567407226845637585637583893E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_8.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^8",
+            "actual": "0.65404226990299363867553625138514735124",
+            "expected": "0.6540422699697944423730418203",
+            "absolute_difference": "6.680080369750556891485264876E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_9.revenue",
+            "source": "W-TOST!K46",
+            "actual": "13.719664558598737939200",
+            "expected": "13.71966456",
+            "absolute_difference": "1.401262060800E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_9.owner_cash_flow",
+            "source": "W-TOST!K46*K38",
+            "actual": "1.028974841894905345440000",
+            "expected": "1.02897484200",
+            "absolute_difference": "1.05094654560000E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_9.owner_cash_flow_per_share",
+            "source": "(W-TOST!K46*K38)/W-TOST!B8",
+            "actual": "1.7264678555283646735570469798657718121",
+            "expected": "1.726467855704697986577181208",
+            "absolute_difference": "1.763333130201342281342281879E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_9.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^9",
+            "actual": "0.66139105945246547731234002949059844510",
+            "expected": "0.6613910595200168518379074587",
+            "absolute_difference": "6.755137452556742920940155490E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_10.revenue",
+            "source": "W-TOST!L46",
+            "actual": "14.337049463735681146464000",
+            "expected": "14.33704946",
+            "absolute_difference": "3.735681146464000E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_10.owner_cash_flow",
+            "source": "W-TOST!L46*L38",
+            "actual": "1.14696395709885449171712000",
+            "expected": "1.1469639568",
+            "absolute_difference": "2.9885449171712000E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_10.owner_cash_flow_per_share",
+            "source": "(W-TOST!L46*L38)/W-TOST!B8",
+            "actual": "1.9244361696289504894582550335570469799",
+            "expected": "1.924436169127516778523489933",
+            "absolute_difference": "5.014337109347651005570469799E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_10.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M37)^10",
+            "actual": "0.66267916189035042880373484902368874919",
+            "expected": "0.6626791617176818432980451612",
+            "absolute_difference": "1.726685855056896878236887492E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BEAR.year_10.terminal_value_per_share",
+            "source": "W-TOST!L46*L38 terminal formula",
+            "actual": "22.543395129939134305082416107382550336",
+            "expected": "22.54339512406519654841802493",
+            "absolute_difference": "5.873937756664391177382550336E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_1.revenue",
+            "source": "W-TOST!C47",
+            "actual": "7.4703573",
+            "expected": "7.4703573",
+            "absolute_difference": "0E-7",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_1.owner_cash_flow",
+            "source": "W-TOST!C47*C40",
+            "actual": "0.373517865",
+            "expected": "0.373517865",
+            "absolute_difference": "0E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_1.owner_cash_flow_per_share",
+            "source": "(W-TOST!C47*C40)/W-TOST!B8",
+            "actual": "0.62670782718120805369127516778523489933",
+            "expected": "0.6267078271812080536912751678",
+            "absolute_difference": "1.476510067E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_1.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^1",
+            "actual": "0.57103218877558820381892953784531653697",
+            "expected": "0.5710321887755882038189295379",
+            "absolute_difference": "5.468346303E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_2.revenue",
+            "source": "W-TOST!D47",
+            "actual": "8.84415600747",
+            "expected": "8.844156007",
+            "absolute_difference": "4.7E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_2.owner_cash_flow",
+            "source": "W-TOST!D47*D40",
+            "actual": "0.57487014048555",
+            "expected": "0.574870140455",
+            "absolute_difference": "3.055E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_2.owner_cash_flow_per_share",
+            "source": "(W-TOST!D47*D40)/W-TOST!B8",
+            "actual": "0.96454721557978187919463087248322147651",
+            "expected": "0.9645472155285234899328859060",
+            "absolute_difference": "5.125838926174496648322147651E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_2.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^2",
+            "actual": "0.80078224216751210647070604447525405245",
+            "expected": "0.8007822421249565869275364125",
+            "absolute_difference": "4.255551954316963197525405245E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_3.revenue",
+            "source": "W-TOST!E47",
+            "actual": "10.377732659165298",
+            "expected": "10.37773266",
+            "absolute_difference": "8.34702E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_3.owner_cash_flow",
+            "source": "W-TOST!E47*E40",
+            "actual": "0.778329949437397350",
+            "expected": "0.77832994950",
+            "absolute_difference": "6.2602650E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_3.owner_cash_flow_per_share",
+            "source": "(W-TOST!E47*E40)/W-TOST!B8",
+            "actual": "1.3059227339553646812080536912751677852",
+            "expected": "1.305922734060402684563758389",
+            "absolute_difference": "1.050380033557046977248322148E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_3.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^3",
+            "actual": "0.98787932324446333176736618810646199942",
+            "expected": "0.9878793233239204611763177437",
+            "absolute_difference": "7.945712940895155559353800058E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_4.revenue",
+            "source": "W-TOST!F47",
+            "actual": "11.93439255804009270",
+            "expected": "11.93439256",
+            "absolute_difference": "1.95990730E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_4.owner_cash_flow",
+            "source": "W-TOST!F47*F40",
+            "actual": "1.01442336743340787950",
+            "expected": "1.01442336760",
+            "absolute_difference": "1.6659212050E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_4.owner_cash_flow_per_share",
+            "source": "(W-TOST!F47*F40)/W-TOST!B8",
+            "actual": "1.7020526299218253011744966442953020134",
+            "expected": "1.702052630201342281879194631",
+            "absolute_difference": "2.795169807046979867046979866E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_4.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^4",
+            "actual": "1.1731535774900080872317089735751758292",
+            "expected": "1.173153577682667432846646328",
+            "absolute_difference": "1.926593456149373544248241708E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_5.revenue",
+            "source": "W-TOST!G47",
+            "actual": "13.4858635905853047510",
+            "expected": "13.48586359",
+            "absolute_difference": "5.853047510E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_5.owner_cash_flow",
+            "source": "W-TOST!G47*G40",
+            "actual": "1.2811570411056039513450",
+            "expected": "1.28115704105",
+            "absolute_difference": "5.56039513450E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_5.owner_cash_flow_per_share",
+            "source": "(W-TOST!G47*G40)/W-TOST!B8",
+            "actual": "2.1495923508483287774244966442953020134",
+            "expected": "2.149592350755033557046979866",
+            "absolute_difference": "9.32952203775167782953020134E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_5.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^5",
+            "actual": "1.3499990517867063450550605205766595232",
+            "expected": "1.349999051728114557176687045",
+            "absolute_difference": "5.85917878783734755766595232E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_6.revenue",
+            "source": "W-TOST!H47",
+            "actual": "15.0367379035026147973650",
+            "expected": "15.0367379",
+            "absolute_difference": "3.5026147973650E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_6.owner_cash_flow",
+            "source": "W-TOST!H47*H40",
+            "actual": "1.50367379035026147973650",
+            "expected": "1.50367379",
+            "absolute_difference": "3.5026147973650E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_6.owner_cash_flow_per_share",
+            "source": "(W-TOST!H47*H40)/W-TOST!B8",
+            "actual": "2.5229426012588279861350671140939597315",
+            "expected": "2.522942600671140939597315436",
+            "absolute_difference": "5.876870465377516780939597315E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_6.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^6",
+            "actual": "1.4437107711230572590685936750442156752",
+            "expected": "1.443710770786763393836497874",
+            "absolute_difference": "3.362938652320958010442156752E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_7.revenue",
+            "source": "W-TOST!I47",
+            "actual": "16.54041169385287627710150",
+            "expected": "16.54041169",
+            "absolute_difference": "3.85287627710150E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_7.owner_cash_flow",
+            "source": "W-TOST!I47*I40",
+            "actual": "1.73674322785455200909565750",
+            "expected": "1.73674322745",
+            "absolute_difference": "4.0455200909565750E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_7.owner_cash_flow_per_share",
+            "source": "(W-TOST!I47*I40)/W-TOST!B8",
+            "actual": "2.9139987044539463239860025167785234899",
+            "expected": "2.913998703775167785234899329",
+            "absolute_difference": "6.787785387511031877785234899E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_7.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^7",
+            "actual": "1.5193493764438552475847158949212474760",
+            "expected": "1.519349376089942341577362227",
+            "absolute_difference": "3.539129060073536679212474760E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_8.revenue",
+            "source": "W-TOST!J47",
+            "actual": "18.0290487462996351420406350",
+            "expected": "18.02904875",
+            "absolute_difference": "3.7003648579593650E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_8.owner_cash_flow",
+            "source": "W-TOST!J47*J40",
+            "actual": "1.983195362092959865624469850",
+            "expected": "1.9831953625",
+            "absolute_difference": "4.07040134375530150E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_8.owner_cash_flow_per_share",
+            "source": "(W-TOST!J47*J40)/W-TOST!B8",
+            "actual": "3.3275089968002682309135400167785234899",
+            "expected": "3.327508997483221476510067114",
+            "absolute_difference": "6.829532455965270972214765101E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_8.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^8",
+            "actual": "1.5808221302581038653685426688452766883",
+            "expected": "1.580822130582559067626074527",
+            "absolute_difference": "3.244552022575318581547233117E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_9.revenue",
+            "source": "W-TOST!K47",
+            "actual": "19.471372646003605953403885800",
+            "expected": "19.47137265",
+            "absolute_difference": "3.996394046596114200E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_9.owner_cash_flow",
+            "source": "W-TOST!K47*K40",
+            "actual": "2.239207854290414684641446867000",
+            "expected": "2.23920785475",
+            "absolute_difference": "4.59585315358553133000E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_9.owner_cash_flow_per_share",
+            "source": "(W-TOST!K47*K40)/W-TOST!B8",
+            "actual": "3.7570601582053937661769242734899328859",
+            "expected": "3.757060158976510067114093960",
+            "absolute_difference": "7.711163009371696865100671141E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_9.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^9",
+            "actual": "1.6263251901267881555499937831483401507",
+            "expected": "1.626325190460582615027197816",
+            "absolute_difference": "3.337944594772040328516598493E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_10.revenue",
+            "source": "W-TOST!L47",
+            "actual": "20.83436873122385837014215780600",
+            "expected": "20.83436873",
+            "absolute_difference": "1.22385837014215780600E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_10.owner_cash_flow",
+            "source": "W-TOST!L47*L40",
+            "actual": "2.5001242477468630044170589367200",
+            "expected": "2.5001242476",
+            "absolute_difference": "1.468630044170589367200E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_10.owner_cash_flow_per_share",
+            "source": "(W-TOST!L47*L40)/W-TOST!B8",
+            "actual": "4.1948393418571526919749311018791946309",
+            "expected": "4.194839341610738255033557047",
+            "absolute_difference": "2.464144369413740548791946309E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_10.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M39)^10",
+            "actual": "1.6545124643936186920678950322372734503",
+            "expected": "1.654512464296428853768738057",
+            "absolute_difference": "9.71898382991569752372734503E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BASE.year_10.terminal_value_per_share",
+            "source": "W-TOST!L47*L40 terminal formula",
+            "actual": "69.466539501154448579104859047119463088",
+            "expected": "69.46653949707382550335570470",
+            "absolute_difference": "4.080623075749154347119463088E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_1.revenue",
+            "source": "W-TOST!C48",
+            "actual": "7.69125",
+            "expected": "7.69125",
+            "absolute_difference": "0.00000",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_1.owner_cash_flow",
+            "source": "W-TOST!C48*C42",
+            "actual": "0.5383875",
+            "expected": "0.5383875",
+            "absolute_difference": "0E-7",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_1.owner_cash_flow_per_share",
+            "source": "(W-TOST!C48*C42)/W-TOST!B8",
+            "actual": "0.90333473154362416107382550335570469799",
+            "expected": "0.9033347315436241610738255034",
+            "absolute_difference": "4.429530201E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_1.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^1",
+            "actual": "0.83448935939364818574949238185284498660",
+            "expected": "0.8344893593936481857494923819",
+            "absolute_difference": "4.715501340E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_2.revenue",
+            "source": "W-TOST!D48",
+            "actual": "9.4602375",
+            "expected": "9.4602375",
+            "absolute_difference": "0E-7",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_2.owner_cash_flow",
+            "source": "W-TOST!D48*D42",
+            "actual": "0.8041201875",
+            "expected": "0.8041201875",
+            "absolute_difference": "0E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_2.owner_cash_flow_per_share",
+            "source": "(W-TOST!D48*D42)/W-TOST!B8",
+            "actual": "1.3491949454697986577181208053691275168",
+            "expected": "1.349194945469798657718120805",
+            "absolute_difference": "3.691275168E-28",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_2.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^2",
+            "actual": "1.1513805677942054479724108020153737163",
+            "expected": "1.151380567794205447972410802",
+            "absolute_difference": "1.53737163E-29",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_3.revenue",
+            "source": "W-TOST!E48",
+            "actual": "11.446887375",
+            "expected": "11.44688738",
+            "absolute_difference": "5E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_3.owner_cash_flow",
+            "source": "W-TOST!E48*E42",
+            "actual": "1.1446887375",
+            "expected": "1.144688738",
+            "absolute_difference": "5E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_3.owner_cash_flow_per_share",
+            "source": "(W-TOST!E48*E42)/W-TOST!B8",
+            "actual": "1.9206186870805369127516778523489932886",
+            "expected": "1.920618687919463087248322148",
+            "absolute_difference": "8.389261744966442956510067114E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_3.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^3",
+            "actual": "1.5141100253019846130108594706573587248",
+            "expected": "1.514110025963347818439437654",
+            "absolute_difference": "6.613632054285781833426412752E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_4.revenue",
+            "source": "W-TOST!F48",
+            "actual": "13.62179597625",
+            "expected": "13.62179598",
+            "absolute_difference": "3.75E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_4.owner_cash_flow",
+            "source": "W-TOST!F48*F42",
+            "actual": "1.56650653726875",
+            "expected": "1.56650653770",
+            "absolute_difference": "4.3125E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_4.owner_cash_flow_per_share",
+            "source": "(W-TOST!F48*F42)/W-TOST!B8",
+            "actual": "2.6283666732697147651006711409395973154",
+            "expected": "2.628366673993288590604026846",
+            "absolute_difference": "7.235738255033557050604026846E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_4.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^4",
+            "actual": "1.9141427894926244276261997095562082354",
+            "expected": "1.914142790019576635184766622",
+            "absolute_difference": "5.269522075585669124437917646E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_5.revenue",
+            "source": "W-TOST!G48",
+            "actual": "15.9375012922125",
+            "expected": "15.93750129",
+            "absolute_difference": "2.2125E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_5.owner_cash_flow",
+            "source": "W-TOST!G48*G42",
+            "actual": "2.071875167987625",
+            "expected": "2.0718751677",
+            "absolute_difference": "2.87625E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_5.owner_cash_flow_per_share",
+            "source": "(W-TOST!G48*G42)/W-TOST!B8",
+            "actual": "3.4763006174289010067114093959731543624",
+            "expected": "3.476300616946308724832214765",
+            "absolute_difference": "4.825922818791946309731543624E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_5.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^5",
+            "actual": "2.3387176887786177362542020349312121507",
+            "expected": "2.338717688453948718724393161",
+            "absolute_difference": "3.246690175298088739312121507E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_6.revenue",
+            "source": "W-TOST!H48",
+            "actual": "18.328126486044375",
+            "expected": "18.32812649",
+            "absolute_difference": "3.955625E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_6.owner_cash_flow",
+            "source": "W-TOST!H48*H42",
+            "actual": "2.56593770804621250",
+            "expected": "2.5659377086",
+            "absolute_difference": "5.5378750E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_6.owner_cash_flow_per_share",
+            "source": "(W-TOST!H48*H42)/W-TOST!B8",
+            "actual": "4.3052646108157927852348993288590604027",
+            "expected": "4.305264611744966442953020134",
+            "absolute_difference": "9.291736577181208051409395973E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_6.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^6",
+            "actual": "2.6756691980341620574661682545668868806",
+            "expected": "2.675669198611632099455066446",
+            "absolute_difference": "5.774700419888981914331131194E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_7.revenue",
+            "source": "W-TOST!I48",
+            "actual": "20.89406419409058750",
+            "expected": "20.89406419",
+            "absolute_difference": "4.09058750E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_7.owner_cash_flow",
+            "source": "W-TOST!I48*I42",
+            "actual": "3.1341096291135881250",
+            "expected": "3.1341096285",
+            "absolute_difference": "6.135881250E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_7.owner_cash_flow_per_share",
+            "source": "(W-TOST!I48*I42)/W-TOST!B8",
+            "actual": "5.2585732032107183305369127516778523490",
+            "expected": "5.258573202181208053691275168",
+            "absolute_difference": "1.029510276845637583677852349E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_7.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^7",
+            "actual": "3.0190658717508526019578671826521785323",
+            "expected": "3.019065871159787455323853848",
+            "absolute_difference": "5.910651466340133346521785323E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_8.revenue",
+            "source": "W-TOST!J48",
+            "actual": "23.6102925393223638750",
+            "expected": "23.61029254",
+            "absolute_difference": "6.776361250E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_8.owner_cash_flow",
+            "source": "W-TOST!J48*J42",
+            "actual": "3.777646806291578220000",
+            "expected": "3.7776468064",
+            "absolute_difference": "1.08421780000E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_8.owner_cash_flow_per_share",
+            "source": "(W-TOST!J48*J42)/W-TOST!B8",
+            "actual": "6.3383335676033191610738255033557046980",
+            "expected": "6.338333567785234899328859060",
+            "absolute_difference": "1.819157382550335566442953020E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_8.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^8",
+            "actual": "3.3616450168594558918182133125389615313",
+            "expected": "3.361645016955938055224545302",
+            "absolute_difference": "9.64821634063319894610384687E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_9.revenue",
+            "source": "W-TOST!K48",
+            "actual": "26.443527644041047540000",
+            "expected": "26.44352764",
+            "absolute_difference": "4.041047540000E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_9.owner_cash_flow",
+            "source": "W-TOST!K48*K42",
+            "actual": "4.49539969948697808180000",
+            "expected": "4.4953996988",
+            "absolute_difference": "6.8697808180000E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_9.owner_cash_flow_per_share",
+            "source": "(W-TOST!K48*K42)/W-TOST!B8",
+            "actual": "7.5426169454479498016778523489932885906",
+            "expected": "7.542616944295302013422818792",
+            "absolute_difference": "1.152647788255033556993288591E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_9.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^9",
+            "actual": "3.6954804342381085554398834567402902746",
+            "expected": "3.695480433673372552024647919",
+            "absolute_difference": "5.647360034152355377402902746E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_10.revenue",
+            "source": "W-TOST!L48",
+            "actual": "29.35231568488556276940000",
+            "expected": "29.35231568",
+            "absolute_difference": "4.88556276940000E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_10.owner_cash_flow",
+            "source": "W-TOST!L48*L42",
+            "actual": "5.2834168232794012984920000",
+            "expected": "5.2834168224",
+            "absolute_difference": "8.794012984920000E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_10.owner_cash_flow_per_share",
+            "source": "(W-TOST!L48*L42)/W-TOST!B8",
+            "actual": "8.8647933276500021786778523489932885906",
+            "expected": "8.864793326174496644295302013",
+            "absolute_difference": "1.475505534382550335993288591E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_10.present_value_per_share",
+            "source": "owner CF per share/(1+W-TOST!M41)^10",
+            "actual": "4.0122645877504365677320402915729384423",
+            "expected": "4.012264587082612921334378019",
+            "absolute_difference": "6.678236463976622725729384423E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "BULL.year_10.terminal_value_per_share",
+            "source": "W-TOST!L48*L42 terminal formula",
+            "actual": "216.92670731190593566646979865771812080",
+            "expected": "216.9267072757994472956968022",
+            "absolute_difference": "3.610648837077299645771812080E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          }
+        ]
+      },
+      "output_reconciliation": {
+        "compared": 22,
+        "passed": 22,
+        "status": "PASS",
+        "comparisons": [
+          {
+            "field": "bear_fv",
+            "source": "W-TOST!M46",
+            "actual": "16.295820249666771225596342349700813987",
+            "expected": "16.29582025",
+            "absolute_difference": "3.33228774403657650299186013E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "base_fv",
+            "source": "W-TOST!M47",
+            "actual": "42.980453799993530190332552039201650926",
+            "expected": "42.9804538",
+            "absolute_difference": "6.469809667447960798349074E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "bull_fv",
+            "source": "W-TOST!M48",
+            "actual": "125.57360123111263545111607966568157539",
+            "expected": "125.5736012",
+            "absolute_difference": "3.111263545111607966568157539E-8",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "bear_probability",
+            "source": "W-TOST!B46",
+            "actual": "0.2",
+            "expected": "0.2",
+            "absolute_difference": "0.0",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "base_probability",
+            "source": "W-TOST!B47",
+            "actual": "0.6",
+            "expected": "0.6",
+            "absolute_difference": "0.0",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "bull_probability",
+            "source": "W-TOST!B48",
+            "actual": "0.2",
+            "expected": "0.2",
+            "absolute_difference": "0.0",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "weighted_fv",
+            "source": "W-TOST!B52",
+            "actual": "54.162156576151999449542015626597468431",
+            "expected": "54.16215658",
+            "absolute_difference": "3.848000550457984373402531569E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "weighted_upside",
+            "source": "W-TOST!B53",
+            "actual": "0.8181321442145686287191008938099183763",
+            "expected": "0.8181321442",
+            "absolute_difference": "1.45686287191008938099183763E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "expected_cash_flow_irr",
+            "source": "W-TOST!B55",
+            "actual": "0.16279964036844936867561022316417333996",
+            "expected": "0.1627996404",
+            "absolute_difference": "3.155063132438977683582666004E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "hurdle",
+            "source": "W-TOST!B54",
+            "actual": "0.09750",
+            "expected": "0.0975",
+            "absolute_difference": "0.00000",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "expected_excess",
+            "source": "W-TOST!B56",
+            "actual": "0.06529964036844936867561022316417333996",
+            "expected": "0.06529964037",
+            "absolute_difference": "1.55063132438977683582666004E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_0",
+            "source": "W-TOST!B61",
+            "actual": "-29.79",
+            "expected": "-29.79",
+            "absolute_difference": "0.00",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_1",
+            "source": "W-TOST!C61",
+            "actual": "0.6291648976510067114093959732",
+            "expected": "0.6291648977",
+            "absolute_difference": "4.89932885906040268E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_2",
+            "source": "W-TOST!D61",
+            "actual": "0.9587266660928355704697986578",
+            "expected": "0.9587266661",
+            "absolute_difference": "7.1644295302013422E-12",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_3",
+            "source": "W-TOST!E61",
+            "actual": "1.306478155829594647651006712",
+            "expected": "1.306478156",
+            "absolute_difference": "1.70405352348993288E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_4",
+            "source": "W-TOST!F61",
+            "actual": "1.716550307989588469295302014",
+            "expected": "1.716550308",
+            "absolute_difference": "1.0411530704697986E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_5",
+            "source": "W-TOST!G61",
+            "actual": "2.186554263709247266454697987",
+            "expected": "2.186554264",
+            "absolute_difference": "2.90752733545302013E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_6",
+            "source": "W-TOST!H61",
+            "actual": "2.610069145603345550070302013",
+            "expected": "2.610069146",
+            "absolute_difference": "3.96654449929697987E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_7",
+            "source": "W-TOST!I61",
+            "actual": "3.070260040964327041707037751",
+            "expected": "3.070260041",
+            "absolute_difference": "3.5672958292962249E-11",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_8",
+            "source": "W-TOST!J61",
+            "actual": "3.571099730361422934950808574",
+            "expected": "3.57109973",
+            "absolute_difference": "3.61422934950808574E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_9",
+            "source": "W-TOST!K61",
+            "actual": "4.108053055118499154753134430",
+            "expected": "4.108053055",
+            "absolute_difference": "1.18499154753134430E-10",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          },
+          {
+            "field": "legacy_return_stream.period_10",
+            "source": "W-TOST!L61",
+            "actual": "97.12285476745726864629023651",
+            "expected": "97.12285477",
+            "absolute_difference": "2.54273135370976349E-9",
+            "tolerance": "1E-7",
+            "status": "PASS"
+          }
+        ]
+      },
+      "status": "PARITY_PASS",
+      "current_application_recalculation": {
+        "status": "COMPLETE",
+        "price_status": "FRESH",
+        "price": "29.230000000000000000",
+        "price_effective_at": "2026-10-01T00:00:00+00:00",
+        "weighted_upside": "0.852964645095860399",
+        "expected_cash_flow_irr": "0.165331178059146451",
+        "expected_excess": "0.067831178059146451",
+        "unavailable_reason": null
+      },
+      "accepted_model": {
+        "model_id": "ef0631c9-a866-4fe4-ade9-7f03268010c0",
+        "revision_id": "020a4d36-4692-4e07-bfde-f957e2cfa0bc",
+        "revision_number": 1,
+        "source_revision_id": "legacy:27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9:W-TOST:legacy-native-input-v1",
+        "effective_at": "2026-10-05T10:43:01.252762+00:00",
+        "recorded_at": "2026-10-05T10:43:02.004676+00:00"
+      },
+      "mapping_version": "legacy-native-input-v1",
+      "identity": {
+        "company_id": "1ea17cfe-1ec1-5685-a28f-d1cb0b1a4253",
+        "company_name": "Toast",
+        "listing_id": "2c66a822-40a0-57d6-8208-982341681ed9",
+        "ticker": "TOST",
+        "venue": "NYSE",
+        "currency": "USD"
+      },
+      "apply_status": "ALREADY_IMPORTED"
+    }
+  ]
+}

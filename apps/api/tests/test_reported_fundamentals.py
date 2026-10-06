@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -347,7 +347,7 @@ def test_resolver_uses_latest_filing_in_a_lineage_and_preserves_data_check() -> 
 
 @pytest.mark.integration
 def test_sec_import_is_repeatable_and_later_filing_appends_a_possible_restatement(
-    postgres_engine: Engine,
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     with Session(postgres_engine) as session:
         issuer = Company(id=COMPANY_ID, name="Example canonical issuer", reporting_currency="USD")
@@ -364,6 +364,10 @@ def test_sec_import_is_repeatable_and_later_filing_appends_a_possible_restatemen
         first = ingest_sec_company_facts(session, COMPANY_ID, CIK, initial)
         session.commit()
         first_known_at = now()
+        monkeypatch.setattr(
+            "portfolio_api.reported_fundamentals.now",
+            lambda: first_known_at + timedelta(seconds=1),
+        )
 
         correction_payload = companyfacts_payload(
             annual_revenue=9007199254740994,

@@ -31,20 +31,26 @@ The Explorer is arranged for a top-down company review:
    snapshot freshness, data-quality reason and expandable revision history. Provider
    continuity is visible; fallback series remain separate and never fill a primary
    provider gap. Consensus is not a native model assumption.
-7. **Filings and source documents** ? SEC filings and issuer source links by type,
+7. **Estimate Momentum** - a separate API-calculated direction and confidence-adjusted
+   score from point-in-time annual Revenue/EPS revisions. The Explorer shows the 12M,
+   6M and 3M comparison values and dates, per-period analyst coverage, separate history coverage/confidence, selected provider, freshness
+   and quality state. Missing history is unavailable, not neutral. Persistence and
+   analyst up/down breadth remain uncalculated because their inputs cannot be safely
+   derived from the captured consensus domain.
+8. **Filings and source documents** ? SEC filings and issuer source links by type,
    filing/publication date, reporting period, accession/reference, amendment link,
    retrieval/recorded time and data-quality state. Unmapped SEC identity and empty
    history remain explicit. The view links to primary sources without downloaded
    filing text or AI-generated summaries.
-8. **Canonical models** — UFCF DCF, owner-cash-flow and residual-income assumptions,
+9. **Canonical models** — UFCF DCF, owner-cash-flow and residual-income assumptions,
    scenarios, method-derived projections, normalized outputs, availability and
    immutable revision history. Each method has a corresponding form and calculation
    preview. Imported workbook output snapshots remain separate and read-only.
-9. **Imported valuation outputs** — current normalized Bear/Base/Bull outputs,
-   probabilities, Weighted Fair Value/Upside, Expected Cash-Flow IRR, Hurdle,
-   Expected Excess, Forward Fundamental CAGR, model currency/status, quality,
-   provenance and recorded/effective times. Historical snapshots are expandable.
-10. **Ranking context** — Portfolio, Watchlist and Research state remain separate.
+10. **Imported valuation outputs** — current normalized Bear/Base/Bull outputs,
+    probabilities, Weighted Fair Value/Upside, Expected Cash-Flow IRR, Hurdle,
+    Expected Excess, Forward Fundamental CAGR, model currency/status, quality,
+    provenance and recorded/effective times. Historical snapshots are expandable.
+11. **Ranking context** — Portfolio, Watchlist and Research state remain separate.
     Stored rank positions are shown only where recorded; unavailable, excluded,
     partial and not-migrated states remain explicit. Each type retains its run history.
 
@@ -52,6 +58,15 @@ A compact in-page navigation links to these sections. The layout folds longer
 histories and price details behind native disclosure controls, while keeping current
 company and investment context visible. Cards collapse into a single-column flow on
 small screens; tables and fixed-width spreadsheet layouts are not used on this page.
+
+The **Forecast vs. outcome** section follows consensus estimates. It displays the
+selected native model revision, selected consensus period and later reported Revenue
+for the chosen fiscal year where each source can be aligned. Current model projections
+have ordinal years but no fiscal-year anchor, so their requested-FY value remains
+explicitly unavailable instead of using revision time as a proxy. Its controls select
+fiscal year, forecast cutoff and market return horizon. The display retains revision
+provenance, both temporal cutoffs, exact-listing baseline price, total-return outcome
+and explicit coverage states; it does not produce a forecast-quality score.
 
 ## Canonical reads
 
@@ -76,6 +91,20 @@ proxy:
   provider streams, their continuity selection, current forward periods and captured
   history; optional `as_of` and timezone-aware `known_at` preserve point-in-time
   semantics.
+- `GET /v1/companies/{company_id}/estimate-momentum` for the deterministic partial
+  legacy signal and its per-period revisions, with optional `as_of` and timezone-aware
+  `known_at`. It reports revision direction, confidence, data quality and freshness
+  separately. See [estimate-momentum.md](estimate-momentum.md).
+- `GET /v1/universe/estimate-momentum-summary` for the compact company-wide read, with
+  lifecycle/search filters and the same time cutoffs.
+- `GET /v1/companies/{company_id}/temporal-alignment` for the point-in-time annual
+  Revenue comparison. `fiscal_year` and `as_of` are required; timezone-aware
+  `known_at` and `outcome_known_at` separate forecast knowledge from later outcome
+  knowledge, and `horizon_days` selects a subsequent total-return period. Native
+  model FY alignment remains unavailable until a revision has an explicit fiscal-year
+  anchor. See
+  [temporal-alignment.md](temporal-alignment.md) for the exact cutoff and coverage
+  rules.
 - `GET /v1/companies/{company_id}/source-documents` for filing/source metadata,
   SEC identity status and source history; optional `document_type`, `as_of` and
   timezone-aware `known_at` filters preserve type and point-in-time semantics.
@@ -85,6 +114,20 @@ proxy:
 - `GET /v1/companies/{company_id}/model-outputs/current` and
   `GET /v1/companies/{company_id}/model-outputs/history` for imported normalized
   model-output snapshots and recorded history;
+- `GET /v1/companies/{company_id}/expected-return-history` for a read-only,
+  point-in-time composition of imported outputs, native revision outputs, exact
+  listing prices, and the selected point-in-time estimate context. Optional
+  `as_of` and timezone-aware `known_at` cutoffs are supported. Imported snapshots
+  remain distinct from native revisions, undated imports remain visible but are
+  not charted, and no historical record is recalculated or overwritten. See
+  [expected-return-history.md](expected-return-history.md) for the source and
+  cutoff rules.
+- `GET /v1/companies/{company_id}/expected-return-attribution` compares two IDs
+  from the expected-return history. Native same-method revisions are recalculated
+  across symmetric price, probability, required-return and other-model-input
+  counterfactuals. Legacy outputs, missing values, and method changes remain
+  explicitly output-only or residual. See
+  [expected-return-attribution.md](expected-return-attribution.md).
 - `GET /v1/companies/{company_id}/financial-models` and
   `POST /v1/companies/{company_id}/financial-models` to list or create accepted
   UFCF DCF models;
@@ -117,8 +160,11 @@ model currency is not inferred from the listing or reporting currency. Model
 `effective_at` stays unknown when the source did not record one; `recorded_at` remains
 visible.
 
-The rank panel displays stored source positions where available and explicit status
-for inputs the application has not migrated. It does not recalculate ranking history.
+The rank panel displays current immutable rank positions, as-of run state and
+explicit unavailable/data-check statuses. Watchlist Rank includes its snapshotted
+Expected IRR source and separate durability, quality, and forward-compounding
+context. Historical entries are read as recorded and never recalculated from current
+inputs. Portfolio and Research positions remain imported source snapshots.
 The score panel keeps Risk’s higher-is-greater-risk direction separate from the
 higher-is-better dimensions. Model output snapshots do not own scores, lifecycle,
 holdings, targets, market facts or ranking state.

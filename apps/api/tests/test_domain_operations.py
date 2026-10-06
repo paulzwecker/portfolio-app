@@ -595,15 +595,25 @@ def test_ranking_definitions_preserve_distinct_workbook_rules_and_inputs(
     with Session(postgres_engine) as db, db.begin():
         seed(db)
         definitions = q.ranking_definitions(db)
-        assert [item.ranking_type for item in definitions] == [
-            "PORTFOLIO",
-            "RESEARCH",
-            "WATCHLIST",
-        ]
-        by_type = {item.ranking_type: item for item in definitions}
-        assert all(item.version == 1 for item in definitions)
-        assert all(item.implementation_status == "NOT_MIGRATED" for item in definitions)
-        assert "Portfolio Score" in by_type[RankingType.PORTFOLIO].methodology
+        assert len(definitions) == 7
+        by_type = {
+            ranking_type: next(
+                item
+                for item in definitions
+                if item.ranking_type == ranking_type and item.status == "ACTIVE"
+            )
+            for ranking_type in RankingType
+        }
+        assert by_type[RankingType.PORTFOLIO].version == 2
+        assert by_type[RankingType.RESEARCH].version == 2
+        assert by_type[RankingType.WATCHLIST].version == 3
+        assert all(item.implementation_status == "READY" for item in by_type.values())
+        assert all(
+            item.implementation_status == "NOT_MIGRATED"
+            for item in definitions
+            if item.status == "RETIRED" and item.version == 1
+        )
+        assert "100-point score" in by_type[RankingType.PORTFOLIO].methodology
         assert "Expected IRR" in by_type[RankingType.WATCHLIST].methodology
         assert "Research Sort Key" in by_type[RankingType.RESEARCH].methodology
         assert by_type[RankingType.WATCHLIST].id != by_type[RankingType.RESEARCH].id
@@ -627,17 +637,20 @@ def test_ranking_runs_store_unavailable_and_excluded_entries_without_rank_zero(
         harbor = db.scalar(select(Company).where(Company.name.startswith("Harbor")))
         assert cedar and atlas and harbor
         by_id = {item.company.id: item.entry for item in portfolio.entries}
-        assert by_id[atlas.id].status == RankingEntryStatus.NOT_MIGRATED
+        assert by_id[atlas.id].status == RankingEntryStatus.DATA_CHECK
         assert by_id[harbor.id].status == RankingEntryStatus.NOT_ELIGIBLE
         assert by_id[cedar.id].status == RankingEntryStatus.NOT_ELIGIBLE
 
         watchlist = q.ranking_run_detail(db, runs[RankingType.WATCHLIST].id)
         watchlist_by_id = {item.company.id: item.entry for item in watchlist.entries}
-        assert watchlist_by_id[cedar.id].status == RankingEntryStatus.NOT_MIGRATED
+        assert watchlist_by_id[cedar.id].status == RankingEntryStatus.INPUTS_UNAVAILABLE
         assert watchlist_by_id[atlas.id].status == RankingEntryStatus.NOT_ELIGIBLE
         research = q.ranking_run_detail(db, runs[RankingType.RESEARCH].id)
+        research_by_id = {item.company.id: item.entry for item in research.entries}
+        assert research_by_id[harbor.id].status == RankingEntryStatus.INPUTS_UNAVAILABLE
         assert all(
-            item.entry.status == RankingEntryStatus.NOT_MIGRATED for item in research.entries
+            research_by_id[issuer.id].status == RankingEntryStatus.NOT_ELIGIBLE
+            for issuer in (atlas, cedar)
         )
 
 
@@ -750,7 +763,7 @@ def test_ranking_history_is_snapshot_based_when_lifecycle_and_universe_change(
             item.entry for item in unchanged.entries if item.company.id == cedar.id
         )
         assert cedar_previous.id == previous_entry.id
-        assert cedar_previous.status == RankingEntryStatus.NOT_MIGRATED
+        assert cedar_previous.status == RankingEntryStatus.INPUTS_UNAVAILABLE
         assert unchanged.run.company_count == 4
         assert q.ranking_run_detail(db, new_run.id).run.company_count == 5
 
@@ -768,13 +781,21 @@ def test_ranking_api_exposes_metadata_runs_current_and_complete_history(
         TestClient(create_app(Settings(database_url=None))) as client,
     ):
         definitions = client.get("/v1/ranking-definitions")
-        assert definitions.status_code == 200 and len(definitions.json()) == 3
-        assert (
-            client.get("/v1/ranking-definitions?ranking_type=RESEARCH").json()[0][
-                "implementation_status"
-            ]
-            == "NOT_MIGRATED"
+        assert definitions.status_code == 200 and len(definitions.json()) == 7
+        active_watchlist = next(
+            item
+            for item in definitions.json()
+            if item["ranking_type"] == "WATCHLIST" and item["status"] == "ACTIVE"
         )
+        assert active_watchlist["version"] == 3
+        assert active_watchlist["implementation_status"] == "READY"
+        active_research = next(
+            item
+            for item in client.get("/v1/ranking-definitions?ranking_type=RESEARCH").json()
+            if item["status"] == "ACTIVE"
+        )
+        assert active_research["version"] == 2
+        assert active_research["implementation_status"] == "READY"
         runs = client.get("/v1/ranking-runs?ranking_type=RESEARCH")
         assert runs.status_code == 200 and len(runs.json()) == 1
         created = client.post(

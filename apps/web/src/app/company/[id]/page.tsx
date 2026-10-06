@@ -14,6 +14,9 @@ import {
 import {
   isDetail,
   isCompanyRankings,
+  isWatchlistRankInputSnapshot,
+  isPortfolioRankInputSnapshot,
+  isResearchRankInputSnapshot,
   lifecycleStates,
   isScoreCurrents,
   isScoreHistory,
@@ -38,7 +41,12 @@ import { CanonicalDcfExplorer } from "@/components/canonical-dcf";
 import { CanonicalArchetypeExplorer } from "@/components/canonical-archetypes";
 import { ModelMigrationStatus } from "@/components/model-migration-status";
 import { ConsensusEstimates } from "@/components/consensus-estimates";
+import { EstimateMomentum } from "@/components/estimate-momentum";
 import { SourceDocuments } from "@/components/source-documents";
+import { TemporalAlignment } from "@/components/temporal-alignment";
+import { ExpectedReturnHistory } from "@/components/expected-return-history";
+import { ExecutionPacePanel } from "@/components/execution-pace";
+import { AttentionCenter } from "@/components/attention-center";
 
 export default function CompanyPage({
   params,
@@ -98,16 +106,21 @@ export default function CompanyPage({
         >
           {[
             ["overview", "Overview"],
+            ["attention", "Recent changes"],
             ["investment-quality", "Quality & risk"],
             ["market-facts", "Market data"],
             ["reported-fundamentals", "Reported fundamentals"],
             ["source-documents", "Filings & sources"],
             ["consensus-estimates", "Consensus estimates"],
+            ["estimate-momentum", "Estimate Momentum"],
+            ["temporal-alignment", "Forecast vs. outcome"],
             ["canonical-models", "Model & valuation"],
             ["canonical-model-archetypes", "Other model methods"],
             ["model-migration-status", "Model migration"],
             ["model-output-history", "Imported outputs"],
+            ["expected-return-history", "Expected-return history"],
             ["ranking-context", "Ranking context"],
+            ["execution-pace", "Execution Pace"],
           ].map(([target, label]) => (
             <Link
               key={target}
@@ -120,11 +133,16 @@ export default function CompanyPage({
         </nav>
       </div>
       <CompanyOverview detail={detail} lifecycleChanged={state.retry} />
+      <div id="attention" className="mb-8 scroll-mt-5">
+        <AttentionCenter companyId={detail.company.id} />
+      </div>
       <InvestmentQuality companyId={detail.company.id} />
       <MarketFacts companyId={detail.company.id} />
       <ReportedFundamentalsPanel companyId={detail.company.id} />
       <SourceDocuments companyId={detail.company.id} />
       <ConsensusEstimates companyId={detail.company.id} />
+      <EstimateMomentum companyId={detail.company.id} />
+      <TemporalAlignment companyId={detail.company.id} />
       <CanonicalDcfExplorer
         companyId={detail.company.id}
         listings={detail.listings}
@@ -135,7 +153,9 @@ export default function CompanyPage({
       />
       <ModelMigrationStatus companyId={detail.company.id} />
       <ModelOutputs companyId={detail.company.id} />
+      <ExpectedReturnHistory companyId={detail.company.id} />
       <RankingPanel companyId={detail.company.id} />
+      <ExecutionPacePanel companyId={detail.company.id} />
     </>
   );
 }
@@ -1388,6 +1408,21 @@ function RankingPanel({ companyId }: { companyId: string }) {
               (item) => item.run.definition.ranking_type === type,
             );
             const entry = current?.entry;
+            const rankContext =
+              type === "WATCHLIST" &&
+              isWatchlistRankInputSnapshot(entry?.input_snapshot)
+                ? entry.input_snapshot
+                : null;
+            const portfolioRankContext =
+              type === "PORTFOLIO" &&
+              isPortfolioRankInputSnapshot(entry?.input_snapshot)
+                ? entry.input_snapshot
+                : null;
+            const researchRankContext =
+              type === "RESEARCH" &&
+              isResearchRankInputSnapshot(entry?.input_snapshot)
+                ? entry.input_snapshot
+                : null;
             const value = !current?.run
               ? "No run recorded"
               : !entry
@@ -1420,6 +1455,284 @@ function RankingPanel({ companyId }: { companyId: string }) {
                         <p className="break-words text-xs leading-5">
                           {entry.reason}
                         </p>
+                      )}
+                      {rankContext && (
+                        <div className="rounded-md bg-secondary/40 p-3 text-xs">
+                          <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+                            <div>
+                              <dt className="text-muted-foreground">
+                                10Y Durability
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {rankContext.durability_10y.score === null
+                                  ? rankContext.durability_10y.status.replaceAll(
+                                      "_",
+                                      " ",
+                                    )
+                                  : `${rankContext.durability_10y.score} / 5`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Compounder Quality
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {rankContext.compounder_quality.score === null
+                                  ? rankContext.compounder_quality.status.replaceAll(
+                                      "_",
+                                      " ",
+                                    )
+                                  : `${rankContext.compounder_quality.score} / 5`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Forward Fundamental CAGR
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {percent(rankContext.forward_fundamental_cagr)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Expected IRR
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {percent(rankContext.expected_irr)}
+                              </dd>
+                            </div>
+                          </dl>
+                          <p className="mt-2 text-muted-foreground">
+                            {rankContext.return_source.source_kind ===
+                            "NATIVE_MODEL_REVISION"
+                              ? `Native revision ${rankContext.return_source.revision_number ?? "?"}`
+                              : "Imported current contract"}
+                            {rankContext.return_source.model_currency
+                              ? ` · ${rankContext.return_source.model_currency}`
+                              : " · currency unknown"}
+                            {rankContext.return_source.price_effective_at
+                              ? ` · price ${date(rankContext.return_source.price_effective_at)}`
+                              : rankContext.return_source
+                                    .effective_time_status === "UNKNOWN"
+                                ? " · output effective date unknown"
+                                : ""}
+                          </p>
+                          <details className="mt-2 border-t pt-2">
+                            <summary className="cursor-pointer font-medium">
+                              Assessment rationale and source
+                            </summary>
+                            <p className="mt-2 leading-5">
+                              Durability:{" "}
+                              {rankContext.durability_10y.rationale ??
+                                "No rationale recorded."}
+                            </p>
+                            <p className="mt-1 leading-5">
+                              Quality:{" "}
+                              {rankContext.compounder_quality.rationale ??
+                                "No rationale recorded."}
+                            </p>
+                            <p className="mt-1 break-words leading-5 text-muted-foreground">
+                              {rankContext.return_source.source ??
+                                "No model source recorded."}
+                            </p>
+                            <p className="mt-2 leading-5 text-muted-foreground">
+                              {rankContext.context_note}
+                            </p>
+                          </details>
+                        </div>
+                      )}
+                      {portfolioRankContext && (
+                        <div className="rounded-md bg-secondary/40 p-3 text-xs">
+                          <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Portfolio Score
+                              </dt>
+                              <dd className="mt-0.5 font-semibold tabular-nums">
+                                {portfolioRankContext.portfolio_score === null
+                                  ? "Unavailable"
+                                  : `${quantity(portfolioRankContext.portfolio_score)} / 100`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Expected Cash-Flow IRR
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {percent(portfolioRankContext.expected_irr)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Current weight / target
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {percent(portfolioRankContext.current_weight)} /{" "}
+                                {percent(portfolioRankContext.target_weight)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Allocation gap
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {percent(
+                                  portfolioRankContext.target_minus_current_gap,
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Lifecycle / valuation
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {portfolioRankContext.lifecycle ??
+                                  "Unavailable"}{" "}
+                                ·{" "}
+                                {portfolioRankContext.allocation_status.replaceAll(
+                                  "_",
+                                  " ",
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Durability / Quality
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {portfolioRankContext.durability_10y.score ??
+                                  portfolioRankContext.durability_10y
+                                    .status}{" "}
+                                /{" "}
+                                {portfolioRankContext.compounder_quality
+                                  .score ??
+                                  portfolioRankContext.compounder_quality
+                                    .status}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Execution / Risk
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {portfolioRankContext.execution.score ??
+                                  portfolioRankContext.execution.status}{" "}
+                                /{" "}
+                                {portfolioRankContext.risk.score ??
+                                  portfolioRankContext.risk.status}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Valuation uncertainty
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {percent(
+                                  portfolioRankContext.valuation_uncertainty,
+                                )}
+                              </dd>
+                            </div>
+                          </dl>
+                          <p className="mt-2 text-muted-foreground">
+                            {portfolioRankContext.model_source?.model_key ??
+                              "No model source"}{" "}
+                            ·{" "}
+                            {portfolioRankContext.model_source
+                              ?.model_currency ?? "currency unknown"}{" "}
+                            · reference price{" "}
+                            {portfolioRankContext.model_source
+                              ?.price_effective_at
+                              ? date(
+                                  portfolioRankContext.model_source
+                                    .price_effective_at,
+                                )
+                              : "unavailable"}
+                          </p>
+                          <details className="mt-2 border-t pt-2">
+                            <summary className="cursor-pointer font-medium">
+                              Score contribution breakdown
+                            </summary>
+                            <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                              {Object.entries(
+                                portfolioRankContext.score_contributions,
+                              ).map(([name, value]) => (
+                                <div key={name} className="contents">
+                                  <dt className="text-muted-foreground">
+                                    {name.replaceAll("_", " ")}
+                                  </dt>
+                                  <dd className="text-right tabular-nums">
+                                    {value === null
+                                      ? "Unavailable"
+                                      : quantity(value)}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                            <p className="mt-2 leading-5 text-muted-foreground">
+                              {portfolioRankContext.context_note} Target,
+                              current weight, allocation gap and Execution Pace
+                              remain separate state; this rank does not change
+                              them.
+                            </p>
+                          </details>
+                        </div>
+                      )}
+                      {researchRankContext && (
+                        <div className="rounded-md bg-secondary/40 p-3 text-xs">
+                          <p className="font-medium">
+                            Research attention context
+                          </p>
+                          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Candidate tier
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {researchRankContext.candidate_tier ??
+                                  "Unavailable"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Research Sort Key
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {researchRankContext.sort_key === null
+                                  ? "Unavailable"
+                                  : quantity(researchRankContext.sort_key)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Persistent priority seed
+                              </dt>
+                              <dd className="mt-0.5 font-medium tabular-nums">
+                                {researchRankContext.priority_seed === null
+                                  ? researchRankContext.used_legacy_default
+                                    ? `Blank · source fallback ${quantity(researchRankContext.legacy_default_priority_seed)}`
+                                    : "Unavailable"
+                                  : quantity(researchRankContext.priority_seed)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Input state
+                              </dt>
+                              <dd className="mt-0.5 font-medium">
+                                {researchRankContext.input_quality.replaceAll(
+                                  "_",
+                                  " ",
+                                )}
+                              </dd>
+                            </div>
+                          </dl>
+                          <p className="mt-2 leading-5 text-muted-foreground">
+                            {researchRankContext.context_note} Research Rank
+                            prioritizes research attention only; it is separate
+                            from Watchlist/Portfolio Rank and does not change
+                            lifecycle.
+                          </p>
+                        </div>
                       )}
                       <p className="text-xs text-muted-foreground">
                         As of {date(current.run.as_of)} · Recorded{" "}

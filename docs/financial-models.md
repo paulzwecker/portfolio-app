@@ -56,20 +56,21 @@ The currently implemented archetypes and representative workbook references are:
 | `OWNER_CASH_FLOW_10Y`      | `W-TOST`           | Owner cash flow, ten-year forecast and Gordon terminal value | USD              |
 | `RESIDUAL_INCOME_10Y_FADE` | `W-HDFC`           | Book value plus residual income with mature-ROE fade         | INR              |
 
-The first real native-input population is deliberately smaller than the set of
-supported methods: only parity-proven `P-GOOGL` and `W-TOST` have been accepted
-from the tracked workbook. Their listing identities, source mappings, revision
-provenance, idempotent import behavior and detailed comparison results are in the
-[native model-input migration report](native-model-input-migration.md). The other
-supported methods remain fixtures until their own real model tabs pass mapping
-and parity review.
+The real native-input population remains deliberately smaller than the set of
+supported methods. `P-GOOGL` and `W-TOST` were accepted first; the reviewed Portfolio
+DCF sub-batch then accepted `P-ASML`, `P-ISRG`, and `P-MA`. Their listing identities,
+source mappings, revision provenance, idempotent import behavior and detailed
+comparison results are in the [native model-input migration report](native-model-input-migration.md).
+Other active workbook tabs remain output-only or blocked until their own input
+mapping and parity review passes.
 
 The DCF method is represented by the `P-GOOGL` tab in
 `reference/workbook/Portfolio_Watchlist.xlsx` (workbook SHA-256
 `27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9`). Its published
 methodology is "10-Year Secular Growth Fade UFCF DCF". The frozen test fixture is
 [`apps/api/tests/fixtures/p_googl_ufcf_dcf_v1.json`](../apps/api/tests/fixtures/p_googl_ufcf_dcf_v1.json).
-It is not a production seed or a current model import.
+It is not a production seed. Accepted native model state is created through the
+versioned importer documented in [native-model-input-migration.md](native-model-input-migration.md).
 
 Revenue, D&A, capex, NWC and diluted shares follow the source model's billion-unit
 inputs; fair values and market price are per share in the explicit model/listing
@@ -190,12 +191,12 @@ recompute or relabel historical legacy outputs. A method-specific bridge and
 regression fixture are required before treating any legacy field as canonical
 shareholder-cash-flow IRR.
 
-The inventory distinguishes published outputs from safe assumption mapping. Ninety-
-six normalized contracts are currently publishable after source identity/layout
-checks, but only `P-GOOGL` and `W-TOST` are active tabs ready for native input import
-on existing tab-specific parity evidence. `W-HDFC` has residual-income parity but
-is currently Drop and remains outside active migration priority. Zero real company
-input sets have been batch imported.
+The inventory distinguishes published outputs from safe assumption mapping.
+Ninety-six normalized contracts are publishable after source identity/layout checks.
+Five active tabs have tab-specific parity evidence: four Portfolio DCFs (`P-GOOGL`,
+`P-ASML`, `P-ISRG`, `P-MA`) and Watchlist owner-cash model `W-TOST`. Those five
+company input sets are accepted as native revisions. `W-HDFC` has residual-income
+parity but is currently Drop and remains outside active migration priority.
 
 ## API and Company flow
 
@@ -311,12 +312,10 @@ accepted.
 ## Lessons for more model types
 
 The migration inventory lists 116 model tabs and the workbook registry contains
-219 companies. Only `P-GOOGL`, `W-TOST` and `W-HDFC` currently have native formula
-parity fixtures: three of 116 tabs (2.6%) representing three of 219 issuers (1.4%).
-This is methodology proof, not batch migration; zero legacy company model input
-sets have been imported into the native model domain. The methods can be authored
-for companies once assumptions are reviewed and available, but this does not
-establish workbook-wide issuer coverage.
+219 companies. Six tabs have native formula parity fixtures: `P-GOOGL`, `P-ASML`,
+`P-ISRG`, `P-MA`, `W-TOST`, and dropped `W-HDFC`. Five active companies now have
+accepted native input revisions (4 Portfolio and 1 Watchlist). This is a controlled
+5-of-92 active model-tab migration, not workbook-wide issuer coverage.
 
 Keep the shared envelope small: company/model identity, methodology discriminator,
 currency/listing, revision chain, rationale/provenance, timestamps and a normalized

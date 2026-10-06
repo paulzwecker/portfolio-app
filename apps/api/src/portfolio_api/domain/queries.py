@@ -14,6 +14,7 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services
 from portfolio_api.domain.consensus_policy import select_consensus_source
 from portfolio_api.domain.models import (
+    Actor,
     CashPosition,
     Company,
     CompanyProviderIdentifier,
@@ -25,6 +26,9 @@ from portfolio_api.domain.models import (
     DcfProjection,
     DcfScenarioAssumptions,
     DcfYearAssumption,
+    ExecutionPaceDecision,
+    ExecutionPaceRun,
+    ExecutionPaceRunStatus,
     FinancialModel,
     FinancialModelOutput,
     FinancialModelRevision,
@@ -67,6 +71,7 @@ from portfolio_api.domain.models import (
     TargetRevision,
     now,
 )
+from portfolio_api.estimate_momentum import ConsensusObservationPoint, calculate_estimate_momentum
 from portfolio_api.reported_fundamentals import resolve_fundamental_period
 
 FRESH_DAYS = 5
@@ -157,11 +162,18 @@ def target_read(session: Session, revision: TargetRevision) -> s.TargetRead:
     )
 
 
-def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
+def overview(
+    session: Session, portfolio_id: UUID, as_of: datetime | None = None
+) -> s.PortfolioOverview:
+    cutoff = (as_of or now()).astimezone(UTC)
     item = services.portfolio(session, portfolio_id)
     snapshot = session.scalar(
         select(HoldingSnapshot)
-        .where(HoldingSnapshot.portfolio_id == portfolio_id)
+        .where(
+            HoldingSnapshot.portfolio_id == portfolio_id,
+            HoldingSnapshot.effective_at <= cutoff,
+            HoldingSnapshot.recorded_at <= cutoff,
+        )
         .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
         .limit(1)
     )
@@ -170,6 +182,9 @@ def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
         .where(
             TargetRevision.portfolio_id == portfolio_id,
             TargetRevision.status == "ACCEPTED",
+            TargetRevision.effective_at <= cutoff,
+            TargetRevision.recorded_at <= cutoff,
+            TargetRevision.accepted_at <= cutoff,
         )
         .order_by(TargetRevision.effective_at.desc(), TargetRevision.accepted_at.desc())
         .limit(1)
@@ -193,7 +208,13 @@ def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
             .order_by(Listing.ticker, Listing.venue)
         ).all()
         for position, listing, security in rows:
-            market = listing_market_data(session, listing, history_limit=0)
+            market = listing_market_data(
+                session,
+                listing,
+                history_limit=0,
+                market_as_of=cutoff.date(),
+                known_at=cutoff,
+            )
             observation = market.latest
             price_matches_holdings = (
                 snapshot is not None
@@ -227,6 +248,7 @@ def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
                     listing.currency,
                     item.base_currency,
                     observation.observed_at or observation.market_date,
+                    known_at=cutoff,
                 )
                 is None
             ):
@@ -240,6 +262,7 @@ def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
                     listing.currency,
                     item.base_currency,
                     observation.observed_at or observation.market_date,
+                    known_at=cutoff,
                 )
                 if listing.currency == item.base_currency:
                     base_value = value
@@ -275,7 +298,13 @@ def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
     cash_values: list[Decimal] = []
     for cash in snapshot_cash:
         rate = (
-            _fx_rate(session, cash.currency, item.base_currency, snapshot.effective_at)
+            _fx_rate(
+                session,
+                cash.currency,
+                item.base_currency,
+                snapshot.effective_at,
+                known_at=cutoff,
+            )
             if cash.balance is not None and snapshot is not None
             else None
         )
@@ -337,7 +366,7 @@ def overview(session: Session, portfolio_id: UUID) -> s.PortfolioOverview:
     incomplete = (
         not snapshot
         or snapshot.completeness != "COMPLETE"
-        or (now().date() - snapshot.effective_at.date()).days > FRESH_DAYS
+        or (cutoff.date() - snapshot.effective_at.date()).days > FRESH_DAYS
     )
     total: Decimal | None = None
     if snapshot and snapshot.completeness == "COMPLETE" and not valuation_gaps:
@@ -595,6 +624,7 @@ def company_reported_fundamentals(
     period_type: str | None = None,
     as_of: date | None = None,
     known_at: datetime | None = None,
+    effective_cutoff: datetime | None = None,
 ) -> s.CompanyReportedFundamentalsRead:
     """Resolve immutable reported facts with visible precedence and conflict candidates."""
 
@@ -624,7 +654,7 @@ def company_reported_fundamentals(
     if period_type is not None:
         statement = statement.where(ReportedFundamentalObservation.period_type == period_type)
     if as_of is not None:
-        cutoff = datetime.combine(as_of, time.max, UTC)
+        cutoff = effective_cutoff or datetime.combine(as_of, time.max, UTC)
         statement = statement.where(
             ReportedFundamentalObservation.period_end <= cutoff,
             ReportedFundamentalObservation.filed_at.is_not(None),
@@ -812,10 +842,11 @@ def company_consensus_estimates(
     company_id: UUID,
     as_of: date | None = None,
     known_at: datetime | None = None,
+    effective_cutoff: datetime | None = None,
 ) -> s.CompanyConsensusEstimatesRead:
     """Return separate provider histories under an explicit no-blending continuity rule."""
     services.company(session, company_id)
-    as_of_cutoff = datetime.combine(as_of or date.today(), time.max, UTC)
+    as_of_cutoff = effective_cutoff or datetime.combine(as_of or date.today(), time.max, UTC)
     mappings = list(
         session.scalars(
             select(ConsensusEstimateProviderMapping)
@@ -977,6 +1008,143 @@ def company_consensus_estimates(
         known_at=known_at,
         providers=providers,
     )
+
+
+def company_estimate_momentum(
+    session: Session,
+    company_id: UUID,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyEstimateMomentumRead:
+    """Return the deterministic momentum view from one selected provider stream."""
+    services.company(session, company_id)
+    day = as_of or date.today()
+    return _estimate_momentum_for_companies(session, [company_id], day, known_at)[company_id]
+
+
+def universe_estimate_momentum(
+    session: Session,
+    lifecycle: Lifecycle | None = None,
+    search: str | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> list[s.UniverseEstimateMomentumRead]:
+    """Build a bulk summary without per-company query loops or provider blending."""
+    companies = universe(session, lifecycle, search)
+    day = as_of or date.today()
+    signals = _estimate_momentum_for_companies(
+        session, [company.id for company in companies], day, known_at
+    )
+    return [
+        s.UniverseEstimateMomentumRead(
+            company=company,
+            estimate_momentum=s.EstimateMomentumSummaryRead.model_validate(
+                signals[company.id].model_dump(exclude={"periods"})
+            ),
+        )
+        for company in companies
+    ]
+
+
+def _estimate_momentum_for_companies(
+    session: Session,
+    company_ids: list[UUID],
+    as_of: date,
+    known_at: datetime | None,
+) -> dict[UUID, s.CompanyEstimateMomentumRead]:
+    if not company_ids:
+        return {}
+    effective_cutoff = datetime.combine(as_of, time.max, UTC)
+    mapping_statement = select(ConsensusEstimateProviderMapping).where(
+        ConsensusEstimateProviderMapping.company_id.in_(company_ids),
+        ConsensusEstimateProviderMapping.effective_from <= effective_cutoff,
+        ConsensusEstimateProviderMapping.recorded_at
+        <= (known_at or datetime.max.replace(tzinfo=UTC)),
+    )
+    mappings = list(
+        session.scalars(
+            mapping_statement.order_by(ConsensusEstimateProviderMapping.effective_from.desc())
+        )
+    )
+    latest_by_source: dict[tuple[UUID, str, str], ConsensusEstimateProviderMapping] = {}
+    for mapping in mappings:
+        key = (mapping.company_id, mapping.role, mapping.provider_id)
+        latest_by_source.setdefault(key, mapping)
+    mappings_by_company: dict[UUID, list[ConsensusEstimateProviderMapping]] = defaultdict(list)
+    for mapping in latest_by_source.values():
+        mappings_by_company[mapping.company_id].append(mapping)
+    selected_by_company = {
+        company_id: select_consensus_source(mappings_by_company.get(company_id, []))
+        for company_id in company_ids
+    }
+    selected_mappings = {
+        company_id: selected
+        for company_id, (selected, _status) in selected_by_company.items()
+        if selected is not None
+    }
+    selected_ids = [item.id for item in selected_mappings.values()]
+    observation_statement = (
+        select(ConsensusEstimateObservation).where(
+            ConsensusEstimateObservation.provider_mapping_id.in_(selected_ids),
+            ConsensusEstimateObservation.snapshot_date <= as_of,
+        )
+        if selected_ids
+        else None
+    )
+    if observation_statement is not None:
+        if known_at is not None:
+            observation_statement = observation_statement.where(
+                ConsensusEstimateObservation.recorded_at <= known_at,
+                (ConsensusEstimateObservation.observed_at.is_(None))
+                | (ConsensusEstimateObservation.observed_at <= known_at),
+            )
+        observations = list(
+            session.scalars(
+                observation_statement.order_by(
+                    ConsensusEstimateObservation.company_id,
+                    ConsensusEstimateObservation.snapshot_date,
+                    ConsensusEstimateObservation.observed_at,
+                    ConsensusEstimateObservation.recorded_at,
+                )
+            )
+        )
+    else:
+        observations = []
+    points_by_company: dict[UUID, list[ConsensusObservationPoint]] = defaultdict(list)
+    for observation in observations:
+        points_by_company[observation.company_id].append(
+            ConsensusObservationPoint(
+                id=observation.id,
+                provider_mapping_id=observation.provider_mapping_id,
+                provider_id=observation.provider_id,
+                metric=observation.metric,
+                period_type=observation.period_type,
+                forecast_period=observation.forecast_period,
+                period_end=observation.period_end,
+                value=observation.value,
+                analyst_count=observation.analyst_count,
+                currency=observation.currency,
+                unit=observation.unit,
+                snapshot_date=observation.snapshot_date,
+                observed_at=observation.observed_at,
+                recorded_at=observation.recorded_at,
+                data_quality=observation.data_quality,
+                quality_reason=observation.quality_reason,
+            )
+        )
+    result: dict[UUID, s.CompanyEstimateMomentumRead] = {}
+    for company_id in company_ids:
+        selected, continuity = selected_by_company[company_id]
+        result[company_id] = calculate_estimate_momentum(
+            company_id=company_id,
+            as_of=as_of,
+            known_at=known_at,
+            continuity_status=continuity,
+            selected_provider_id=selected.provider_id if selected else None,
+            selected_mapping_id=selected.id if selected else None,
+            observations=points_by_company.get(company_id, []),
+        )
+    return result
 
 
 def _metric_statement(metric: FundamentalMetric) -> FundamentalStatement:
@@ -1232,6 +1400,622 @@ def company_model_outputs_history(
         ModelOutputSnapshot.model_key,
     )
     return [model_output_snapshot_read(item) for item in session.scalars(statement)]
+
+
+def company_expected_return_history(
+    session: Session,
+    company_id: UUID,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyExpectedReturnHistoryRead:
+    """Compose imported outputs and immutable native revisions without persisting a new series."""
+    services.company(session, company_id)
+    query_now = now()
+    as_of_date = as_of or query_now.date()
+    effective_cutoff = datetime.combine(as_of_date, time.max, UTC)
+    knowledge_cutoff = known_at or min(query_now, effective_cutoff)
+    if knowledge_cutoff.tzinfo is None or knowledge_cutoff.utcoffset() is None:
+        raise ValueError("known_at must include a timezone offset")
+    knowledge_cutoff = knowledge_cutoff.astimezone(UTC)
+
+    models = list(
+        session.scalars(
+            select(FinancialModel)
+            .where(FinancialModel.company_id == company_id)
+            .order_by(FinancialModel.model_name, FinancialModel.id)
+        )
+    )
+    models_by_id = {model.id: model for model in models}
+    source_models: dict[str, list[FinancialModel]] = defaultdict(list)
+    for model in models:
+        if model.source_model_key:
+            source_models[model.source_model_key].append(model)
+
+    native_revisions: list[FinancialModelRevision] = []
+    if models:
+        native_revisions = list(
+            session.scalars(
+                select(FinancialModelRevision)
+                .where(
+                    FinancialModelRevision.model_id.in_(models_by_id),
+                    FinancialModelRevision.effective_at <= effective_cutoff,
+                    FinancialModelRevision.effective_at <= knowledge_cutoff,
+                    FinancialModelRevision.recorded_at <= knowledge_cutoff,
+                )
+                .order_by(
+                    FinancialModelRevision.revision_number,
+                )
+            )
+        )
+    revision_ids = [revision.id for revision in native_revisions]
+    native_outputs = (
+        list(
+            session.scalars(
+                select(FinancialModelOutput).where(
+                    FinancialModelOutput.revision_id.in_(revision_ids)
+                )
+            )
+        )
+        if revision_ids
+        else []
+    )
+    output_by_revision = {output.revision_id: output for output in native_outputs}
+
+    latest_revision_at_cutoff: dict[UUID, UUID] = {}
+    for revision in native_revisions:
+        latest_revision_at_cutoff[revision.model_id] = revision.id
+
+    records: list[dict[str, Any]] = []
+    for revision in native_revisions:
+        model = models_by_id[revision.model_id]
+        output = output_by_revision.get(revision.id)
+        if output is None:
+            continue
+        records.append(
+            {
+                "point_id": f"native:{revision.id}",
+                "source_kind": "NATIVE_MODEL_REVISION",
+                "effective_at": revision.effective_at,
+                "recorded_at": revision.recorded_at,
+                "series_id": f"native:{model.id}",
+                "model_key": model.source_model_key,
+                "model_id": model.id,
+                "revision_id": revision.id,
+                "revision_number": revision.revision_number,
+                "model_type": revision.model_type,
+                "methodology_version": revision.methodology_version,
+                "model_label": model.model_name,
+                "model_currency": model.model_currency,
+                "currency_status": "DOCUMENTED",
+                "listing": session.get(Listing, model.valuation_listing_id),
+                "is_current_at_cutoff": latest_revision_at_cutoff[model.id] == revision.id,
+                "output_status": output.status,
+                "output_quality": "COMPLETE" if output.status == "COMPLETE" else "PARTIAL",
+                "contract_status": None,
+                "return_semantics": "NATIVE_METHOD_OUTPUT",
+                "actor": revision.actor,
+                "source_actor": None,
+                "revision_source": None,
+                "revision_type": None,
+                "output": output,
+                "snapshot": None,
+                "revision": revision,
+                "source": revision.source,
+                "source_revision_id": revision.source_revision_id,
+                "rationale": revision.rationale,
+                "evidence": None,
+            }
+        )
+
+    legacy_snapshots = list(
+        session.scalars(
+            select(ModelOutputSnapshot)
+            .where(
+                ModelOutputSnapshot.company_id == company_id,
+                ModelOutputSnapshot.recorded_at <= knowledge_cutoff,
+                or_(
+                    ModelOutputSnapshot.effective_at.is_(None),
+                    and_(
+                        ModelOutputSnapshot.effective_at <= effective_cutoff,
+                        ModelOutputSnapshot.effective_at <= knowledge_cutoff,
+                    ),
+                ),
+            )
+            .order_by(
+                ModelOutputSnapshot.effective_at.nullsfirst(),
+                ModelOutputSnapshot.recorded_at,
+                ModelOutputSnapshot.model_key,
+            )
+        )
+    )
+    for snapshot in legacy_snapshots:
+        matches = source_models.get(snapshot.model_key, [])
+        listing_ids = {model.valuation_listing_id for model in matches}
+        listing = session.get(Listing, next(iter(listing_ids))) if len(listing_ids) == 1 else None
+        source_kind = (
+            "IMPORTED_CURRENT_CONTRACT"
+            if snapshot.snapshot_kind == ModelOutputSnapshotKind.CURRENT_CONTRACT
+            else "IMPORTED_LEGACY_REVISION"
+        )
+        records.append(
+            {
+                "point_id": f"imported:{snapshot.id}",
+                "source_kind": source_kind,
+                "effective_at": snapshot.effective_at,
+                "recorded_at": snapshot.recorded_at,
+                "series_id": f"legacy:{snapshot.model_key}",
+                "model_key": snapshot.model_key,
+                "model_id": matches[0].id if len(matches) == 1 else None,
+                "revision_id": None,
+                "revision_number": None,
+                "model_type": None,
+                "methodology_version": None,
+                "model_label": snapshot.model_key,
+                "model_currency": snapshot.model_currency,
+                "currency_status": snapshot.currency_status,
+                "listing": listing,
+                "is_current_at_cutoff": False,
+                "output_status": snapshot.model_status,
+                "output_quality": snapshot.output_quality,
+                "contract_status": snapshot.contract_status,
+                "return_semantics": "LEGACY_NORMALIZED_FIELD",
+                "actor": snapshot.actor,
+                "source_actor": snapshot.source_actor,
+                "revision_source": snapshot.revision_source,
+                "revision_type": snapshot.revision_type,
+                "output": snapshot,
+                "snapshot": snapshot,
+                "revision": None,
+                "source": snapshot.source,
+                "source_revision_id": snapshot.source_revision_id,
+                "rationale": snapshot.rationale,
+                "evidence": snapshot.evidence,
+            }
+        )
+
+    listing_ids = {record["listing"].id for record in records if record["listing"] is not None}
+    cutoff_quotes = (
+        list(
+            session.scalars(
+                select(PriceObservation)
+                .where(
+                    PriceObservation.listing_id.in_(listing_ids),
+                    PriceObservation.price_kind == "DAILY_CLOSE",
+                    PriceObservation.market_date <= effective_cutoff,
+                    PriceObservation.recorded_at <= knowledge_cutoff,
+                    or_(
+                        PriceObservation.observed_at.is_(None),
+                        PriceObservation.observed_at <= knowledge_cutoff,
+                    ),
+                )
+                .order_by(
+                    PriceObservation.listing_id,
+                    PriceObservation.market_date,
+                    *_price_ordering(),
+                )
+            )
+        )
+        if listing_ids
+        else []
+    )
+    quotes_by_listing: dict[UUID, list[PriceObservation]] = defaultdict(list)
+    for quote in cutoff_quotes:
+        quotes_by_listing[quote.listing_id].append(quote)
+
+    native_quote_ids = {
+        record["output"].price_observation_id
+        for record in records
+        if record["source_kind"] == "NATIVE_MODEL_REVISION"
+        and record["output"].price_observation_id is not None
+    }
+    linked_native_quotes = (
+        {
+            quote.id: quote
+            for quote in session.scalars(
+                select(PriceObservation).where(PriceObservation.id.in_(native_quote_ids))
+            )
+        }
+        if native_quote_ids
+        else {}
+    )
+
+    mapping_rows = list(
+        session.scalars(
+            select(ConsensusEstimateProviderMapping)
+            .where(
+                ConsensusEstimateProviderMapping.company_id == company_id,
+                ConsensusEstimateProviderMapping.effective_from <= effective_cutoff,
+                ConsensusEstimateProviderMapping.recorded_at <= knowledge_cutoff,
+            )
+            .order_by(ConsensusEstimateProviderMapping.effective_from.desc())
+        )
+    )
+    mapping_ids = [mapping.id for mapping in mapping_rows]
+    estimate_rows = (
+        list(
+            session.scalars(
+                select(ConsensusEstimateObservation)
+                .where(
+                    ConsensusEstimateObservation.company_id == company_id,
+                    ConsensusEstimateObservation.provider_mapping_id.in_(mapping_ids),
+                    ConsensusEstimateObservation.snapshot_date <= as_of_date,
+                    ConsensusEstimateObservation.recorded_at <= knowledge_cutoff,
+                    or_(
+                        ConsensusEstimateObservation.observed_at.is_(None),
+                        ConsensusEstimateObservation.observed_at <= knowledge_cutoff,
+                    ),
+                )
+                .order_by(
+                    ConsensusEstimateObservation.snapshot_date,
+                    ConsensusEstimateObservation.observed_at,
+                    ConsensusEstimateObservation.recorded_at,
+                )
+            )
+        )
+        if mapping_ids
+        else []
+    )
+
+    for record in records:
+        listing = record["listing"]
+        output = record["output"]
+        snapshot = record["snapshot"]
+        revision = record["revision"]
+        effective_at = record["effective_at"]
+        model_currency = record["model_currency"]
+        price_read: s.ExpectedReturnMarketPriceRead
+        if revision is not None:
+            price_output = output
+            native_quote = linked_native_quotes.get(price_output.price_observation_id)
+            if native_quote and (
+                native_quote.recorded_at > revision.recorded_at
+                or (
+                    native_quote.observed_at is not None
+                    and native_quote.observed_at > revision.recorded_at
+                )
+            ):
+                native_quote = None
+            price_status = {
+                "FRESH": "AVAILABLE",
+                "STALE": "STALE",
+                "QUALITY_CHECK": "DATA_CHECK",
+                "NO_DATA": "NO_DATA",
+                "CURRENCY_MISMATCH": "CURRENCY_MISMATCH",
+                "CURRENCY_UNKNOWN": "CURRENCY_UNKNOWN",
+            }[price_output.price_status]
+            price_reason = price_output.price_unavailable_reason
+            if price_output.price_observation_id is not None and native_quote is None:
+                price_status = "PRICE_NOT_CAPTURED"
+                price_reason = (
+                    "The linked quote was not yet recorded and observed by this revision."
+                )
+            elif native_quote is not None and native_quote.observed_at is None:
+                price_status = "DATA_CHECK"
+                price_reason = "The source quote has no observation timestamp."
+            elif native_quote is not None and native_quote.currency != price_output.model_currency:
+                price_status = "CURRENCY_MISMATCH"
+                price_reason = "The linked quote currency differs from the model currency."
+            price_read = s.ExpectedReturnMarketPriceRead(
+                status=price_status,
+                listing_id=listing.id if listing else None,
+                ticker=listing.ticker if listing else None,
+                venue=listing.venue if listing else None,
+                listing_currency=listing.currency if listing else None,
+                quote=native_quote.provider_close if native_quote else None,
+                quote_currency=native_quote.currency if native_quote else None,
+                model_reference_price=price_output.current_price,
+                model_currency=price_output.model_currency,
+                effective_at=price_output.price_effective_at,
+                observed_at=native_quote.observed_at if native_quote else None,
+                recorded_at=native_quote.recorded_at if native_quote else None,
+                provider=native_quote.provider if native_quote else None,
+                adjustment_basis=native_quote.adjustment_basis if native_quote else None,
+                observation_id=price_output.price_observation_id,
+                source_ref=native_quote.source_ref if native_quote else None,
+                reason=price_reason,
+            )
+        elif effective_at is None:
+            price_read = _expected_return_unavailable_price(
+                "UNDATED",
+                listing,
+                model_currency,
+                "The source snapshot has no effective timestamp.",
+            )
+        elif listing is None:
+            price_read = _expected_return_unavailable_price(
+                "LISTING_UNMAPPED",
+                None,
+                model_currency,
+                "No unique valuation listing is linked to this imported model key.",
+            )
+        else:
+            candidates = [
+                quote
+                for quote in quotes_by_listing.get(listing.id, [])
+                if quote.market_date <= effective_at
+                and quote.recorded_at <= effective_at
+                and (quote.observed_at is None or quote.observed_at <= effective_at)
+            ]
+            historical_quote = max(
+                candidates,
+                key=lambda item: (
+                    item.market_date,
+                    item.data_quality in {"PASS", "PASS_VERIFIED_FALLBACK"},
+                    item.provider == "YAHOO_FINANCE",
+                    item.recorded_at,
+                ),
+                default=None,
+            )
+            if historical_quote is None:
+                price_read = _expected_return_unavailable_price(
+                    "NO_DATA",
+                    listing,
+                    model_currency,
+                    "No exact-listing close was recorded by the source effective time.",
+                )
+            else:
+                status = (
+                    "DATA_CHECK"
+                    if historical_quote.data_quality not in {"PASS", "PASS_VERIFIED_FALLBACK"}
+                    or historical_quote.observed_at is None
+                    else "CURRENCY_UNKNOWN"
+                    if model_currency is None
+                    else "CURRENCY_MISMATCH"
+                    if historical_quote.currency != model_currency
+                    else "STALE"
+                    if (effective_at.date() - historical_quote.market_date.date()).days > FRESH_DAYS
+                    else "AVAILABLE"
+                )
+                price_read = s.ExpectedReturnMarketPriceRead(
+                    status=status,
+                    listing_id=listing.id,
+                    ticker=listing.ticker,
+                    venue=listing.venue,
+                    listing_currency=listing.currency,
+                    quote=historical_quote.provider_close,
+                    quote_currency=historical_quote.currency,
+                    model_reference_price=None,
+                    model_currency=model_currency,
+                    effective_at=historical_quote.market_date,
+                    observed_at=historical_quote.observed_at,
+                    recorded_at=historical_quote.recorded_at,
+                    provider=historical_quote.provider,
+                    adjustment_basis=historical_quote.adjustment_basis,
+                    observation_id=historical_quote.id,
+                    source_ref=historical_quote.source_ref,
+                    reason=(
+                        "Listing and model currencies differ; no FX conversion is inferred."
+                        if status == "CURRENCY_MISMATCH"
+                        else "Model currency is unknown; no currency is inferred from the listing."
+                        if status == "CURRENCY_UNKNOWN"
+                        else "The source quote has no observation timestamp."
+                        if status == "DATA_CHECK" and historical_quote.observed_at is None
+                        else None
+                        if status in {"AVAILABLE", "STALE"}
+                        else historical_quote.data_quality
+                    ),
+                )
+
+        estimate_context = _expected_return_estimate_context(
+            effective_at, mapping_rows, estimate_rows
+        )
+        source = output
+        record["market_price"] = price_read
+        record["estimate_context"] = estimate_context
+        record["bear_fv"] = source.bear_fv
+        record["base_fv"] = source.base_fv
+        record["bull_fv"] = source.bull_fv
+        record["bear_probability"] = source.bear_probability
+        record["base_probability"] = source.base_probability
+        record["bull_probability"] = source.bull_probability
+        record["weighted_fv"] = source.weighted_fv
+        record["weighted_upside"] = source.weighted_upside
+        record["expected_cash_flow_irr"] = source.expected_cash_flow_irr
+        record["hurdle"] = source.hurdle
+        record["expected_excess"] = source.expected_excess
+        record["forward_fundamental_cagr"] = source.forward_fundamental_cagr
+
+    records.sort(
+        key=lambda item: (
+            item["effective_at"] is None,
+            item["effective_at"] or item["recorded_at"],
+            item["recorded_at"],
+            item["series_id"],
+        )
+    )
+    history = [
+        s.ExpectedReturnHistoryPointRead(
+            point_id=item["point_id"],
+            source_kind=item["source_kind"],
+            event_status="DATED" if item["effective_at"] is not None else "EFFECTIVE_DATE_UNKNOWN",
+            effective_at=item["effective_at"],
+            recorded_at=item["recorded_at"],
+            series_id=item["series_id"],
+            model_key=item["model_key"],
+            model_id=item["model_id"],
+            revision_id=item["revision_id"],
+            revision_number=item["revision_number"],
+            model_type=item["model_type"],
+            methodology_version=item["methodology_version"],
+            model_label=item["model_label"],
+            model_currency=item["model_currency"],
+            currency_status=item["currency_status"],
+            valuation_listing_id=item["listing"].id if item["listing"] else None,
+            valuation_ticker=item["listing"].ticker if item["listing"] else None,
+            valuation_venue=item["listing"].venue if item["listing"] else None,
+            valuation_listing_currency=item["listing"].currency if item["listing"] else None,
+            is_current_at_cutoff=item["is_current_at_cutoff"],
+            output_status=item["output_status"],
+            output_quality=item["output_quality"],
+            contract_status=item["contract_status"],
+            return_semantics=item["return_semantics"],
+            actor=item["actor"],
+            source_actor=item["source_actor"],
+            revision_source=item["revision_source"],
+            revision_type=item["revision_type"],
+            bear_fv=item["bear_fv"],
+            base_fv=item["base_fv"],
+            bull_fv=item["bull_fv"],
+            bear_probability=item["bear_probability"],
+            base_probability=item["base_probability"],
+            bull_probability=item["bull_probability"],
+            weighted_fv=item["weighted_fv"],
+            weighted_upside=item["weighted_upside"],
+            expected_cash_flow_irr=item["expected_cash_flow_irr"],
+            hurdle=item["hurdle"],
+            expected_excess=item["expected_excess"],
+            forward_fundamental_cagr=item["forward_fundamental_cagr"],
+            market_price=item["market_price"],
+            estimate_context=item["estimate_context"],
+            source=item["source"],
+            source_revision_id=item["source_revision_id"],
+            rationale=item["rationale"],
+            evidence=item["evidence"],
+        )
+        for item in records
+    ]
+    if not history:
+        status = "NO_HISTORY"
+    elif any(
+        point.output_quality in {"PARTIAL", "DATA_CHECK", "UNAVAILABLE"}
+        or point.event_status == "EFFECTIVE_DATE_UNKNOWN"
+        for point in history
+    ):
+        status = "PARTIAL"
+    else:
+        status = "AVAILABLE"
+    return s.CompanyExpectedReturnHistoryRead(
+        company_id=company_id,
+        as_of=as_of_date,
+        known_at=knowledge_cutoff,
+        status=status,
+        history=history,
+    )
+
+
+def _expected_return_unavailable_price(
+    status: str,
+    listing: Listing | None,
+    model_currency: str | None,
+    reason: str,
+) -> s.ExpectedReturnMarketPriceRead:
+    return s.ExpectedReturnMarketPriceRead(
+        status=status,
+        listing_id=listing.id if listing else None,
+        ticker=listing.ticker if listing else None,
+        venue=listing.venue if listing else None,
+        listing_currency=listing.currency if listing else None,
+        quote=None,
+        quote_currency=None,
+        model_reference_price=None,
+        model_currency=model_currency,
+        effective_at=None,
+        observed_at=None,
+        recorded_at=None,
+        provider=None,
+        adjustment_basis=None,
+        observation_id=None,
+        source_ref=None,
+        reason=reason,
+    )
+
+
+def _expected_return_estimate_context(
+    effective_at: datetime | None,
+    mappings: list[ConsensusEstimateProviderMapping],
+    observations: list[ConsensusEstimateObservation],
+) -> s.ExpectedReturnEstimateContextRead:
+    if effective_at is None:
+        return s.ExpectedReturnEstimateContextRead(status="UNDATED", provider_id=None, periods=[])
+    cutoff = effective_at.astimezone(UTC)
+    eligible_mappings = [
+        mapping
+        for mapping in mappings
+        if mapping.effective_from <= cutoff and mapping.recorded_at <= cutoff
+    ]
+    latest_mappings: dict[tuple[str, str], ConsensusEstimateProviderMapping] = {}
+    for mapping in sorted(eligible_mappings, key=lambda row: row.effective_from, reverse=True):
+        latest_mappings.setdefault((mapping.role, mapping.provider_id), mapping)
+    selected, continuity = select_consensus_source(list(latest_mappings.values()))
+    if continuity == "NO_MAPPING":
+        status = "NO_MAPPING"
+    elif continuity == "AMBIGUOUS_FALLBACK":
+        status = "AMBIGUOUS_SOURCE"
+    elif selected is None:
+        status = "NO_MAPPING"
+    else:
+        status = "AVAILABLE"
+    if selected is None:
+        return s.ExpectedReturnEstimateContextRead(status=status, provider_id=None, periods=[])
+    facts = [
+        observation
+        for observation in observations
+        if observation.provider_mapping_id == selected.id
+        and observation.snapshot_date <= cutoff.date()
+        and observation.recorded_at <= cutoff
+        and (
+            observation.observed_at <= cutoff
+            if observation.observed_at is not None
+            else observation.snapshot_date < cutoff.date()
+        )
+        and (observation.period_end is None or observation.period_end > cutoff.date())
+    ]
+    latest_by_period: dict[tuple[Any, ...], ConsensusEstimateObservation] = {}
+    for observation in sorted(
+        facts,
+        key=lambda row: (
+            row.metric,
+            row.period_type,
+            row.forecast_period,
+            row.period_end or date.max,
+            row.currency or "",
+            row.unit,
+            row.snapshot_date,
+            row.observed_at or datetime.min.replace(tzinfo=UTC),
+            row.recorded_at,
+        ),
+        reverse=True,
+    ):
+        key = (
+            observation.metric,
+            observation.period_type,
+            observation.forecast_period,
+            observation.period_end,
+            observation.currency,
+            observation.unit,
+        )
+        latest_by_period.setdefault(key, observation)
+    selected_rows = sorted(
+        latest_by_period.values(),
+        key=lambda row: (row.period_end or date.max, row.metric, row.period_type),
+    )
+    if not selected_rows:
+        status = "NO_OBSERVATIONS"
+    return s.ExpectedReturnEstimateContextRead(
+        status=status,
+        provider_id=selected.provider_id,
+        periods=[
+            s.ExpectedReturnEstimateRead(
+                observation_id=row.id,
+                metric=row.metric,
+                period_type=row.period_type,
+                forecast_period=row.forecast_period,
+                period_end=row.period_end,
+                value=row.value,
+                currency=row.currency,
+                unit=row.unit,
+                analyst_count=row.analyst_count,
+                snapshot_date=row.snapshot_date,
+                observed_at=row.observed_at,
+                recorded_at=row.recorded_at,
+                provider_id=row.provider_id,
+                source_ref=row.source_ref,
+                data_quality=row.data_quality,
+                quality_reason=row.quality_reason,
+            )
+            for row in selected_rows
+        ],
+    )
 
 
 def universe_model_output_summary(
@@ -1774,8 +2558,8 @@ def _ranking_run_read(
         definition=s.RankingDefinitionRead.model_validate(definition),
         as_of=run.as_of,
         recorded_at=run.recorded_at,
-        status=run.status,
-        actor=run.actor,
+        status=ExecutionPaceRunStatus(run.status),
+        actor=Actor(run.actor),
         reason=run.reason,
         source=run.source,
         company_count=counts[0],
@@ -1872,6 +2656,132 @@ def universe_ranking_summary(
     current = _current_ranking_views(session, issuer_rows, definitions)
     return [
         s.UniverseRankingSummary(company=company, rankings=current[company.id])
+        for company in companies
+    ]
+
+
+def _execution_pace_run_read(session: Session, run: ExecutionPaceRun) -> s.ExecutionPaceRunRead:
+    counts = dict(
+        session.execute(
+            select(ExecutionPaceDecision.decision_status, func.count(ExecutionPaceDecision.id))
+            .where(ExecutionPaceDecision.run_id == run.id)
+            .group_by(ExecutionPaceDecision.decision_status)
+        ).all()
+    )
+    available = counts.get("AVAILABLE", 0)
+    review = counts.get("REVIEW", 0)
+    unavailable = counts.get("UNAVAILABLE", 0)
+    not_applicable = counts.get("NOT_APPLICABLE", 0)
+    return s.ExecutionPaceRunRead(
+        id=run.id,
+        portfolio_id=run.portfolio_id,
+        as_of=run.as_of,
+        recorded_at=run.recorded_at,
+        methodology_version=run.methodology_version,
+        status=run.status,
+        actor=run.actor,
+        reason=run.reason,
+        source=run.source,
+        company_count=sum(counts.values()),
+        available_count=available,
+        review_count=review,
+        unavailable_count=unavailable,
+        not_applicable_count=not_applicable,
+    )
+
+
+def execution_pace_run_read(session: Session, run: ExecutionPaceRun) -> s.ExecutionPaceRunRead:
+    return _execution_pace_run_read(session, run)
+
+
+def execution_pace_runs(session: Session, limit: int = 100) -> list[s.ExecutionPaceRunRead]:
+    rows = session.scalars(
+        select(ExecutionPaceRun)
+        .order_by(ExecutionPaceRun.as_of.desc(), ExecutionPaceRun.recorded_at.desc())
+        .limit(limit)
+    ).all()
+    return [_execution_pace_run_read(session, row) for row in rows]
+
+
+def execution_pace_run_detail(session: Session, run_id: UUID) -> s.ExecutionPaceRunDetailRead:
+    run = session.get(ExecutionPaceRun, run_id)
+    if run is None:
+        raise services.DomainError("Execution Pace run not found", 404)
+    rows = session.execute(
+        select(ExecutionPaceDecision, Company)
+        .join(Company, Company.id == ExecutionPaceDecision.company_id)
+        .where(ExecutionPaceDecision.run_id == run_id)
+        .order_by(Company.name, Company.id)
+    ).all()
+    return s.ExecutionPaceRunDetailRead(
+        run=_execution_pace_run_read(session, run),
+        decisions=[
+            s.ExecutionPaceRunDecisionRead(
+                company=company_read(session, company),
+                decision=s.ExecutionPaceDecisionRead.model_validate(decision),
+            )
+            for decision, company in rows
+        ],
+    )
+
+
+def company_execution_pace(session: Session, company_id: UUID) -> s.CompanyExecutionPaceRead:
+    services.company(session, company_id)
+    rows = session.execute(
+        select(ExecutionPaceRun, ExecutionPaceDecision)
+        .join(ExecutionPaceDecision, ExecutionPaceDecision.run_id == ExecutionPaceRun.id)
+        .where(ExecutionPaceDecision.company_id == company_id)
+        .order_by(ExecutionPaceRun.as_of.desc(), ExecutionPaceRun.recorded_at.desc())
+    ).all()
+    history = [
+        s.ExecutionPaceHistoryEntry(
+            run=_execution_pace_run_read(session, run),
+            decision=s.ExecutionPaceDecisionRead.model_validate(decision),
+        )
+        for run, decision in rows
+    ]
+    return s.CompanyExecutionPaceRead(
+        company_id=company_id,
+        current=history[0] if history else None,
+        history=history,
+    )
+
+
+def universe_execution_pace_summary(
+    session: Session, lifecycle: Lifecycle | None = None, search: str | None = None
+) -> list[s.UniverseExecutionPaceSummary]:
+    companies = universe(session, lifecycle, search)
+    run = session.scalar(
+        select(ExecutionPaceRun)
+        .order_by(ExecutionPaceRun.as_of.desc(), ExecutionPaceRun.recorded_at.desc())
+        .limit(1)
+    )
+    if run is None or not companies:
+        return [
+            s.UniverseExecutionPaceSummary(company=company, decision=None) for company in companies
+        ]
+    entries = {
+        entry.company_id: entry
+        for entry in session.scalars(
+            select(ExecutionPaceDecision).where(
+                ExecutionPaceDecision.run_id == run.id,
+                ExecutionPaceDecision.company_id.in_([company.id for company in companies]),
+            )
+        )
+    }
+    run_read = _execution_pace_run_read(session, run)
+    return [
+        s.UniverseExecutionPaceSummary(
+            company=company,
+            decision=(
+                s.ExecutionPaceHistoryEntry(
+                    run=run_read,
+                    decision=s.ExecutionPaceDecisionRead.model_validate(entries[company.id]),
+                )
+                if company.id in entries
+                else None
+            ),
+        )
         for company in companies
     ]
 

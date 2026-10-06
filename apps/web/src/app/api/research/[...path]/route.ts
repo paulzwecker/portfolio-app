@@ -1,4 +1,5 @@
 import {
+  isAttentionFeed,
   isDetail,
   isEvent,
   isFxObservation,
@@ -18,9 +19,16 @@ import {
   isRankingRun,
   isRankingRunDetail,
   isRankingRuns,
+  isExecutionPaceRun,
+  isExecutionPaceRunDetail,
+  isExecutionPaceRuns,
+  isCompanyExecutionPace,
+  isUniverseExecutionPaceSummary,
   isUniverseRankingSummary,
   isUniverseMarketSummary,
+  isUniverseEstimateMomentumSummary,
   isUniverseScoreSummary,
+  isUniverseModelOutputSummary,
   isUniverse,
   isFinancialModel,
   isFinancialModels,
@@ -40,6 +48,10 @@ import {
   isResidualIncomeCalculationPreview,
   isCompanyReportedFundamentals,
   isCompanyConsensusEstimates,
+  isCompanyEstimateMomentum,
+  isCompanyExpectedReturnHistory,
+  isCompanyExpectedReturnAttribution,
+  isCompanyTemporalAlignment,
   isCompanySourceDocuments,
   isSourceDocument,
   isReportedFundamentalDefinitions,
@@ -50,10 +62,10 @@ export const runtime = "nodejs";
 const headers = { "Cache-Control": "no-store" };
 const id = "[0-9a-fA-F-]{36}";
 const readable = new RegExp(
-  `^(universe|universe/score-summary|universe/ranking-summary|universe/market-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|reported-fundamental-definitions|portfolios|companies/${id}|companies/${id}/(market-data|reported-fundamentals|source-documents|consensus-estimates|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/overview)$`,
+  `^(attention|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|portfolios|companies/${id}|companies/${id}/(market-data|reported-fundamentals|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/overview)$`,
 );
 const writable = new RegExp(
-  `^(companies/${id}/(lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|ranking-runs|fx-observations)$`,
+  `^(companies/${id}/(lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|ranking-runs|execution-pace-runs|fx-observations)$`,
 );
 
 function validWrite(path: string, data: unknown): boolean {
@@ -96,11 +108,13 @@ function validWrite(path: string, data: unknown): boolean {
   if (path.endsWith("/financial-models")) return isFinancialModel(data);
   if (path.endsWith("/revisions")) return isFinancialModelRevisionDetail(data);
   if (path === "ranking-runs") return isRankingRun(data);
+  if (path === "execution-pace-runs") return isExecutionPaceRun(data);
   if (path === "fx-observations") return isFxObservation(data);
   return isEvent(data);
 }
 
 function validRead(path: string, data: unknown): boolean {
+  if (path === "attention") return isAttentionFeed(data);
   if (path.startsWith("canonical-financial-models/")) {
     if (path.endsWith("/contract"))
       return isAdditionalModelPortableContractResponse(data);
@@ -115,17 +129,44 @@ function validRead(path: string, data: unknown): boolean {
     return isCompanyReportedFundamentals(data);
   if (path.startsWith("companies/") && path.endsWith("/consensus-estimates"))
     return isCompanyConsensusEstimates(data);
+  if (path.startsWith("companies/") && path.endsWith("/estimate-momentum"))
+    return isCompanyEstimateMomentum(data);
+  if (
+    path.startsWith("companies/") &&
+    path.endsWith("/expected-return-history")
+  )
+    return isCompanyExpectedReturnHistory(data);
+  if (
+    path.startsWith("companies/") &&
+    path.endsWith("/expected-return-attribution")
+  )
+    return isCompanyExpectedReturnAttribution(data);
+  if (path.startsWith("companies/") && path.endsWith("/temporal-alignment"))
+    return isCompanyTemporalAlignment(data);
   if (path.startsWith("companies/") && path.endsWith("/source-documents"))
     return isCompanySourceDocuments(data);
   if (path === "universe/score-summary") return isUniverseScoreSummary(data);
   if (path === "universe/ranking-summary")
     return isUniverseRankingSummary(data);
+  if (path === "universe/execution-pace-summary")
+    return isUniverseExecutionPaceSummary(data);
   if (path === "universe/market-summary") return isUniverseMarketSummary(data);
+  if (path === "universe/estimate-momentum-summary")
+    return isUniverseEstimateMomentumSummary(data);
+  if (path === "universe/model-output-summary")
+    return isUniverseModelOutputSummary(data);
   if (path === "fx-observations") return isFxObservations(data);
   if (path === "score-definitions") return isScoreDefinitions(data);
   if (path === "ranking-definitions") return isRankingDefinitions(data);
   if (path === "ranking-runs") return isRankingRuns(data);
   if (path.startsWith("ranking-runs/")) return isRankingRunDetail(data);
+  if (path === "execution-pace-runs") return isExecutionPaceRuns(data);
+  if (path.startsWith("execution-pace-runs/"))
+    return isExecutionPaceRunDetail(data);
+  if (path.startsWith("companies/") && path.endsWith("/execution-pace"))
+    return isCompanyExecutionPace(data);
+  if (path === "universe/execution-pace-summary")
+    return isUniverseExecutionPaceSummary(data);
   if (path.startsWith("companies/") && path.endsWith("/rankings"))
     return isCompanyRankings(data);
   if (path === "portfolios") return isPortfolios(data);
@@ -178,15 +219,40 @@ async function proxy(request: Request, path: string[]) {
       "period_type",
       "as_of",
       "known_at",
+      "outcome_known_at",
+      "fiscal_year",
+      "horizon_days",
+      "prior_point_id",
+      "current_point_id",
       "document_type",
+      "company_id",
+      "event_type",
+      "severity",
+      "status",
+      "lookback_days",
       "limit",
     ]) {
       const value = search.get(key);
       if (
         value !== null &&
+        joined === "attention" &&
+        [
+          "company_id",
+          "event_type",
+          "lifecycle",
+          "severity",
+          "status",
+          "lookback_days",
+          "limit",
+        ].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
         (joined === "universe" ||
           joined === "universe/score-summary" ||
-          joined === "universe/market-summary") &&
+          joined === "universe/market-summary" ||
+          joined === "universe/estimate-momentum-summary") &&
         key !== "dimension"
       )
         url.searchParams.set(key, value);
@@ -227,9 +293,39 @@ async function proxy(request: Request, path: string[]) {
       if (
         value !== null &&
         joined.startsWith("companies/") &&
+        joined.endsWith("/temporal-alignment") &&
+        [
+          "fiscal_year",
+          "as_of",
+          "known_at",
+          "outcome_known_at",
+          "horizon_days",
+        ].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
         (joined.endsWith("/reported-fundamentals") ||
-          joined.endsWith("/consensus-estimates")) &&
+          joined.endsWith("/consensus-estimates") ||
+          joined.endsWith("/estimate-momentum")) &&
         ["period_type", "as_of", "known_at"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
+        joined.endsWith("/expected-return-history") &&
+        ["as_of", "known_at"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
+        joined.endsWith("/expected-return-attribution") &&
+        ["prior_point_id", "current_point_id", "as_of", "known_at"].includes(
+          key,
+        )
       )
         url.searchParams.set(key, value);
     }

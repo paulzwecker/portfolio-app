@@ -31,6 +31,9 @@ INVENTORY_DATE = "2026-10-05"
 
 READY_FIXTURES = {
     "P-GOOGL": "UFCF_DCF_10Y_FADE",
+    "P-ASML": "UFCF_DCF_10Y_FADE",
+    "P-ISRG": "UFCF_DCF_10Y_FADE",
+    "P-MA": "UFCF_DCF_10Y_FADE",
     "W-TOST": "OWNER_CASH_FLOW_10Y",
     "W-HDFC": "RESIDUAL_INCOME_10Y_FADE",
 }
@@ -577,9 +580,7 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
             "model_tabs": tabs(
                 lambda model: model["migration_status"] == "READY_FOR_NATIVE_IMPORT"
             ),
-            "objective": (
-                "Import only the two active tabs with existing tab-specific native parity fixtures."
-            ),
+            "objective": ("Import active tabs with reviewed tab-specific native parity fixtures."),
             "entry_gates": [
                 "Preserve source workbook hash and import provenance.",
                 "Set effective time to the explicit application acceptance time; retain the "
@@ -627,7 +628,8 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
                 lambda model: (
                     model["lifecycle"] == "PORTFOLIO"
                     and model["methodology_family"] == "UFCF_DCF_10Y_FADE"
-                    and model["model_tab"] not in {"P-GOOGL", "P-NVO"}
+                    and model["migration_status"] != "READY_FOR_NATIVE_IMPORT"
+                    and model["model_tab"] != "P-NVO"
                 )
             ),
             "objective": (
@@ -817,8 +819,9 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
             "establish safe assumption import.",
             "P-/W- prefixes are naming hints only. Lifecycle is derived from the Universe "
             "Registry rules and cached membership inputs.",
-            "Only P-GOOGL, W-TOST, and W-HDFC have tab-specific native input/output parity "
-            "fixtures. Dropped W-HDFC remains outside active migration priority.",
+            "P-GOOGL, P-ASML, P-ISRG, P-MA, W-TOST, and W-HDFC have tab-specific native "
+            "input/output parity fixtures. Dropped W-HDFC remains outside active migration "
+            "priority.",
             "No tab is classified NOT_RELEVANT; dropped/archived tabs are marked LEGACY_ONLY "
             "and retained as evidence.",
         ],

@@ -1,4 +1,4 @@
-# Application architecture through Milestone 2C and provider contracts
+﻿# Application architecture through Milestone 2C and provider contracts
 
 ## Request path
 
@@ -48,12 +48,11 @@ has been added.
 
 The frontend owns navigation, presentation, interaction, and user feedback. Backend modules will own all investment calculations, ranking/scoring algorithms, portfolio analytics, and execution derivation. PostgreSQL will own migrated canonical state and immutable history. The same definitions must not be recreated in frontend components.
 
-Baseline `0001` contains no domain tables. Revisions `a57efdd8015f`, `4cef0ea57fba`,
-and the Milestone 1C revision add 16 identity, portfolio, score, and ranking tables.
-There are still no market-price, financial-model, or execution tables. Score/ranking
-demonstration data is fictional; no legacy scores or numeric ranks have been imported.
-Health status establishes infrastructure readiness, not workbook parity or
-investment-data freshness.
+Baseline `0001` contains no domain tables. Later revisions add identity, portfolio,
+score, ranking, market, model, and external-data domains. The original fictional
+score/ranking seed remains demonstration data; the current rank definitions are
+verified separately against documented workbook formulas and canonical inputs.
+Health status establishes infrastructure readiness, not investment-data freshness.
 
 The initial stack stays small: interactive table/chart dependencies, authentication,
 market-data providers, queues, research agents and model engines are deferred until
@@ -93,9 +92,9 @@ append a record and can link to the superseded observation. Rankings use separat
 versioned definitions for Portfolio, Watchlist, and Research, then immutable runs and
 one explicit status row per company in the observed universe. Positive integer
 positions are allowed only for a ranked result; missing inputs keep position null.
-The current definitions record the workbook's separate ordering semantics, but
-numbered ranking calculation remains unavailable until the required inputs migrate.
-Run history is read as stored and is never regenerated from current lifecycle or data.
+All three ranks calculate their documented methodologies from separate canonical
+inputs and store their input/source context on immutable runs. Run history is read as
+stored and is never regenerated from current lifecycle or data.
 
 ## REST operations
 
@@ -123,6 +122,7 @@ and response schemas. Unknown records return 404, conflicts 409, invalid contrac
 | GET        | `/universe/score-summary`                                             | Current score coverage for the universe                                                   |
 | GET        | `/companies/{company_id}/model-outputs/current`                       | Current normalized imported model outputs and availability                                |
 | GET        | `/companies/{company_id}/model-outputs/history`                       | Current and immutable historical model-output snapshots                                   |
+| GET        | `/companies/{company_id}/temporal-alignment`                          | Point-in-time annual Revenue, selected consensus, later actual and market return          |
 | GET        | `/universe/model-output-summary`                                      | Current model-output coverage for the universe                                            |
 | GET / POST | `/companies/{company_id}/financial-models`                            | List or create an accepted canonical model                                                |
 | GET        | `/financial-models/{model_id}`                                        | Current canonical model, revision history and derived output                              |
@@ -140,7 +140,7 @@ and response schemas. Unknown records return 404, conflicts 409, invalid contrac
 | GET        | `/ranking-definitions`                                                | Versioned ranking semantics and input availability                                        |
 | GET        | `/universe/ranking-summary`                                           | Current ranking snapshot states for the universe                                          |
 | GET        | `/companies/{company_id}/rankings`                                    | Current ranking states and company history                                                |
-| GET / POST | `/ranking-runs`                                                       | Read prior runs or append an availability snapshot                                        |
+| GET / POST | `/ranking-runs`                                                       | Read prior runs or calculate and append an immutable ranked/unavailable snapshot          |
 | GET        | `/ranking-runs/{run_id}`                                              | Inspect the immutable run and all company entries                                         |
 
 Frontend presentation performs no portfolio valuation calculations. The API emits
@@ -151,14 +151,17 @@ ADR identity does not imply a conversion ratio.
 
 ## Ranking availability boundary
 
-Portfolio Rank requires Portfolio Score and its supported active population; current
-market positions also need prices/FX to confirm current weights. Watchlist Rank
-requires Expected IRR for explicit WATCHLIST companies. Research Rank requires its
-Research Sort Key and upstream research inputs. These values are not migrated, so
-Milestone 1C can persist definitions and explicit availability snapshots but does
-not calculate ordinal ranks. The separate Watchlist Fit Tier-first Candidate Rank
-also remains out of scope. See [domain-model.md](domain-model.md) and
-[workbook-map.md](workbook-map.md) for the scoped workbook evidence.
+Portfolio Rank implements the documented Portfolio Score for positive current/target
+portfolio companies and requires complete dated holdings, targets, prices/FX, four
+assessed score dimensions, and model inputs. Native shareholder-cash-flow and legacy
+normalized Expected IRR are never mixed. Watchlist Rank uses Expected IRR for explicit
+WATCHLIST companies with the same return-methodology cohort separation. Research Rank
+uses only explicit CANDIDATE lifecycle, Candidate High/Low tier, and persistent
+deep-dive seed; Expected IRR and score completeness are not inputs. Missing, stale, or
+ambiguous data remains unavailable or data-check. The separate Watchlist Fit
+Tier-first Candidate Rank remains out of scope. See [portfolio-rank.md](portfolio-rank.md),
+[watchlist-rank.md](watchlist-rank.md), [research-rank.md](research-rank.md), and
+[workbook-map.md](workbook-map.md).
 
 ## Market facts and current portfolio valuation
 

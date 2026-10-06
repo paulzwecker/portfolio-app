@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DemoNotice,
   PageTitle,
@@ -16,6 +17,11 @@ import {
   isUniverseRankingSummary,
   isUniverseMarketSummary,
   isUniverseModelOutputSummary,
+  isUniverseEstimateMomentumSummary,
+  isUniverseExecutionPaceSummary,
+  isRankingRun,
+  isWatchlistRankInputSnapshot,
+  isResearchRankInputSnapshot,
   lifecycleStates,
   rankingTypes,
   scoreDimensions,
@@ -25,8 +31,13 @@ import {
   type ScoreCurrent,
   type ListingMarketData,
   type UniverseModelOutputSummary,
+  type EstimateMomentumSummary,
 } from "@/lib/domain-contracts";
 import { quantity } from "@/lib/display";
+import {
+  ExecutionPaceCompact,
+  executionPaceLabel,
+} from "@/components/execution-pace";
 
 const scoreLabels: Record<ScoreDimension, string> = {
   DURABILITY_10Y: "10Y Durability",
@@ -72,15 +83,28 @@ function modelSummaryValue(value: string | null, percentage = false) {
     : quantity(value);
 }
 
+function rowMomentumScore(momentum: EstimateMomentumSummary | undefined) {
+  return momentum?.confidence_adjusted_score === null || !momentum
+    ? null
+    : Number(momentum.confidence_adjusted_score);
+}
+
 export default function UniversePage() {
   const [lifecycle, setLifecycle] = useState("");
   const [search, setSearch] = useState("");
   const [focus, setFocus] = useState<ScoreDimension>("DURABILITY_10Y");
   const [scoreState, setScoreState] = useState("");
-  const [rankingFocus, setRankingFocus] = useState<RankingType>("PORTFOLIO");
+  const [rankingFocus, setRankingFocus] = useState<RankingType>("WATCHLIST");
   const [rankingState, setRankingState] = useState("");
+  const [rankRunReason, setRankRunReason] = useState(
+    "Current canonical ranking review.",
+  );
+  const [rankRunPending, setRankRunPending] = useState(false);
+  const [rankRunError, setRankRunError] = useState("");
   const [priceState, setPriceState] = useState("");
   const [modelState, setModelState] = useState("");
+  const [momentumState, setMomentumState] = useState("");
+  const [paceState, setPaceState] = useState("");
   const [sort, setSort] = useState("name");
   const query = new URLSearchParams();
   if (lifecycle) query.set("lifecycle", lifecycle);
@@ -101,6 +125,14 @@ export default function UniversePage() {
     `universe/model-output-summary?${query.toString()}`,
     isUniverseModelOutputSummary,
   );
+  const momentumView = useResearch(
+    `universe/estimate-momentum-summary?${query.toString()}`,
+    isUniverseEstimateMomentumSummary,
+  );
+  const paceView = useResearch(
+    `universe/execution-pace-summary?${query.toString()}`,
+    isUniverseExecutionPaceSummary,
+  );
   const companies = useMemo(() => {
     const rankingRows = new Map(
       (rankingView.data ?? []).map((row) => [row.company.id, row.rankings]),
@@ -111,11 +143,22 @@ export default function UniversePage() {
     const modelRows = new Map(
       (modelView.data ?? []).map((row) => [row.company.id, row]),
     );
+    const momentumRows = new Map(
+      (momentumView.data ?? []).map((row) => [
+        row.company.id,
+        row.estimate_momentum,
+      ]),
+    );
+    const paceRows = new Map(
+      (paceView.data ?? []).map((row) => [row.company.id, row.decision]),
+    );
     const rows = (state.data ?? []).map((row) => ({
       ...row,
       rankings: rankingRows.get(row.company.id) ?? [],
       market_data: marketRows.get(row.company.id) ?? [],
       model_outputs: modelRows.get(row.company.id),
+      estimate_momentum: momentumRows.get(row.company.id),
+      execution_pace: paceRows.get(row.company.id),
     }));
     const visible = rows.filter((row) => {
       const selected = row.scores.find(
@@ -150,6 +193,30 @@ export default function UniversePage() {
         )
       )
         return false;
+      const momentum = row.estimate_momentum;
+      if (
+        momentumState === "AVAILABLE" &&
+        momentum?.availability !== "AVAILABLE"
+      )
+        return false;
+      if (
+        momentumState === "DIRECTION_ONLY" &&
+        momentum?.availability !== "DIRECTION_ONLY"
+      )
+        return false;
+      if (
+        momentumState === "UNAVAILABLE" &&
+        ["AVAILABLE", "DIRECTION_ONLY"].includes(momentum?.availability ?? "")
+      )
+        return false;
+      if (momentumState === "STALE" && momentum?.freshness !== "STALE")
+        return false;
+      const pace = row.execution_pace?.decision;
+      if (paceState === "AVAILABLE" && pace?.decision_status !== "AVAILABLE")
+        return false;
+      if (paceState === "REVIEW" && pace?.decision_status !== "REVIEW")
+        return false;
+      if (paceState === "NO_RUN" && row.execution_pace) return false;
       return true;
     });
     visible.sort((left, right) => {
@@ -185,6 +252,16 @@ export default function UniversePage() {
         }
         return b - a;
       }
+      if (sort === "momentum-desc" || sort === "momentum-asc") {
+        const a = rowMomentumScore(left.estimate_momentum);
+        const b = rowMomentumScore(right.estimate_momentum);
+        if (a === null || b === null) {
+          if (a === b)
+            return left.company.name.localeCompare(right.company.name);
+          return a === null ? 1 : -1;
+        }
+        return sort === "momentum-asc" ? a - b : b - a;
+      }
       const leftScore = left.scores.find(
         (score) => score.definition.dimension === focus,
       );
@@ -211,14 +288,49 @@ export default function UniversePage() {
     rankingView.data,
     marketView.data,
     modelView.data,
+    momentumView.data,
+    paceView.data,
     priceState,
     modelState,
+    momentumState,
+    paceState,
     scoreState,
     focus,
     rankingFocus,
     rankingState,
     sort,
   ]);
+  async function recordSelectedRank() {
+    setRankRunPending(true);
+    setRankRunError("");
+    try {
+      const response = await fetch("/api/research/ranking-runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ranking_type: rankingFocus,
+          actor: "LOCAL_USER",
+          reason: rankRunReason.trim(),
+          source: "web-universe",
+        }),
+      });
+      const result: unknown = await response.json();
+      if (!response.ok || !isRankingRun(result)) {
+        throw new Error(
+          "Ranking run could not be recorded. Check the API and current input states, then retry.",
+        );
+      }
+      rankingView.retry();
+    } catch (error) {
+      setRankRunError(
+        error instanceof Error
+          ? error.message
+          : "Ranking run could not be recorded.",
+      );
+    } finally {
+      setRankRunPending(false);
+    }
+  }
   return (
     <>
       <PageTitle
@@ -305,7 +417,7 @@ export default function UniversePage() {
             <option value="">All ranking states</option>
             <option value="RANKED">Has numeric position</option>
             <option value="UNRANKED">
-              Unavailable, excluded or not migrated
+              Unavailable, excluded, data-check or not migrated
             </option>
           </select>
         </label>
@@ -333,6 +445,35 @@ export default function UniversePage() {
             <option value="NO_OUTPUT">No output values or not mapped</option>
           </select>
         </label>
+        <label className="text-xs font-medium">
+          Estimate Momentum state
+          <select
+            value={momentumState}
+            onChange={(event) => setMomentumState(event.target.value)}
+            className="mt-2 block h-10 w-full rounded-md border bg-card px-3 text-sm"
+          >
+            <option value="">All signal states</option>
+            <option value="AVAILABLE">Available with coverage</option>
+            <option value="DIRECTION_ONLY">Direction only</option>
+            <option value="UNAVAILABLE">
+              No signal / insufficient history
+            </option>
+            <option value="STALE">Stale estimates</option>
+          </select>
+        </label>
+        <label className="text-xs font-medium">
+          Execution Pace state
+          <select
+            value={paceState}
+            onChange={(event) => setPaceState(event.target.value)}
+            className="mt-2 block h-10 w-full rounded-md border bg-card px-3 text-sm"
+          >
+            <option value="">All pace states</option>
+            <option value="AVAILABLE">Available decision</option>
+            <option value="REVIEW">Review required</option>
+            <option value="NO_RUN">No recorded run</option>
+          </select>
+        </label>
         <label className="text-xs font-medium sm:col-span-2 xl:col-span-4">
           Sort companies
           <select
@@ -351,9 +492,49 @@ export default function UniversePage() {
             <option value="irr-desc">
               Expected cash-flow IRR · high to low
             </option>
+            <option value="momentum-desc">
+              Estimate Momentum · high to low
+            </option>
+            <option value="momentum-asc">
+              Estimate Momentum · low to high
+            </option>
           </select>
         </label>
       </div>
+      {(rankingFocus === "WATCHLIST" || rankingFocus === "RESEARCH") && (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-end">
+          <label className="min-w-0 flex-1 text-xs font-medium">
+            Ranking run reason
+            <input
+              value={rankRunReason}
+              onChange={(event) => setRankRunReason(event.target.value)}
+              maxLength={1000}
+              className="mt-2 block h-10 w-full rounded-md border bg-background px-3 text-sm"
+            />
+          </label>
+          <Button
+            type="button"
+            onClick={recordSelectedRank}
+            disabled={rankRunPending || !rankRunReason.trim()}
+            className="shrink-0"
+          >
+            {rankRunPending
+              ? "Recording rank…"
+              : `Record ${rankingLabels[rankingFocus]}`}
+          </Button>
+          <p className="basis-full text-xs leading-5 text-muted-foreground sm:basis-auto">
+            {rankingFocus === "RESEARCH"
+              ? "Research Rank orders Candidate High/Low deep-dive priority and its persistent seed. It is a research-attention queue, not an investment-attractiveness signal or lifecycle decision."
+              : "Watchlist Rank orders comparable Expected IRR among explicit Watchlist companies. It does not change lifecycle, models, targets or holdings."}{" "}
+            Each run is an immutable snapshot of inputs available now.
+          </p>
+          {rankRunError && (
+            <p role="alert" className="basis-full text-xs text-destructive">
+              {rankRunError}
+            </p>
+          )}
+        </div>
+      )}
       {!state.data ? (
         <PendingOrError {...state} />
       ) : (
@@ -376,7 +557,15 @@ export default function UniversePage() {
           )}
           <div className="grid gap-4 lg:grid-cols-2">
             {companies.map(
-              ({ company, scores, rankings, market_data, model_outputs }) => (
+              ({
+                company,
+                scores,
+                rankings,
+                market_data,
+                model_outputs,
+                estimate_momentum,
+                execution_pace,
+              }) => (
                 <Card key={company.id} className="min-w-0 shadow-none">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -574,6 +763,106 @@ export default function UniversePage() {
                       Execution. Risk is separate and excludes valuation.
                     </p>
                     <div className="mt-4 border-t pt-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-xs font-semibold">
+                          Execution Pace
+                        </h2>
+                        {execution_pace && (
+                          <Badge
+                            variant={
+                              execution_pace.decision.decision_status ===
+                              "AVAILABLE"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {executionPaceLabel(
+                              execution_pace.decision.pace ??
+                                execution_pace.decision.decision_status,
+                            )}
+                          </Badge>
+                        )}
+                      </div>
+                      {paceView.error ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Execution Pace data is unavailable.
+                        </p>
+                      ) : !paceView.data ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Loading latest pace decisions…
+                        </p>
+                      ) : (
+                        <ExecutionPaceCompact entry={execution_pace} />
+                      )}
+                      <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
+                        Portfolio timing only. It does not change target weight,
+                        lifecycle, model assumptions or the business Execution
+                        score.
+                      </p>
+                    </div>
+                    <div className="mt-4 border-t pt-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-xs font-semibold">
+                          Estimate Momentum
+                        </h2>
+                        {momentumView.data && estimate_momentum && (
+                          <Badge
+                            variant={
+                              estimate_momentum.availability === "AVAILABLE"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {estimate_momentum.availability.replaceAll(
+                              "_",
+                              " ",
+                            )}
+                          </Badge>
+                        )}
+                      </div>
+                      {momentumView.error ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Estimate Momentum is unavailable.
+                        </p>
+                      ) : !momentumView.data ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Loading point-in-time estimate history…
+                        </p>
+                      ) : !estimate_momentum ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          No signal summary is available.
+                        </p>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span className="text-sm font-semibold">
+                            {estimate_momentum.direction?.replaceAll(
+                              "_",
+                              " ",
+                            ) ?? "No direction"}
+                          </span>
+                          <span className="text-xs tabular-nums text-muted-foreground">
+                            Confidence-adjusted{" "}
+                            {modelSummaryValue(
+                              estimate_momentum.confidence_adjusted_score,
+                            )}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Coverage {estimate_momentum.coverage_count}/
+                            {estimate_momentum.coverage_total} · Confidence{" "}
+                            {new Intl.NumberFormat("en", {
+                              style: "percent",
+                              maximumFractionDigits: 0,
+                            }).format(Number(estimate_momentum.confidence))}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {estimate_momentum.freshness.replaceAll("_", " ")} ·{" "}
+                            {estimate_momentum.provider_id ??
+                              "no selected source"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 border-t pt-4">
                       <h2 className="text-xs font-semibold">
                         Latest ranking snapshots
                       </h2>
@@ -591,6 +880,18 @@ export default function UniversePage() {
                                 (item) => item.definition.ranking_type === type,
                               );
                             const entry = current?.entry;
+                            const rankContext =
+                              type === "WATCHLIST" &&
+                              isWatchlistRankInputSnapshot(
+                                entry?.input_snapshot,
+                              )
+                                ? entry.input_snapshot
+                                : null;
+                            const researchRankContext =
+                              type === "RESEARCH" &&
+                              isResearchRankInputSnapshot(entry?.input_snapshot)
+                                ? entry.input_snapshot
+                                : null;
                             return (
                               <div key={type} className="min-w-0">
                                 <dt className="text-[11px] leading-4 text-muted-foreground">
@@ -608,6 +909,76 @@ export default function UniversePage() {
                                 {entry && entry.status !== "RANKED" && (
                                   <dd className="mt-1 break-words text-[10px] leading-4 text-muted-foreground">
                                     {entry.reason}
+                                  </dd>
+                                )}
+                                {rankContext && (
+                                  <dd className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] leading-4">
+                                    <span className="text-muted-foreground">
+                                      Durability / Quality
+                                    </span>
+                                    <span className="text-right tabular-nums">
+                                      {rankContext.durability_10y.score ??
+                                        rankContext.durability_10y.status}
+                                      {" / "}
+                                      {rankContext.compounder_quality.score ??
+                                        rankContext.compounder_quality.status}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      Fundamental CAGR
+                                    </span>
+                                    <span className="text-right tabular-nums">
+                                      {modelSummaryValue(
+                                        rankContext.forward_fundamental_cagr,
+                                        true,
+                                      )}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      Expected IRR
+                                    </span>
+                                    <span className="text-right tabular-nums">
+                                      {modelSummaryValue(
+                                        rankContext.expected_irr,
+                                        true,
+                                      )}
+                                    </span>
+                                    <span className="col-span-2 text-right text-muted-foreground">
+                                      {rankContext.return_source.source_kind ===
+                                      "NATIVE_MODEL_REVISION"
+                                        ? `Native revision ${rankContext.return_source.revision_number ?? "?"}`
+                                        : "Legacy output · separate return semantics"}
+                                    </span>
+                                  </dd>
+                                )}
+                                {researchRankContext && (
+                                  <dd className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] leading-4">
+                                    <span className="text-muted-foreground">
+                                      Candidate tier / sort key
+                                    </span>
+                                    <span className="text-right tabular-nums">
+                                      {researchRankContext.candidate_tier ??
+                                        "Unavailable"}{" "}
+                                      /{" "}
+                                      {modelSummaryValue(
+                                        researchRankContext.sort_key,
+                                      )}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      Persistent seed
+                                    </span>
+                                    <span className="text-right tabular-nums">
+                                      {researchRankContext.priority_seed ===
+                                      null
+                                        ? researchRankContext.used_legacy_default
+                                          ? `Fallback ${quantity(researchRankContext.legacy_default_priority_seed)}`
+                                          : "Unavailable"
+                                        : quantity(
+                                            researchRankContext.priority_seed,
+                                          )}
+                                    </span>
+                                    <span className="col-span-2 text-right text-muted-foreground">
+                                      Research attention queue · not an
+                                      investment rank
+                                    </span>
                                   </dd>
                                 )}
                               </div>

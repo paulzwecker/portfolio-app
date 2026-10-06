@@ -53,6 +53,11 @@ class ScoreDimension(StrEnum):
     RISK = "RISK"
 
 
+class ResearchCandidateTier(StrEnum):
+    HIGH = "HIGH"
+    LOW = "LOW"
+
+
 class FundamentalMetric(StrEnum):
     REVENUE = "REVENUE"
     GROSS_PROFIT = "GROSS_PROFIT"
@@ -180,6 +185,36 @@ class RankingEntryStatus(StrEnum):
     NOT_ELIGIBLE = "NOT_ELIGIBLE"
     EXCLUDED = "EXCLUDED"
     NOT_MIGRATED = "NOT_MIGRATED"
+    DATA_CHECK = "DATA_CHECK"
+
+
+class ExecutionPaceRunStatus(StrEnum):
+    COMPLETE = "COMPLETE"
+    PARTIAL = "PARTIAL"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class ExecutionPaceDecisionStatus(StrEnum):
+    AVAILABLE = "AVAILABLE"
+    REVIEW = "REVIEW"
+    UNAVAILABLE = "UNAVAILABLE"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+class ExecutionPace(StrEnum):
+    ACCELERATE = "ACCELERATE"
+    BUILD = "BUILD"
+    NORMAL_BUILD = "NORMAL_BUILD"
+    SMALL_LADDER = "SMALL_LADDER"
+    LADDER = "LADDER"
+    HOLD = "HOLD"
+    SLOW_LIMIT = "SLOW_LIMIT"
+    WAIT_LIMIT = "WAIT_LIMIT"
+    PATIENT_TRIM = "PATIENT_TRIM"
+    TRIM_FASTER = "TRIM_FASTER"
+    NORMAL_TRIM = "NORMAL_TRIM"
+    PATIENT_EXIT = "PATIENT_EXIT"
+    NORMAL_EXIT = "NORMAL_EXIT"
 
 
 class ModelOutputSnapshotKind(StrEnum):
@@ -533,7 +568,8 @@ class RankingEntry(Base):
         UniqueConstraint("run_id", "company_id", name="uq_ranking_entries_run_company"),
         UniqueConstraint("run_id", "position", name="uq_ranking_entries_run_position"),
         CheckConstraint(
-            "status IN ('RANKED','INPUTS_UNAVAILABLE','NOT_ELIGIBLE','EXCLUDED','NOT_MIGRATED')",
+            "status IN ('RANKED','INPUTS_UNAVAILABLE','NOT_ELIGIBLE','EXCLUDED',"
+            "'NOT_MIGRATED','DATA_CHECK')",
             name="status",
         ),
         CheckConstraint(
@@ -552,6 +588,107 @@ class RankingEntry(Base):
     position: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(24))
     reason: Mapped[str] = mapped_column(String(1000))
+    input_snapshot: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+
+
+class ResearchPriorityInput(Base):
+    """Imported source inputs for the workbook's candidate-only Research Sort Key."""
+
+    __tablename__ = "research_priority_inputs"
+    __table_args__ = (
+        UniqueConstraint("company_id", "source_digest"),
+        CheckConstraint("candidate_tier IN ('HIGH','LOW')", name="candidate_tier"),
+        CheckConstraint("priority_seed IS NULL OR priority_seed >= 0", name="priority_seed"),
+        CheckConstraint("input_quality IN ('PASS','DATA_CHECK')", name="input_quality"),
+        CheckConstraint("length(source_digest) = 64", name="source_digest"),
+        CheckConstraint("actor IN ('LOCAL_USER','SYSTEM','IMPORT')", name="actor"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    canonical_ticker: Mapped[str] = mapped_column(String(40))
+    candidate_tier: Mapped[str] = mapped_column(String(8))
+    priority_seed: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    input_quality: Mapped[str] = mapped_column(String(16), default="PASS")
+    quality_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    source_digest: Mapped[str] = mapped_column(String(64))
+    bucket_source_ref: Mapped[str] = mapped_column(String(500))
+    priority_seed_source_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    actor: Mapped[str] = mapped_column(String(32), default=Actor.IMPORT)
+
+
+class ExecutionPaceRun(Base):
+    """Immutable portfolio-wide snapshot of the Execution Pace calculation."""
+
+    __tablename__ = "execution_pace_runs"
+    __table_args__ = (
+        CheckConstraint("status IN ('COMPLETE','PARTIAL','UNAVAILABLE')", name="status"),
+        CheckConstraint("actor IN ('LOCAL_USER','SYSTEM','IMPORT')", name="actor"),
+        CheckConstraint("length(methodology_version) > 0", name="methodology_version"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    portfolio_id: Mapped[UUID] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="RESTRICT"), index=True
+    )
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    methodology_version: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(20))
+    actor: Mapped[str] = mapped_column(String(32))
+    reason: Mapped[str] = mapped_column(String(1000))
+    source: Mapped[str | None] = mapped_column(String(1000))
+
+
+class ExecutionPaceDecision(Base):
+    """Immutable company decision and the exact canonical inputs used to derive it."""
+
+    __tablename__ = "execution_pace_decisions"
+    __table_args__ = (
+        UniqueConstraint("run_id", "company_id", name="uq_execution_pace_run_company"),
+        CheckConstraint(
+            "decision_status IN ('AVAILABLE','REVIEW','UNAVAILABLE','NOT_APPLICABLE')",
+            name="decision_status",
+        ),
+        CheckConstraint(
+            "(decision_status = 'AVAILABLE' AND pace IS NOT NULL) OR "
+            "(decision_status <> 'AVAILABLE' AND pace IS NULL)",
+            name="pace_status",
+        ),
+        CheckConstraint(
+            "pace IS NULL OR pace IN ('ACCELERATE','BUILD','NORMAL_BUILD','SMALL_LADDER',"
+            "'LADDER','HOLD','SLOW_LIMIT','WAIT_LIMIT','PATIENT_TRIM','TRIM_FASTER',"
+            "'NORMAL_TRIM','PATIENT_EXIT','NORMAL_EXIT')",
+            name="pace",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("execution_pace_runs.id", ondelete="RESTRICT"), index=True
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    target_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("target_allocation_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    holding_snapshot_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("holding_snapshots.id", ondelete="RESTRICT"), nullable=True
+    )
+    model_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("financial_model_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    model_output_snapshot_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("model_output_snapshots.id", ondelete="RESTRICT"), nullable=True
+    )
+    price_observation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("price_observations.id", ondelete="RESTRICT"), nullable=True
+    )
+    decision_status: Mapped[str] = mapped_column(String(24))
+    pace: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    reason: Mapped[str] = mapped_column(String(1000))
+    input_snapshot: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
 class LegacyImportBatch(Base):
@@ -1759,6 +1896,8 @@ def protect_ranking_history(session: Session, flush_context: object, instances: 
     immutable = (
         RankingRun,
         RankingEntry,
+        ExecutionPaceRun,
+        ExecutionPaceDecision,
     )
     for item in session.dirty.union(session.deleted):
         if isinstance(item, immutable):
@@ -1791,6 +1930,7 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         PriceRegimeSnapshot,
         FxObservation,
         ExternalRawPayload,
+        ResearchPriorityInput,
         ModelOutputImportBatch,
         ModelOutputSnapshot,
         FinancialModelRevision,

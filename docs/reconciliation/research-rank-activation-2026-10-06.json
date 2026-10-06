@@ -1,0 +1,82 @@
+{
+  "status": "ACTIVATED",
+  "source": "reference/workbook/Portfolio_Watchlist.xlsx",
+  "source_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+  "methodology": {
+    "source_formula": "IF(OR(I<>\"C\", NOT(REGEXMATCH(C,\"^Candidate - (High|Low)$\"))),\"\", IF(C=\"Candidate - High\",200000,100000)-IF(N=\"\",50000,N))",
+    "inputs": [
+      "effective CANDIDATE lifecycle",
+      "Universe Registry candidate tier",
+      "Candidate Ranking persistent priority seed",
+      "canonical registry ticker"
+    ],
+    "formula": "HIGH: 200000 - seed; LOW: 100000 - seed; blank seed explicitly falls back to 50000",
+    "direction": "sort key descending, canonical ticker ascending",
+    "excluded_inputs": [
+      "Expected IRR",
+      "quality scores",
+      "model status",
+      "target weight",
+      "holdings",
+      "Execution Pace"
+    ],
+    "effective_time_policy": "Workbook has no documented effective timestamp for tier/seed; only usable in runs at or after import recorded_at."
+  },
+  "import": {
+    "observed_at": "2026-10-05T22:46:06.217053+00:00",
+    "candidate_source_rows": 98,
+    "inserted": 98,
+    "replay_inserted": 0,
+    "unresolved_identities": 0,
+    "data_check_rows": 0,
+    "blank_seed_rows_using_documented_fallback": 9
+  },
+  "canonical_run": {
+    "run_id": "367b6e87-6a4a-4baa-a920-6e2c5f888896",
+    "as_of": "2026-10-06T00:46:59.283018+02:00",
+    "recorded_at": "2026-10-06T00:46:59.449816+02:00",
+    "universe_size": 219,
+    "ranked": 96,
+    "inputs_unavailable": 5,
+    "not_eligible": 118,
+    "data_check": 0,
+    "unavailable_reasons": {
+      "missing_point_in_time_lifecycle": 5
+    },
+    "unavailable_companies": [
+      "ARENIT Industrie SE",
+      "CTT Systems AB",
+      "engcon AB",
+      "Plejd AB",
+      "VSE Corporation"
+    ]
+  },
+  "reconciliation": {
+    "representative_cached_source_ranks_matched": [
+      "NBIS",
+      "PGR",
+      "TMUS",
+      "CBOE",
+      "TXN"
+    ],
+    "representative_rank_and_sort_key_matches_exact": true,
+    "blank_seed_fallback_verified": true,
+    "source_cached_numeric_rank_count": 97,
+    "source_cached_malformed_rank_count": 1,
+    "full_cached_ordinal_positions_matching_documented_inputs": 36,
+    "full_cached_ordinal_positions_mismatching_documented_inputs": 61,
+    "full_cached_rank_parity_claimed": false,
+    "known_stale_example": {
+      "ticker": "FICO",
+      "cached_rank": 1,
+      "sort_key_from_current_source_inputs": 99997,
+      "recomputed_position": 25
+    }
+  },
+  "ownership": {
+    "changes_lifecycle": false,
+    "changes_investment_ranks": false,
+    "changes_targets_or_holdings": false,
+    "changes_execution_pace": false
+  }
+}

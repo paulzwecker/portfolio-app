@@ -1,0 +1,80 @@
+{
+  "status": "PARTIAL_RULE_PARITY",
+  "reference_artifact": "reference/workbook/Portfolio_Watchlist.xlsx",
+  "reference_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+  "methodology_version": "legacy-execution-pace-v1",
+  "source_formula": "Portfolio!K5:K25",
+  "source_rationale": "Portfolio!L5:L25",
+  "fixture_cases": [
+    {
+      "company_ticker": "DLO",
+      "source_cell": "Portfolio!K6",
+      "legacy_cached_result": "ACCELERATE",
+      "canonical_result": "ACCELERATE",
+      "coverage": "discount + correction and return/estimate acceleration branch"
+    },
+    {
+      "company_ticker": "SPGI",
+      "source_cell": "Portfolio!K11",
+      "legacy_cached_result": "SMALL / LADDER",
+      "canonical_result": "SMALL_LADDER",
+      "coverage": "negative estimate revisions cap a discounted correction-context buy"
+    },
+    {
+      "company_ticker": "TSM",
+      "source_cell": "Portfolio!K14",
+      "legacy_cached_result": "NORMAL BUILD",
+      "canonical_result": "NORMAL_BUILD",
+      "coverage": "discount while regime does not support faster recovery branch"
+    },
+    {
+      "company_ticker": "MA",
+      "source_cell": "Portfolio!K15",
+      "legacy_cached_result": "WAIT / LIMIT",
+      "canonical_result": "WAIT_LIMIT",
+      "coverage": "downtrend/pullback branch"
+    },
+    {
+      "company_ticker": "NVO",
+      "source_cell": "Portfolio!K21",
+      "legacy_cached_result": "PATIENT EXIT",
+      "canonical_result": "PATIENT_EXIT",
+      "coverage": "zero target with discount and correction context"
+    }
+  ],
+  "additional_regressions": [
+    "valuation boundaries at +25%, +10%, -10%, -25% weighted upside",
+    "0.3 percentage-point allocation hold band",
+    "positive-target patient/accelerated trim branches",
+    "missing or stale price, model, regime, estimate, allocation and hurdle inputs produce REVIEW",
+    "explicit DIRECTION_ONLY estimate state is distinct from absent history"
+  ],
+  "historical_rows": {
+    "source_sheet": "Decision Signal History",
+    "rows_seen": 5,
+    "canonical_rows_imported": 0,
+    "reason": "Source rows do not establish reliable recorded/knowledge timestamps for canonical point-in-time history."
+  },
+  "current_data_coverage_rehearsal": {
+    "as_of_date": "2026-10-06",
+    "persisted_as_history": false,
+    "tracked_companies": 219,
+    "portfolio_contexts": 21,
+    "available": 2,
+    "review": 19,
+    "not_applicable": 198,
+    "available_examples": ["ASML Holding", "Intuitive Surgical"],
+    "review_blockers": {
+      "no_explicit_target": 5,
+      "model_output_without_effective_timestamp": 12,
+      "expected_irr_source_price_not_current_or_comparable": 1,
+      "estimate_momentum_history_unavailable_for_branch": 1
+    },
+    "method": "Calculated using the current canonical database in a transaction that was rolled back; no decision history was written."
+  },
+  "parity_limitations": [
+    "Fixture tests pin documented cached outputs and branch behavior; they are not a full-population formula reconciliation.",
+    "The legacy formula's 9% hurdle fallback is not used when the canonical hurdle is missing; the application returns REVIEW.",
+    "Workbook observation time is unknown, so cached decision history is not represented as canonical history."
+  ]
+}

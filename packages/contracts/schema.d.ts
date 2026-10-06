@@ -33,6 +33,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Attention Feed */
+        get: operations["get_attention_feed_v1_attention_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/canonical-financial-models/{model_id}": {
         parameters: {
             query?: never;
@@ -322,6 +339,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/estimate-momentum": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Estimate Momentum */
+        get: operations["get_company_estimate_momentum_v1_companies__company_id__estimate_momentum_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/execution-pace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Execution Pace */
+        get: operations["get_company_execution_pace_v1_companies__company_id__execution_pace_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/expected-return-attribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Expected Return Attribution */
+        get: operations["get_company_expected_return_attribution_v1_companies__company_id__expected_return_attribution_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/expected-return-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Expected Return History */
+        get: operations["get_company_expected_return_history_v1_companies__company_id__expected_return_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/financial-models": {
         parameters: {
             query?: never;
@@ -556,6 +641,58 @@ export interface paths {
         put?: never;
         /** Post Company Source Document */
         post: operations["post_company_source_document_v1_companies__company_id__source_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/temporal-alignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Temporal Alignment */
+        get: operations["get_company_temporal_alignment_v1_companies__company_id__temporal_alignment_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/execution-pace-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Execution Pace Runs */
+        get: operations["get_execution_pace_runs_v1_execution_pace_runs_get"];
+        put?: never;
+        /** Post Execution Pace Run */
+        post: operations["post_execution_pace_run_v1_execution_pace_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/execution-pace-runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Execution Pace Run */
+        get: operations["get_execution_pace_run_v1_execution_pace_runs__run_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -942,6 +1079,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/universe/estimate-momentum-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Universe Estimate Momentum Summary */
+        get: operations["get_universe_estimate_momentum_summary_v1_universe_estimate_momentum_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/universe/execution-pace-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Universe Execution Pace Summary */
+        get: operations["get_universe_execution_pace_summary_v1_universe_execution_pace_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/universe/market-summary": {
         parameters: {
             query?: never;
@@ -1234,6 +1405,72 @@ export interface components {
             /** Weight */
             weight: string;
         };
+        /** AttentionEventRead */
+        AttentionEventRead: {
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /** Current Value */
+            current_value?: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            /**
+             * Event Type
+             * @enum {string}
+             */
+            event_type: "MODEL_REVISION" | "MODEL_OUTPUT_IMPORT" | "EXPECTED_IRR_CHANGE" | "CONSENSUS_REVISION" | "NEW_FILING" | "PRICE_MOVE" | "RANK_CHANGE" | "EXECUTION_PACE_CHANGE" | "DATA_QUALITY";
+            /** Explanation */
+            explanation: string;
+            /** Href */
+            href: string | null;
+            /** Id */
+            id: string;
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            /** Prior Value */
+            prior_value?: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "HIGH" | "MEDIUM" | "LOW";
+            /** Source Domain */
+            source_domain: string;
+            /** Source Id */
+            source_id: string | null;
+            /** Source Reference */
+            source_reference: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "REVIEW" | "INFORMATIONAL";
+            /**
+             * Time Precision
+             * @enum {string}
+             */
+            time_precision: "TIMESTAMP" | "DATE" | "UNKNOWN";
+            /** Title */
+            title: string;
+            /** Unit */
+            unit?: string | null;
+        };
+        /** AttentionFeedRead */
+        AttentionFeedRead: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Events */
+            events: components["schemas"]["AttentionEventRead"][];
+            /** Lookback Days */
+            lookback_days: number;
+            /** Total */
+            total: number;
+        };
         /** CashInput */
         "CashInput-Input": {
             /** Balance */
@@ -1308,6 +1545,132 @@ export interface components {
             target_revision_id: string | null;
             /** Target Weight */
             target_weight: string | null;
+        };
+        /** CompanyEstimateMomentumRead */
+        CompanyEstimateMomentumRead: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "AVAILABLE" | "DIRECTION_ONLY" | "INSUFFICIENT_HISTORY" | "NO_MAPPING" | "AMBIGUOUS_SOURCE";
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Confidence */
+            confidence: string;
+            /** Confidence Adjusted Score */
+            confidence_adjusted_score: string | null;
+            /**
+             * Confidence Band
+             * @enum {string}
+             */
+            confidence_band: "HIGH" | "MEDIUM" | "LOW" | "COLLECTING" | "NO_DATA";
+            /** Coverage Count */
+            coverage_count: number;
+            /** Coverage Fraction */
+            coverage_fraction: string;
+            /** Coverage Total */
+            coverage_total: number;
+            /**
+             * Data Quality
+             * @enum {string}
+             */
+            data_quality: "PASS" | "DATA_CHECK" | "INVALID" | "NO_DATA";
+            /** Direction */
+            direction: ("POSITIVE" | "MILD_POSITIVE" | "NEUTRAL_MIXED" | "MILD_NEGATIVE" | "NEGATIVE") | null;
+            /**
+             * Freshness
+             * @enum {string}
+             */
+            freshness: "FRESH" | "STALE" | "DATA_CHECK" | "NO_DATA";
+            /** Known At */
+            known_at: string | null;
+            /** Latest Snapshot Date */
+            latest_snapshot_date: string | null;
+            /** Methodology Version */
+            methodology_version: string;
+            /** Periods */
+            periods: components["schemas"]["EstimateMomentumPeriodRead"][];
+            /** Provider Id */
+            provider_id: string | null;
+            /** Raw Score */
+            raw_score: string | null;
+            /** Reason */
+            reason: string | null;
+        };
+        /** CompanyExecutionPaceRead */
+        CompanyExecutionPaceRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            current: components["schemas"]["ExecutionPaceHistoryEntry"] | null;
+            /** History */
+            history: components["schemas"]["ExecutionPaceHistoryEntry"][];
+        };
+        /** CompanyExpectedReturnAttributionRead */
+        CompanyExpectedReturnAttributionRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            context_changes: components["schemas"]["ExpectedReturnAttributionContextChangesRead"];
+            current: components["schemas"]["ExpectedReturnAttributionStateRead"];
+            /** Drivers */
+            drivers: components["schemas"]["ExpectedReturnAttributionDriverRead"][];
+            /** Estimate Context Note */
+            estimate_context_note: string;
+            /** Expected Irr Change */
+            expected_irr_change: string | null;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "SYMMETRIC_COUNTERFACTUAL_SHAPLEY" | "UNAVAILABLE";
+            prior: components["schemas"]["ExpectedReturnAttributionStateRead"];
+            /** Residual */
+            residual: string | null;
+            /** Residual Reason */
+            residual_reason: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ATTRIBUTED" | "OUTPUTS_ONLY" | "MISSING_RETURN" | "RETURN_SEMANTICS_CHANGE" | "MODEL_SERIES_CHANGE" | "METHODOLOGY_CHANGE" | "INPUTS_UNAVAILABLE" | "RECALCULATION_MISMATCH" | "UNDATED";
+        };
+        /** CompanyExpectedReturnHistoryRead */
+        CompanyExpectedReturnHistoryRead: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** History */
+            history: components["schemas"]["ExpectedReturnHistoryPointRead"][];
+            /**
+             * Known At
+             * Format: date-time
+             */
+            known_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "PARTIAL" | "NO_HISTORY";
         };
         /** CompanyFinancialModelMigrationItemRead */
         CompanyFinancialModelMigrationItemRead: {
@@ -1481,6 +1844,46 @@ export interface components {
             sec_identity_status: "MAPPED" | "UNMAPPED" | "AMBIGUOUS";
             /** Source Count */
             source_count: number;
+        };
+        /** CompanyTemporalAlignmentRead */
+        CompanyTemporalAlignmentRead: {
+            actual: components["schemas"]["TemporalAlignedValueRead"];
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Comparison Status */
+            comparison_status: string;
+            consensus: components["schemas"]["TemporalAlignedValueRead"];
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Fiscal Year Mapping Basis */
+            fiscal_year_mapping_basis: string;
+            /**
+             * Forecast Known At
+             * Format: date-time
+             */
+            forecast_known_at: string;
+            /** Horizon Days */
+            horizon_days: number;
+            /**
+             * Metric
+             * @constant
+             */
+            metric: "REVENUE";
+            /** Model Forecasts */
+            model_forecasts: components["schemas"]["TemporalModelForecastRead"][];
+            /**
+             * Outcome Known At
+             * Format: date-time
+             */
+            outcome_known_at: string;
         };
         /** ConsensusEstimateObservationRead */
         ConsensusEstimateObservationRead: {
@@ -1969,6 +2372,686 @@ export interface components {
             scenario_id: string;
             /** Tax Rate */
             tax_rate: string;
+        };
+        /** EstimateMomentumPeriodRead */
+        EstimateMomentumPeriodRead: {
+            /** Analyst Count */
+            analyst_count: number | null;
+            /** Currency */
+            currency: string | null;
+            /** Current Snapshot Date */
+            current_snapshot_date: string | null;
+            /** Current Value */
+            current_value: string | null;
+            /**
+             * Data Quality
+             * @enum {string}
+             */
+            data_quality: "PASS" | "DATA_CHECK" | "INVALID";
+            /** Forecast Period */
+            forecast_period: string;
+            /**
+             * Horizon
+             * @enum {string}
+             */
+            horizon: "FY+1" | "FY+2";
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "REVENUE" | "EPS";
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Quality Reason */
+            quality_reason: string | null;
+            /** Unit */
+            unit: string;
+            /** Windows */
+            windows: components["schemas"]["EstimateMomentumWindowRead"][];
+        };
+        /** EstimateMomentumSummaryRead */
+        EstimateMomentumSummaryRead: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "AVAILABLE" | "DIRECTION_ONLY" | "INSUFFICIENT_HISTORY" | "NO_MAPPING" | "AMBIGUOUS_SOURCE";
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Confidence */
+            confidence: string;
+            /** Confidence Adjusted Score */
+            confidence_adjusted_score: string | null;
+            /**
+             * Confidence Band
+             * @enum {string}
+             */
+            confidence_band: "HIGH" | "MEDIUM" | "LOW" | "COLLECTING" | "NO_DATA";
+            /** Coverage Count */
+            coverage_count: number;
+            /** Coverage Fraction */
+            coverage_fraction: string;
+            /** Coverage Total */
+            coverage_total: number;
+            /**
+             * Data Quality
+             * @enum {string}
+             */
+            data_quality: "PASS" | "DATA_CHECK" | "INVALID" | "NO_DATA";
+            /** Direction */
+            direction: ("POSITIVE" | "MILD_POSITIVE" | "NEUTRAL_MIXED" | "MILD_NEGATIVE" | "NEGATIVE") | null;
+            /**
+             * Freshness
+             * @enum {string}
+             */
+            freshness: "FRESH" | "STALE" | "DATA_CHECK" | "NO_DATA";
+            /** Known At */
+            known_at: string | null;
+            /** Latest Snapshot Date */
+            latest_snapshot_date: string | null;
+            /** Methodology Version */
+            methodology_version: string;
+            /** Provider Id */
+            provider_id: string | null;
+            /** Raw Score */
+            raw_score: string | null;
+            /** Reason */
+            reason: string | null;
+        };
+        /** EstimateMomentumWindowRead */
+        EstimateMomentumWindowRead: {
+            /** Component Score */
+            component_score: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Reference Days Before Target */
+            reference_days_before_target: number | null;
+            /** Reference Snapshot Date */
+            reference_snapshot_date: string | null;
+            /** Reference Value */
+            reference_value: string | null;
+            /** Revision Fraction */
+            revision_fraction: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "MISSING_REFERENCE" | "STALE_REFERENCE" | "DATA_CHECK" | "INVALID_BASELINE";
+            /**
+             * Window
+             * @enum {string}
+             */
+            window: "12M" | "6M" | "3M";
+        };
+        /**
+         * ExecutionPace
+         * @enum {string}
+         */
+        ExecutionPace: "ACCELERATE" | "BUILD" | "NORMAL_BUILD" | "SMALL_LADDER" | "LADDER" | "HOLD" | "SLOW_LIMIT" | "WAIT_LIMIT" | "PATIENT_TRIM" | "TRIM_FASTER" | "NORMAL_TRIM" | "PATIENT_EXIT" | "NORMAL_EXIT";
+        /** ExecutionPaceDecisionRead */
+        ExecutionPaceDecisionRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            decision_status: components["schemas"]["ExecutionPaceDecisionStatus"];
+            /** Holding Snapshot Id */
+            holding_snapshot_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            input_snapshot: components["schemas"]["ExecutionPaceInputSnapshot"];
+            /** Model Output Snapshot Id */
+            model_output_snapshot_id: string | null;
+            /** Model Revision Id */
+            model_revision_id: string | null;
+            pace: components["schemas"]["ExecutionPace"] | null;
+            /** Price Observation Id */
+            price_observation_id: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Target Revision Id */
+            target_revision_id: string | null;
+        };
+        /**
+         * ExecutionPaceDecisionStatus
+         * @enum {string}
+         */
+        ExecutionPaceDecisionStatus: "AVAILABLE" | "REVIEW" | "UNAVAILABLE" | "NOT_APPLICABLE";
+        /** ExecutionPaceHistoryEntry */
+        ExecutionPaceHistoryEntry: {
+            decision: components["schemas"]["ExecutionPaceDecisionRead"];
+            run: components["schemas"]["ExecutionPaceRunRead"];
+        };
+        /** ExecutionPaceInputSnapshot */
+        ExecutionPaceInputSnapshot: {
+            /** Allocation Gap */
+            allocation_gap: string | null;
+            /** Allocation Status */
+            allocation_status: string | null;
+            /** Context Notes */
+            context_notes: string[];
+            /**
+             * Context Version
+             * @constant
+             */
+            context_version: "execution-pace-inputs-v1";
+            /** Current Weight */
+            current_weight: string | null;
+            /** Estimate Latest Snapshot Date */
+            estimate_latest_snapshot_date: string | null;
+            /** Estimate Momentum Availability */
+            estimate_momentum_availability: ("AVAILABLE" | "DIRECTION_ONLY" | "INSUFFICIENT_HISTORY" | "NO_MAPPING" | "AMBIGUOUS_SOURCE") | null;
+            /** Estimate Momentum Direction */
+            estimate_momentum_direction: ("POSITIVE" | "MILD_POSITIVE" | "NEUTRAL_MIXED" | "MILD_NEGATIVE" | "NEGATIVE") | null;
+            /** Estimate Momentum Freshness */
+            estimate_momentum_freshness: ("FRESH" | "STALE" | "DATA_CHECK" | "NO_DATA") | null;
+            /** Estimate Momentum Quality */
+            estimate_momentum_quality: ("PASS" | "DATA_CHECK" | "INVALID" | "NO_DATA") | null;
+            /** Estimate Momentum Reason */
+            estimate_momentum_reason: string | null;
+            /** Estimate Provider Id */
+            estimate_provider_id: string | null;
+            /** Expected Irr */
+            expected_irr: string | null;
+            /** Holding Effective At */
+            holding_effective_at: string | null;
+            /** Holding Snapshot Id */
+            holding_snapshot_id: string | null;
+            /** Hurdle */
+            hurdle: string | null;
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            /** Model Contract Status */
+            model_contract_status: string | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Effective At */
+            model_effective_at: string | null;
+            /** Model Key */
+            model_key: string | null;
+            /** Model Output Quality */
+            model_output_quality: string | null;
+            /** Model Output Snapshot Id */
+            model_output_snapshot_id: string | null;
+            /** Model Price Currency */
+            model_price_currency: string | null;
+            /** Model Price Effective At */
+            model_price_effective_at: string | null;
+            /** Model Price Observation Id */
+            model_price_observation_id: string | null;
+            /** Model Price Status */
+            model_price_status: string | null;
+            /** Model Recorded At */
+            model_recorded_at: string | null;
+            /** Model Reference Price */
+            model_reference_price: string | null;
+            /** Model Review Flag */
+            model_review_flag: string | null;
+            /** Model Revision Id */
+            model_revision_id: string | null;
+            /** Model Source Id */
+            model_source_id: string | null;
+            /** Model Source Kind */
+            model_source_kind: ("NATIVE_MODEL_REVISION" | "IMPORTED_CURRENT_CONTRACT") | null;
+            /** Price */
+            price: string | null;
+            /** Price Currency */
+            price_currency: string | null;
+            /**
+             * Price Freshness
+             * @enum {string}
+             */
+            price_freshness: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA";
+            /** Price Market Date */
+            price_market_date: string | null;
+            /** Price Observation Id */
+            price_observation_id: string | null;
+            /** Price Provider */
+            price_provider: string | null;
+            /** Price Quality */
+            price_quality: string | null;
+            /** Price Recorded At */
+            price_recorded_at: string | null;
+            /** Price Regime */
+            price_regime: string | null;
+            /** Price Regime As Of */
+            price_regime_as_of: string | null;
+            /**
+             * Price Regime Freshness
+             * @enum {string}
+             */
+            price_regime_freshness: "FRESH" | "STALE" | "DATA_CHECK" | "NO_DATA";
+            /** Price Regime Quality */
+            price_regime_quality: ("PASS" | "DATA_CHECK" | "UNSPECIFIED") | null;
+            /** Price Regime Raw */
+            price_regime_raw: string | null;
+            /** Price Regime Source Ref */
+            price_regime_source_ref: string | null;
+            /** Return Semantics */
+            return_semantics: ("NATIVE_METHOD_OUTPUT" | "LEGACY_NORMALIZED_FIELD") | null;
+            /** Target Effective At */
+            target_effective_at: string | null;
+            /** Target Revision Id */
+            target_revision_id: string | null;
+            /** Target Weight */
+            target_weight: string | null;
+            /** Valuation Currency */
+            valuation_currency: string | null;
+            /** Valuation Listing Id */
+            valuation_listing_id: string | null;
+            /** Valuation Range Ratio */
+            valuation_range_ratio: string | null;
+            /** Valuation Ticker */
+            valuation_ticker: string | null;
+            /** Valuation Venue */
+            valuation_venue: string | null;
+            /** Valuation Zone */
+            valuation_zone: ("DEEP_DISCOUNT" | "DISCOUNT" | "NEAR_FAIR" | "RICH" | "VERY_RICH") | null;
+            /** Weighted Fair Value */
+            weighted_fair_value: string | null;
+            /** Weighted Upside */
+            weighted_upside: string | null;
+        };
+        /** ExecutionPaceRunCreate */
+        ExecutionPaceRunCreate: {
+            actor: components["schemas"]["Actor"];
+            /** As Of */
+            as_of?: string | null;
+            /** Reason */
+            reason: string;
+            /** Source */
+            source?: string | null;
+        };
+        /** ExecutionPaceRunDecisionRead */
+        ExecutionPaceRunDecisionRead: {
+            company: components["schemas"]["CompanyRead"];
+            decision: components["schemas"]["ExecutionPaceDecisionRead"];
+        };
+        /** ExecutionPaceRunDetailRead */
+        ExecutionPaceRunDetailRead: {
+            /** Decisions */
+            decisions: components["schemas"]["ExecutionPaceRunDecisionRead"][];
+            run: components["schemas"]["ExecutionPaceRunRead"];
+        };
+        /** ExecutionPaceRunRead */
+        ExecutionPaceRunRead: {
+            actor: components["schemas"]["Actor"];
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Available Count */
+            available_count: number;
+            /** Company Count */
+            company_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Methodology Version */
+            methodology_version: string;
+            /** Not Applicable Count */
+            not_applicable_count: number;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Review Count */
+            review_count: number;
+            /** Source */
+            source: string | null;
+            status: components["schemas"]["ExecutionPaceRunStatus"];
+            /** Unavailable Count */
+            unavailable_count: number;
+        };
+        /**
+         * ExecutionPaceRunStatus
+         * @enum {string}
+         */
+        ExecutionPaceRunStatus: "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
+        /** ExpectedReturnAttributionContextChangesRead */
+        ExpectedReturnAttributionContextChangesRead: {
+            /** Base Fv */
+            base_fv: string | null;
+            /** Base Probability */
+            base_probability: string | null;
+            /** Bear Fv */
+            bear_fv: string | null;
+            /** Bear Probability */
+            bear_probability: string | null;
+            /** Bull Fv */
+            bull_fv: string | null;
+            /** Bull Probability */
+            bull_probability: string | null;
+            /** Expected Excess */
+            expected_excess: string | null;
+            /** Hurdle */
+            hurdle: string | null;
+            /** Weighted Fv */
+            weighted_fv: string | null;
+        };
+        /** ExpectedReturnAttributionDriverRead */
+        ExpectedReturnAttributionDriverRead: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "MARKET_PRICE" | "MODEL_ASSUMPTIONS" | "REQUIRED_RETURN_ASSUMPTIONS" | "SCENARIO_PROBABILITIES";
+            /** Effect */
+            effect: string;
+            /** Explanation */
+            explanation: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * ExpectedReturnAttributionStateRead
+         * @description A source-linked endpoint state used by a derived return comparison.
+         */
+        ExpectedReturnAttributionStateRead: {
+            /** Base Fv */
+            base_fv: string | null;
+            /** Base Probability */
+            base_probability: string | null;
+            /** Bear Fv */
+            bear_fv: string | null;
+            /** Bear Probability */
+            bear_probability: string | null;
+            /** Bull Fv */
+            bull_fv: string | null;
+            /** Bull Probability */
+            bull_probability: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            estimate_context: components["schemas"]["ExpectedReturnEstimateContextRead"];
+            /** Expected Cash Flow Irr */
+            expected_cash_flow_irr: string | null;
+            /** Expected Excess */
+            expected_excess: string | null;
+            /** Hurdle */
+            hurdle: string | null;
+            market_price: components["schemas"]["ExpectedReturnMarketPriceRead"];
+            /** Methodology Version */
+            methodology_version: string | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Id */
+            model_id: string | null;
+            /** Model Type */
+            model_type: ("UFCF_DCF_10Y_FADE" | "OWNER_CASH_FLOW_10Y" | "RESIDUAL_INCOME_10Y_FADE") | null;
+            /** Point Id */
+            point_id: string;
+            /** Rationale */
+            rationale: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Return Semantics
+             * @enum {string}
+             */
+            return_semantics: "NATIVE_METHOD_OUTPUT" | "LEGACY_NORMALIZED_FIELD";
+            /** Revision Id */
+            revision_id: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Series Id */
+            series_id: string;
+            /** Source */
+            source: string | null;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "IMPORTED_CURRENT_CONTRACT" | "IMPORTED_LEGACY_REVISION" | "NATIVE_MODEL_REVISION";
+            /** Source Revision Id */
+            source_revision_id: string | null;
+            /** Weighted Fv */
+            weighted_fv: string | null;
+        };
+        /** ExpectedReturnEstimateContextRead */
+        ExpectedReturnEstimateContextRead: {
+            /** Periods */
+            periods: components["schemas"]["ExpectedReturnEstimateRead"][];
+            /** Provider Id */
+            provider_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "NO_MAPPING" | "AMBIGUOUS_SOURCE" | "NO_OBSERVATIONS" | "UNDATED";
+        };
+        /** ExpectedReturnEstimateRead */
+        ExpectedReturnEstimateRead: {
+            /** Analyst Count */
+            analyst_count: number | null;
+            /** Currency */
+            currency: string | null;
+            /**
+             * Data Quality
+             * @enum {string}
+             */
+            data_quality: "PASS" | "DATA_CHECK" | "INVALID";
+            /** Forecast Period */
+            forecast_period: string;
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "REVENUE" | "EPS";
+            /**
+             * Observation Id
+             * Format: uuid
+             */
+            observation_id: string;
+            /** Observed At */
+            observed_at: string | null;
+            /** Period End */
+            period_end: string | null;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "ANNUAL" | "QUARTERLY";
+            /** Provider Id */
+            provider_id: string;
+            /** Quality Reason */
+            quality_reason: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Snapshot Date
+             * Format: date
+             */
+            snapshot_date: string;
+            /** Source Ref */
+            source_ref: string;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+        };
+        /** ExpectedReturnHistoryPointRead */
+        ExpectedReturnHistoryPointRead: {
+            /** Actor */
+            actor: string;
+            /** Base Fv */
+            base_fv: string | null;
+            /** Base Probability */
+            base_probability: string | null;
+            /** Bear Fv */
+            bear_fv: string | null;
+            /** Bear Probability */
+            bear_probability: string | null;
+            /** Bull Fv */
+            bull_fv: string | null;
+            /** Bull Probability */
+            bull_probability: string | null;
+            /** Contract Status */
+            contract_status: string | null;
+            /**
+             * Currency Status
+             * @enum {string}
+             */
+            currency_status: "DOCUMENTED" | "UNKNOWN";
+            /** Effective At */
+            effective_at: string | null;
+            estimate_context: components["schemas"]["ExpectedReturnEstimateContextRead"];
+            /**
+             * Event Status
+             * @enum {string}
+             */
+            event_status: "DATED" | "EFFECTIVE_DATE_UNKNOWN";
+            /** Evidence */
+            evidence: string | null;
+            /** Expected Cash Flow Irr */
+            expected_cash_flow_irr: string | null;
+            /** Expected Excess */
+            expected_excess: string | null;
+            /** Forward Fundamental Cagr */
+            forward_fundamental_cagr: string | null;
+            /** Hurdle */
+            hurdle: string | null;
+            /** Is Current At Cutoff */
+            is_current_at_cutoff: boolean;
+            market_price: components["schemas"]["ExpectedReturnMarketPriceRead"];
+            /** Methodology Version */
+            methodology_version: string | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Id */
+            model_id: string | null;
+            /** Model Key */
+            model_key: string | null;
+            /** Model Label */
+            model_label: string;
+            /** Model Type */
+            model_type: ("UFCF_DCF_10Y_FADE" | "OWNER_CASH_FLOW_10Y" | "RESIDUAL_INCOME_10Y_FADE") | null;
+            /** Output Quality */
+            output_quality: string | null;
+            /** Output Status */
+            output_status: string | null;
+            /** Point Id */
+            point_id: string;
+            /** Rationale */
+            rationale: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Return Semantics
+             * @enum {string}
+             */
+            return_semantics: "NATIVE_METHOD_OUTPUT" | "LEGACY_NORMALIZED_FIELD";
+            /** Revision Id */
+            revision_id: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Revision Source */
+            revision_source: string | null;
+            /** Revision Type */
+            revision_type: string | null;
+            /** Series Id */
+            series_id: string;
+            /** Source */
+            source: string | null;
+            /** Source Actor */
+            source_actor: string | null;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "IMPORTED_CURRENT_CONTRACT" | "IMPORTED_LEGACY_REVISION" | "NATIVE_MODEL_REVISION";
+            /** Source Revision Id */
+            source_revision_id: string | null;
+            /** Valuation Listing Currency */
+            valuation_listing_currency: string | null;
+            /** Valuation Listing Id */
+            valuation_listing_id: string | null;
+            /** Valuation Ticker */
+            valuation_ticker: string | null;
+            /** Valuation Venue */
+            valuation_venue: string | null;
+            /** Weighted Fv */
+            weighted_fv: string | null;
+            /** Weighted Upside */
+            weighted_upside: string | null;
+        };
+        /** ExpectedReturnMarketPriceRead */
+        ExpectedReturnMarketPriceRead: {
+            /** Adjustment Basis */
+            adjustment_basis: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            /** Listing Currency */
+            listing_currency: string | null;
+            /** Listing Id */
+            listing_id: string | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Reference Price */
+            model_reference_price: string | null;
+            /** Observation Id */
+            observation_id: string | null;
+            /** Observed At */
+            observed_at: string | null;
+            /** Provider */
+            provider: string | null;
+            /** Quote */
+            quote: string | null;
+            /** Quote Currency */
+            quote_currency: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Source Ref */
+            source_ref: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "STALE" | "DATA_CHECK" | "NO_DATA" | "CURRENCY_MISMATCH" | "CURRENCY_UNKNOWN" | "LISTING_UNMAPPED" | "PRICE_NOT_CAPTURED" | "UNDATED";
+            /** Ticker */
+            ticker: string | null;
+            /** Venue */
+            venue: string | null;
         };
         /** ExtendedFinancialModelRead */
         ExtendedFinancialModelRead: {
@@ -3254,6 +4337,165 @@ export interface components {
              */
             valuation_status: "VALUED" | "NO_HOLDING_SNAPSHOT" | "INCOMPLETE_HOLDINGS" | "INCOMPLETE_PRICE_COVERAGE" | "INCOMPLETE_FX_COVERAGE";
         };
+        /** PortfolioRankInputSnapshot */
+        PortfolioRankInputSnapshot: {
+            /**
+             * Allocation Status
+             * @enum {string}
+             */
+            allocation_status: "VALUED" | "PRICE_COVERAGE_INCOMPLETE" | "FX_UNAVAILABLE" | "PORTFOLIO_TOTAL_UNAVAILABLE";
+            /** Bear Fair Value */
+            bear_fair_value: string | null;
+            /** Bull Fair Value */
+            bull_fair_value: string | null;
+            compounder_quality: components["schemas"]["PortfolioRankScoreSnapshot"];
+            /** Context Note */
+            context_note: string;
+            /**
+             * Context Version
+             * @constant
+             */
+            context_version: "portfolio-rank-inputs-v1";
+            /** Current Weight */
+            current_weight: string | null;
+            durability_10y: components["schemas"]["PortfolioRankScoreSnapshot"];
+            execution: components["schemas"]["PortfolioRankScoreSnapshot"];
+            /** Expected Excess */
+            expected_excess: string | null;
+            /** Expected Irr */
+            expected_irr: string | null;
+            /** Holding Effective At */
+            holding_effective_at: string | null;
+            /** Holding Snapshot Id */
+            holding_snapshot_id: string | null;
+            /** Hurdle */
+            hurdle: string | null;
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            model_source: components["schemas"]["PortfolioRankModelSource"] | null;
+            /** Portfolio Score */
+            portfolio_score: string | null;
+            risk: components["schemas"]["PortfolioRankScoreSnapshot"];
+            score_contributions: components["schemas"]["PortfolioRankScoreContributions"];
+            /**
+             * Score Formula
+             * @constant
+             */
+            score_formula: "LEGACY_IRR_FIRST_ALLOCATION_V1";
+            /** Target Effective At */
+            target_effective_at: string | null;
+            /** Target Minus Current Gap */
+            target_minus_current_gap: string | null;
+            /** Target Revision Id */
+            target_revision_id: string | null;
+            /** Target Weight */
+            target_weight: string | null;
+            /** Valuation Uncertainty */
+            valuation_uncertainty: string | null;
+            /** Weighted Fair Value */
+            weighted_fair_value: string | null;
+        };
+        /** PortfolioRankModelSource */
+        PortfolioRankModelSource: {
+            /** Contract Status */
+            contract_status: ("PASS" | "NOT_MAPPED" | "NO_CONTRACT" | "DATA_CHECK" | "HISTORICAL_ONLY") | null;
+            /**
+             * Currency Status
+             * @enum {string}
+             */
+            currency_status: "DOCUMENTED" | "UNKNOWN";
+            /** Effective At */
+            effective_at: string | null;
+            /**
+             * Effective Time Status
+             * @enum {string}
+             */
+            effective_time_status: "KNOWN" | "UNKNOWN";
+            /** Listing Id */
+            listing_id: string | null;
+            /** Listing Ticker */
+            listing_ticker: string | null;
+            /** Listing Venue */
+            listing_venue: string | null;
+            /** Methodology Version */
+            methodology_version: string | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Id */
+            model_id: string | null;
+            /** Model Key */
+            model_key: string;
+            /** Model Type */
+            model_type: string | null;
+            /**
+             * Output Quality
+             * @enum {string}
+             */
+            output_quality: "COMPLETE" | "PARTIAL" | "DATA_CHECK" | "UNAVAILABLE";
+            /** Price Effective At */
+            price_effective_at: string | null;
+            /** Price Observation Id */
+            price_observation_id: string | null;
+            /** Price Status */
+            price_status: ("FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA" | "CURRENCY_MISMATCH" | "CURRENCY_UNKNOWN") | null;
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Id */
+            revision_id: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Source */
+            source: string | null;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "NATIVE_MODEL_REVISION" | "IMPORTED_CURRENT_CONTRACT";
+        };
+        /** PortfolioRankScoreContributions */
+        PortfolioRankScoreContributions: {
+            /** Compounder Quality */
+            compounder_quality: string | null;
+            /** Durability 10Y */
+            durability_10y: string | null;
+            /** Execution */
+            execution: string | null;
+            /** Expected Irr */
+            expected_irr: string | null;
+            /** Negative Expected Excess Penalty */
+            negative_expected_excess_penalty: string | null;
+            /** Risk */
+            risk: string | null;
+            /** Target Underweight */
+            target_underweight: string | null;
+            /** Valuation Uncertainty Penalty */
+            valuation_uncertainty_penalty: string | null;
+        };
+        /** PortfolioRankScoreSnapshot */
+        PortfolioRankScoreSnapshot: {
+            /** Assessment Id */
+            assessment_id: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Score */
+            score: string | null;
+            /** Source */
+            source: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ASSESSED" | "MISSING" | "UNAVAILABLE" | "INVALID" | "NOT_ASSESSED";
+        };
         /** PortfolioRead */
         PortfolioRead: {
             /** Base Currency */
@@ -3464,6 +4706,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Input Snapshot */
+            input_snapshot?: components["schemas"]["WatchlistRankInputSnapshot"] | components["schemas"]["PortfolioRankInputSnapshot"] | components["schemas"]["ResearchRankInputSnapshot"] | null;
             /** Position */
             position: number | null;
             /** Reason */
@@ -3479,7 +4723,7 @@ export interface components {
          * RankingEntryStatus
          * @enum {string}
          */
-        RankingEntryStatus: "RANKED" | "INPUTS_UNAVAILABLE" | "NOT_ELIGIBLE" | "EXCLUDED" | "NOT_MIGRATED";
+        RankingEntryStatus: "RANKED" | "INPUTS_UNAVAILABLE" | "NOT_ELIGIBLE" | "EXCLUDED" | "NOT_MIGRATED" | "DATA_CHECK";
         /** RankingHistoryEntry */
         RankingHistoryEntry: {
             entry: components["schemas"]["RankingEntryRead"];
@@ -3687,6 +4931,38 @@ export interface components {
             unit: string;
             /** Value */
             value: string | null;
+        };
+        /** ResearchRankInputSnapshot */
+        ResearchRankInputSnapshot: {
+            /** Bucket Source Ref */
+            bucket_source_ref: string | null;
+            /** Candidate Tier */
+            candidate_tier: ("HIGH" | "LOW") | null;
+            /** Context Note */
+            context_note: string;
+            /**
+             * Context Version
+             * @constant
+             */
+            context_version: "research-rank-inputs-v1";
+            /**
+             * Input Quality
+             * @enum {string}
+             */
+            input_quality: "AVAILABLE" | "MISSING" | "DATA_CHECK";
+            /** Legacy Default Priority Seed */
+            legacy_default_priority_seed: string | null;
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            /** Priority Seed */
+            priority_seed: string | null;
+            /** Priority Seed Source Ref */
+            priority_seed_source_ref: string | null;
+            /** Sort Key */
+            sort_key: string | null;
+            /** Source Digest */
+            source_digest: string | null;
+            /** Used Legacy Default */
+            used_legacy_default: boolean;
         };
         /** ResidualIncomeBase */
         "ResidualIncomeBase-Input": {
@@ -4282,6 +5558,145 @@ export interface components {
             /** Strategic Cash Weight */
             strategic_cash_weight: string;
         };
+        /** TemporalAlignedValueRead */
+        TemporalAlignedValueRead: {
+            /** Analyst Count */
+            analyst_count?: number | null;
+            /** Currency */
+            currency: string | null;
+            /** Data Quality */
+            data_quality: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            /** High Value */
+            high_value?: string | null;
+            /** Low Value */
+            low_value?: string | null;
+            /** Observed At */
+            observed_at: string | null;
+            /** Period End */
+            period_end: string | null;
+            /** Quality Reason */
+            quality_reason: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Source Name */
+            source_name: string | null;
+            /** Source Observation Id */
+            source_observation_id: string | null;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Status */
+            status: string;
+            /** Unit */
+            unit: string | null;
+            /** Value */
+            value: string | null;
+        };
+        /** TemporalModelForecastRead */
+        TemporalModelForecastRead: {
+            /** Effective At */
+            effective_at: string | null;
+            /** Fiscal Year Mapping Basis */
+            fiscal_year_mapping_basis: string;
+            /** Forecast Year */
+            forecast_year: number | null;
+            /** Methodology Version */
+            methodology_version: string | null;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Model Name */
+            model_name: string;
+            model_type: components["schemas"]["FinancialModelType"];
+            price_at_forecast: components["schemas"]["TemporalPriceRead"];
+            /** Rationale */
+            rationale: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Revision Id */
+            revision_id: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Revision Source */
+            revision_source: string | null;
+            /** Status */
+            status: string;
+            subsequent_market_return: components["schemas"]["TemporalReturnRead"];
+            /** Unit */
+            unit: string;
+            valuation_listing: components["schemas"]["ListingRead"];
+            /** Value */
+            value: string | null;
+        };
+        /** TemporalPriceRead */
+        TemporalPriceRead: {
+            /** Age Days */
+            age_days: number | null;
+            /** Close */
+            close: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Data Quality */
+            data_quality: string | null;
+            listing: components["schemas"]["ListingRead"] | null;
+            /** Market Date */
+            market_date: string | null;
+            /** Observed At */
+            observed_at: string | null;
+            /** Provider */
+            provider: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Status */
+            status: string;
+            /** Total Return Close */
+            total_return_close: string | null;
+        };
+        /** TemporalReturnRead */
+        TemporalReturnRead: {
+            /** Actual Days */
+            actual_days: number | null;
+            /** Basis */
+            basis: string;
+            /** End Market Date */
+            end_market_date: string | null;
+            /** End Total Return Close */
+            end_total_return_close: string | null;
+            /** Horizon Days */
+            horizon_days: number;
+            /** Reason */
+            reason: string | null;
+            /** Return Fraction */
+            return_fraction: string | null;
+            /** Start Market Date */
+            start_market_date: string | null;
+            /** Start Total Return Close */
+            start_total_return_close: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+        };
+        /** UniverseEstimateMomentumRead */
+        UniverseEstimateMomentumRead: {
+            company: components["schemas"]["CompanyRead"];
+            estimate_momentum: components["schemas"]["EstimateMomentumSummaryRead"];
+        };
+        /** UniverseExecutionPaceSummary */
+        UniverseExecutionPaceSummary: {
+            company: components["schemas"]["CompanyRead"];
+            decision: components["schemas"]["ExecutionPaceHistoryEntry"] | null;
+        };
         /** UniverseMarketSummary */
         UniverseMarketSummary: {
             company: components["schemas"]["CompanyRead"];
@@ -4324,6 +5739,130 @@ export interface components {
             identity: string;
             /** Reason */
             reason: string;
+        };
+        /** WatchlistRankInputSnapshot */
+        WatchlistRankInputSnapshot: {
+            compounder_quality: components["schemas"]["WatchlistRankScoreSnapshot"];
+            /** Context Note */
+            context_note: string;
+            /**
+             * Context Version
+             * @constant
+             */
+            context_version: "watchlist-rank-inputs-v1";
+            /**
+             * Decision Context
+             * @constant
+             */
+            decision_context: "QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED";
+            durability_10y: components["schemas"]["WatchlistRankScoreSnapshot"];
+            /** Expected Excess */
+            expected_excess: string | null;
+            /** Expected Irr */
+            expected_irr: string | null;
+            /** Forward Fundamental Cagr */
+            forward_fundamental_cagr: string | null;
+            /** Hurdle */
+            hurdle: string | null;
+            /**
+             * Return Semantics
+             * @enum {string}
+             */
+            return_semantics: "NATIVE_METHOD_OUTPUT" | "LEGACY_NORMALIZED_FIELD";
+            return_source: components["schemas"]["WatchlistRankReturnSource"];
+            /** Weighted Fair Value */
+            weighted_fair_value: string | null;
+        };
+        /** WatchlistRankReturnSource */
+        WatchlistRankReturnSource: {
+            /** Contract Status */
+            contract_status: ("PASS" | "NOT_MAPPED" | "NO_CONTRACT" | "DATA_CHECK" | "HISTORICAL_ONLY") | null;
+            /** Contract Version */
+            contract_version: string | null;
+            /**
+             * Currency Status
+             * @enum {string}
+             */
+            currency_status: "DOCUMENTED" | "UNKNOWN";
+            /** Effective At */
+            effective_at: string | null;
+            /**
+             * Effective Time Status
+             * @enum {string}
+             */
+            effective_time_status: "KNOWN" | "UNKNOWN";
+            /** Listing Id */
+            listing_id: string | null;
+            /** Listing Ticker */
+            listing_ticker: string | null;
+            /** Listing Venue */
+            listing_venue: string | null;
+            /** Methodology Version */
+            methodology_version: string | null;
+            /** Migration Status */
+            migration_status: ("PARITY_PASS" | "PARTIAL_MAPPING" | "DATA_CHECK" | "BLOCKED") | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Id */
+            model_id: string | null;
+            /** Model Key */
+            model_key: string | null;
+            /** Model Type */
+            model_type: string | null;
+            /**
+             * Output Quality
+             * @enum {string}
+             */
+            output_quality: "COMPLETE" | "PARTIAL" | "DATA_CHECK" | "UNAVAILABLE";
+            /** Price Effective At */
+            price_effective_at: string | null;
+            /** Price Observation Id */
+            price_observation_id: string | null;
+            /** Price Status */
+            price_status: ("FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA" | "CURRENCY_MISMATCH" | "CURRENCY_UNKNOWN") | null;
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Id */
+            revision_id: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Source */
+            source: string | null;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "NATIVE_MODEL_REVISION" | "IMPORTED_CURRENT_CONTRACT";
+            /** Source Revision Id */
+            source_revision_id: string | null;
+        };
+        /** WatchlistRankScoreSnapshot */
+        WatchlistRankScoreSnapshot: {
+            /** Assessment Id */
+            assessment_id: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            /** Rationale */
+            rationale: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Score */
+            score: string | null;
+            /** Source */
+            source: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ASSESSED" | "MISSING" | "UNAVAILABLE" | "INVALID" | "NOT_ASSESSED";
         };
     };
     responses: never;
@@ -4379,6 +5918,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    get_attention_feed_v1_attention_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                event_type?: string | null;
+                lifecycle?: components["schemas"]["Lifecycle"] | null;
+                severity?: string | null;
+                status?: string | null;
+                lookback_days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttentionFeedRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4956,6 +6532,141 @@ export interface operations {
             };
         };
     };
+    get_company_estimate_momentum_v1_companies__company_id__estimate_momentum_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyEstimateMomentumRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_execution_pace_v1_companies__company_id__execution_pace_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyExecutionPaceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_expected_return_attribution_v1_companies__company_id__expected_return_attribution_get: {
+        parameters: {
+            query: {
+                prior_point_id: string;
+                current_point_id: string;
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyExpectedReturnAttributionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_expected_return_history_v1_companies__company_id__expected_return_history_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyExpectedReturnHistoryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_company_financial_models_v1_companies__company_id__financial_models_get: {
         parameters: {
             query?: never;
@@ -5480,6 +7191,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourceDocumentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_temporal_alignment_v1_companies__company_id__temporal_alignment_get: {
+        parameters: {
+            query: {
+                fiscal_year: number;
+                as_of: string;
+                known_at?: string | null;
+                outcome_known_at?: string | null;
+                horizon_days?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyTemporalAlignmentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_execution_pace_runs_v1_execution_pace_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionPaceRunRead"][];
+                };
+            };
+        };
+    };
+    post_execution_pace_run_v1_execution_pace_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecutionPaceRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionPaceRunRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_execution_pace_run_v1_execution_pace_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionPaceRunDetailRead"];
                 };
             };
             /** @description Validation Error */
@@ -6374,6 +8206,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_universe_estimate_momentum_summary_v1_universe_estimate_momentum_summary_get: {
+        parameters: {
+            query?: {
+                lifecycle?: components["schemas"]["Lifecycle"] | null;
+                search?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UniverseEstimateMomentumRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_universe_execution_pace_summary_v1_universe_execution_pace_summary_get: {
+        parameters: {
+            query?: {
+                lifecycle?: components["schemas"]["Lifecycle"] | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UniverseExecutionPaceSummary"][];
                 };
             };
             /** @description Validation Error */

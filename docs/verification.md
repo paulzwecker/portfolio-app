@@ -1,5 +1,21 @@
 # Verification records
 
+## Local Playwright server modes
+
+Playwright uses the Next.js development server by default. On Windows hosts
+where that server's worker-process creation is restricted, build the application
+and start the production server in one terminal, then reuse it from Playwright:
+
+```powershell
+npm run build
+$env:E2E_WEB_PORT = "3000"
+npm run start:web
+```
+
+In a second terminal, set `$env:E2E_USE_PRODUCTION_SERVER = "1"` and run
+`npm run test:e2e -- --workers=1`. The production test mode reuses the already
+running server and does not try to launch another web server process.
+
 ## Milestone 1A — 2026-10-04
 
 Implemented and verified only Milestone 1A. The decisions in domain-model.md were
@@ -340,3 +356,122 @@ Coverage is ready for explicitly mapped SEC issuers only. The browser/API surfac
 shows empty and unmapped states honestly. SEC filing bodies and issuer PDFs remain
 on their respective primary sources; see [`source-documents.md`](source-documents.md)
 for the source terms, request-rate policy and retention boundary.
+
+## Temporal forecast/outcome alignment — 2026-10-05
+
+The initial temporal query selects the eligible model revision and aligns annual
+Revenue inputs where canonical source periods permit. Forecast and outcome
+knowledge cutoffs are independent; exact intraday cutoffs also bound effective and
+filing timestamps. Model projections stay unmapped until their revisions have an
+explicit fiscal-year anchor. No database migration was required.
+
+| Check                              |                                                                                                           Result |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------: |
+| Full `npm run check`               |                                     Passed: lint, format, TypeScript/mypy, tests, contracts and production build |
+| Vitest                             |                                                                                                        69 passed |
+| pytest with PostgreSQL integration |                                                                                                       136 passed |
+| Temporal cutoff tests              | 2 passed; includes same-day future-effective revision, price, consensus mapping, filing and return-horizon edges |
+| Chromium desktop/mobile E2E        |                                  18 passed; 10 live-database cases skipped by the suite's explicit database gate |
+| Alembic schema check               |                                                                       Passed; no new migration or metadata drift |
+| OpenAPI / TypeScript contracts     |                                                                                                          Current |
+
+The local development database at verification time contains 219 companies, 21 in
+Portfolio and 71 in Watchlist; two native models have 15 ordinal Base Revenue
+projections with no fiscal-year anchors.
+It has 67 consensus observations but none with an absolute fiscal period end, no
+reported-fundamental observations, and daily price history for 99 of 100 listings.
+Total-return history covers 84 listings, but the imported price rows lack source
+`observed_at` timestamps. The UI exposes those prices as data-check context and the
+alignment query withholds returns. Therefore the implementation is ready for
+point-in-time reads, but the current local facts do not yet produce a complete
+forecast/consensus/actual comparison. See [`temporal-alignment.md`](temporal-alignment.md).
+
+## Native model migration — Portfolio DCF sub-batch — 2026-10-05
+
+The importer accepted `P-ASML`, `P-ISRG` and `P-MA` as immutable native UFCF DCF
+revisions. Each reconciles all 30 projection and 22 normalized-output/return checks.
+The replay imported zero revisions and returned `ALREADY_IMPORTED` for all five
+currently imported models. Nine other active UFCF tabs remain `DATA_CHECK`, `P-NVO`
+is blocked on exact listing/currency confirmation, and `W-GEV` is partially mapped;
+their source discrepancies are retained in the
+[`batch-2 migration report`](reconciliation/native-model-input-import-batch-2-2026-10-05.json).
+
+| Check                               | Result                                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| Full `npm run check`                | Passed: lint, formatting, TypeScript/mypy, Vitest, pytest, contracts and production build |
+| Vitest                              | 69 passed                                                                                 |
+| pytest with PostgreSQL integration  | 137 passed                                                                                |
+| Focused migration/inventory tests   | 11 passed                                                                                 |
+| Chromium desktop/mobile E2E         | 18 passed; 10 explicit live-database cases skipped                                        |
+| Native import and idempotent replay | 3 imported; replay 0 imported and 5 already imported                                      |
+| Model-migration-status API          | All five native models report `NATIVE_EDITABLE` / `PARITY_PASS`                           |
+| Database schema                     | No schema change required                                                                 |
+
+Native input coverage is 4 of 21 Portfolio model tabs and 1 of 71 Watchlist tabs.
+The 87 other active models with published outputs remain output-only pending safe
+input mapping and parity.
+
+## Canonical Watchlist Rank activation — 2026-10-05
+
+Watchlist Rank v3 is active in the existing immutable ranking-run domain. It sorts
+supported explicit Watchlist members by Expected IRR descending and canonical
+listing ticker ascending for ties. Legacy normalized outputs and native
+shareholder-cash-flow returns are kept in separate cohorts. Score dimensions,
+Forward Fundamental CAGR and valuation context remain separate from the ordinal
+position because the workbook does not document numeric quality/durability gates
+for this rank. The application has not implemented Candidate Rank.
+
+The latest development run covers 219 companies: 71 explicit Watchlist members,
+14 ranked legacy normalized outputs, 45 `DATA_CHECK`, 12 `INPUTS_UNAVAILABLE` and
+148 `NOT_ELIGIBLE`. `DATA_CHECK` is driven by 35 unknown model currencies, nine
+ambiguous/missing listing mappings and one native Toast reference price superseded
+by a later exact-listing quote. All ranked and data-check entries retain their
+point-in-time input snapshots. The workbook comparison matches nine representative
+cached ranks; the remaining cached order is not claimed as parity because it has
+62 documented-formula mismatches and six duplicate positions.
+
+| Check                            | Result                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Full `npm run check`             | Passed: lint, formatting, TypeScript/mypy, Vitest, pytest, contracts and production build      |
+| Vitest / pytest                  | 78 frontend tests and 163 backend tests passed                                                 |
+| Chromium desktop/mobile E2E      | 18 passed; 10 live-database cases skipped by the suite's explicit database gate                |
+| Alembic upgrade and schema check | `npm run db:migrate` passed; `npm run db:check` reports no schema drift                        |
+| Workbook rank reconciliation     | Nine representative cached matches; full cached-rank parity is unresolved                      |
+| Ranking-run input snapshots      | Ranked and data-check rows retain source, methodology and relevant point-in-time input context |
+
+See [`watchlist-rank.md`](watchlist-rank.md) and its linked reconciliation record
+for the detailed semantics, coverage, workbook evidence and remaining comparability
+questions.
+
+## Portfolio and Research Rank activation — 2026-10-06
+
+Portfolio Rank v2 now calculates the workbook's documented 100-point Portfolio
+Score from point-in-time canonical state. The first live run has 3 ranked companies,
+10 `DATA_CHECK`, 8 `INPUTS_UNAVAILABLE`, and 198 `NOT_ELIGIBLE`. It keeps native
+shareholder-cash-flow Expected IRR separate from legacy normalized output semantics.
+Workbook formula fixtures match for 18 input-complete cases to `1e-8`; three source
+cases lack inputs.
+
+Research Rank v2 now calculates the documented Candidate High/Low Research Sort Key.
+Its focused source import mapped and inserted 98 inputs from the workbook SHA shown
+in [research-rank.md](research-rank.md); all identities resolved, there were no
+source data-check rows, and replay inserted zero. Nine blank seeds use only the
+workbook's explicit 50,000 fallback. The first live run has 96 ranked, five
+`INPUTS_UNAVAILABLE` for missing point-in-time lifecycle, and 118 `NOT_ELIGIBLE`.
+Five representative cached top ranks match exactly. The source's remaining cached
+ordinal positions are demonstrably stale and are not copied into new runs.
+
+| Check                          | Result                                                                                                          |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                | Passed: lint, format, TypeScript/mypy, 80 Vitest tests, 178 pytest tests, contract check, production build      |
+| Chromium desktop/mobile E2E    | 20 passed; 10 explicit live-database cases skipped                                                              |
+| Alembic upgrade / schema check | `npm run db:migrate` passed; `npm run db:check` reports no drift                                                |
+| Research source import         | 98 inserted, zero unresolved identities/data checks; replay inserted zero                                       |
+| Ranking history/as-of tests    | Earlier Research run remains unavailable when its source inputs were recorded later; entries remain append-only |
+
+The responsive Universe flow records a Research Rank run and shows candidate tier,
+sort key, seed/fallback, and its research-attention purpose. Company keeps current
+and prior Research context separate from investment ranks. Current coverage,
+unavailable reasons, formula evidence and the immutable run IDs are in the
+[Research Rank report](research-rank.md),
+[Portfolio Rank report](portfolio-rank.md), and their linked reconciliation JSON.

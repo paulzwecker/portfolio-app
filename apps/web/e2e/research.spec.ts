@@ -10,13 +10,40 @@ const company = {
   lifecycle: null,
   lifecycle_event_id: null,
 };
+const momentumSummary = (
+  companyId: string,
+  availability: "NO_MAPPING" | "INSUFFICIENT_HISTORY" = "NO_MAPPING",
+) => ({
+  company_id: companyId,
+  methodology_version: "legacy-estimate-momentum-v2-partial-1",
+  availability,
+  direction: null,
+  raw_score: null,
+  confidence_adjusted_score: null,
+  confidence: "0",
+  confidence_band: "NO_DATA",
+  coverage_fraction: "0",
+  coverage_count: 0,
+  coverage_total: 20,
+  freshness: "NO_DATA",
+  data_quality: availability === "NO_MAPPING" ? "NO_DATA" : "DATA_CHECK",
+  provider_id:
+    availability === "NO_MAPPING" ? null : "legacy_workbook_estimates",
+  latest_snapshot_date: null,
+  as_of: "2026-10-05",
+  known_at: null,
+  reason:
+    availability === "NO_MAPPING"
+      ? "No consensus source is selected for this as-of date."
+      : "The selected source has no future annual Revenue/EPS estimates with resolved fiscal-period ends.",
+});
 const scoreDimensions = [
   ["DURABILITY_10Y", "0.00", "HIGHER_IS_BETTER"],
   ["COMPOUNDER_QUALITY", "0.00", "HIGHER_IS_BETTER"],
   ["EXECUTION", "1.00", "HIGHER_IS_BETTER"],
   ["RISK", "1.00", "HIGHER_IS_RISK"],
 ] as const;
-const scoreSummary = (issuer: typeof company) => [
+const scoreSummary = (issuer: Pick<typeof company, "created_at">) => [
   {
     company: issuer,
     scores: scoreDimensions.map(
@@ -300,21 +327,77 @@ test("universe pending, identity and missing lifecycle states are explicit", asy
   ).toBeVisible();
 });
 
-test("universe keeps unranked and not-migrated ranking states explicit", async ({
+test("universe keeps unavailable and data-check ranking states explicit", async ({
   page,
 }) => {
   const types = ["PORTFOLIO", "WATCHLIST", "RESEARCH"] as const;
+  const watchlistInputSnapshot = {
+    context_version: "watchlist-rank-inputs-v1",
+    expected_irr: "0.12",
+    return_semantics: "LEGACY_NORMALIZED_FIELD",
+    return_source: {
+      source_kind: "IMPORTED_CURRENT_CONTRACT",
+      record_id: id,
+      model_id: null,
+      revision_id: null,
+      revision_number: null,
+      model_key: "P-EXAMPLE",
+      model_type: null,
+      methodology_version: null,
+      contract_version: "1.0.0",
+      source_revision_id: "legacy-1",
+      source: "Workbook fixture",
+      effective_at: null,
+      recorded_at: company.created_at,
+      effective_time_status: "UNKNOWN",
+      model_currency: "USD",
+      currency_status: "DOCUMENTED",
+      output_quality: "COMPLETE",
+      contract_status: "PASS",
+      price_status: null,
+      price_effective_at: null,
+      price_observation_id: null,
+      listing_id: id,
+      listing_ticker: "EX",
+      listing_venue: "NASDAQ",
+      migration_status: null,
+    },
+    durability_10y: {
+      score: "4.0",
+      status: "ASSESSED",
+      assessment_id: id,
+      effective_at: company.created_at,
+      recorded_at: company.created_at,
+      rationale: "Long business life supported by evidence.",
+      source: "fixture",
+    },
+    compounder_quality: {
+      score: null,
+      status: "NOT_ASSESSED",
+      assessment_id: null,
+      effective_at: null,
+      recorded_at: null,
+      rationale: null,
+      source: null,
+    },
+    forward_fundamental_cagr: "0.11",
+    weighted_fair_value: "25",
+    hurdle: "0.09",
+    expected_excess: "0.03",
+    decision_context: "QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED",
+    context_note: "Missing quality context remains explicit.",
+  };
   const rankings = types.map((ranking_type, index) => {
     const definition = {
       id: `22222222-2222-4222-8222-22222222222${index}`,
       ranking_type,
-      version: 1,
+      version: ranking_type === "WATCHLIST" ? 3 : 2,
       title: `${ranking_type} Rank`,
       methodology: "Documented workbook order; input not migrated.",
       population_rule: "Explicit domain population.",
       required_inputs: "Canonical source values.",
       source_reference: "reference/workbook/Portfolio_Watchlist.xlsx",
-      implementation_status: "NOT_MIGRATED",
+      implementation_status: "READY",
       effective_from: company.created_at,
       status: "ACTIVE",
       recorded_at: company.created_at,
@@ -324,7 +407,7 @@ test("universe keeps unranked and not-migrated ranking states explicit", async (
       definition,
       as_of: company.created_at,
       recorded_at: company.created_at,
-      status: "UNAVAILABLE",
+      status: "PARTIAL",
       actor: "SYSTEM",
       reason: "Availability-only fixture.",
       source: "browser-fixture",
@@ -340,10 +423,61 @@ test("universe keeps unranked and not-migrated ranking states explicit", async (
         company_id: id,
         position: null,
         status:
-          ranking_type === "PORTFOLIO" ? "INPUTS_UNAVAILABLE" : "NOT_MIGRATED",
-        reason: "Required source inputs are not migrated.",
+          ranking_type === "WATCHLIST" ? "DATA_CHECK" : "INPUTS_UNAVAILABLE",
+        reason:
+          ranking_type === "RESEARCH"
+            ? "Point-in-time lifecycle is unavailable."
+            : "Required source inputs are unavailable.",
+        ...(ranking_type === "WATCHLIST"
+          ? { input_snapshot: watchlistInputSnapshot }
+          : ranking_type === "RESEARCH"
+            ? {
+                input_snapshot: {
+                  context_version: "research-rank-inputs-v1",
+                  lifecycle: null,
+                  candidate_tier: null,
+                  priority_seed: null,
+                  legacy_default_priority_seed: null,
+                  used_legacy_default: false,
+                  sort_key: null,
+                  input_quality: "MISSING",
+                  source_digest: null,
+                  bucket_source_ref: null,
+                  priority_seed_source_ref: null,
+                  context_note: "Lifecycle is unavailable at this run.",
+                },
+              }
+            : {}),
       },
     };
+  });
+  let submittedReason = "";
+  let submittedType = "";
+  await page.route(/\/api\/research\/ranking-runs$/, async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const body = route.request().postDataJSON() as {
+      ranking_type: string;
+      reason: string;
+    };
+    submittedReason = body.reason;
+    submittedType = body.ranking_type;
+    const selectedDefinition = rankings.find(
+      (item) => item.definition.ranking_type === body.ranking_type,
+    )!.definition;
+    await route.fulfill({
+      json: {
+        id: "77777777-7777-4777-8777-777777777777",
+        definition: selectedDefinition,
+        as_of: company.created_at,
+        recorded_at: company.created_at,
+        status: "PARTIAL",
+        actor: "LOCAL_USER",
+        reason: body.reason,
+        source: "web-universe",
+        company_count: 1,
+        ranked_count: 0,
+      },
+    });
   });
   await page.route(/\/api\/research\/universe(?:\/|$)/, (route) => {
     const url = new URL(route.request().url());
@@ -359,8 +493,37 @@ test("universe keeps unranked and not-migrated ranking states explicit", async (
   await page.goto("/universe");
   await expect(page.getByRole("link", { name: company.name })).toBeVisible();
   await expect(
-    page.getByText("NOT_MIGRATED", { exact: true }).first(),
+    page.getByText("INPUTS_UNAVAILABLE", { exact: true }).first(),
   ).toBeVisible();
+  await expect(
+    page.getByText("DATA_CHECK", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Legacy output · separate return semantics"),
+  ).toBeVisible();
+  await expect(page.getByText("12%", { exact: true })).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Ranking run reason" })
+    .fill("Record explicit Watchlist Rank from the UI.");
+  await page.getByRole("button", { name: "Record Watchlist Rank" }).click();
+  await expect
+    .poll(() => submittedReason)
+    .toBe("Record explicit Watchlist Rank from the UI.");
+  await expect.poll(() => submittedType).toBe("WATCHLIST");
+  await page.getByLabel("Ranking type").selectOption("RESEARCH");
+  await expect(
+    page.getByText(
+      /Research Rank orders Candidate High\/Low deep-dive priority/,
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Ranking run reason" })
+    .fill("Record Research Rank from the UI.");
+  await page.getByRole("button", { name: "Record Research Rank" }).click();
+  await expect.poll(() => submittedType).toBe("RESEARCH");
+  await expect
+    .poll(() => submittedReason)
+    .toBe("Record Research Rank from the UI.");
   await page.getByLabel("Ranking filter").selectOption("UNRANKED");
   await expect(page.getByRole("status")).toHaveText("1 businesses shown");
   await page.getByLabel("Sort companies").selectOption("rank-asc");
@@ -371,6 +534,147 @@ test("universe keeps unranked and not-migrated ranking states explicit", async (
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("Research Rank explains research priority, records a run, and fits mobile", async ({
+  page,
+}) => {
+  const candidate = { ...company, lifecycle: "CANDIDATE" };
+  const recordedAt = "2026-10-06T00:00:00Z";
+  const types = ["PORTFOLIO", "WATCHLIST", "RESEARCH"] as const;
+  const currents = types.map((ranking_type, index) => {
+    const definition = {
+      id: `23232323-2323-4232-8232-23232323232${index}`,
+      ranking_type,
+      version: ranking_type === "WATCHLIST" ? 3 : 2,
+      title: `${ranking_type} Rank`,
+      methodology: "Documented ranking methodology.",
+      population_rule: "Explicit domain population.",
+      required_inputs: "Canonical source values.",
+      source_reference: "reference/workbook/Portfolio_Watchlist.xlsx",
+      implementation_status: "READY",
+      effective_from: recordedAt,
+      status: "ACTIVE",
+      recorded_at: recordedAt,
+    };
+    if (ranking_type !== "RESEARCH") {
+      return { definition, run: null, entry: null };
+    }
+    const run = {
+      id: "34343434-3434-4343-8343-343434343434",
+      definition,
+      as_of: recordedAt,
+      recorded_at: recordedAt,
+      status: "COMPLETE",
+      actor: "SYSTEM",
+      reason: "Canonical candidate research-priority snapshot.",
+      source: "research-rank-test",
+      company_count: 1,
+      ranked_count: 1,
+    };
+    return {
+      definition,
+      run,
+      entry: {
+        id: "45454545-4545-4454-8454-454545454545",
+        run_id: run.id,
+        company_id: candidate.id,
+        position: 1,
+        status: "RANKED",
+        reason: "Research Sort Key descending, then ticker ascending.",
+        input_snapshot: {
+          context_version: "research-rank-inputs-v1",
+          lifecycle: "CANDIDATE",
+          candidate_tier: "HIGH",
+          priority_seed: "3.0000",
+          legacy_default_priority_seed: null,
+          used_legacy_default: false,
+          sort_key: "199997.0000",
+          input_quality: "AVAILABLE",
+          source_digest: "a".repeat(64),
+          bucket_source_ref: "Portfolio_Watchlist.xlsx:Universe Registry!C5",
+          priority_seed_source_ref:
+            "Portfolio_Watchlist.xlsx:Candidate Ranking!A2",
+          context_note: "Research Rank prioritizes research attention only.",
+        },
+      },
+    };
+  });
+  let submittedType = "";
+  let submittedReason = "";
+  await page.route(/\/api\/research\/ranking-runs$/, async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const body = route.request().postDataJSON() as {
+      ranking_type: string;
+      reason: string;
+    };
+    submittedType = body.ranking_type;
+    submittedReason = body.reason;
+    const definition = currents.find(
+      (item) => item.definition.ranking_type === body.ranking_type,
+    )!.definition;
+    await route.fulfill({
+      json: {
+        id: "56565656-5656-4565-8565-565656565656",
+        definition,
+        as_of: recordedAt,
+        recorded_at: recordedAt,
+        status: "COMPLETE",
+        actor: "LOCAL_USER",
+        reason: body.reason,
+        source: "web-universe",
+        company_count: 1,
+        ranked_count: 1,
+      },
+    });
+  });
+  await page.route(/\/api\/research\/universe(?:\/|$)/, (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/ranking-summary")) {
+      return route.fulfill({
+        json: [{ company: candidate, rankings: currents }],
+      });
+    }
+    if (url.pathname.endsWith("/score-summary")) {
+      return route.fulfill({
+        json: [{ ...scoreSummary(company)[0]!, company: candidate }],
+      });
+    }
+    return route.fulfill({ json: [] });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/universe");
+  await expect(page.getByRole("link", { name: candidate.name })).toBeVisible();
+  await expect(page.getByText("No Execution Pace run recorded.")).toBeVisible();
+  await page.getByLabel("Ranking type").selectOption("RESEARCH");
+  await expect(
+    page.getByText(
+      /research-attention queue, not an investment-attractiveness signal/,
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Candidate tier / sort key")).toBeVisible();
+  await expect(page.getByText("HIGH / 199997")).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Ranking run reason" })
+    .fill("Review next research priority.");
+  await page.getByRole("button", { name: "Record Research Rank" }).click();
+  await expect.poll(() => submittedType).toBe("RESEARCH");
+  await expect
+    .poll(() => submittedReason)
+    .toBe("Review next research priority.");
+  await page.getByLabel("Execution Pace state").selectOption("NO_RUN");
+  await expect(page.getByRole("status")).toContainText("1 businesses shown");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(
+    page.getByText("Research attention queue · not an investment rank"),
+  ).toBeVisible();
 });
 
 test("model outputs keep missing values visible across responsive universe and company views", async ({
@@ -449,6 +753,10 @@ test("model outputs keep missing values visible across responsive universe and c
     history_count: 0,
     models: [],
   };
+  const momentumRead = {
+    ...momentumSummary(id, "INSUFFICIENT_HISTORY"),
+    periods: [],
+  };
 
   await page.route(/\/api\/research\//, async (route) => {
     const url = new URL(route.request().url());
@@ -473,6 +781,19 @@ test("model outputs keep missing values visible across responsive universe and c
           { company: missingCompany, outputs: missingOutputs },
         ],
       });
+    if (pathname === "universe/estimate-momentum-summary")
+      return route.fulfill({
+        json: [
+          {
+            company,
+            estimate_momentum: momentumSummary(id, "INSUFFICIENT_HISTORY"),
+          },
+          {
+            company: missingCompany,
+            estimate_momentum: momentumSummary(missingId),
+          },
+        ],
+      });
     if (pathname === "universe")
       return route.fulfill({ json: [company, missingCompany] });
     if (pathname === `companies/${id}`)
@@ -492,10 +813,22 @@ test("model outputs keep missing values visible across responsive universe and c
       });
     if (pathname === `companies/${id}/market-data`)
       return route.fulfill({ json: [] });
+    if (pathname === `companies/${id}/estimate-momentum`)
+      return route.fulfill({ json: momentumRead });
     if (pathname === `companies/${id}/model-outputs/current`)
       return route.fulfill({ json: currentOutputs });
     if (pathname === `companies/${id}/model-outputs/history`)
       return route.fulfill({ json: [outputSnapshot, historySnapshot] });
+    if (pathname === `companies/${id}/expected-return-history`)
+      return route.fulfill({
+        json: {
+          company_id: id,
+          as_of: "2026-10-05",
+          known_at: "2026-10-05T12:00:00Z",
+          status: "NO_HISTORY",
+          history: [],
+        },
+      });
     if (pathname === `companies/${id}/financial-models`)
       return route.fulfill({ json: [] });
     if (pathname === `companies/${id}/canonical-financial-models`)
@@ -524,6 +857,12 @@ test("model outputs keep missing values visible across responsive universe and c
   await expect(
     page.getByText("No current model contract is published.").first(),
   ).toBeVisible();
+  await expect(
+    page.getByText("No direction", { exact: true }).first(),
+  ).toBeVisible();
+  await page.getByLabel("Estimate Momentum state").selectOption("UNAVAILABLE");
+  await expect(page.getByRole("status")).toHaveText("2 businesses shown");
+  await page.getByLabel("Estimate Momentum state").selectOption("");
   await page.getByLabel("Model output coverage").selectOption("AVAILABLE");
   await expect(page.getByRole("status")).toHaveText("1 businesses shown");
   await page.getByLabel("Sort companies").selectOption("irr-desc");
@@ -538,6 +877,14 @@ test("model outputs keep missing values visible across responsive universe and c
     page.getByText("No legacy model tab is mapped to this company."),
   ).toBeVisible();
   await expect(page.getByText("Lifecycle unassigned")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Estimate Momentum" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "No usable forward annual Revenue/EPS estimate periods are available.",
+    ),
+  ).toBeVisible();
   await expect(
     page.getByText("No target", { exact: true }).first(),
   ).toBeVisible();
@@ -688,6 +1035,23 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ),
     history: [{ run: rankingRun, entry: rankingEntry }],
   };
+  const paceRun = {
+    id: "14141414-1414-4141-8141-141414141414",
+    portfolio_id: portfolioId,
+    as_of: observedAt,
+    recorded_at: observedAt,
+    methodology_version: "legacy-execution-pace-v1",
+    status: "UNAVAILABLE",
+    actor: "LOCAL_USER",
+    reason: "Record current execution context.",
+    source: "web-company-explorer",
+    company_count: 1,
+    available_count: 0,
+    review_count: 1,
+    unavailable_count: 0,
+    not_applicable_count: 0,
+  };
+  let submittedPaceReason = "";
   const companyDetail = {
     company: explorerCompany,
     securities: [security],
@@ -1027,11 +1391,355 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       },
     ],
   };
+  const estimateMomentumRead = {
+    ...momentumSummary(id, "INSUFFICIENT_HISTORY"),
+    availability: "DIRECTION_ONLY",
+    direction: "POSITIVE",
+    raw_score: "0.5",
+    confidence_adjusted_score: "0.05",
+    confidence: "0.1",
+    confidence_band: "COLLECTING",
+    coverage_fraction: "0.05",
+    coverage_count: 1,
+    freshness: "FRESH",
+    data_quality: "PASS",
+    provider_id: "fmp_estimates",
+    latest_snapshot_date: "2026-10-05",
+    reason: "Direction is visible with low history coverage.",
+    periods: [
+      {
+        metric: "REVENUE",
+        horizon: "FY+1",
+        forecast_period: "FY2027",
+        period_end: "2027-12-31",
+        currency: "USD",
+        unit: "CURRENCY",
+        analyst_count: 11,
+        current_value: "1200000",
+        current_snapshot_date: "2026-10-05",
+        data_quality: "PASS",
+        quality_reason: null,
+        windows: [
+          {
+            window: "12M",
+            status: "AVAILABLE",
+            reference_value: "1000000",
+            reference_snapshot_date: "2025-10-05",
+            reference_days_before_target: 0,
+            revision_fraction: "0.2",
+            component_score: "2",
+            reason: null,
+          },
+          {
+            window: "6M",
+            status: "MISSING_REFERENCE",
+            reference_value: null,
+            reference_snapshot_date: null,
+            reference_days_before_target: null,
+            revision_fraction: null,
+            component_score: null,
+            reason: "No same-provider reference exists.",
+          },
+          {
+            window: "3M",
+            status: "MISSING_REFERENCE",
+            reference_value: null,
+            reference_snapshot_date: null,
+            reference_days_before_target: null,
+            revision_fraction: null,
+            component_score: null,
+            reason: "No same-provider reference exists.",
+          },
+        ],
+      },
+    ],
+  };
   const noModel = {
     company_id: id,
     status: "NO_MODEL",
     history_count: 0,
     models: [],
+  };
+  const expectedPoint = ({
+    pointId,
+    sourceKind,
+    effectiveAt,
+    recordedAt,
+    seriesId,
+    revisionNumber,
+    isCurrent,
+    weightedFairValue,
+    quote,
+  }: {
+    pointId: string;
+    sourceKind: string;
+    effectiveAt: string;
+    recordedAt: string;
+    seriesId: string;
+    revisionNumber: number | null;
+    isCurrent: boolean;
+    weightedFairValue: string;
+    quote: string;
+  }) => ({
+    point_id: pointId,
+    source_kind: sourceKind,
+    event_status: "DATED",
+    effective_at: effectiveAt,
+    recorded_at: recordedAt,
+    series_id: seriesId,
+    model_key: "P-EXPL",
+    model_id:
+      sourceKind === "NATIVE_MODEL_REVISION"
+        ? "13131313-1313-4131-8131-131313131313"
+        : null,
+    revision_id: sourceKind === "NATIVE_MODEL_REVISION" ? pointId : null,
+    revision_number: revisionNumber,
+    model_type:
+      sourceKind === "NATIVE_MODEL_REVISION" ? "UFCF_DCF_10Y_FADE" : null,
+    methodology_version:
+      sourceKind === "NATIVE_MODEL_REVISION" ? "dcf-v1" : null,
+    model_label: "Explorer DCF",
+    model_currency: "USD",
+    currency_status: "DOCUMENTED",
+    valuation_listing_id: listingId,
+    valuation_ticker: "EXPL",
+    valuation_venue: "NASDAQ",
+    valuation_listing_currency: "USD",
+    is_current_at_cutoff: isCurrent,
+    output_status: "COMPLETE",
+    output_quality: "COMPLETE",
+    contract_status: sourceKind === "NATIVE_MODEL_REVISION" ? null : "PASS",
+    return_semantics:
+      sourceKind === "NATIVE_MODEL_REVISION"
+        ? "NATIVE_METHOD_OUTPUT"
+        : "LEGACY_NORMALIZED_FIELD",
+    actor: sourceKind === "NATIVE_MODEL_REVISION" ? "LOCAL_USER" : "IMPORT",
+    source_actor:
+      sourceKind === "NATIVE_MODEL_REVISION" ? null : "Workbook researcher",
+    revision_source: sourceKind === "NATIVE_MODEL_REVISION" ? null : "Workbook",
+    revision_type:
+      sourceKind === "NATIVE_MODEL_REVISION" ? null : "Periodic review",
+    bear_fv: "35",
+    base_fv: weightedFairValue,
+    bull_fv: "75",
+    bear_probability: "0.2",
+    base_probability: "0.6",
+    bull_probability: "0.2",
+    weighted_fv: weightedFairValue,
+    weighted_upside: "0.25",
+    expected_cash_flow_irr: "0.14",
+    hurdle: "0.10",
+    expected_excess: "0.04",
+    forward_fundamental_cagr: "0.09",
+    market_price: {
+      status: "AVAILABLE",
+      listing_id: listingId,
+      ticker: "EXPL",
+      venue: "NASDAQ",
+      listing_currency: "USD",
+      quote,
+      quote_currency: "USD",
+      model_reference_price: quote,
+      model_currency: "USD",
+      effective_at: effectiveAt,
+      observed_at: effectiveAt,
+      recorded_at: effectiveAt,
+      provider: "Fixture market source",
+      adjustment_basis: "SPLIT_ADJUSTED",
+      observation_id: "23232323-2323-4232-8232-232323232323",
+      source_ref: "browser-fixture",
+      reason: null,
+    },
+    estimate_context: {
+      status: "AVAILABLE",
+      provider_id: "fmp_estimates",
+      periods: [
+        {
+          observation_id: "24242424-2424-4242-8242-242424242424",
+          metric: "REVENUE",
+          period_type: "ANNUAL",
+          forecast_period: "FY2027",
+          period_end: "2027-12-31",
+          value: "1200000",
+          currency: "USD",
+          unit: "CURRENCY",
+          analyst_count: 11,
+          snapshot_date: effectiveAt.slice(0, 10),
+          observed_at: effectiveAt,
+          recorded_at: effectiveAt,
+          provider_id: "fmp_estimates",
+          source_ref: "browser-fixture",
+          data_quality: "PASS",
+          quality_reason: null,
+        },
+      ],
+    },
+    source:
+      sourceKind === "NATIVE_MODEL_REVISION" ? "Web editor" : "Legacy workbook",
+    source_revision_id: revisionNumber === null ? "legacy-revision-1" : null,
+    rationale: "Retained point-in-time output for the browser fixture.",
+    evidence: null,
+  });
+  const expectedReturnHistory = {
+    company_id: id,
+    as_of: "2026-10-05",
+    known_at: "2026-10-05T23:59:59Z",
+    status: "AVAILABLE",
+    history: [
+      expectedPoint({
+        pointId: "19191919-1919-4191-8191-191919191919",
+        sourceKind: "NATIVE_MODEL_REVISION",
+        effectiveAt: "2026-10-01T16:00:00Z",
+        recordedAt: "2026-10-01T16:00:00Z",
+        seriesId: "native:13131313-1313-4131-8131-131313131313",
+        revisionNumber: 1,
+        isCurrent: false,
+        weightedFairValue: "50",
+        quote: "40",
+      }),
+      expectedPoint({
+        pointId: "legacy:fixture-snapshot",
+        sourceKind: "IMPORTED_LEGACY_REVISION",
+        effectiveAt: "2026-10-02T16:00:00Z",
+        recordedAt: "2026-10-03T10:00:00Z",
+        seriesId: "legacy:P-EXPL",
+        revisionNumber: null,
+        isCurrent: false,
+        weightedFairValue: "48",
+        quote: "41",
+      }),
+      expectedPoint({
+        pointId: "20202020-2020-4202-8202-202020202020",
+        sourceKind: "NATIVE_MODEL_REVISION",
+        effectiveAt: "2026-10-05T16:00:00Z",
+        recordedAt: "2026-10-05T16:00:00Z",
+        seriesId: "native:13131313-1313-4131-8131-131313131313",
+        revisionNumber: 2,
+        isCurrent: true,
+        weightedFairValue: "55",
+        quote: "42.5",
+      }),
+    ],
+  };
+  const attributionState = (
+    point: (typeof expectedReturnHistory.history)[number],
+  ) => ({
+    point_id: point.point_id,
+    source_kind: point.source_kind,
+    effective_at: point.effective_at,
+    recorded_at: point.recorded_at,
+    series_id: point.series_id,
+    model_id: point.model_id,
+    revision_id: point.revision_id,
+    revision_number: point.revision_number,
+    model_type: point.model_type,
+    methodology_version: point.methodology_version,
+    return_semantics: point.return_semantics,
+    model_currency: point.model_currency,
+    expected_cash_flow_irr: point.expected_cash_flow_irr,
+    hurdle: point.hurdle,
+    expected_excess: point.expected_excess,
+    bear_fv: point.bear_fv,
+    base_fv: point.base_fv,
+    bull_fv: point.bull_fv,
+    bear_probability: point.bear_probability,
+    base_probability: point.base_probability,
+    bull_probability: point.bull_probability,
+    weighted_fv: point.weighted_fv,
+    market_price: point.market_price,
+    estimate_context: point.estimate_context,
+    source: point.source,
+    source_revision_id: point.source_revision_id,
+    rationale: point.rationale,
+  });
+  const temporalValue = (
+    value: string,
+    effectiveAt: string,
+    source: string,
+    recordedAt = observedAt,
+  ) => ({
+    status: "AVAILABLE",
+    value,
+    currency: "USD",
+    unit: "currency",
+    source_name: source,
+    source_reference: "browser-fixture",
+    source_observation_id: "16161616-1616-4161-8161-161616161616",
+    period_end: "2027-12-31",
+    effective_at: effectiveAt,
+    observed_at: observedAt,
+    recorded_at: recordedAt,
+    data_quality: "PASS",
+    quality_reason: null,
+    low_value: null,
+    high_value: null,
+    analyst_count: null,
+  });
+  let temporalAlignment: Record<string, unknown> = {
+    company_id: id,
+    metric: "REVENUE",
+    fiscal_year: 2027,
+    as_of: "2026-10-04",
+    forecast_known_at: "2026-10-04T23:59:59.999999Z",
+    outcome_known_at: "2028-03-01T12:00:00Z",
+    horizon_days: 365,
+    fiscal_year_mapping_basis: "NO_EXPLICIT_MODEL_FISCAL_YEAR_ANCHOR",
+    comparison_status: "FISCAL_YEAR_MAPPING_UNAVAILABLE",
+    consensus: {
+      ...temporalValue("1100000", "2026-10-04T00:00:00Z", "fmp_estimates"),
+      low_value: "1000000",
+      high_value: "1200000",
+      analyst_count: 14,
+    },
+    actual: temporalValue("1050000", "2028-02-15T00:00:00Z", "sec_edgar"),
+    model_forecasts: [
+      {
+        model_id: "17171717-1717-4171-8171-171717171717",
+        model_name: "Native DCF",
+        model_type: "UFCF_DCF_10Y_FADE",
+        model_currency: "USD",
+        valuation_listing: listing,
+        status: "FISCAL_YEAR_MAPPING_UNAVAILABLE",
+        forecast_year: null,
+        fiscal_year_mapping_basis: "NO_EXPLICIT_MODEL_FISCAL_YEAR_ANCHOR",
+        value: null,
+        unit: "currency",
+        revision_id: "18181818-1818-4181-8181-181818181818",
+        revision_number: 3,
+        methodology_version: "dcf-v1",
+        revision_source: "local research",
+        rationale: "Ordinal projections have no explicit fiscal-year anchor.",
+        effective_at: "2026-10-01T00:00:00Z",
+        recorded_at: observedAt,
+        price_at_forecast: {
+          status: "AVAILABLE",
+          listing,
+          market_date: observedAt,
+          close: "42.50",
+          total_return_close: "42.50",
+          currency: "USD",
+          provider: "YAHOO_FINANCE",
+          observed_at: observedAt,
+          recorded_at: observedAt,
+          data_quality: "PASS",
+          age_days: 0,
+          reason: null,
+        },
+        subsequent_market_return: {
+          status: "AVAILABLE",
+          horizon_days: 365,
+          target_date: "2027-10-04",
+          start_market_date: observedAt,
+          end_market_date: "2027-10-04T00:00:00Z",
+          start_total_return_close: "42.50",
+          end_total_return_close: "55.25",
+          return_fraction: "0.3",
+          actual_days: 365,
+          basis: "TOTAL_RETURN_CLOSE",
+          reason: null,
+        },
+      },
+    ],
   };
   const migrationStatus = {
     company_id: id,
@@ -1075,6 +1783,21 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       return route.fulfill({ json: scoreAssessments });
     if (pathname === `companies/${id}/rankings`)
       return route.fulfill({ json: rankings });
+    if (pathname === `companies/${id}/execution-pace`)
+      return route.fulfill({
+        json: { company_id: id, current: null, history: [] },
+      });
+    if (pathname === "execution-pace-runs") {
+      if (route.request().method() === "POST") {
+        const body = route.request().postDataJSON() as { reason: string };
+        submittedPaceReason = body.reason;
+        return route.fulfill({
+          status: 201,
+          json: { ...paceRun, reason: body.reason },
+        });
+      }
+      return route.fulfill({ json: [] });
+    }
     if (pathname === `companies/${id}/model-migration-status`)
       return route.fulfill({ json: migrationStatus });
     if (pathname === `companies/${id}/market-data`)
@@ -1085,6 +1808,78 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       return route.fulfill({ json: sourceDocuments });
     if (pathname === `companies/${id}/consensus-estimates`)
       return route.fulfill({ json: consensusEstimateRead });
+    if (pathname === `companies/${id}/estimate-momentum`)
+      return route.fulfill({ json: estimateMomentumRead });
+    if (pathname === `companies/${id}/temporal-alignment`)
+      return route.fulfill({ json: temporalAlignment });
+    if (pathname === `companies/${id}/expected-return-history`)
+      return route.fulfill({ json: expectedReturnHistory });
+    if (pathname === `companies/${id}/expected-return-attribution`) {
+      const url = new URL(route.request().url());
+      const prior = expectedReturnHistory.history.find(
+        (point) => point.point_id === url.searchParams.get("prior_point_id"),
+      );
+      const current = expectedReturnHistory.history.find(
+        (point) => point.point_id === url.searchParams.get("current_point_id"),
+      );
+      if (!prior || !current)
+        return route.fulfill({
+          status: 404,
+          json: { detail: "Point missing" },
+        });
+      return route.fulfill({
+        json: {
+          company_id: id,
+          status: "ATTRIBUTED",
+          method: "SYMMETRIC_COUNTERFACTUAL_SHAPLEY",
+          prior: attributionState(prior),
+          current: attributionState(current),
+          expected_irr_change: "0.02",
+          drivers: [
+            {
+              code: "MARKET_PRICE",
+              label: "Market-price movement",
+              effect: "-0.01",
+              explanation: "Exact accepted prices were recalculated.",
+            },
+            {
+              code: "SCENARIO_PROBABILITIES",
+              label: "Scenario-probability changes",
+              effect: "0.005",
+              explanation: "Scenario cash flows were reweighted.",
+            },
+            {
+              code: "REQUIRED_RETURN_ASSUMPTIONS",
+              label: "Required-return assumptions",
+              effect: "0.01",
+              explanation:
+                "A lower hurdle is a changed return constraint, not improved company economics.",
+            },
+            {
+              code: "MODEL_ASSUMPTIONS",
+              label: "Operating and model assumptions",
+              effect: "0.015",
+              explanation: "Operating and terminal assumptions changed.",
+            },
+          ],
+          residual: "0",
+          residual_reason: null,
+          context_changes: {
+            weighted_fv: "5",
+            bear_fv: "0",
+            base_fv: "5",
+            bull_fv: "0",
+            bear_probability: "0",
+            base_probability: "0",
+            bull_probability: "0",
+            hurdle: "0",
+            expected_excess: "0.02",
+          },
+          estimate_context_note:
+            "Estimates are contextual and not consumed by this model.",
+        },
+      });
+    }
     if (pathname === `companies/${id}/model-outputs/current`)
       return route.fulfill({ json: noModel });
     if (pathname === `companies/${id}/model-outputs/history`)
@@ -1106,7 +1901,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       page.getByRole("heading", { name: "Company context" }),
     ).toBeVisible();
     await expect(page.getByText("EXPL · NASDAQ · USD").first()).toBeVisible();
-    await expect(page.getByText("10%", { exact: true })).toBeVisible();
+    await expect(
+      page.locator("#overview").getByText("10%", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.locator("#overview").getByText("20%", { exact: true }),
     ).toBeVisible();
@@ -1149,6 +1946,69 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByRole("heading", { name: "Consensus estimates" }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Estimate Momentum" }),
+    ).toBeVisible();
+    await expect(page.getByText("Analyst coverage: 11")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Forecast vs. outcome" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Expected-return history" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Execution Pace" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("No decision has been recorded."),
+    ).toBeVisible();
+    const returnHistory = page.getByRole("region", {
+      name: "Expected-return history",
+    });
+    await expect(
+      returnHistory.getByText("Current accepted model state"),
+    ).toBeVisible();
+    await expect(
+      returnHistory.getByText("Why Expected IRR changed"),
+    ).toBeVisible();
+    await expect(
+      returnHistory.getByText("Counterfactual contributions"),
+    ).toBeVisible();
+    await expect(
+      returnHistory.getByText("Residual / unexplained"),
+    ).toBeVisible();
+    await expect(
+      returnHistory.getByLabel("Prior Expected IRR state"),
+    ).toBeVisible();
+    await returnHistory
+      .getByLabel("Expected-return model series")
+      .selectOption("legacy:P-EXPL::USD");
+    await expect(
+      returnHistory.getByText("Imported legacy snapshot"),
+    ).toBeVisible();
+    await returnHistory
+      .locator("details")
+      .filter({ hasText: "Imported legacy snapshot" })
+      .locator("summary")
+      .click();
+    await expect(
+      returnHistory.getByText(/source author Workbook researcher/),
+    ).toBeVisible();
+    await expect(
+      returnHistory.getByRole("img", {
+        name: /Fair value and comparable price/,
+      }),
+    ).toBeVisible();
+    await expect(returnHistory.getByRole("status")).toContainText(
+      "3 total immutable imported/native model point(s)",
+    );
+    const temporal = page.getByRole("region", { name: "Forecast vs. outcome" });
+    await expect(temporal.getByText(/FY2027 cannot be assigned/)).toBeVisible();
+    await expect(temporal.getByText("fmp_estimates")).toBeVisible();
+    await expect(temporal.getByText("sec_edgar")).toBeVisible();
+    await expect(temporal.getByText("30%", { exact: true })).toBeVisible();
+    await expect(temporal.getByLabel("Forecast date")).toBeVisible();
+    await expect(temporal.getByLabel("Return horizon")).toBeVisible();
     await expect(page.getByText("FALLBACK SELECTED")).toBeVisible();
     await expect(page.getByText("FY+1 · legacy horizon only")).toBeVisible();
     await expect(
@@ -1225,6 +2085,13 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
   }
+  await page
+    .getByLabel("Review rationale")
+    .fill("Reassessed source coverage before pacing.");
+  await page.getByRole("button", { name: "Record Execution Pace" }).click();
+  await expect
+    .poll(() => submittedPaceReason)
+    .toBe("Reassessed source coverage before pacing.");
   consensusEstimateRead = {
     company_id: id,
     continuity_status: "NO_MAPPING",
@@ -1233,10 +2100,41 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     known_at: null,
     providers: [],
   };
+  const emptyTemporalValue = {
+    status: "NO_MAPPING",
+    value: null,
+    currency: null,
+    unit: null,
+    source_name: null,
+    source_reference: null,
+    source_observation_id: null,
+    period_end: null,
+    effective_at: null,
+    observed_at: null,
+    recorded_at: null,
+    data_quality: null,
+    quality_reason: null,
+    low_value: null,
+    high_value: null,
+    analyst_count: null,
+  };
+  temporalAlignment = {
+    ...temporalAlignment,
+    comparison_status: "FISCAL_YEAR_MAPPING_UNAVAILABLE",
+    consensus: emptyTemporalValue,
+    actual: { ...emptyTemporalValue, status: "NOT_REPORTED" },
+  };
   await page.goto(`/company/${id}`);
   await expect(
     page.getByText("No consensus provider identity is mapped."),
   ).toBeVisible();
+  const temporalRegion = page.getByRole("region", {
+    name: "Forecast vs. outcome",
+  });
+  await expect(
+    temporalRegion.getByText("Unavailable", { exact: true }),
+  ).toHaveCount(3);
+  await expect(temporalRegion.getByText("NOT REPORTED")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -1328,6 +2226,16 @@ test("Company Explorer exports, previews and accepts a Sheets contract responsiv
       return route.fulfill({ json: noModelOutputs });
     if (pathname === `companies/${id}/model-outputs/history`)
       return route.fulfill({ json: [] });
+    if (pathname === `companies/${id}/expected-return-history`)
+      return route.fulfill({
+        json: {
+          company_id: id,
+          as_of: "2026-10-05",
+          known_at: "2026-10-05T12:00:00Z",
+          status: "NO_HISTORY",
+          history: [],
+        },
+      });
     if (pathname === `financial-models/${contractModelId}/contract`)
       return route.fulfill({ json: portableContract });
     if (
@@ -1664,6 +2572,299 @@ test("Company Explorer exports, previews and accepts a Sheets contract responsiv
   await expect(
     page.getByText("Base revenue (billions): 100 → 110"),
   ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("portfolio dashboard composes canonical posture, ranks and missing states responsively", async ({
+  page,
+}) => {
+  const portfolioId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const listingId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const securityId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const watchlistId = "22222222-2222-4222-8222-222222222222";
+  const portfolioCompany = { ...company, lifecycle: "PORTFOLIO" as const };
+  const watchlistCompany = {
+    ...company,
+    id: watchlistId,
+    name: "Watchlist opportunity",
+    lifecycle: "WATCHLIST" as const,
+  };
+  const currentTime = "2026-10-05T12:00:00Z";
+  const overview = {
+    portfolio: {
+      id: portfolioId,
+      name: "Long-term portfolio",
+      base_currency: "USD",
+      created_at: "2026-01-01T00:00:00Z",
+      is_demo: false,
+    },
+    snapshot: {
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      portfolio_id: portfolioId,
+      completeness: "COMPLETE",
+      positions: [{ listing_id: listingId, quantity: "10" }],
+      cash_positions: [{ currency: "USD", balance: "100" }],
+      actor: "IMPORT",
+      reason: "Complete test holding observation.",
+      source: "browser-fixture",
+      effective_at: currentTime,
+      recorded_at: currentTime,
+    },
+    target_revision: {
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      portfolio_id: portfolioId,
+      status: "ACCEPTED",
+      allocations: [{ company_id: id, weight: "0.4" }],
+      actor: "IMPORT",
+      reason: "Accepted strategic target.",
+      source: "browser-fixture",
+      effective_at: currentTime,
+      recorded_at: currentTime,
+      accepted_at: currentTime,
+      invested_weight: "0.4",
+      strategic_cash_weight: "0.6",
+    },
+    companies: [
+      {
+        company: portfolioCompany,
+        positions: [
+          {
+            listing_id: listingId,
+            security_id: securityId,
+            ticker: "EXM",
+            venue: "NASDAQ",
+            currency: "USD",
+            security_name: "Example common stock",
+            quantity: "10",
+            latest_price: "90",
+            price_date: currentTime,
+            price_currency: "USD",
+            price_freshness: "FRESH",
+            native_market_value: "900",
+            base_market_value: "900",
+            valuation_status: "VALUED",
+          },
+        ],
+        target_weight: "0.4",
+        current_market_value: "900",
+        current_market_currency: "USD",
+        current_weight: "0.9",
+        allocation_gap: "-0.5",
+        allocation_status: "VALUED",
+      },
+    ],
+    standalone_positions: [],
+    valuation_status: "VALUED",
+    base_market_value: "1000",
+    valuation_currency: "USD",
+    cash_valuations: [
+      {
+        currency: "USD",
+        balance: "100",
+        base_market_value: "100",
+        valuation_status: "VALUED",
+      },
+    ],
+    valuation_gaps: [],
+  };
+  const emptyRanks = () =>
+    companyRankingCurrent.current.map((rank) => ({
+      ...rank,
+      run: null,
+      entry: null,
+    }));
+  const modelSummary = [portfolioCompany, watchlistCompany].map((issuer) => ({
+    company: issuer,
+    outputs: {
+      company_id: issuer.id,
+      status: "NO_MODEL",
+      history_count: 0,
+      models: [],
+    },
+  }));
+  const scores = [portfolioCompany, watchlistCompany].map((issuer) => ({
+    company: issuer,
+    scores: scoreSummary(issuer)[0].scores,
+  }));
+
+  await page.route("**/api/research/portfolios", (route) =>
+    route.fulfill({ json: [overview.portfolio] }),
+  );
+  await page.route(
+    `**/api/research/portfolios/${portfolioId}/overview`,
+    (route) => route.fulfill({ json: overview }),
+  );
+  await page.route("**/api/research/universe/ranking-summary", (route) =>
+    route.fulfill({
+      json: [portfolioCompany, watchlistCompany].map((issuer) => ({
+        company: issuer,
+        rankings: emptyRanks(),
+      })),
+    }),
+  );
+  await page.route("**/api/research/universe/execution-pace-summary", (route) =>
+    route.fulfill({
+      json: [portfolioCompany, watchlistCompany].map((issuer) => ({
+        company: issuer,
+        decision: null,
+      })),
+    }),
+  );
+  await page.route("**/api/research/universe/score-summary", (route) =>
+    route.fulfill({ json: scores }),
+  );
+  await page.route(
+    "**/api/research/universe/estimate-momentum-summary",
+    (route) =>
+      route.fulfill({
+        json: [portfolioCompany, watchlistCompany].map((issuer) => ({
+          company: issuer,
+          estimate_momentum: momentumSummary(issuer.id),
+        })),
+      }),
+  );
+  await page.route("**/api/research/universe/model-output-summary", (route) =>
+    route.fulfill({ json: modelSummary }),
+  );
+  await page.route("**/api/research/universe", (route) =>
+    route.fulfill({ json: [portfolioCompany, watchlistCompany] }),
+  );
+  await page.route("**/api/research/attention?*", (route) =>
+    route.fulfill({
+      json: {
+        as_of: currentTime,
+        lookback_days: 30,
+        total: 1,
+        events: [
+          {
+            id: "financial_model_revision:fixture-revision",
+            company_id: portfolioCompany.id,
+            company_name: portfolioCompany.name,
+            lifecycle: "PORTFOLIO",
+            event_type: "MODEL_REVISION",
+            severity: "MEDIUM",
+            status: "INFORMATIONAL",
+            title: "Model revision 2",
+            explanation: "An accepted native model revision was recorded.",
+            effective_at: currentTime,
+            time_precision: "TIMESTAMP",
+            recorded_at: currentTime,
+            source_domain: "financial_model_revision",
+            source_id: "fixture-revision",
+            source_reference: "web-test",
+            href: `/company/${portfolioCompany.id}`,
+            prior_value: null,
+            current_value: null,
+            unit: null,
+          },
+        ],
+      },
+    }),
+  );
+
+  await page.goto("/portfolio");
+  await expect(
+    page.getByRole("heading", { name: "Portfolio posture" }),
+  ).toBeVisible();
+  await expect(page.getByText("$1,000.00", { exact: true })).toBeVisible();
+  await expect(page.getByText("Largest strategic gaps")).toBeVisible();
+  await expect(page.getByText("Above target", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Portfolio No run", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("NO MAPPING", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("NO MODEL", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.getByText("Needs attention")).toBeVisible();
+  await expect(page.getByText("Model revision 2")).toBeVisible();
+  await page.getByText("Quality, model and decision evidence").click();
+  await expect(page.getByText("Not assessed").first()).toBeVisible();
+
+  await page.getByText("Record a new analytical review").click();
+  await expect(
+    page.getByRole("button", { name: "Record Portfolio Rank" }),
+  ).toBeVisible();
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+});
+
+test("Attention Center keeps missing times explicit and filters by company and event type", async ({
+  page,
+}) => {
+  const companyId = "33333333-3333-4333-8333-333333333333";
+  await page.route("**/api/research/universe", (route) =>
+    route.fulfill({
+      json: [{ ...company, id: companyId, lifecycle: "PORTFOLIO" }],
+    }),
+  );
+  const queries: string[] = [];
+  await page.route(/\/api\/research\/attention(?:\?.*)?$/, async (route) => {
+    const url = new URL(route.request().url());
+    queries.push(url.search);
+    await route.fulfill({
+      json: {
+        as_of: "2026-10-05T12:00:00Z",
+        lookback_days: 30,
+        total: 1,
+        events: [
+          {
+            id: "model_output_coverage:missing-model",
+            company_id: companyId,
+            company_name: "Example business",
+            lifecycle: "PORTFOLIO",
+            event_type: "DATA_QUALITY",
+            severity: "LOW",
+            status: "REVIEW",
+            title: "No complete normalized model output",
+            explanation:
+              "Missing model values remain unavailable; no neutral value was substituted.",
+            effective_at: null,
+            time_precision: "UNKNOWN",
+            recorded_at: null,
+            source_domain: "model_output_coverage",
+            source_id: "missing-model",
+            source_reference: null,
+            href: `/company/${companyId}`,
+            prior_value: null,
+            current_value: null,
+            unit: null,
+          },
+        ],
+      },
+    });
+  });
+
+  await page.goto("/attention");
+  await expect(
+    page.getByRole("heading", { name: "Attention Center" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No complete normalized model output"),
+  ).toBeVisible();
+  await expect(page.getByText(/Current status · checked/)).toBeVisible();
+  await page.getByLabel("Filter by company").selectOption(companyId);
+  await page.getByLabel("Filter by event type").selectOption("DATA_QUALITY");
+  await expect
+    .poll(() => queries.some((query) => query.includes("company_id=")))
+    .toBe(true);
+  await expect
+    .poll(() =>
+      queries.some((query) => query.includes("event_type=DATA_QUALITY")),
+    )
+    .toBe(true);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

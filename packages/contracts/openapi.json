@@ -550,6 +550,244 @@
         "title": "AllocationInput",
         "type": "object"
       },
+      "AttentionEventRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "event_type": {
+            "enum": [
+              "MODEL_REVISION",
+              "MODEL_OUTPUT_IMPORT",
+              "EXPECTED_IRR_CHANGE",
+              "CONSENSUS_REVISION",
+              "NEW_FILING",
+              "PRICE_MOVE",
+              "RANK_CHANGE",
+              "EXECUTION_PACE_CHANGE",
+              "DATA_QUALITY"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prior_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prior Value"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "severity": {
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "source_domain": {
+            "title": "Source Domain",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          },
+          "status": {
+            "enum": [
+              "REVIEW",
+              "INFORMATIONAL"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "time_precision": {
+            "enum": [
+              "TIMESTAMP",
+              "DATE",
+              "UNKNOWN"
+            ],
+            "title": "Time Precision",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "company_name",
+          "lifecycle",
+          "event_type",
+          "severity",
+          "status",
+          "title",
+          "explanation",
+          "effective_at",
+          "time_precision",
+          "recorded_at",
+          "source_domain",
+          "source_id",
+          "source_reference",
+          "href"
+        ],
+        "title": "AttentionEventRead",
+        "type": "object"
+      },
+      "AttentionFeedRead": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionEventRead"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "lookback_days": {
+            "title": "Lookback Days",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "lookback_days",
+          "total",
+          "events"
+        ],
+        "title": "AttentionFeedRead",
+        "type": "object"
+      },
       "CashInput-Input": {
         "additionalProperties": false,
         "properties": {
@@ -869,6 +1107,379 @@
           "target_revision_id"
         ],
         "title": "CompanyDetail",
+        "type": "object"
+      },
+      "CompanyEstimateMomentumRead": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "DIRECTION_ONLY",
+              "INSUFFICIENT_HISTORY",
+              "NO_MAPPING",
+              "AMBIGUOUS_SOURCE"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "confidence_adjusted_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Adjusted Score"
+          },
+          "confidence_band": {
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+              "COLLECTING",
+              "NO_DATA"
+            ],
+            "title": "Confidence Band",
+            "type": "string"
+          },
+          "coverage_count": {
+            "title": "Coverage Count",
+            "type": "integer"
+          },
+          "coverage_fraction": {
+            "title": "Coverage Fraction",
+            "type": "string"
+          },
+          "coverage_total": {
+            "title": "Coverage Total",
+            "type": "integer"
+          },
+          "data_quality": {
+            "enum": [
+              "PASS",
+              "DATA_CHECK",
+              "INVALID",
+              "NO_DATA"
+            ],
+            "title": "Data Quality",
+            "type": "string"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "POSITIVE",
+                  "MILD_POSITIVE",
+                  "NEUTRAL_MIXED",
+                  "MILD_NEGATIVE",
+                  "NEGATIVE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "freshness": {
+            "enum": [
+              "FRESH",
+              "STALE",
+              "DATA_CHECK",
+              "NO_DATA"
+            ],
+            "title": "Freshness",
+            "type": "string"
+          },
+          "known_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known At"
+          },
+          "latest_snapshot_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Snapshot Date"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/EstimateMomentumPeriodRead"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "raw_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Score"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "company_id",
+          "methodology_version",
+          "availability",
+          "direction",
+          "raw_score",
+          "confidence_adjusted_score",
+          "confidence",
+          "confidence_band",
+          "coverage_fraction",
+          "coverage_count",
+          "coverage_total",
+          "freshness",
+          "data_quality",
+          "provider_id",
+          "latest_snapshot_date",
+          "as_of",
+          "known_at",
+          "reason",
+          "periods"
+        ],
+        "title": "CompanyEstimateMomentumRead",
+        "type": "object"
+      },
+      "CompanyExecutionPaceRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionPaceHistoryEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionPaceHistoryEntry"
+            },
+            "title": "History",
+            "type": "array"
+          }
+        },
+        "required": [
+          "company_id",
+          "current",
+          "history"
+        ],
+        "title": "CompanyExecutionPaceRead",
+        "type": "object"
+      },
+      "CompanyExpectedReturnAttributionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "context_changes": {
+            "$ref": "#/components/schemas/ExpectedReturnAttributionContextChangesRead"
+          },
+          "current": {
+            "$ref": "#/components/schemas/ExpectedReturnAttributionStateRead"
+          },
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/ExpectedReturnAttributionDriverRead"
+            },
+            "title": "Drivers",
+            "type": "array"
+          },
+          "estimate_context_note": {
+            "title": "Estimate Context Note",
+            "type": "string"
+          },
+          "expected_irr_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Irr Change"
+          },
+          "method": {
+            "enum": [
+              "SYMMETRIC_COUNTERFACTUAL_SHAPLEY",
+              "UNAVAILABLE"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "prior": {
+            "$ref": "#/components/schemas/ExpectedReturnAttributionStateRead"
+          },
+          "residual": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual"
+          },
+          "residual_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Reason"
+          },
+          "status": {
+            "enum": [
+              "ATTRIBUTED",
+              "OUTPUTS_ONLY",
+              "MISSING_RETURN",
+              "RETURN_SEMANTICS_CHANGE",
+              "MODEL_SERIES_CHANGE",
+              "METHODOLOGY_CHANGE",
+              "INPUTS_UNAVAILABLE",
+              "RECALCULATION_MISMATCH",
+              "UNDATED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "status",
+          "method",
+          "prior",
+          "current",
+          "expected_irr_change",
+          "drivers",
+          "residual",
+          "residual_reason",
+          "context_changes",
+          "estimate_context_note"
+        ],
+        "title": "CompanyExpectedReturnAttributionRead",
+        "type": "object"
+      },
+      "CompanyExpectedReturnHistoryRead": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ExpectedReturnHistoryPointRead"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "known_at": {
+            "format": "date-time",
+            "title": "Known At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "PARTIAL",
+              "NO_HISTORY"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "as_of",
+          "known_at",
+          "status",
+          "history"
+        ],
+        "title": "CompanyExpectedReturnHistoryRead",
         "type": "object"
       },
       "CompanyFinancialModelMigrationItemRead": {
@@ -1477,6 +2088,81 @@
           "documents"
         ],
         "title": "CompanySourceDocumentsRead",
+        "type": "object"
+      },
+      "CompanyTemporalAlignmentRead": {
+        "additionalProperties": false,
+        "properties": {
+          "actual": {
+            "$ref": "#/components/schemas/TemporalAlignedValueRead"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "comparison_status": {
+            "title": "Comparison Status",
+            "type": "string"
+          },
+          "consensus": {
+            "$ref": "#/components/schemas/TemporalAlignedValueRead"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "fiscal_year_mapping_basis": {
+            "title": "Fiscal Year Mapping Basis",
+            "type": "string"
+          },
+          "forecast_known_at": {
+            "format": "date-time",
+            "title": "Forecast Known At",
+            "type": "string"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "metric": {
+            "const": "REVENUE",
+            "title": "Metric",
+            "type": "string"
+          },
+          "model_forecasts": {
+            "items": {
+              "$ref": "#/components/schemas/TemporalModelForecastRead"
+            },
+            "title": "Model Forecasts",
+            "type": "array"
+          },
+          "outcome_known_at": {
+            "format": "date-time",
+            "title": "Outcome Known At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "metric",
+          "fiscal_year",
+          "as_of",
+          "forecast_known_at",
+          "outcome_known_at",
+          "horizon_days",
+          "fiscal_year_mapping_basis",
+          "comparison_status",
+          "model_forecasts",
+          "consensus",
+          "actual"
+        ],
+        "title": "CompanyTemporalAlignmentRead",
         "type": "object"
       },
       "ConsensusEstimateObservationRead": {
@@ -3505,6 +4191,2898 @@
           "scenario_id"
         ],
         "title": "DcfYearAssumptionRead",
+        "type": "object"
+      },
+      "EstimateMomentumPeriodRead": {
+        "additionalProperties": false,
+        "properties": {
+          "analyst_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyst Count"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "current_snapshot_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Snapshot Date"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "data_quality": {
+            "enum": [
+              "PASS",
+              "DATA_CHECK",
+              "INVALID"
+            ],
+            "title": "Data Quality",
+            "type": "string"
+          },
+          "forecast_period": {
+            "title": "Forecast Period",
+            "type": "string"
+          },
+          "horizon": {
+            "enum": [
+              "FY+1",
+              "FY+2"
+            ],
+            "title": "Horizon",
+            "type": "string"
+          },
+          "metric": {
+            "enum": [
+              "REVENUE",
+              "EPS"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/EstimateMomentumWindowRead"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "metric",
+          "horizon",
+          "forecast_period",
+          "period_end",
+          "currency",
+          "unit",
+          "analyst_count",
+          "current_value",
+          "current_snapshot_date",
+          "data_quality",
+          "quality_reason",
+          "windows"
+        ],
+        "title": "EstimateMomentumPeriodRead",
+        "type": "object"
+      },
+      "EstimateMomentumSummaryRead": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "DIRECTION_ONLY",
+              "INSUFFICIENT_HISTORY",
+              "NO_MAPPING",
+              "AMBIGUOUS_SOURCE"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "confidence_adjusted_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Adjusted Score"
+          },
+          "confidence_band": {
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+              "COLLECTING",
+              "NO_DATA"
+            ],
+            "title": "Confidence Band",
+            "type": "string"
+          },
+          "coverage_count": {
+            "title": "Coverage Count",
+            "type": "integer"
+          },
+          "coverage_fraction": {
+            "title": "Coverage Fraction",
+            "type": "string"
+          },
+          "coverage_total": {
+            "title": "Coverage Total",
+            "type": "integer"
+          },
+          "data_quality": {
+            "enum": [
+              "PASS",
+              "DATA_CHECK",
+              "INVALID",
+              "NO_DATA"
+            ],
+            "title": "Data Quality",
+            "type": "string"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "POSITIVE",
+                  "MILD_POSITIVE",
+                  "NEUTRAL_MIXED",
+                  "MILD_NEGATIVE",
+                  "NEGATIVE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "freshness": {
+            "enum": [
+              "FRESH",
+              "STALE",
+              "DATA_CHECK",
+              "NO_DATA"
+            ],
+            "title": "Freshness",
+            "type": "string"
+          },
+          "known_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known At"
+          },
+          "latest_snapshot_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Snapshot Date"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "raw_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Score"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "company_id",
+          "methodology_version",
+          "availability",
+          "direction",
+          "raw_score",
+          "confidence_adjusted_score",
+          "confidence",
+          "confidence_band",
+          "coverage_fraction",
+          "coverage_count",
+          "coverage_total",
+          "freshness",
+          "data_quality",
+          "provider_id",
+          "latest_snapshot_date",
+          "as_of",
+          "known_at",
+          "reason"
+        ],
+        "title": "EstimateMomentumSummaryRead",
+        "type": "object"
+      },
+      "EstimateMomentumWindowRead": {
+        "additionalProperties": false,
+        "properties": {
+          "component_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component Score"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reference_days_before_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Days Before Target"
+          },
+          "reference_snapshot_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Snapshot Date"
+          },
+          "reference_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Value"
+          },
+          "revision_fraction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Fraction"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "MISSING_REFERENCE",
+              "STALE_REFERENCE",
+              "DATA_CHECK",
+              "INVALID_BASELINE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "window": {
+            "enum": [
+              "12M",
+              "6M",
+              "3M"
+            ],
+            "title": "Window",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window",
+          "status",
+          "reference_value",
+          "reference_snapshot_date",
+          "reference_days_before_target",
+          "revision_fraction",
+          "component_score",
+          "reason"
+        ],
+        "title": "EstimateMomentumWindowRead",
+        "type": "object"
+      },
+      "ExecutionPace": {
+        "enum": [
+          "ACCELERATE",
+          "BUILD",
+          "NORMAL_BUILD",
+          "SMALL_LADDER",
+          "LADDER",
+          "HOLD",
+          "SLOW_LIMIT",
+          "WAIT_LIMIT",
+          "PATIENT_TRIM",
+          "TRIM_FASTER",
+          "NORMAL_TRIM",
+          "PATIENT_EXIT",
+          "NORMAL_EXIT"
+        ],
+        "title": "ExecutionPace",
+        "type": "string"
+      },
+      "ExecutionPaceDecisionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "decision_status": {
+            "$ref": "#/components/schemas/ExecutionPaceDecisionStatus"
+          },
+          "holding_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Snapshot Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_snapshot": {
+            "$ref": "#/components/schemas/ExecutionPaceInputSnapshot"
+          },
+          "model_output_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Output Snapshot Id"
+          },
+          "model_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Revision Id"
+          },
+          "pace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionPace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Observation Id"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "target_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Revision Id"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "company_id",
+          "target_revision_id",
+          "holding_snapshot_id",
+          "model_revision_id",
+          "model_output_snapshot_id",
+          "price_observation_id",
+          "decision_status",
+          "pace",
+          "reason",
+          "input_snapshot"
+        ],
+        "title": "ExecutionPaceDecisionRead",
+        "type": "object"
+      },
+      "ExecutionPaceDecisionStatus": {
+        "enum": [
+          "AVAILABLE",
+          "REVIEW",
+          "UNAVAILABLE",
+          "NOT_APPLICABLE"
+        ],
+        "title": "ExecutionPaceDecisionStatus",
+        "type": "string"
+      },
+      "ExecutionPaceHistoryEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/ExecutionPaceDecisionRead"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ExecutionPaceRunRead"
+          }
+        },
+        "required": [
+          "run",
+          "decision"
+        ],
+        "title": "ExecutionPaceHistoryEntry",
+        "type": "object"
+      },
+      "ExecutionPaceInputSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Gap"
+          },
+          "allocation_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Status"
+          },
+          "context_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Context Notes",
+            "type": "array"
+          },
+          "context_version": {
+            "const": "execution-pace-inputs-v1",
+            "title": "Context Version",
+            "type": "string"
+          },
+          "current_weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Weight"
+          },
+          "estimate_latest_snapshot_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Latest Snapshot Date"
+          },
+          "estimate_momentum_availability": {
+            "anyOf": [
+              {
+                "enum": [
+                  "AVAILABLE",
+                  "DIRECTION_ONLY",
+                  "INSUFFICIENT_HISTORY",
+                  "NO_MAPPING",
+                  "AMBIGUOUS_SOURCE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Momentum Availability"
+          },
+          "estimate_momentum_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "POSITIVE",
+                  "MILD_POSITIVE",
+                  "NEUTRAL_MIXED",
+                  "MILD_NEGATIVE",
+                  "NEGATIVE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Momentum Direction"
+          },
+          "estimate_momentum_freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FRESH",
+                  "STALE",
+                  "DATA_CHECK",
+                  "NO_DATA"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Momentum Freshness"
+          },
+          "estimate_momentum_quality": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PASS",
+                  "DATA_CHECK",
+                  "INVALID",
+                  "NO_DATA"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Momentum Quality"
+          },
+          "estimate_momentum_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Momentum Reason"
+          },
+          "estimate_provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Provider Id"
+          },
+          "expected_irr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Irr"
+          },
+          "holding_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Effective At"
+          },
+          "holding_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Snapshot Id"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_contract_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Contract Status"
+          },
+          "model_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Currency"
+          },
+          "model_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Effective At"
+          },
+          "model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Key"
+          },
+          "model_output_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Output Quality"
+          },
+          "model_output_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Output Snapshot Id"
+          },
+          "model_price_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Price Currency"
+          },
+          "model_price_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Price Effective At"
+          },
+          "model_price_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Price Observation Id"
+          },
+          "model_price_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Price Status"
+          },
+          "model_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Recorded At"
+          },
+          "model_reference_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Reference Price"
+          },
+          "model_review_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Review Flag"
+          },
+          "model_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Revision Id"
+          },
+          "model_source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Source Id"
+          },
+          "model_source_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NATIVE_MODEL_REVISION",
+                  "IMPORTED_CURRENT_CONTRACT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Source Kind"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "price_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Currency"
+          },
+          "price_freshness": {
+            "enum": [
+              "FRESH",
+              "STALE",
+              "QUALITY_CHECK",
+              "NO_DATA"
+            ],
+            "title": "Price Freshness",
+            "type": "string"
+          },
+          "price_market_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Market Date"
+          },
+          "price_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Observation Id"
+          },
+          "price_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Provider"
+          },
+          "price_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Quality"
+          },
+          "price_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Recorded At"
+          },
+          "price_regime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Regime"
+          },
+          "price_regime_as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Regime As Of"
+          },
+          "price_regime_freshness": {
+            "enum": [
+              "FRESH",
+              "STALE",
+              "DATA_CHECK",
+              "NO_DATA"
+            ],
+            "title": "Price Regime Freshness",
+            "type": "string"
+          },
+          "price_regime_quality": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PASS",
+                  "DATA_CHECK",
+                  "UNSPECIFIED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Regime Quality"
+          },
+          "price_regime_raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Regime Raw"
+          },
+          "price_regime_source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Regime Source Ref"
+          },
+          "return_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NATIVE_METHOD_OUTPUT",
+                  "LEGACY_NORMALIZED_FIELD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Semantics"
+          },
+          "target_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Effective At"
+          },
+          "target_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Revision Id"
+          },
+          "target_weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Weight"
+          },
+          "valuation_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Currency"
+          },
+          "valuation_listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Listing Id"
+          },
+          "valuation_range_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Range Ratio"
+          },
+          "valuation_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Ticker"
+          },
+          "valuation_venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Venue"
+          },
+          "valuation_zone": {
+            "anyOf": [
+              {
+                "enum": [
+                  "DEEP_DISCOUNT",
+                  "DISCOUNT",
+                  "NEAR_FAIR",
+                  "RICH",
+                  "VERY_RICH"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Zone"
+          },
+          "weighted_fair_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fair Value"
+          },
+          "weighted_upside": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Upside"
+          }
+        },
+        "required": [
+          "context_version",
+          "lifecycle",
+          "target_revision_id",
+          "target_effective_at",
+          "holding_snapshot_id",
+          "holding_effective_at",
+          "allocation_status",
+          "current_weight",
+          "target_weight",
+          "allocation_gap",
+          "model_source_kind",
+          "model_source_id",
+          "model_revision_id",
+          "model_output_snapshot_id",
+          "model_key",
+          "return_semantics",
+          "model_effective_at",
+          "model_recorded_at",
+          "model_currency",
+          "model_output_quality",
+          "model_contract_status",
+          "model_review_flag",
+          "expected_irr",
+          "hurdle",
+          "valuation_listing_id",
+          "valuation_ticker",
+          "valuation_venue",
+          "valuation_currency",
+          "price_observation_id",
+          "price_market_date",
+          "price_recorded_at",
+          "price_currency",
+          "price",
+          "price_provider",
+          "price_quality",
+          "price_freshness",
+          "model_price_status",
+          "model_price_effective_at",
+          "model_price_observation_id",
+          "model_reference_price",
+          "model_price_currency",
+          "weighted_fair_value",
+          "weighted_upside",
+          "valuation_zone",
+          "valuation_range_ratio",
+          "estimate_momentum_availability",
+          "estimate_momentum_direction",
+          "estimate_momentum_freshness",
+          "estimate_momentum_quality",
+          "estimate_provider_id",
+          "estimate_latest_snapshot_date",
+          "estimate_momentum_reason",
+          "price_regime_source_ref",
+          "price_regime_as_of",
+          "price_regime_quality",
+          "price_regime_raw",
+          "price_regime",
+          "price_regime_freshness",
+          "context_notes"
+        ],
+        "title": "ExecutionPaceInputSnapshot",
+        "type": "object"
+      },
+      "ExecutionPaceRunCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "actor",
+          "reason"
+        ],
+        "title": "ExecutionPaceRunCreate",
+        "type": "object"
+      },
+      "ExecutionPaceRunDecisionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyRead"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ExecutionPaceDecisionRead"
+          }
+        },
+        "required": [
+          "company",
+          "decision"
+        ],
+        "title": "ExecutionPaceRunDecisionRead",
+        "type": "object"
+      },
+      "ExecutionPaceRunDetailRead": {
+        "additionalProperties": false,
+        "properties": {
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionPaceRunDecisionRead"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ExecutionPaceRunRead"
+          }
+        },
+        "required": [
+          "run",
+          "decisions"
+        ],
+        "title": "ExecutionPaceRunDetailRead",
+        "type": "object"
+      },
+      "ExecutionPaceRunRead": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "available_count": {
+            "title": "Available Count",
+            "type": "integer"
+          },
+          "company_count": {
+            "title": "Company Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "not_applicable_count": {
+            "title": "Not Applicable Count",
+            "type": "integer"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "review_count": {
+            "title": "Review Count",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionPaceRunStatus"
+          },
+          "unavailable_count": {
+            "title": "Unavailable Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "portfolio_id",
+          "as_of",
+          "recorded_at",
+          "methodology_version",
+          "status",
+          "actor",
+          "reason",
+          "source",
+          "company_count",
+          "available_count",
+          "review_count",
+          "unavailable_count",
+          "not_applicable_count"
+        ],
+        "title": "ExecutionPaceRunRead",
+        "type": "object"
+      },
+      "ExecutionPaceRunStatus": {
+        "enum": [
+          "COMPLETE",
+          "PARTIAL",
+          "UNAVAILABLE"
+        ],
+        "title": "ExecutionPaceRunStatus",
+        "type": "string"
+      },
+      "ExpectedReturnAttributionContextChangesRead": {
+        "additionalProperties": false,
+        "properties": {
+          "base_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Fv"
+          },
+          "base_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Probability"
+          },
+          "bear_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Fv"
+          },
+          "bear_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Probability"
+          },
+          "bull_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Fv"
+          },
+          "bull_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Probability"
+          },
+          "expected_excess": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Excess"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "weighted_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fv"
+          }
+        },
+        "required": [
+          "weighted_fv",
+          "bear_fv",
+          "base_fv",
+          "bull_fv",
+          "bear_probability",
+          "base_probability",
+          "bull_probability",
+          "hurdle",
+          "expected_excess"
+        ],
+        "title": "ExpectedReturnAttributionContextChangesRead",
+        "type": "object"
+      },
+      "ExpectedReturnAttributionDriverRead": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "MARKET_PRICE",
+              "MODEL_ASSUMPTIONS",
+              "REQUIRED_RETURN_ASSUMPTIONS",
+              "SCENARIO_PROBABILITIES"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "effect": {
+            "title": "Effect",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "effect",
+          "explanation"
+        ],
+        "title": "ExpectedReturnAttributionDriverRead",
+        "type": "object"
+      },
+      "ExpectedReturnAttributionStateRead": {
+        "additionalProperties": false,
+        "description": "A source-linked endpoint state used by a derived return comparison.",
+        "properties": {
+          "base_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Fv"
+          },
+          "base_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Probability"
+          },
+          "bear_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Fv"
+          },
+          "bear_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Probability"
+          },
+          "bull_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Fv"
+          },
+          "bull_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Probability"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "estimate_context": {
+            "$ref": "#/components/schemas/ExpectedReturnEstimateContextRead"
+          },
+          "expected_cash_flow_irr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Cash Flow Irr"
+          },
+          "expected_excess": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Excess"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "market_price": {
+            "$ref": "#/components/schemas/ExpectedReturnMarketPriceRead"
+          },
+          "methodology_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Version"
+          },
+          "model_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Currency"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UFCF_DCF_10Y_FADE",
+                  "OWNER_CASH_FLOW_10Y",
+                  "RESIDUAL_INCOME_10Y_FADE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Type"
+          },
+          "point_id": {
+            "title": "Point Id",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "return_semantics": {
+            "enum": [
+              "NATIVE_METHOD_OUTPUT",
+              "LEGACY_NORMALIZED_FIELD"
+            ],
+            "title": "Return Semantics",
+            "type": "string"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          },
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_kind": {
+            "enum": [
+              "IMPORTED_CURRENT_CONTRACT",
+              "IMPORTED_LEGACY_REVISION",
+              "NATIVE_MODEL_REVISION"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          },
+          "weighted_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fv"
+          }
+        },
+        "required": [
+          "point_id",
+          "source_kind",
+          "effective_at",
+          "recorded_at",
+          "series_id",
+          "model_id",
+          "revision_id",
+          "revision_number",
+          "model_type",
+          "methodology_version",
+          "return_semantics",
+          "model_currency",
+          "expected_cash_flow_irr",
+          "hurdle",
+          "expected_excess",
+          "bear_fv",
+          "base_fv",
+          "bull_fv",
+          "bear_probability",
+          "base_probability",
+          "bull_probability",
+          "weighted_fv",
+          "market_price",
+          "estimate_context",
+          "source",
+          "source_revision_id",
+          "rationale"
+        ],
+        "title": "ExpectedReturnAttributionStateRead",
+        "type": "object"
+      },
+      "ExpectedReturnEstimateContextRead": {
+        "additionalProperties": false,
+        "properties": {
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/ExpectedReturnEstimateRead"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "NO_MAPPING",
+              "AMBIGUOUS_SOURCE",
+              "NO_OBSERVATIONS",
+              "UNDATED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "provider_id",
+          "periods"
+        ],
+        "title": "ExpectedReturnEstimateContextRead",
+        "type": "object"
+      },
+      "ExpectedReturnEstimateRead": {
+        "additionalProperties": false,
+        "properties": {
+          "analyst_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyst Count"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "data_quality": {
+            "enum": [
+              "PASS",
+              "DATA_CHECK",
+              "INVALID"
+            ],
+            "title": "Data Quality",
+            "type": "string"
+          },
+          "forecast_period": {
+            "title": "Forecast Period",
+            "type": "string"
+          },
+          "metric": {
+            "enum": [
+              "REVENUE",
+              "EPS"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "observation_id": {
+            "format": "uuid",
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "period_type": {
+            "enum": [
+              "ANNUAL",
+              "QUARTERLY"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "provider_id": {
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "snapshot_date": {
+            "format": "date",
+            "title": "Snapshot Date",
+            "type": "string"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observation_id",
+          "metric",
+          "period_type",
+          "forecast_period",
+          "period_end",
+          "value",
+          "currency",
+          "unit",
+          "analyst_count",
+          "snapshot_date",
+          "observed_at",
+          "recorded_at",
+          "provider_id",
+          "source_ref",
+          "data_quality",
+          "quality_reason"
+        ],
+        "title": "ExpectedReturnEstimateRead",
+        "type": "object"
+      },
+      "ExpectedReturnHistoryPointRead": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "base_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Fv"
+          },
+          "base_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Probability"
+          },
+          "bear_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Fv"
+          },
+          "bear_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Probability"
+          },
+          "bull_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Fv"
+          },
+          "bull_probability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Probability"
+          },
+          "contract_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Status"
+          },
+          "currency_status": {
+            "enum": [
+              "DOCUMENTED",
+              "UNKNOWN"
+            ],
+            "title": "Currency Status",
+            "type": "string"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "estimate_context": {
+            "$ref": "#/components/schemas/ExpectedReturnEstimateContextRead"
+          },
+          "event_status": {
+            "enum": [
+              "DATED",
+              "EFFECTIVE_DATE_UNKNOWN"
+            ],
+            "title": "Event Status",
+            "type": "string"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "expected_cash_flow_irr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Cash Flow Irr"
+          },
+          "expected_excess": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Excess"
+          },
+          "forward_fundamental_cagr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forward Fundamental Cagr"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "is_current_at_cutoff": {
+            "title": "Is Current At Cutoff",
+            "type": "boolean"
+          },
+          "market_price": {
+            "$ref": "#/components/schemas/ExpectedReturnMarketPriceRead"
+          },
+          "methodology_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Version"
+          },
+          "model_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Currency"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Key"
+          },
+          "model_label": {
+            "title": "Model Label",
+            "type": "string"
+          },
+          "model_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UFCF_DCF_10Y_FADE",
+                  "OWNER_CASH_FLOW_10Y",
+                  "RESIDUAL_INCOME_10Y_FADE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Type"
+          },
+          "output_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Quality"
+          },
+          "output_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Status"
+          },
+          "point_id": {
+            "title": "Point Id",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "return_semantics": {
+            "enum": [
+              "NATIVE_METHOD_OUTPUT",
+              "LEGACY_NORMALIZED_FIELD"
+            ],
+            "title": "Return Semantics",
+            "type": "string"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          },
+          "revision_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Source"
+          },
+          "revision_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Type"
+          },
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Actor"
+          },
+          "source_kind": {
+            "enum": [
+              "IMPORTED_CURRENT_CONTRACT",
+              "IMPORTED_LEGACY_REVISION",
+              "NATIVE_MODEL_REVISION"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          },
+          "valuation_listing_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Listing Currency"
+          },
+          "valuation_listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Listing Id"
+          },
+          "valuation_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Ticker"
+          },
+          "valuation_venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Venue"
+          },
+          "weighted_fv": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fv"
+          },
+          "weighted_upside": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Upside"
+          }
+        },
+        "required": [
+          "point_id",
+          "source_kind",
+          "event_status",
+          "effective_at",
+          "recorded_at",
+          "series_id",
+          "model_key",
+          "model_id",
+          "revision_id",
+          "revision_number",
+          "model_type",
+          "methodology_version",
+          "model_label",
+          "model_currency",
+          "currency_status",
+          "valuation_listing_id",
+          "valuation_ticker",
+          "valuation_venue",
+          "valuation_listing_currency",
+          "is_current_at_cutoff",
+          "output_status",
+          "output_quality",
+          "contract_status",
+          "return_semantics",
+          "actor",
+          "source_actor",
+          "revision_source",
+          "revision_type",
+          "bear_fv",
+          "base_fv",
+          "bull_fv",
+          "bear_probability",
+          "base_probability",
+          "bull_probability",
+          "weighted_fv",
+          "weighted_upside",
+          "expected_cash_flow_irr",
+          "hurdle",
+          "expected_excess",
+          "forward_fundamental_cagr",
+          "market_price",
+          "estimate_context",
+          "source",
+          "source_revision_id",
+          "rationale",
+          "evidence"
+        ],
+        "title": "ExpectedReturnHistoryPointRead",
+        "type": "object"
+      },
+      "ExpectedReturnMarketPriceRead": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustment_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment Basis"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "listing_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Currency"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "model_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Currency"
+          },
+          "model_reference_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Reference Price"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "quote_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Currency"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "STALE",
+              "DATA_CHECK",
+              "NO_DATA",
+              "CURRENCY_MISMATCH",
+              "CURRENCY_UNKNOWN",
+              "LISTING_UNMAPPED",
+              "PRICE_NOT_CAPTURED",
+              "UNDATED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue"
+          }
+        },
+        "required": [
+          "status",
+          "listing_id",
+          "ticker",
+          "venue",
+          "listing_currency",
+          "quote",
+          "quote_currency",
+          "model_reference_price",
+          "model_currency",
+          "effective_at",
+          "observed_at",
+          "recorded_at",
+          "provider",
+          "adjustment_basis",
+          "observation_id",
+          "source_ref",
+          "reason"
+        ],
+        "title": "ExpectedReturnMarketPriceRead",
         "type": "object"
       },
       "ExtendedFinancialModelRead": {
@@ -7736,6 +11314,728 @@
         "title": "PortfolioOverview",
         "type": "object"
       },
+      "PortfolioRankInputSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_status": {
+            "enum": [
+              "VALUED",
+              "PRICE_COVERAGE_INCOMPLETE",
+              "FX_UNAVAILABLE",
+              "PORTFOLIO_TOTAL_UNAVAILABLE"
+            ],
+            "title": "Allocation Status",
+            "type": "string"
+          },
+          "bear_fair_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Fair Value"
+          },
+          "bull_fair_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Fair Value"
+          },
+          "compounder_quality": {
+            "$ref": "#/components/schemas/PortfolioRankScoreSnapshot"
+          },
+          "context_note": {
+            "title": "Context Note",
+            "type": "string"
+          },
+          "context_version": {
+            "const": "portfolio-rank-inputs-v1",
+            "title": "Context Version",
+            "type": "string"
+          },
+          "current_weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Weight"
+          },
+          "durability_10y": {
+            "$ref": "#/components/schemas/PortfolioRankScoreSnapshot"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/PortfolioRankScoreSnapshot"
+          },
+          "expected_excess": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Excess"
+          },
+          "expected_irr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Irr"
+          },
+          "holding_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Effective At"
+          },
+          "holding_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Snapshot Id"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortfolioRankModelSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Score"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/PortfolioRankScoreSnapshot"
+          },
+          "score_contributions": {
+            "$ref": "#/components/schemas/PortfolioRankScoreContributions"
+          },
+          "score_formula": {
+            "const": "LEGACY_IRR_FIRST_ALLOCATION_V1",
+            "title": "Score Formula",
+            "type": "string"
+          },
+          "target_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Effective At"
+          },
+          "target_minus_current_gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Minus Current Gap"
+          },
+          "target_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Revision Id"
+          },
+          "target_weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Weight"
+          },
+          "valuation_uncertainty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Uncertainty"
+          },
+          "weighted_fair_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fair Value"
+          }
+        },
+        "required": [
+          "context_version",
+          "score_formula",
+          "portfolio_score",
+          "current_weight",
+          "target_weight",
+          "target_minus_current_gap",
+          "lifecycle",
+          "allocation_status",
+          "holding_snapshot_id",
+          "holding_effective_at",
+          "target_revision_id",
+          "target_effective_at",
+          "expected_irr",
+          "expected_excess",
+          "hurdle",
+          "bear_fair_value",
+          "weighted_fair_value",
+          "bull_fair_value",
+          "valuation_uncertainty",
+          "durability_10y",
+          "compounder_quality",
+          "execution",
+          "risk",
+          "model_source",
+          "score_contributions",
+          "context_note"
+        ],
+        "title": "PortfolioRankInputSnapshot",
+        "type": "object"
+      },
+      "PortfolioRankModelSource": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PASS",
+                  "NOT_MAPPED",
+                  "NO_CONTRACT",
+                  "DATA_CHECK",
+                  "HISTORICAL_ONLY"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Status"
+          },
+          "currency_status": {
+            "enum": [
+              "DOCUMENTED",
+              "UNKNOWN"
+            ],
+            "title": "Currency Status",
+            "type": "string"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "effective_time_status": {
+            "enum": [
+              "KNOWN",
+              "UNKNOWN"
+            ],
+            "title": "Effective Time Status",
+            "type": "string"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "listing_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Ticker"
+          },
+          "listing_venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Venue"
+          },
+          "methodology_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Version"
+          },
+          "model_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Currency"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_key": {
+            "title": "Model Key",
+            "type": "string"
+          },
+          "model_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Type"
+          },
+          "output_quality": {
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "DATA_CHECK",
+              "UNAVAILABLE"
+            ],
+            "title": "Output Quality",
+            "type": "string"
+          },
+          "price_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Effective At"
+          },
+          "price_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Observation Id"
+          },
+          "price_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FRESH",
+                  "STALE",
+                  "QUALITY_CHECK",
+                  "NO_DATA",
+                  "CURRENCY_MISMATCH",
+                  "CURRENCY_UNKNOWN"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Status"
+          },
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_kind": {
+            "enum": [
+              "NATIVE_MODEL_REVISION",
+              "IMPORTED_CURRENT_CONTRACT"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_kind",
+          "record_id",
+          "model_id",
+          "revision_id",
+          "revision_number",
+          "model_key",
+          "model_type",
+          "methodology_version",
+          "source",
+          "effective_at",
+          "recorded_at",
+          "effective_time_status",
+          "model_currency",
+          "currency_status",
+          "output_quality",
+          "contract_status",
+          "price_status",
+          "price_effective_at",
+          "price_observation_id",
+          "listing_id",
+          "listing_ticker",
+          "listing_venue"
+        ],
+        "title": "PortfolioRankModelSource",
+        "type": "object"
+      },
+      "PortfolioRankScoreContributions": {
+        "additionalProperties": false,
+        "properties": {
+          "compounder_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compounder Quality"
+          },
+          "durability_10y": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durability 10Y"
+          },
+          "execution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution"
+          },
+          "expected_irr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Irr"
+          },
+          "negative_expected_excess_penalty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negative Expected Excess Penalty"
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk"
+          },
+          "target_underweight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Underweight"
+          },
+          "valuation_uncertainty_penalty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Uncertainty Penalty"
+          }
+        },
+        "required": [
+          "target_underweight",
+          "expected_irr",
+          "durability_10y",
+          "compounder_quality",
+          "execution",
+          "risk",
+          "valuation_uncertainty_penalty",
+          "negative_expected_excess_penalty"
+        ],
+        "title": "PortfolioRankScoreContributions",
+        "type": "object"
+      },
+      "PortfolioRankScoreSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Id"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "decimal_places": 4,
+                "ge": 0,
+                "le": 5,
+                "max_digits": 6,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "enum": [
+              "ASSESSED",
+              "MISSING",
+              "UNAVAILABLE",
+              "INVALID",
+              "NOT_ASSESSED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score",
+          "status",
+          "assessment_id",
+          "effective_at",
+          "recorded_at",
+          "source"
+        ],
+        "title": "PortfolioRankScoreSnapshot",
+        "type": "object"
+      },
       "PortfolioRead": {
         "additionalProperties": false,
         "properties": {
@@ -8382,6 +12682,23 @@
             "title": "Id",
             "type": "string"
           },
+          "input_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WatchlistRankInputSnapshot"
+              },
+              {
+                "$ref": "#/components/schemas/PortfolioRankInputSnapshot"
+              },
+              {
+                "$ref": "#/components/schemas/ResearchRankInputSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Snapshot"
+          },
           "position": {
             "anyOf": [
               {
@@ -8423,7 +12740,8 @@
           "INPUTS_UNAVAILABLE",
           "NOT_ELIGIBLE",
           "EXCLUDED",
-          "NOT_MIGRATED"
+          "NOT_MIGRATED",
+          "DATA_CHECK"
         ],
         "title": "RankingEntryStatus",
         "type": "string"
@@ -9080,6 +13398,140 @@
           "observations"
         ],
         "title": "ReportedFundamentalPeriodRead",
+        "type": "object"
+      },
+      "ResearchRankInputSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "bucket_source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket Source Ref"
+          },
+          "candidate_tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "HIGH",
+                  "LOW"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Tier"
+          },
+          "context_note": {
+            "title": "Context Note",
+            "type": "string"
+          },
+          "context_version": {
+            "const": "research-rank-inputs-v1",
+            "title": "Context Version",
+            "type": "string"
+          },
+          "input_quality": {
+            "enum": [
+              "AVAILABLE",
+              "MISSING",
+              "DATA_CHECK"
+            ],
+            "title": "Input Quality",
+            "type": "string"
+          },
+          "legacy_default_priority_seed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Default Priority Seed"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "priority_seed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority Seed"
+          },
+          "priority_seed_source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority Seed Source Ref"
+          },
+          "sort_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Key"
+          },
+          "source_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Digest"
+          },
+          "used_legacy_default": {
+            "title": "Used Legacy Default",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "context_version",
+          "lifecycle",
+          "candidate_tier",
+          "priority_seed",
+          "legacy_default_priority_seed",
+          "used_legacy_default",
+          "sort_key",
+          "input_quality",
+          "source_digest",
+          "bucket_source_ref",
+          "priority_seed_source_ref",
+          "context_note"
+        ],
+        "title": "ResearchRankInputSnapshot",
         "type": "object"
       },
       "ResidualIncomeBase-Input": {
@@ -11015,6 +15467,677 @@
         "title": "TargetRead",
         "type": "object"
       },
+      "TemporalAlignedValueRead": {
+        "additionalProperties": false,
+        "properties": {
+          "analyst_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyst Count"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "data_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "high_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Value"
+          },
+          "low_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Value"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "source_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Observation Id"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status",
+          "value",
+          "currency",
+          "unit",
+          "source_name",
+          "source_reference",
+          "source_observation_id",
+          "period_end",
+          "effective_at",
+          "observed_at",
+          "recorded_at",
+          "data_quality",
+          "quality_reason"
+        ],
+        "title": "TemporalAlignedValueRead",
+        "type": "object"
+      },
+      "TemporalModelForecastRead": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "fiscal_year_mapping_basis": {
+            "title": "Fiscal Year Mapping Basis",
+            "type": "string"
+          },
+          "forecast_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Year"
+          },
+          "methodology_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Version"
+          },
+          "model_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_type": {
+            "$ref": "#/components/schemas/FinancialModelType"
+          },
+          "price_at_forecast": {
+            "$ref": "#/components/schemas/TemporalPriceRead"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          },
+          "revision_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Source"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subsequent_market_return": {
+            "$ref": "#/components/schemas/TemporalReturnRead"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "valuation_listing": {
+            "$ref": "#/components/schemas/ListingRead"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "model_id",
+          "model_name",
+          "model_type",
+          "model_currency",
+          "valuation_listing",
+          "status",
+          "forecast_year",
+          "fiscal_year_mapping_basis",
+          "value",
+          "unit",
+          "revision_id",
+          "revision_number",
+          "methodology_version",
+          "revision_source",
+          "rationale",
+          "effective_at",
+          "recorded_at",
+          "price_at_forecast",
+          "subsequent_market_return"
+        ],
+        "title": "TemporalModelForecastRead",
+        "type": "object"
+      },
+      "TemporalPriceRead": {
+        "additionalProperties": false,
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Days"
+          },
+          "close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "data_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality"
+          },
+          "listing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListingRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "market_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Date"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_return_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Return Close"
+          }
+        },
+        "required": [
+          "status",
+          "listing",
+          "market_date",
+          "close",
+          "total_return_close",
+          "currency",
+          "provider",
+          "observed_at",
+          "recorded_at",
+          "data_quality",
+          "age_days",
+          "reason"
+        ],
+        "title": "TemporalPriceRead",
+        "type": "object"
+      },
+      "TemporalReturnRead": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Days"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "end_market_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Market Date"
+          },
+          "end_total_return_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Total Return Close"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "return_fraction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Fraction"
+          },
+          "start_market_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Market Date"
+          },
+          "start_total_return_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Total Return Close"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "horizon_days",
+          "target_date",
+          "start_market_date",
+          "end_market_date",
+          "start_total_return_close",
+          "end_total_return_close",
+          "return_fraction",
+          "actual_days",
+          "basis",
+          "reason"
+        ],
+        "title": "TemporalReturnRead",
+        "type": "object"
+      },
+      "UniverseEstimateMomentumRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyRead"
+          },
+          "estimate_momentum": {
+            "$ref": "#/components/schemas/EstimateMomentumSummaryRead"
+          }
+        },
+        "required": [
+          "company",
+          "estimate_momentum"
+        ],
+        "title": "UniverseEstimateMomentumRead",
+        "type": "object"
+      },
+      "UniverseExecutionPaceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyRead"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionPaceHistoryEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "company",
+          "decision"
+        ],
+        "title": "UniverseExecutionPaceSummary",
+        "type": "object"
+      },
       "UniverseMarketSummary": {
         "additionalProperties": false,
         "properties": {
@@ -11153,6 +16276,528 @@
         ],
         "title": "ValuationGap",
         "type": "object"
+      },
+      "WatchlistRankInputSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "compounder_quality": {
+            "$ref": "#/components/schemas/WatchlistRankScoreSnapshot"
+          },
+          "context_note": {
+            "title": "Context Note",
+            "type": "string"
+          },
+          "context_version": {
+            "const": "watchlist-rank-inputs-v1",
+            "title": "Context Version",
+            "type": "string"
+          },
+          "decision_context": {
+            "const": "QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED",
+            "title": "Decision Context",
+            "type": "string"
+          },
+          "durability_10y": {
+            "$ref": "#/components/schemas/WatchlistRankScoreSnapshot"
+          },
+          "expected_excess": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Excess"
+          },
+          "expected_irr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Irr"
+          },
+          "forward_fundamental_cagr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forward Fundamental Cagr"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "return_semantics": {
+            "enum": [
+              "NATIVE_METHOD_OUTPUT",
+              "LEGACY_NORMALIZED_FIELD"
+            ],
+            "title": "Return Semantics",
+            "type": "string"
+          },
+          "return_source": {
+            "$ref": "#/components/schemas/WatchlistRankReturnSource"
+          },
+          "weighted_fair_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fair Value"
+          }
+        },
+        "required": [
+          "context_version",
+          "expected_irr",
+          "return_semantics",
+          "return_source",
+          "durability_10y",
+          "compounder_quality",
+          "forward_fundamental_cagr",
+          "weighted_fair_value",
+          "hurdle",
+          "expected_excess",
+          "decision_context",
+          "context_note"
+        ],
+        "title": "WatchlistRankInputSnapshot",
+        "type": "object"
+      },
+      "WatchlistRankReturnSource": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PASS",
+                  "NOT_MAPPED",
+                  "NO_CONTRACT",
+                  "DATA_CHECK",
+                  "HISTORICAL_ONLY"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Status"
+          },
+          "contract_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Version"
+          },
+          "currency_status": {
+            "enum": [
+              "DOCUMENTED",
+              "UNKNOWN"
+            ],
+            "title": "Currency Status",
+            "type": "string"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "effective_time_status": {
+            "enum": [
+              "KNOWN",
+              "UNKNOWN"
+            ],
+            "title": "Effective Time Status",
+            "type": "string"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "listing_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Ticker"
+          },
+          "listing_venue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Venue"
+          },
+          "methodology_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Methodology Version"
+          },
+          "migration_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PARITY_PASS",
+                  "PARTIAL_MAPPING",
+                  "DATA_CHECK",
+                  "BLOCKED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Status"
+          },
+          "model_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Currency"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Key"
+          },
+          "model_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Type"
+          },
+          "output_quality": {
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "DATA_CHECK",
+              "UNAVAILABLE"
+            ],
+            "title": "Output Quality",
+            "type": "string"
+          },
+          "price_effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Effective At"
+          },
+          "price_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Observation Id"
+          },
+          "price_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FRESH",
+                  "STALE",
+                  "QUALITY_CHECK",
+                  "NO_DATA",
+                  "CURRENCY_MISMATCH",
+                  "CURRENCY_UNKNOWN"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Status"
+          },
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_kind": {
+            "enum": [
+              "NATIVE_MODEL_REVISION",
+              "IMPORTED_CURRENT_CONTRACT"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_revision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision Id"
+          }
+        },
+        "required": [
+          "source_kind",
+          "record_id",
+          "model_id",
+          "revision_id",
+          "revision_number",
+          "model_key",
+          "model_type",
+          "methodology_version",
+          "contract_version",
+          "source_revision_id",
+          "source",
+          "effective_at",
+          "recorded_at",
+          "effective_time_status",
+          "model_currency",
+          "currency_status",
+          "output_quality",
+          "contract_status",
+          "price_status",
+          "price_effective_at",
+          "price_observation_id",
+          "listing_id",
+          "listing_ticker",
+          "listing_venue",
+          "migration_status"
+        ],
+        "title": "WatchlistRankReturnSource",
+        "type": "object"
+      },
+      "WatchlistRankScoreSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Id"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "decimal_places": 4,
+                "ge": 0,
+                "le": 5,
+                "max_digits": 6,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "enum": [
+              "ASSESSED",
+              "MISSING",
+              "UNAVAILABLE",
+              "INVALID",
+              "NOT_ASSESSED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score",
+          "status",
+          "assessment_id",
+          "effective_at",
+          "recorded_at",
+          "rationale",
+          "source"
+        ],
+        "title": "WatchlistRankScoreSnapshot",
+        "type": "object"
       }
     }
   },
@@ -11212,6 +16857,147 @@
         "summary": "Readiness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/attention": {
+      "get": {
+        "operationId": "get_attention_feed_v1_attention_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(MODEL_REVISION|MODEL_OUTPUT_IMPORT|EXPECTED_IRR_CHANGE|CONSENSUS_REVISION|NEW_FILING|PRICE_MOVE|RANK_CHANGE|EXECUTION_PACE_CHANGE|DATA_QUALITY)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Lifecycle"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(HIGH|MEDIUM|LOW)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(REVIEW|INFORMATIONAL)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lookback_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Lookback Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttentionFeedRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Attention Feed",
+        "tags": [
+          "Portfolio research"
         ]
       }
     },
@@ -12095,6 +17881,302 @@
           }
         },
         "summary": "Get Company Consensus Estimates",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/estimate-momentum": {
+      "get": {
+        "operationId": "get_company_estimate_momentum_v1_companies__company_id__estimate_momentum_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyEstimateMomentumRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Estimate Momentum",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/execution-pace": {
+      "get": {
+        "operationId": "get_company_execution_pace_v1_companies__company_id__execution_pace_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyExecutionPaceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Execution Pace",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/expected-return-attribution": {
+      "get": {
+        "operationId": "get_company_expected_return_attribution_v1_companies__company_id__expected_return_attribution_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "prior_point_id",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Prior Point Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "current_point_id",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Current Point Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyExpectedReturnAttributionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Expected Return Attribution",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/expected-return-history": {
+      "get": {
+        "operationId": "get_company_expected_return_history_v1_companies__company_id__expected_return_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyExpectedReturnHistoryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Expected Return History",
         "tags": [
           "Portfolio research"
         ]
@@ -13050,6 +19132,223 @@
           }
         },
         "summary": "Post Company Source Document",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/temporal-alignment": {
+      "get": {
+        "operationId": "get_company_temporal_alignment_v1_companies__company_id__temporal_alignment_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year",
+            "required": true,
+            "schema": {
+              "maximum": 2200,
+              "minimum": 1800,
+              "title": "Fiscal Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "outcome_known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome Known At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "horizon_days",
+            "required": false,
+            "schema": {
+              "default": 365,
+              "maximum": 3650,
+              "minimum": 1,
+              "title": "Horizon Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyTemporalAlignmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Temporal Alignment",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/execution-pace-runs": {
+      "get": {
+        "operationId": "get_execution_pace_runs_v1_execution_pace_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExecutionPaceRunRead"
+                  },
+                  "title": "Response Get Execution Pace Runs V1 Execution Pace Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Execution Pace Runs",
+        "tags": [
+          "Portfolio research"
+        ]
+      },
+      "post": {
+        "operationId": "post_execution_pace_run_v1_execution_pace_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutionPaceRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionPaceRunRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Execution Pace Run",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/execution-pace-runs/{run_id}": {
+      "get": {
+        "operationId": "get_execution_pace_run_v1_execution_pace_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionPaceRunDetailRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Execution Pace Run",
         "tags": [
           "Portfolio research"
         ]
@@ -14517,6 +20816,180 @@
           }
         },
         "summary": "Get Universe",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/universe/estimate-momentum-summary": {
+      "get": {
+        "operationId": "get_universe_estimate_momentum_summary_v1_universe_estimate_momentum_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Lifecycle"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UniverseEstimateMomentumRead"
+                  },
+                  "title": "Response Get Universe Estimate Momentum Summary V1 Universe Estimate Momentum Summary Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Universe Estimate Momentum Summary",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/universe/execution-pace-summary": {
+      "get": {
+        "operationId": "get_universe_execution_pace_summary_v1_universe_execution_pace_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Lifecycle"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UniverseExecutionPaceSummary"
+                  },
+                  "title": "Response Get Universe Execution Pace Summary V1 Universe Execution Pace Summary Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Universe Execution Pace Summary",
         "tags": [
           "Portfolio research"
         ]

@@ -66,6 +66,9 @@ from portfolio_api.financial_models import (
     MarketPriceInput,
     calculate_ufcf_dcf,
 )
+from portfolio_api.portfolio_ranking import build_portfolio_rank_entries
+from portfolio_api.research_ranking import build_research_rank_entries
+from portfolio_api.watchlist_ranking import build_watchlist_rank_entries
 
 
 class DomainError(Exception):
@@ -1850,7 +1853,14 @@ def create_ranking_run(session: Session, value: s.RankingRunCreate) -> RankingRu
     )
     if definition is None:
         raise DomainError("No effective definition exists for this ranking type", 409)
-    if definition.implementation_status != RankingImplementationStatus.NOT_MIGRATED:
+    if (
+        not (
+            value.ranking_type
+            in (RankingType.WATCHLIST, RankingType.PORTFOLIO, RankingType.RESEARCH)
+            and definition.implementation_status == RankingImplementationStatus.READY
+        )
+        and definition.implementation_status != RankingImplementationStatus.NOT_MIGRATED
+    ):
         raise DomainError("No registered ranking implementation exists for this definition", 409)
 
     issuers = list(
@@ -1870,122 +1880,22 @@ def create_ranking_run(session: Session, value: s.RankingRunCreate) -> RankingRu
         .order_by(LifecycleEvent.sequence.desc())
     ):
         lifecycles.setdefault(company_id, Lifecycle(lifecycle))
-    entry_states: list[tuple[UUID, RankingEntryStatus, str]] = []
+    entry_states: list[
+        tuple[UUID, RankingEntryStatus, str, int | None, dict[str, object] | None]
+    ] = []
     if value.ranking_type == RankingType.WATCHLIST:
-        entry_states = [
-            (
-                issuer.id,
-                (
-                    RankingEntryStatus.NOT_MIGRATED
-                    if lifecycles.get(issuer.id) == Lifecycle.WATCHLIST
-                    else RankingEntryStatus.NOT_ELIGIBLE
-                ),
-                (
-                    "Expected IRR, the canonical Watchlist Rank input, is not migrated."
-                    if lifecycles.get(issuer.id) == Lifecycle.WATCHLIST
-                    else "Canonical Watchlist Rank includes explicit WATCHLIST lifecycle only."
-                ),
-            )
-            for issuer in issuers
-        ]
+        entry_states = build_watchlist_rank_entries(
+            session,
+            issuers,
+            {company_id: lifecycle.value for company_id, lifecycle in lifecycles.items()},
+            run_as_of,
+        )
     elif value.ranking_type == RankingType.RESEARCH:
-        entry_states = [
-            (
-                issuer.id,
-                RankingEntryStatus.NOT_MIGRATED,
-                (
-                    "Research Sort Key and its authoritative inputs are not migrated; "
-                    "no ordinal position is assigned."
-                ),
-            )
-            for issuer in issuers
-        ]
-    else:
-        portfolio_item = session.scalar(
-            select(Portfolio)
-            .where(Portfolio.created_at <= run_as_of)
-            .order_by(Portfolio.created_at)
-            .limit(1)
-        )
-        snapshot = (
-            session.scalar(
-                select(HoldingSnapshot)
-                .where(
-                    HoldingSnapshot.portfolio_id == portfolio_item.id,
-                    HoldingSnapshot.effective_at <= run_as_of,
-                    HoldingSnapshot.recorded_at <= run_as_of,
-                )
-                .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
-                .limit(1)
-            )
-            if portfolio_item
-            else None
-        )
-        target_revision = (
-            session.scalar(
-                select(TargetRevision)
-                .where(
-                    TargetRevision.portfolio_id == portfolio_item.id,
-                    TargetRevision.status == "ACCEPTED",
-                    TargetRevision.effective_at <= run_as_of,
-                    TargetRevision.recorded_at <= run_as_of,
-                    TargetRevision.accepted_at <= run_as_of,
-                )
-                .order_by(TargetRevision.effective_at.desc(), TargetRevision.accepted_at.desc())
-                .limit(1)
-            )
-            if portfolio_item
-            else None
-        )
-        positive_positions: set[UUID] = set()
-        if snapshot:
-            positive_positions = {
-                company_id
-                for company_id, quantity in session.execute(
-                    select(Security.company_id, HoldingPosition.quantity)
-                    .join(Listing, Listing.security_id == Security.id)
-                    .join(HoldingPosition, HoldingPosition.listing_id == Listing.id)
-                    .where(HoldingPosition.snapshot_id == snapshot.id)
-                )
-                if company_id is not None and quantity is not None and quantity > 0
-            }
-        positive_targets: set[UUID] = set()
-        if target_revision:
-            positive_targets = {
-                company_id
-                for company_id, weight in session.execute(
-                    select(TargetAllocation.company_id, TargetAllocation.weight).where(
-                        TargetAllocation.revision_id == target_revision.id
-                    )
-                )
-                if weight > 0
-            }
-        for issuer in issuers:
-            if issuer.id in positive_targets:
-                status = RankingEntryStatus.NOT_MIGRATED
-                reason = "Portfolio Score, the canonical Portfolio Rank input, is not migrated."
-            elif issuer.id in positive_positions:
-                status = RankingEntryStatus.INPUTS_UNAVAILABLE
-                reason = (
-                    "Current market value/weight needs prices and FX; Portfolio Score is also "
-                    "not migrated."
-                )
-            elif (
-                snapshot is not None
-                and snapshot.completeness == "COMPLETE"
-                and target_revision is not None
-            ):
-                status = RankingEntryStatus.NOT_ELIGIBLE
-                reason = "No positive current or target portfolio allocation was observed."
-            else:
-                status = RankingEntryStatus.INPUTS_UNAVAILABLE
-                reason = (
-                    "Complete current holdings and accepted targets are required to establish "
-                    "Portfolio Rank membership."
-                )
-            entry_states.append((issuer.id, status, reason))
+        entry_states = build_research_rank_entries(session, issuers, run_as_of)
+    elif value.ranking_type == RankingType.PORTFOLIO:
+        entry_states = build_portfolio_rank_entries(session, issuers, run_as_of)
 
-    ranked_count = sum(status == RankingEntryStatus.RANKED for _, status, _ in entry_states)
+    ranked_count = sum(status == RankingEntryStatus.RANKED for _, status, _, _, _ in entry_states)
     if ranked_count == 0:
         run_status = RankingRunStatus.UNAVAILABLE
     elif all(
@@ -1995,7 +1905,7 @@ def create_ranking_run(session: Session, value: s.RankingRunCreate) -> RankingRu
             RankingEntryStatus.NOT_ELIGIBLE,
             RankingEntryStatus.EXCLUDED,
         )
-        for _, status, _ in entry_states
+        for _, status, _, _, _ in entry_states
     ):
         run_status = RankingRunStatus.COMPLETE
     else:
@@ -2028,11 +1938,12 @@ def create_ranking_run(session: Session, value: s.RankingRunCreate) -> RankingRu
         RankingEntry(
             run_id=run.id,
             company_id=company_id,
-            position=None,
+            position=position,
             status=status,
             reason=reason,
+            input_snapshot=input_snapshot,
         )
-        for company_id, status, reason in entry_states
+        for company_id, status, reason, position, input_snapshot in entry_states
     )
     session.flush()
     return run

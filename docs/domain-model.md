@@ -1,10 +1,11 @@
-# Domain model
+﻿# Domain model
 
 Status: Milestones 1A-1C, controlled legacy-record import, listing-specific market
 facts, normalized output ingestion, the Company Explorer, three representative
 canonical financial-model methodologies, provider-neutral external-data
 contracts, Yahoo market-data ingestion, SEC reported fundamentals, and canonical
-consensus-estimate snapshots are implemented. Cached source ranks remain distinct from rank calculations. Native model-input coverage across
+consensus-estimate snapshots plus a partial, point-in-time Estimate Momentum
+derivation are implemented. Cached source ranks remain distinct from rank calculations. Native model-input coverage across
 the tracked workbook population remains very low; see the source-grounded
 [model migration inventory](model-migration-inventory.md).
 
@@ -29,7 +30,7 @@ the tracked workbook population remains very low; see the source-grounded
   cash balance stays null in partial snapshots; observed zero stays zero.
 - Target revisions are explicitly created as drafts and accepted through a domain
   operation. Acceptance locks the portfolio/revision and checks each fractional
-  weight in [0,1] and the invested total ≤ 1. Residual is strategic cash. Accepted
+  weight in [0,1] and the invested total â‰¤ 1. Residual is strategic cash. Accepted
   revisions cannot be edited; missing rows remain distinct from authored zero.
 - Domain services and ORM guards protect append-only snapshots/events and accepted
   targets. Restrictive database foreign keys protect historical identity references.
@@ -45,9 +46,10 @@ the tracked workbook population remains very low; see the source-grounded
   append-only; corrections point to the superseded assessment. Missing values are
   null with an explicit assessment status.
 - Ranking definitions, runs, and per-company entries preserve separate Portfolio,
-  Watchlist, and Research concepts. Cached legacy rank positions are imported as
-  source observations, while the application still emits no calculated ranks until
-  their inputs and methodology are migrated.
+  Watchlist, and Research concepts. Cached legacy rank positions remain source
+  observations; the active v2 Portfolio and Research definitions calculate only
+  from their separately migrated inputs and methodologies. See section 11 and the
+  dedicated rank documents.
 - One standalone ETF security may have no company reference, with an exact listing
   identity. Other standalone instrument classes and instrument-level target design
   remain deferred.
@@ -131,6 +133,13 @@ currency and absolute fiscal dates, so it remains visible as `DATA_CHECK`. See
 [`consensus-estimates.md`](consensus-estimates.md) for exact source limits, coverage
 and the FMP mapping/sync workflow.
 
+Estimate Momentum is a read-time analytic over the selected same-provider annual
+estimate history; it has no separate stored snapshot or mutable state. It preserves
+direction, coverage-derived confidence, source data quality, freshness and availability
+as distinct outputs. The imported legacy estimate baseline is not sufficient to produce
+a value. Unavailable workbook persistence/breadth components remain uncalculated. See
+[`estimate-momentum.md`](estimate-momentum.md).
+
 ## Filings and source documents
 
 `SourceDocumentBatch` records immutable provider ingestion receipts and points to
@@ -183,6 +192,20 @@ The model in this document is intentionally evolutionary. It defines domain owne
 
 ---
 
+## Temporal forecast and outcome alignment
+
+Temporal comparison is a query over accepted model revisions, consensus snapshots,
+reported fundamentals and listing-specific daily price observations. Forecast
+knowledge and later outcome knowledge use separate cutoffs. Both effective/source
+time and application recorded/observed time are bounded; a later filing or same-day
+future-effective revision cannot appear in an earlier point-in-time view. Missing,
+ambiguous, stale and unsupported inputs stay explicit. The initial comparison is
+annual Revenue only and does not compute model-quality or ranking scores. Current
+model revisions lack an explicit forecast fiscal-year anchor, so requested-FY
+model values remain null instead of deriving fiscal periods from revision
+timestamps. See
+[`temporal-alignment.md`](temporal-alignment.md) for current rules and limitations.
+
 ## 1. Authority and ownership
 
 Explicit user instructions, `AGENTS.md`, `README.md`, and the documentation in this directory govern architecture and domain ownership.
@@ -193,15 +216,15 @@ The required dependency direction is:
 
 ```text
 Market facts
-    ↓
+    â†“
 Estimates and company facts
-    ↓
+    â†“
 Financial models
-    ↓
+    â†“
 Investment interpretation
-    ↓
+    â†“
 Portfolio construction
-    ↓
+    â†“
 Execution timing
 ```
 
@@ -273,9 +296,9 @@ The application distinguishes three levels of investment identity:
 
 ```text
 Company
-   ↓
+   â†“
 Security
-   ↓
+   â†“
 Listing
 ```
 
@@ -760,7 +783,7 @@ Known current dimensions:
 Scale:
 
 ```text
-0–5
+0â€“5
 ```
 
 Higher is better.
@@ -776,7 +799,7 @@ Assess whether competitive advantage / relevance is likely to persist for 10+ ye
 Scale:
 
 ```text
-0–5
+0â€“5
 ```
 
 Higher is better.
@@ -792,7 +815,7 @@ Assess how effectively the business can convert growth and reinvestment into lon
 Scale:
 
 ```text
-1–5
+1â€“5
 ```
 
 Higher is better.
@@ -809,7 +832,7 @@ Interpretation:
 Scale:
 
 ```text
-1–5
+1â€“5
 ```
 
 Higher means greater structural/business/financial/regulatory/geopolitical risk.
@@ -865,7 +888,7 @@ The application may understand the known investment dimensions explicitly while 
 
 Rankings are distinct from scores.
 
-Future ranking categories include:
+Ranking categories include:
 
 - Portfolio Rank
 - Watchlist Rank
@@ -881,7 +904,9 @@ The relational implementation uses:
 
 - `ranking_definitions`
 - `ranking_runs`
-- `ranking_entries`
+- `ranking_entries` (with versioned input context for Watchlist, Portfolio, and
+  Research Rank entries)
+- `research_priority_inputs` (append-only source candidate tier/seed imports)
 
 A `ranking_runs` row records one definition version, as-of and recorded timestamps,
 run status, actor, reason, and source. Its `ranking_entries` snapshot one state for
@@ -893,7 +918,7 @@ integer only for `RANKED`; all other statuses require a null position. Per-run
 company identity and ordinal positions are constrained against duplicates.
 
 Entry statuses include `RANKED`, `INPUTS_UNAVAILABLE`, `NOT_ELIGIBLE`, `EXCLUDED`,
-and `NOT_MIGRATED`. Runs and entries are append-only. Company views select the latest
+`NOT_MIGRATED`, and `DATA_CHECK`. Runs and entries are append-only. Company views select the latest
 run for each active definition and expose prior per-company entries as history;
 universe changes or lifecycle changes never rewrite earlier snapshots.
 
@@ -902,26 +927,39 @@ universe changes or lifecycle changes never rewrite earlier snapshots.
 Focused inspection of `Portfolio_Watchlist.xlsx` records these separate rules in
 `docs/workbook-map.md`:
 
-- **Portfolio Rank** orders non-empty Portfolio Score descending, then ticker
-  ascending for ties. Its active decision population is companies with a positive
-  observed current weight or target weight. Cached unique positions are imported;
-  Portfolio Score remains unmigrated.
-- **Watchlist Rank** orders Expected IRR descending, then ticker ascending, for
-  explicit `WATCHLIST` lifecycle members. Cached unique positions are imported;
-  Expected IRR and valuation remain unmigrated.
-- **Research Rank** orders Research Sort Key descending, then ticker ascending.
-  Cached unique positions are imported; the sort key and upstream inputs are not
-  migrated.
+- **Portfolio Rank** implements the documented 100-point Portfolio Score, then
+  ticker ascending for ties. Its active decision population is companies with a
+  positive observed current weight or target weight. Exact inputs, component
+  contributions, current/target weights, model output source and methodology are
+  snapshotted. Native shareholder-cash-flow and legacy normalized Expected IRR are
+  never mixed.
+- **Watchlist Rank** orders Expected IRR descending, then canonical listing ticker
+  ascending, for explicit `WATCHLIST` lifecycle members. Definition v3 is active and
+  creates immutable current runs. It uses native shareholder-cash-flow IRR when
+  available. Legacy normalized Expected IRR values can be ranked only as a separate
+  cohort when no native values participate; a run never sorts the two return
+  semantics together. If a native cohort exists, legacy-only entries are `DATA_CHECK`
+  until comparable native inputs are available. Missing IRR remains unavailable and
+  never becomes zero. Each ranked entry snapshots its IRR, methodology/revision or
+  import source, currency, listing, price date where applicable, score assessments,
+  fundamental CAGR, fair value and hurdle context. Cached workbook positions are not
+  used as current rank inputs.
+- **Research Rank** covers explicit `CANDIDATE` lifecycle companies whose source
+  tier is `Candidate - High` or `Candidate - Low`. Its key is 200000 or 100000,
+  respectively, minus persistent priority seed; the documented 50000 fallback for
+  a blank seed is surfaced in each applicable snapshot. It orders key descending,
+  then canonical ticker ascending. Expected IRR, scores, targets, and holdings are
+  not inputs. The focused importer records source hash/cell provenance and does not
+  invent missing effective dates.
 - The Watchlist view's separate Candidate Rank starts with Fit Tier and then uses
-  Expected IRR. It is not the canonical IRR-first Watchlist Rank and is not
-  implemented here.
+  Expected IRR. It remains distinct from canonical IRR-first Watchlist Rank.
 
-Milestone 1C stores auditable source positions and explicit availability snapshots,
-not calculated ranks. Cached positions are preserved only where they fit the
-unique-ordinal contract; duplicate or malformed cells and unresolved population
-inputs remain `INPUTS_UNAVAILABLE`. Missing values are never replaced with rank zero
-or an invented ordinal result. Rankings do not change lifecycle, holdings, target
-weights, model assumptions, or execution behavior.
+Milestone 1C stores auditable source positions and explicit availability snapshots.
+The first canonical Portfolio and Research runs rank 3 and 96 companies respectively;
+all other states remain data-check, unavailable, or not eligible as documented.
+Cached duplicate, malformed, and stale source cells remain source history and are
+not substituted for current calculations. Rankings do not change lifecycle, holdings,
+target weights, model assumptions, or execution behavior.
 
 Historical ranking runs preserve:
 
@@ -931,9 +969,8 @@ Historical ranking runs preserve:
 - as-of and recorded timestamps, actor, reason, and source
 
 Historical rankings are read from stored runs and are never recomputed using today's
-lifecycle membership or inputs. Future numeric rank generation must wait for the
-documented upstream values and a scoped parity migration. No generic rules engine is
-used.
+lifecycle membership or inputs. A methodology or source-policy change requires a new
+immutable definition version. No generic rules engine is used.
 
 ---
 
@@ -1135,7 +1172,7 @@ for other model types remain in the legacy modeling environment until separately
 migrated and reconciled. The per-tab population and migration blockers are recorded
 in the [model migration inventory](model-migration-inventory.md).
 
-### Canonical financial-model state (Milestones 3A–3D)
+### Canonical financial-model state (Milestones 3Aâ€“3D)
 
 `financial_models` stores model identity/type, company and valuation-listing
 references, model currency and the current-revision pointer. Each accepted
@@ -1152,9 +1189,10 @@ Revision creation checks the current base revision under a row lock. A stale edi
 returns a conflict rather than replacing a newer accepted state. The model pointer
 is a current-state projection only: all prior revisions and their assumptions,
 scenario drivers, projections and outputs remain readable. Workbook parity is
-currently represented by P-GOOGL, W-TOST and W-HDFC fixtures; this is not a batch
-migration of real model assumptions. See [financial-models.md](financial-models.md)
-for methodology formulas, portable contract versions, APIs and limits.
+covered by P-GOOGL, P-ASML, P-ISRG, P-MA, W-TOST and W-HDFC fixtures. Five active
+company input sets are now accepted as native revisions; dropped W-HDFC remains a
+methodology fixture only. See [financial-models.md](financial-models.md) for
+methodology formulas, portable contract versions, APIs and limits.
 
 A financial model does not own lifecycle.
 
@@ -1213,6 +1251,19 @@ Expected IRR is the primary opportunity-return measure after quality/durability 
 
 Expected Excess is secondary context.
 
+### 15.5 Expected IRR attribution
+
+Expected IRR history comparisons use retained native model inputs and the same
+deterministic methodology to isolate supported price, scenario-probability,
+required-return and other model-assumption effects. A symmetric counterfactual
+decomposition preserves interaction effects; any reconciliation difference
+remains an explicit residual. Imported legacy outputs and methodology changes
+are not reverse-engineered into fabricated drivers. Hurdle changes are described
+as return-constraint/model-rate changes, not changes in company economics.
+Point-in-time estimates remain linked context unless the accepted native model
+method consumes them. See
+[`expected-return-attribution.md`](expected-return-attribution.md).
+
 ---
 
 ## 16. Investment decision hierarchy
@@ -1238,6 +1289,17 @@ Execution timing must never alter:
 - durability
 - quality
 - long-term thesis
+
+Canonical Execution Pace is an append-only, point-in-time decision downstream
+of target architecture. Each run stores explicit current/target allocation,
+exact-listing market, valuation/return, price-regime and Estimate Momentum
+inputs with source IDs. A missing or stale critical input produces `REVIEW`
+with no pace value; a company without a holding or explicit target is
+`NOT_APPLICABLE`. The decision is not an order and cannot mutate target
+weights, holdings, lifecycle, model assumptions, scores or thesis. Business
+Execution (1–5) remains a separate quality assessment. See
+[`execution-pace.md`](execution-pace.md) for the migrated legacy branches,
+input freshness rules and parity fixtures.
 
 ---
 
@@ -1309,8 +1371,9 @@ target_allocation_revisions
 target_allocations
 ```
 
-Milestones 1B and 1C add only the distinct score assessments and ranking snapshot
-infrastructure described in sections 10 and 11. Do not yet implement:
+Milestones 1B and 1C add distinct score assessments and immutable ranking snapshots.
+The ranking definitions now have separate calculation support described in section 11. Later analytical domains remain separate owners; they must not be folded into
+ranking logic:
 
 - market-price ingestion
 - FX
@@ -1318,7 +1381,7 @@ infrastructure described in sections 10 and 11. Do not yet implement:
 - DCF calculations
 - scenario engines
 - Expected IRR
-- numerical Portfolio, Watchlist, or Research rank calculations
+- generic ranking rules engines or undocumented composite rank inputs
 - estimate momentum
 - execution signals
 - Thesis Watch automation
@@ -1418,7 +1481,7 @@ The following decisions are considered resolved for Milestone 1A:
 ### Identity
 
 ```text
-Company → Security → Listing
+Company â†’ Security â†’ Listing
 ```
 
 ### Lifecycle
@@ -1462,9 +1525,11 @@ canonical dimensions. Missing values remain explicit nulls with statuses.
 ### Ranking
 
 Milestone 1C provides three separate, versioned definitions and immutable run
-snapshots. Supported cached workbook positions are imported as source observations
-without recalculation. Rankings do not own lifecycle or portfolio/model state, and
-numeric ranking generation remains unavailable until its source inputs are migrated.
+snapshots. Watchlist Rank orders documented Expected IRR inputs; Portfolio Rank
+implements the documented Portfolio Score; Research Rank orders the documented
+Candidate High/Low tier and seed key. Their populations and inputs remain separate,
+and every run snapshots source context. Cached workbook positions remain separate
+source observations. Rankings do not own lifecycle or portfolio/model state.
 
 ### Authentication
 
@@ -1497,7 +1562,6 @@ The following decisions should be deferred until their corresponding domain is i
 - native model-authoring and assumption-versioning strategy
 - assumption-versioning strategy
 - estimate-history schema
-- numeric ranking inputs and parity implementation details
 - execution-signal persistence
 - multi-user authentication/authorization
 

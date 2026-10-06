@@ -31,7 +31,11 @@ from portfolio_api.legacy_import import Workbook
 from portfolio_api.main import create_app
 from portfolio_api.model_input_migration import (
     DEFAULT_WORKBOOK,
+    EXPECTED_MODEL_KEYS,
+    REVIEWED_IMPORT_KEYS,
+    _legacy_inventory_rows,
     _reconcile_model,
+    _screen_active_dcf_cohort,
     _source_price,
     import_native_model_inputs,
     map_supported_models,
@@ -42,7 +46,7 @@ pytestmark = pytest.mark.integration
 
 
 def source_workbook() -> Workbook:
-    return Workbook.read(DEFAULT_WORKBOOK, lambda name: name in {"P-GOOGL", "W-TOST"})
+    return Workbook.read(DEFAULT_WORKBOOK, lambda name: name in EXPECTED_MODEL_KEYS)
 
 
 def add_company_listing(
@@ -82,8 +86,8 @@ def add_company_listing(
 def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> None:
     workbook = source_workbook()
     mapped = map_supported_models(workbook, datetime.now(UTC))
-    assert [model.model_key for model in mapped] == ["P-GOOGL", "W-TOST"]
-    googl, tost = mapped
+    assert [model.model_key for model in mapped] == list(REVIEWED_IMPORT_KEYS)
+    googl, tost, asml, isrg, mastercard = mapped
     assert googl.model_currency == "USD"
     assert googl.input_cell_map["base.base_revenue"] == "B17"
     assert googl.input_cell_map["scenarios.BASE.years"] == "J16:N22"
@@ -92,9 +96,21 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
     assert tost.input_cell_map["base.base_revenue"] == "B5"
     assert tost.input_cell_map["scenarios.BASE.owner_cash_flow_margin"] == "C40:L40"
     assert tost.source_references["base.base_revenue"].startswith("https://www.sec.gov/")
+    for model, ticker, currency in (
+        (asml, "ASML", "EUR"),
+        (isrg, "ISRG", "USD"),
+        (mastercard, "MA", "USD"),
+    ):
+        assert model.ticker == ticker
+        assert model.model_currency == currency
+        assert model.mapping_version == "legacy-ufcf-dcf-cohort-v1"
+        assert model.input_cell_map["base.base_revenue"] == "B17"
+        assert model.input_cell_map["scenarios.BASE.years"] == "J16:N22"
+        assert model.venue is None
 
-    googl_result = _reconcile_model(workbook, googl)
-    tost_result = _reconcile_model(workbook, tost)
+    parity = {model.model_key: _reconcile_model(workbook, model) for model in mapped}
+    googl_result = parity["P-GOOGL"]
+    tost_result = parity["W-TOST"]
     assert googl_result["status"] == "PARITY_PASS"
     assert googl_result["projection_reconciliation"]["compared"] == 30
     assert googl_result["projection_reconciliation"]["passed"] == 30
@@ -105,23 +121,29 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
     assert tost_result["projection_reconciliation"]["passed"] == 123
     assert tost_result["output_reconciliation"]["compared"] == 22
     assert tost_result["output_reconciliation"]["passed"] == 22
+    for model_key in ("P-ASML", "P-ISRG", "P-MA"):
+        assert parity[model_key]["status"] == "PARITY_PASS"
+        assert parity[model_key]["projection_reconciliation"]["passed"] == 30
+        assert parity[model_key]["output_reconciliation"]["passed"] == 22
 
 
 def test_source_quote_is_used_only_for_parity_and_keeps_effective_date_unknown() -> None:
-    googl, tost = map_supported_models(source_workbook(), datetime.now(UTC))
-    assert googl.values.effective_at.tzinfo is not None
-    assert tost.values.effective_at.tzinfo is not None
-    assert _source_price(googl).effective_at is None
-    assert _source_price(tost).effective_at is None
-    assert googl.source_price == Decimal("343.5")
-    assert tost.source_price == Decimal("29.79")
+    mapped = map_supported_models(source_workbook(), datetime.now(UTC))
+    assert all(model.values.effective_at.tzinfo is not None for model in mapped)
+    assert all(_source_price(model).effective_at is None for model in mapped)
+    by_key = {model.model_key: model for model in mapped}
+    assert by_key["P-GOOGL"].source_price == Decimal("343.5")
+    assert by_key["W-TOST"].source_price == Decimal("29.79")
+    assert by_key["P-ASML"].source_price_cell == "B4"
+    assert "P-ASML legacy Expected Cash-Flow IRR" in by_key["P-ASML"].legacy_return_semantics
+    googl, tost = by_key["P-GOOGL"], by_key["W-TOST"]
     assert googl.legacy_return_semantics.startswith("P-GOOGL legacy Expected Cash-Flow IRR")
     assert (
         "not document owner cash flow as a guaranteed distribution" in tost.legacy_return_semantics
     )
 
 
-def test_import_creates_two_native_revisions_once_and_records_parity_assessments(
+def test_import_creates_reviewed_native_revisions_once_and_records_parity_assessments(
     postgres_engine: Engine,
 ) -> None:
     accepted_at = datetime.now(UTC) - timedelta(minutes=1)
@@ -145,17 +167,35 @@ def test_import_creates_two_native_revisions_once_and_records_parity_assessments
             venue="NYSE",
             currency="USD",
         )
+        for name, ticker, venue, currency in (
+            ("ASML Holding", "ASML", "AMS", "EUR"),
+            ("Intuitive Surgical", "ISRG", "NASDAQ", "USD"),
+            ("Mastercard", "MA", "NYSE", "USD"),
+        ):
+            add_company_listing(
+                session,
+                name=name,
+                reporting_currency=currency,
+                security_name=f"{name} ordinary shares",
+                ticker=ticker,
+                venue=venue,
+                currency=currency,
+            )
         first = import_native_model_inputs(session, workbook, accepted_at=accepted_at, apply=True)
-        assert first["input_sets_imported"] == 2
-        assert first["status_counts"]["PARITY_PASS"] == 2
-        assert [row["apply_status"] for row in first["models"]] == ["IMPORTED", "IMPORTED"]
+        assert first["input_sets_imported"] == 5
+        assert first["status_counts"]["PARITY_PASS"] == 5
+        assert all(row["apply_status"] == "IMPORTED" for row in first["models"])
+        screening = {row["model_key"]: row["status"] for row in first["candidate_screening"]}
+        assert screening["P-NVO"] == "BLOCKED"
+        assert screening["P-MSCI"] == "DATA_CHECK"
+        assert screening["W-GEV"] == "PARTIAL_MAPPING"
 
     with Session(postgres_engine) as session, session.begin():
         replay = import_native_model_inputs(
             session, workbook, accepted_at=accepted_at + timedelta(seconds=30), apply=True
         )
         assert replay["input_sets_imported"] == 0
-        assert replay["input_sets_already_imported"] == 2, [
+        assert replay["input_sets_already_imported"] == 5, [
             (
                 row.get("model_key"),
                 row.get("status"),
@@ -167,17 +207,26 @@ def test_import_creates_two_native_revisions_once_and_records_parity_assessments
         assert [row["apply_status"] for row in replay["models"]] == [
             "ALREADY_IMPORTED",
             "ALREADY_IMPORTED",
+            "ALREADY_IMPORTED",
+            "ALREADY_IMPORTED",
+            "ALREADY_IMPORTED",
         ]
-        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 2
-        assert session.scalar(select(func.count()).select_from(FinancialModelRevision)) == 2
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 5
+        assert session.scalar(select(func.count()).select_from(FinancialModelRevision)) == 5
         assert (
-            session.scalar(select(func.count()).select_from(FinancialModelMigrationAssessment)) == 2
+            session.scalar(select(func.count()).select_from(FinancialModelMigrationAssessment)) == 5
         )
-        assert session.scalar(select(func.count()).select_from(FinancialModelOutput)) == 2
+        assert session.scalar(select(func.count()).select_from(FinancialModelOutput)) == 5
         revisions = session.scalars(select(FinancialModelRevision)).all()
         assert {row.actor for row in revisions} == {"IMPORT"}
         assert all(row.effective_at == accepted_at for row in revisions)
         assert all("sha256=" in (row.source or "") for row in revisions)
+        assert {
+            revision_id.rsplit(":", 1)[-1]
+            for revision_id in {revision.source_revision_id for revision in revisions}
+            if revision_id is not None
+            and any(f":{key}:" in revision_id for key in {"P-ASML", "P-ISRG", "P-MA"})
+        } == {"legacy-ufcf-dcf-cohort-v1"}
         current_outputs = session.scalars(select(FinancialModelOutput)).all()
         assert all(row.status == "PARTIAL" for row in current_outputs)
         assert all(row.weighted_upside is None for row in current_outputs)
@@ -298,17 +347,28 @@ def test_company_migration_status_distinguishes_native_output_only_and_unsupport
         )
 
 
-def test_migration_mapping_is_limited_to_the_inventory_first_batch() -> None:
+def test_migration_mapping_is_limited_to_parity_proven_active_tabs() -> None:
     inventory = json.loads(
         (
             Path(__file__).resolve().parents[3]
             / "docs/reconciliation/model-migration-inventory-2026-10-05.json"
         ).read_text(encoding="utf-8")
     )
-    assert inventory["recommended_batches"][0]["model_tabs"] == ["P-GOOGL", "W-TOST"]
+    assert inventory["recommended_batches"][0]["model_tabs"] == sorted(REVIEWED_IMPORT_KEYS)
     assert {
         model.model_key for model in map_supported_models(source_workbook(), datetime.now(UTC))
-    } == {
-        "P-GOOGL",
-        "W-TOST",
-    }
+    } == set(REVIEWED_IMPORT_KEYS)
+
+
+def test_active_dcf_screening_keeps_incomplete_and_nonparity_inputs_out_of_native_models() -> None:
+    screening = _screen_active_dcf_cohort(
+        source_workbook(),
+        datetime.now(UTC),
+        _legacy_inventory_rows(),
+    )
+    statuses = {row["model_key"]: row["status"] for row in screening}
+    assert statuses["P-NVO"] == "BLOCKED"
+    assert statuses["P-MSCI"] == "DATA_CHECK"
+    assert statuses["W-GEV"] == "PARTIAL_MAPPING"
+    assert statuses["P-ADYEN"] == "DATA_CHECK"
+    assert statuses["P-AMZN"] == "DATA_CHECK"
