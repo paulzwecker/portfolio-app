@@ -7,6 +7,7 @@ import gzip
 import hashlib
 import json
 from datetime import UTC, date, datetime
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -181,8 +182,12 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
     async def sleep(seconds: float) -> None:
         delays.append(seconds)
 
+    async def to_thread(function: Any, *args: Any, **kwargs: Any) -> Any:
+        return function(*args, **kwargs)
+
     monkeypatch.setattr("portfolio_api.source_documents._download_sec_json", download)
     monkeypatch.setattr("portfolio_api.source_documents.asyncio.sleep", sleep)
+    monkeypatch.setattr("portfolio_api.source_documents.asyncio.to_thread", to_thread)
     provider = SecSubmissionsProvider({COMPANY_ID: CIK}, "Portfolio Research test@example.com")
 
     records = asyncio.run(provider.fetch(query()))
@@ -197,6 +202,18 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
         "20-F",
         "6-K",
     ]
+
+    requested.clear()
+    already_known = SecSubmissionsProvider(
+        {COMPANY_ID: CIK},
+        "Portfolio Research test@example.com",
+        known_source_record_ids={f"CIK{CIK}:HISTORY:CIK{CIK}-submissions-001.json"},
+    )
+    incremental = asyncio.run(already_known.fetch(query()))
+    assert len(incremental) == 1
+    assert incremental[0].source_record_id == f"CIK{CIK}"
+    assert requested == [f"{SEC_SUBMISSIONS_BASE}/CIK{CIK}.json"]
+    assert already_known.skipped_history_files == 1
 
 
 def test_sec_import_is_idempotent_links_amendments_and_respects_as_of(

@@ -146,3 +146,22 @@ evaluate financial formulas. The first import accepted parity-proven `P-GOOGL` a
 Future batches still require a tab-specific input/output fixture,
 listing/currency validation, immutable revision provenance, and an explicit
 decision on legacy versus canonical shareholder-cash-flow IRR semantics.
+
+## Milestones 6.1–6.3: operational coverage, ingestion and native-model evidence
+
+The receipt-based operational audit is in
+[`operational-coverage-audit.md`](operational-coverage-audit.md), with its
+company-level matrix at
+[`reconciliation/operational-coverage-matrix-2026-10-06.json`](reconciliation/operational-coverage-matrix-2026-10-06.json).
+Recurring provider ingestion uses the existing adapters and canonical observation
+tables; operational run/attempt status is added by Alembic revision
+`6e6c2d4e8a19`, chained after `main`'s `8f96876cc9e9` execution-pace migration.
+See
+[`external-data-operations.md`](external-data-operations.md) for the daily
+schedule, provider limits, freshness rules, replay and command interface.
+
+The latest native-model parity receipt is
+[`reconciliation/native-model-input-import-2026-10-06.json`](reconciliation/native-model-input-import-2026-10-06.json).
+It is explicitly parity-only (`canonical_application_state: NOT_QUERIED`); it does
+not replace the earlier applied migration receipts or establish current database
+state. See the [model migration reconciliation](native-model-input-migration.md).

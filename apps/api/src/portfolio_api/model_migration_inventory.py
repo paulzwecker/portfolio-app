@@ -25,17 +25,44 @@ from portfolio_api.model_outputs import (
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_WORKBOOK = REPOSITORY_ROOT / "reference" / "workbook" / "Portfolio_Watchlist.xlsx"
 DEFAULT_OUTPUT = (
-    REPOSITORY_ROOT / "docs" / "reconciliation" / "model-migration-inventory-2026-10-05.json"
+    REPOSITORY_ROOT / "docs" / "reconciliation" / "model-migration-inventory-2026-10-06.json"
 )
-INVENTORY_DATE = "2026-10-05"
+INVENTORY_DATE = "2026-10-06"
 
 READY_FIXTURES = {
     "P-GOOGL": "UFCF_DCF_10Y_FADE",
-    "P-ASML": "UFCF_DCF_10Y_FADE",
     "P-ISRG": "UFCF_DCF_10Y_FADE",
     "P-MA": "UFCF_DCF_10Y_FADE",
+    "P-CPRT": "UFCF_DCF_10Y_FADE",
+    "P-UBER": "UFCF_DCF_10Y_FADE",
     "W-TOST": "OWNER_CASH_FLOW_10Y",
     "W-HDFC": "RESIDUAL_INCOME_10Y_FADE",
+}
+FORMULA_AUDITED_METHODOLOGY = {
+    "P-CPRT": (
+        "UFCF_DCF_10Y_FADE",
+        "FIVE_YEAR_DETAILED_FADE_TO_TERMINAL_GROWTH",
+        "Formula audit: scenario rows 16–22 drive five-year revenue, EBIT, NOPAT, D&A, "
+        "capex, NWC and discounting; rows 203–210 fade UFCF growth to terminal growth; "
+        "row 202 discounts UFCF/terminal value and adds net cash over diluted shares. "
+        "The owner-cash wording in the title does not describe the implemented formula.",
+    ),
+    "P-MORN": (
+        "UFCF_DCF_10Y_FADE",
+        "FIVE_YEAR_DETAILED_FADE_TO_TERMINAL_GROWTH",
+        "Formula audit: scenario rows 16–22 drive five-year revenue, EBIT, NOPAT, D&A, "
+        "capex, NWC and discounting; rows 203–210 fade UFCF growth to terminal growth; "
+        "row 202 discounts UFCF/terminal value and adds net cash over diluted shares. "
+        "The owner-earnings wording in the title does not describe the implemented formula.",
+    ),
+    "P-UBER": (
+        "UFCF_DCF_10Y_FADE",
+        "FIVE_YEAR_DETAILED_FADE_TO_TERMINAL_GROWTH",
+        "Formula audit: scenario rows 16–22 drive five-year revenue, EBIT, NOPAT, D&A, "
+        "capex, NWC and discounting; rows 203–210 fade UFCF growth to terminal growth; "
+        "row 202 discounts UFCF/terminal value and adds net debt over diluted shares. "
+        "The owner-cash wording in the title does not describe the implemented formula.",
+    ),
 }
 IDENTITY_CANDIDATES = {
     "P-MELI-SOTP": "MELI",
@@ -149,6 +176,8 @@ def _source_contract_status(raw_status: str | None) -> str:
 
 
 def _methodology_family(model_key: str, title: str) -> str:
+    if model_key in FORMULA_AUDITED_METHODOLOGY:
+        return FORMULA_AUDITED_METHODOLOGY[model_key][0]
     normalized = title.casefold()
     if model_key in {"P-SPGI", "P-MELI-SOTP", "P-SPGI-CIQ"}:
         return "SOTP_OR_HYBRID"
@@ -161,6 +190,18 @@ def _methodology_family(model_key: str, title: str) -> str:
         if any(term in normalized for term in METHOD_FAMILY_BY_TITLE[family]):
             return family
     return "OTHER_METHOD_UNCLASSIFIED"
+
+
+def _methodology_variant(model_key: str, specialization: str | None) -> str | None:
+    if model_key in FORMULA_AUDITED_METHODOLOGY:
+        return FORMULA_AUDITED_METHODOLOGY[model_key][1]
+    return specialization
+
+
+def _methodology_evidence(model_key: str) -> str:
+    if model_key in FORMULA_AUDITED_METHODOLOGY:
+        return FORMULA_AUDITED_METHODOLOGY[model_key][2]
+    return "Model-tab title; not a full formula audit."
 
 
 def _currency(cells: dict[str, Any], model_key: str) -> dict[str, Any]:
@@ -528,8 +569,8 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
             "lifecycle_evidence": lifecycle_evidence,
             "prefix_lifecycle_note": prefix_lifecycle_note,
             "methodology_family": family,
-            "methodology_variant": specialization,
-            "methodology_evidence": "Model-tab title; not a full formula audit.",
+            "methodology_variant": _methodology_variant(model_key, specialization),
+            "methodology_evidence": _methodology_evidence(model_key),
             "assessment_notes": MODEL_NOTES.get(model_key),
             "native_method_support": native_support,
             "assumption_mapping_status": assumption_mapping,
@@ -580,7 +621,10 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
             "model_tabs": tabs(
                 lambda model: model["migration_status"] == "READY_FOR_NATIVE_IMPORT"
             ),
-            "objective": ("Import active tabs with reviewed tab-specific native parity fixtures."),
+            "objective": (
+                "Import only active tabs with tab-specific source mapping and "
+                "complete native parity."
+            ),
             "entry_gates": [
                 "Preserve source workbook hash and import provenance.",
                 "Set effective time to the explicit application acceptance time; retain the "
@@ -628,8 +672,8 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
                 lambda model: (
                     model["lifecycle"] == "PORTFOLIO"
                     and model["methodology_family"] == "UFCF_DCF_10Y_FADE"
+                    and model["model_tab"] not in {"P-GOOGL", "P-NVO"}
                     and model["migration_status"] != "READY_FOR_NATIVE_IMPORT"
-                    and model["model_tab"] != "P-NVO"
                 )
             ),
             "objective": (
@@ -813,15 +857,15 @@ def build_inventory(workbook_path: Path = DEFAULT_WORKBOOK) -> dict[str, Any]:
             },
         },
         "classification_notes": [
-            "Methodology family is a first-pass classification from the model-tab title and "
-            "selected explicit workbook labels, not formula parity acceptance.",
+            "Methodology family is a first-pass classification from the model-tab title, except "
+            "for P-CPRT, P-MORN and P-UBER, which received a focused formula audit.",
             "The source's PASS/NOT MAPPED labels concern normalized outputs; they do not "
             "establish safe assumption import.",
             "P-/W- prefixes are naming hints only. Lifecycle is derived from the Universe "
             "Registry rules and cached membership inputs.",
-            "P-GOOGL, P-ASML, P-ISRG, P-MA, W-TOST, and W-HDFC have tab-specific native "
-            "input/output parity fixtures. Dropped W-HDFC remains outside active migration "
-            "priority.",
+            "P-GOOGL, P-ISRG, P-MA, P-CPRT, P-UBER, W-TOST and W-HDFC have tab-specific native "
+            "input/output parity evidence. Dropped W-HDFC remains outside active priority; the "
+            "Portfolio tabs are import-ready only after exact canonical listing validation.",
             "No tab is classified NOT_RELEVANT; dropped/archived tabs are marked LEGACY_ONLY "
             "and retained as evidence.",
         ],

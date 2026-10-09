@@ -258,5 +258,16 @@ replace Yahoo facts or workbook observations in place.
    representative reconciliations are established. Store analytics separately
    with methodology version and references to the exact input observations used.
 
+## Recurring operations
+
+`portfolio_api.external_ingestion` runs the existing SEC, FMP and Yahoo adapters
+as a daily one-shot worker. PostgreSQL records provider/domain run state, freshness,
+partial results and bounded attempt failures separately from provider batch receipts
+and canonical observations. Run `npm run db:ingest-external-data -- status` to
+inspect operations, and see [external-data-operations.md](external-data-operations.md)
+for cadence, retries, replay and deployment configuration. This worker does not
+change source precedence, fill identity gaps, or make observations canonical when
+normalization or domain quality checks reject them.
+
 The sequence is a recommendation; it does not imply that unlisted providers or
 domain observations are available.

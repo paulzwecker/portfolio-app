@@ -896,13 +896,19 @@ def ingest_sec_company_facts(
     }
 
 
-def _load_cik_mappings(session: Session, company_id: UUID | None = None) -> dict[UUID, str]:
+def _load_cik_mappings(
+    session: Session,
+    company_id: UUID | None = None,
+    company_ids: Sequence[UUID] | None = None,
+) -> dict[UUID, str]:
     query = select(CompanyProviderIdentifier).where(
         CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
         CompanyProviderIdentifier.identifier_type == "SEC_CIK",
     )
     if company_id is not None:
         query = query.where(CompanyProviderIdentifier.company_id == company_id)
+    if company_ids is not None:
+        query = query.where(CompanyProviderIdentifier.company_id.in_(company_ids))
     rows = list(session.scalars(query))
     result: dict[UUID, str] = {}
     grouped: dict[UUID, list[str]] = defaultdict(list)
@@ -919,19 +925,25 @@ async def sync_reported_fundamentals(
     session: Session,
     settings: Settings,
     company_id: UUID | None = None,
+    company_ids: Sequence[UUID] | None = None,
 ) -> list[dict[str, object]]:
     if not settings.sec_user_agent:
         raise ValueError("Set SEC_USER_AGENT to an application name and contact email before sync")
-    identifiers = _load_cik_mappings(session, company_id)
+    identifiers = _load_cik_mappings(session, company_id, company_ids)
     if company_id is not None and company_id not in identifiers:
         return [{"company_id": str(company_id), "status": "UNMAPPED_SEC_IDENTITY"}]
     if not identifiers:
         return [{"status": "NO_VERIFIED_SEC_IDENTITIES"}]
+    ordered_company_ids = (
+        [item for item in company_ids if item in identifiers]
+        if company_ids is not None
+        else sorted(identifiers, key=str)
+    )
     query = ProviderQuery(
         domain=ExternalDataDomain.REPORTED_FUNDAMENTALS,
         subjects=tuple(
             CanonicalSubjectRef(kind=CanonicalSubjectKind.COMPANY, id=item)
-            for item in sorted(identifiers, key=str)
+            for item in ordered_company_ids
         ),
         requested_at=datetime.now(UTC),
     )
@@ -942,7 +954,12 @@ async def sync_reported_fundamentals(
     for record in records:
         cik = record.source_record_id.removeprefix("CIK") if record.source_record_id else ""
         company = by_cik[cik]
-        results.append(ingest_sec_company_facts(session, company, cik, record))
+        results.append(
+            {
+                "company_id": str(company),
+                **ingest_sec_company_facts(session, company, cik, record),
+            }
+        )
     return results
 
 

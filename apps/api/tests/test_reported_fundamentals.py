@@ -7,6 +7,7 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -230,7 +231,11 @@ def test_provider_requires_exact_cik_mapping_and_uses_the_shared_provider_contra
         calls.append((url, user_agent))
         return companyfacts_payload()
 
+    async def to_thread(function: Any, *args: Any, **kwargs: Any) -> Any:
+        return function(*args, **kwargs)
+
     monkeypatch.setattr("portfolio_api.reported_fundamentals._download_sec_json", fake_download)
+    monkeypatch.setattr("portfolio_api.reported_fundamentals.asyncio.to_thread", to_thread)
     query = ProviderQuery(
         domain=ExternalDataDomain.REPORTED_FUNDAMENTALS,
         subjects=[CanonicalSubjectRef(kind=CanonicalSubjectKind.COMPANY, id=COMPANY_ID)],

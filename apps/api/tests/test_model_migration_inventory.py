@@ -55,17 +55,18 @@ def test_only_active_tabs_with_representative_parity_are_ready(
     models = {model["model_tab"]: model for model in inventory["models"]}
 
     assert inventory["summary"]["active_ready_tabs"] == [
-        "P-ASML",
+        "P-CPRT",
         "P-GOOGL",
         "P-ISRG",
         "P-MA",
+        "P-UBER",
         "W-TOST",
     ]
-    assert models["P-ASML"]["assumption_mapping_status"] == (
-        "VERIFIED_BY_REPRESENTATIVE_PARITY_FIXTURE"
-    )
-    assert models["P-ISRG"]["migration_status"] == "READY_FOR_NATIVE_IMPORT"
-    assert models["P-MA"]["migration_status"] == "READY_FOR_NATIVE_IMPORT"
+    assert models["P-CPRT"]["methodology_family"] == "UFCF_DCF_10Y_FADE"
+    assert models["P-UBER"]["methodology_family"] == "UFCF_DCF_10Y_FADE"
+    assert models["P-MORN"]["methodology_family"] == "UFCF_DCF_10Y_FADE"
+    assert models["P-MORN"]["migration_status"] == "NEEDS_MAPPING"
+    assert "Formula audit" in models["P-CPRT"]["methodology_evidence"]
     assert models["W-TOST"]["lifecycle"] == "WATCHLIST"
     assert models["W-TOST"]["assumption_mapping_status"] == (
         "VERIFIED_BY_REPRESENTATIVE_PARITY_FIXTURE"
@@ -120,27 +121,27 @@ def test_recommended_batches_put_active_portfolio_methods_ahead_of_bulk_watchlis
     batches = {batch["batch_id"]: batch for batch in inventory["recommended_batches"]}
 
     assert batches["B0_PARITY_BACKED_ACTIVE_IMPORT"]["model_tabs"] == [
-        "P-ASML",
+        "P-CPRT",
         "P-GOOGL",
         "P-ISRG",
         "P-MA",
+        "P-UBER",
         "W-TOST",
     ]
     assert batches["B1_PORTFOLIO_DCF_COHORT"]["model_tabs"] == [
         "P-ADYEN",
         "P-AMD",
         "P-AMZN",
+        "P-ASML",
         "P-BKNG",
         "P-CELH",
         "P-HIMS",
         "P-MELI",
+        "P-MORN",
         "P-MSCI",
         "P-MSFT",
     ]
     assert batches["B2_PORTFOLIO_OWNER_CASH_FLOW_VARIANTS"]["model_tabs"] == [
-        "P-CPRT",
-        "P-MORN",
-        "P-UBER",
         "W-DLO",
         "W-RDDT",
         "W-TSM",

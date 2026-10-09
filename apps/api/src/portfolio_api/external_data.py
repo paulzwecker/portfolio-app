@@ -6,10 +6,11 @@ the existing or future canonical observation schemas.
 
 from __future__ import annotations
 
+import email.utils
 import hashlib
 import json
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
@@ -166,6 +167,47 @@ class ExternalDataProvider(Protocol):
     provider_id: str
 
     async def fetch(self, query: ProviderQuery) -> Sequence[RawProviderRecord]: ...
+
+
+class ProviderTransportError(RuntimeError):
+    """Sanitized transport failure with retry guidance for the operational runner."""
+
+    provider_id: str
+    code: str
+    retryable: bool
+    retry_after_seconds: float | None
+
+    def __init__(
+        self,
+        provider_id: str,
+        code: str,
+        message: str,
+        *,
+        retryable: bool,
+        retry_after_seconds: float | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.provider_id = provider_id
+        self.code = code
+        self.retryable = retryable
+        self.retry_after_seconds = retry_after_seconds
+
+
+def parse_retry_after_seconds(value: str | None) -> float | None:
+    """Parse both delay-seconds and HTTP-date forms of Retry-After."""
+
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        try:
+            retry_at = email.utils.parsedate_to_datetime(value)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=UTC)
+        return max(0.0, (retry_at - datetime.now(UTC)).total_seconds())
 
 
 class DomainNormalizer[CanonicalObservation](Protocol):

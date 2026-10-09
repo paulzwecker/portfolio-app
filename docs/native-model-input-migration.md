@@ -126,3 +126,30 @@ gaps are resolved. After the active DCF work, assess the materially different
 Portfolio owner-cash-flow variants (`P-CPRT`, `P-MORN`, `P-UBER`) one at a time.
 
 No next batch is implied by this recommendation.
+
+## Milestone 6.3 parity receipt and application-state boundary — 2026-10-06
+
+The current parity-only report is
+[`native-model-input-import-2026-10-06.json`](reconciliation/native-model-input-import-2026-10-06.json).
+It records six `PARITY_PASS` models (`P-GOOGL`, `P-ISRG`, `P-MA`, `P-CPRT`,
+`P-UBER`, and `W-TOST`), ten `DATA_CHECK` rows, and two `PARTIAL_MAPPING` rows.
+It records zero imported revisions, zero already-imported rows, and
+`canonical_application_state: NOT_QUERIED`. The four Portfolio candidates under
+the latest remediation (`P-ISRG`, `P-MA`, `P-CPRT`, `P-UBER`) therefore do not
+represent four new database revisions: the earlier applied receipt already
+contains `P-ISRG` and `P-MA`; only `P-CPRT` and `P-UBER` are new parity candidates.
+
+The prior applied batch and replay remain in the repository as historical
+application evidence for `P-GOOGL`, `W-TOST`, `P-ASML`, `P-ISRG`, and `P-MA`.
+The latest source assessment classifies `P-ASML` as `DATA_CHECK`; this newer
+assessment does not change or delete the earlier accepted revision. A current
+database query is still required to establish which accepted revisions are
+present today.
+
+Return-method parity is recorded separately from canonical shareholder-return
+comparability. The receipt has seven source-method return parity passes and nine
+return data checks; all 16 rows with a mapped Expected IRR are marked
+`NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR`. The DCF mappings preserve their
+enterprise-UFCF return basis and do not relabel legacy values as shareholder IRR.
+No assumptions or effective dates were invented, and no revision was applied by
+the parity-only run.

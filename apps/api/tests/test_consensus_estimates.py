@@ -1,8 +1,11 @@
 import asyncio
 import json
+import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from email.message import Message
+from typing import Any
 from uuid import UUID, uuid4
 
 from pytest import MonkeyPatch
@@ -37,6 +40,7 @@ from portfolio_api.external_data import (
     CanonicalSubjectRef,
     ExternalDataDomain,
     ProviderQuery,
+    ProviderTransportError,
     RawProviderRecord,
 )
 
@@ -78,6 +82,10 @@ def provider_record(payload: bytes, *, source: str = "EXACT:annual") -> RawProvi
         payload=payload,
         payload_sha256=__import__("hashlib").sha256(payload).hexdigest(),
     )
+
+
+async def _direct_to_thread(function: Any, *args: Any, **kwargs: Any) -> Any:
+    return function(*args, **kwargs)
 
 
 def test_fmp_normalizer_keeps_forward_periods_and_exact_values() -> None:
@@ -183,6 +191,7 @@ def test_fmp_transport_uses_exact_mapping_and_never_persists_api_key_in_source_u
         return Response()
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("portfolio_api.consensus_estimates.asyncio.to_thread", _direct_to_thread)
     company_id = uuid4()
     provider = FmpConsensusProvider("secret-test-key", {company_id: "EXACT"})
     query = ProviderQuery(
@@ -198,6 +207,42 @@ def test_fmp_transport_uses_exact_mapping_and_never_persists_api_key_in_source_u
     assert all("symbol=EXACT" in url and "apikey=secret-test-key" in url for url in requests)
     assert all("secret-test-key" not in str(record.source_url) for record in records)
     assert all(record.payload_sha256 for record in records)
+
+
+def test_fmp_transport_classifies_rate_limits_without_leaking_api_key(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    headers = Message()
+    headers["Retry-After"] = "7"
+
+    def limited(request: urllib.request.Request, timeout: int) -> object:
+        raise urllib.error.HTTPError(
+            request.full_url,
+            429,
+            "limited",
+            headers,
+            None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", limited)
+    monkeypatch.setattr("portfolio_api.consensus_estimates.asyncio.to_thread", _direct_to_thread)
+    company_id = uuid4()
+    provider = FmpConsensusProvider("secret-test-key", {company_id: "EXACT"})
+    query = ProviderQuery(
+        domain=ExternalDataDomain.CONSENSUS_ESTIMATES,
+        subjects=(CanonicalSubjectRef(kind=CanonicalSubjectKind.COMPANY, id=company_id),),
+        requested_at=datetime(2026, 10, 5, 12, tzinfo=UTC),
+    )
+
+    try:
+        asyncio.run(provider.fetch(query))
+    except ProviderTransportError as error:
+        assert error.code == "RATE_LIMITED"
+        assert error.retryable
+        assert error.retry_after_seconds == 7
+        assert "secret-test-key" not in str(error)
+    else:
+        raise AssertionError("Expected a classified provider rate-limit failure")
 
 
 def test_correction_comparison_detects_value_and_coverage_changes() -> None:

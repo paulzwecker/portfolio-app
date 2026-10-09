@@ -992,6 +992,83 @@ class ExternalRawPayload(Base):
     payload_bytes: Mapped[bytes] = mapped_column(LargeBinary)
 
 
+class ExternalIngestionRun(Base):
+    """Operational state for one idempotent provider/domain execution."""
+
+    __tablename__ = "external_ingestion_runs"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_external_ingestion_run_idempotency"),
+        CheckConstraint(
+            "domain IN ('MARKET_DATA','FX','CORPORATE_ACTIONS','REPORTED_FUNDAMENTALS',"
+            "'CONSENSUS_ESTIMATES','SOURCE_DOCUMENTS')",
+            name="domain",
+        ),
+        CheckConstraint(
+            "status IN ('RUNNING','COMPLETE','PARTIAL','FAILED','BLOCKED','NOT_APPLICABLE')",
+            name="status",
+        ),
+        CheckConstraint("attempt_count >= 0 AND max_attempts BETWEEN 1 AND 3", name="attempts"),
+        Index(
+            "ix_external_ingestion_run_provider_domain_created",
+            "provider_id",
+            "domain",
+            "created_at",
+        ),
+        Index("ix_external_ingestion_run_status_created", "status", "created_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    provider_id: Mapped[str] = mapped_column(String(120))
+    domain: Mapped[str] = mapped_column(String(80))
+    idempotency_key: Mapped[str] = mapped_column(String(255))
+    replay_of_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("external_ingestion_runs.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default="RUNNING")
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_attempt_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_successful_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    request_scope: Mapped[dict[str, object]] = mapped_column(JSON)
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
+class ExternalIngestionAttempt(Base):
+    """Persisted outcome and diagnostics for one bounded provider attempt."""
+
+    __tablename__ = "external_ingestion_attempts"
+    __table_args__ = (
+        UniqueConstraint("run_id", "attempt_number", name="uq_external_ingestion_attempt_number"),
+        CheckConstraint("attempt_number > 0", name="attempt_number"),
+        CheckConstraint(
+            "status IN ('SUCCEEDED','PARTIAL','FAILED','BLOCKED','NOT_APPLICABLE')",
+            name="status",
+        ),
+        Index("ix_external_ingestion_attempt_run_finished", "run_id", "finished_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("external_ingestion_runs.id", ondelete="RESTRICT"), index=True
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    retryable: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
 class SourceDocumentBatch(Base):
     """Immutable provider response and normalizer receipt for source-document metadata."""
 
@@ -1916,6 +1993,7 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         CashPosition,
         ScoreAssessment,
         LegacyImportBatch,
+        ExternalIngestionAttempt,
         ReportedFundamentalBatch,
         ReportedFundamentalObservation,
         SourceDocumentBatch,
