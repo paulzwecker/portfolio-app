@@ -112,11 +112,18 @@ class SecSubmissionsProvider:
 
     provider_id = SEC_PROVIDER_ID
 
-    def __init__(self, identifiers: dict[UUID, str], user_agent: str) -> None:
+    def __init__(
+        self,
+        identifiers: dict[UUID, str],
+        user_agent: str,
+        known_source_record_ids: set[str] | None = None,
+    ) -> None:
         if not user_agent.strip() or "@" not in user_agent:
             raise ValueError("SEC_USER_AGENT must identify the application and a contact email")
         self.identifiers = identifiers
         self.user_agent = user_agent.strip()
+        self.known_source_record_ids = known_source_record_ids or set()
+        self.skipped_history_files = 0
 
     async def fetch(self, query: ProviderQuery) -> Sequence[RawProviderRecord]:
         if query.domain != ExternalDataDomain.SOURCE_DOCUMENTS:
@@ -159,13 +166,17 @@ class SecSubmissionsProvider:
                     continue
                 if not name.startswith(f"CIK{cik}-"):
                     continue
+                history_record_id = f"CIK{cik}:HISTORY:{name}"
+                if history_record_id in self.known_source_record_ids:
+                    self.skipped_history_files += 1
+                    continue
                 history_url = f"{SEC_SUBMISSIONS_BASE}/{quote(name, safe='-.')}"
                 payload, retrieved_at = await self._fetch_json(history_url, request_count)
                 request_count += 1
                 records.append(
                     _raw_record(
                         payload,
-                        f"CIK{cik}:HISTORY:{name}",
+                        history_record_id,
                         history_url,
                         retrieved_at,
                     )
@@ -397,13 +408,19 @@ def _parse_date(value: str | None) -> date | None:
         return None
 
 
-def _load_cik_mappings(session: Session, company_id: UUID | None = None) -> dict[UUID, str]:
+def _load_cik_mappings(
+    session: Session,
+    company_id: UUID | None = None,
+    company_ids: Sequence[UUID] | None = None,
+) -> dict[UUID, str]:
     statement = select(CompanyProviderIdentifier).where(
         CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
         CompanyProviderIdentifier.identifier_type == "SEC_CIK",
     )
     if company_id is not None:
         statement = statement.where(CompanyProviderIdentifier.company_id == company_id)
+    if company_ids is not None:
+        statement = statement.where(CompanyProviderIdentifier.company_id.in_(company_ids))
     rows = list(session.scalars(statement))
     identifiers: dict[UUID, str] = {}
     for row in rows:
@@ -656,10 +673,28 @@ def ingest_sec_submissions(
         pending[key] = stored
         inserted += 1
 
+    existing_document_companies = set(
+        session.scalars(
+            select(SourceDocument.company_id).where(
+                SourceDocument.provider_id == SEC_PROVIDER_ID,
+                SourceDocument.company_id.in_(identifiers),
+            )
+        )
+    )
+    companies_with_documents = existing_document_companies | {
+        item.company_id for item in normalized
+    }
+    companies_without_supported_filings = sorted(
+        str(company_id) for company_id in identifiers if company_id not in companies_with_documents
+    )
     reconciliation: dict[str, object] = {
         **counters,
         "documents_imported": inserted,
         "documents_reused": reused,
+        "companies_without_supported_filings": companies_without_supported_filings,
+        "data_check_documents": sum(
+            item.data_quality == SourceDocumentQuality.DATA_CHECK for item in documents_to_store
+        ),
         "existing_metadata_conflicts": metadata_conflicts,
         "amendments_linked": linked,
         "amendments_unlinked": unlinked,
@@ -722,24 +757,47 @@ async def sync_sec_source_documents(
     session: Session,
     settings: Settings,
     company_id: UUID | None = None,
+    company_ids: Sequence[UUID] | None = None,
 ) -> list[dict[str, object]]:
     if not settings.sec_user_agent:
         raise ValueError("Set SEC_USER_AGENT to an application name and contact email before sync")
-    identifiers = _load_cik_mappings(session, company_id)
+    identifiers = _load_cik_mappings(session, company_id, company_ids)
     if company_id is not None and company_id not in identifiers:
         return [{"company_id": str(company_id), "status": "UNMAPPED_SEC_IDENTITY"}]
     if not identifiers:
         return [{"status": "NO_VERIFIED_SEC_IDENTITIES", "documents_imported": 0}]
+    ordered_company_ids = (
+        [item for item in company_ids if item in identifiers]
+        if company_ids is not None
+        else sorted(identifiers, key=str)
+    )
     query = ProviderQuery(
         domain=ExternalDataDomain.SOURCE_DOCUMENTS,
         subjects=tuple(
             CanonicalSubjectRef(kind=CanonicalSubjectKind.COMPANY, id=item)
-            for item in sorted(identifiers, key=str)
+            for item in ordered_company_ids
         ),
         requested_at=datetime.now(UTC),
     )
-    records = await SecSubmissionsProvider(identifiers, settings.sec_user_agent).fetch(query)
-    return [ingest_sec_submissions(session, query, records, identifiers)]
+    known_history = set(
+        session.scalars(
+            select(ExternalRawPayload.source_record_id)
+            .where(
+                ExternalRawPayload.source_document_batch_id.is_not(None),
+                ExternalRawPayload.provider_id == SEC_PROVIDER_ID,
+                ExternalRawPayload.domain == ExternalDataDomain.SOURCE_DOCUMENTS.value,
+                ExternalRawPayload.source_record_id.like("CIK%:HISTORY:%"),
+            )
+            .distinct()
+        )
+    )
+    provider = SecSubmissionsProvider(
+        identifiers, settings.sec_user_agent, known_source_record_ids=known_history
+    )
+    records = await provider.fetch(query)
+    result = ingest_sec_submissions(session, query, records, identifiers)
+    result["history_files_skipped_as_unchanged"] = provider.skipped_history_files
+    return [result]
 
 
 def create_company_source_document(

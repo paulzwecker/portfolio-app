@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections import defaultdict
@@ -48,7 +49,9 @@ from portfolio_api.external_data import (
     NormalizationIssue,
     NormalizationResult,
     ProviderQuery,
+    ProviderTransportError,
     RawProviderRecord,
+    parse_retry_after_seconds,
 )
 from portfolio_api.legacy_import import Workbook
 from portfolio_api.settings import Settings
@@ -140,12 +143,17 @@ class FmpConsensusProvider(ExternalDataProvider):
         if query.domain != ExternalDataDomain.CONSENSUS_ESTIMATES:
             raise ValueError("FMP estimate adapter only supports consensus estimates")
         records: list[RawProviderRecord] = []
+        request_count = 0
         for subject in query.subjects:
             if subject.kind != CanonicalSubjectKind.COMPANY or subject.id not in self._symbols:
                 raise ValueError("FMP estimates require an exact provider symbol mapping")
             symbol = self._symbols[subject.id]
             for period in ("annual", "quarter"):
+                if request_count:
+                    # FMP limits vary by subscription; keep this worker at five requests/second.
+                    await asyncio.sleep(0.2)
                 records.append(await asyncio.to_thread(self._fetch_one, symbol, period))
+                request_count += 1
         return tuple(records)
 
     def _fetch_one(self, symbol: str, period: str) -> RawProviderRecord:
@@ -165,10 +173,33 @@ class FmpConsensusProvider(ExternalDataProvider):
                 payload = response.read()
                 schema_version = response.headers.get("X-Api-Version")
                 retrieved_at = datetime.now(UTC)
-        except Exception:
+        except urllib.error.HTTPError as error:
             # urllib's exception text can contain the API key query parameter.
-            raise RuntimeError(
-                "FMP estimate request failed; request details were omitted"
+            retry_after = error.headers.get("Retry-After") if error.headers else None
+            retryable = error.code == 429 or 500 <= error.code <= 599
+            code = "RATE_LIMITED" if error.code == 429 else f"HTTP_{error.code}"
+            raise ProviderTransportError(
+                FMP_PROVIDER_ID,
+                code,
+                f"FMP estimate request returned HTTP {error.code}; request details were omitted",
+                retryable=retryable,
+                retry_after_seconds=parse_retry_after_seconds(retry_after),
+            ) from None
+        except (TimeoutError, urllib.error.URLError, ConnectionError) as error:
+            raise ProviderTransportError(
+                FMP_PROVIDER_ID,
+                "NETWORK_ERROR",
+                f"FMP estimate request failed with {type(error).__name__}; "
+                "request details were omitted",
+                retryable=True,
+            ) from None
+        except Exception as error:
+            raise ProviderTransportError(
+                FMP_PROVIDER_ID,
+                "REQUEST_ERROR",
+                f"FMP estimate request failed with {type(error).__name__}; "
+                "request details were omitted",
+                retryable=False,
             ) from None
         safe_url = (
             "https://financialmodelingprep.com/stable/analyst-estimates?"
@@ -451,7 +482,12 @@ def persist_provider_response(
         )
     )
     if existing is not None:
-        return {"status": "ALREADY_IMPORTED", "batch_id": str(existing.id), "facts_inserted": 0}
+        return {
+            "status": "ALREADY_IMPORTED",
+            "batch_id": str(existing.id),
+            "facts_inserted": 0,
+            "reconciliation": existing.reconciliation,
+        }
     normalized_result = FmpConsensusNormalizer(mapping, snapshot.date()).normalize(record)
     normalized = [item.model_dump(mode="python") for item in (normalized_result.observation or ())]
     issues = normalized_result.issues
@@ -496,7 +532,7 @@ def persist_provider_response(
         source_url=str(record.source_url) if record.source_url else None,
         media_type=record.media_type,
         content_encoding="identity",
-        payload_sha256=digest,
+        payload_sha256=record.payload_sha256,
         retrieved_at=snapshot,
         payload_bytes=record.payload,
     )

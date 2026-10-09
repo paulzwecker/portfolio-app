@@ -27,6 +27,7 @@
     "db:import-native-models": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_input_migration",
     "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",
     "db:sync-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_ingestion",
+    "db:ingest-external-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.external_ingestion",
     "db:map-market-listings": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_mapping",
     "db:reconcile-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_reconciliation",
     "db:sync-reported-fundamentals": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.reported_fundamentals",

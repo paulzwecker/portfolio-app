@@ -60,6 +60,7 @@ from portfolio_api.yahoo_finance import (
 
 CROSSWALK_PATH = REPOSITORY_PATH / "reference" / "market-data" / "providers" / "yahoo-listings.json"
 DEFAULT_LOOKBACK_DAYS = 365 * 10
+DEFAULT_CORPORATE_ACTION_OVERLAP_DAYS = 90
 INSERT_CHUNK_SIZE = 1000
 
 
@@ -435,6 +436,7 @@ def _group_market_queries(
     default_start: date,
     end_date: date,
     forced_start: date | None,
+    corporate_action_overlap_days: int = DEFAULT_CORPORATE_ACTION_OVERLAP_DAYS,
 ) -> list[tuple[date, list[UUID]]]:
     grouped: dict[date, list[UUID]] = defaultdict(list)
     for listing_id in listing_maps:
@@ -448,6 +450,12 @@ def _group_market_queries(
                 )
             )
             start = latest_yahoo.date() + timedelta(days=1) if latest_yahoo else default_start
+            if latest_yahoo is not None:
+                action_refresh_start = max(
+                    default_start,
+                    end_date - timedelta(days=corporate_action_overlap_days),
+                )
+                start = min(start, action_refresh_start)
         if start <= end_date:
             grouped[start].append(listing_id)
         else:
@@ -481,6 +489,8 @@ async def build_provider_import(
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
     scope: str = "active",
     listing_keys: set[tuple[str, str]] | None = None,
+    fx_pairs: set[tuple[str, str]] | None = None,
+    corporate_action_overlap_days: int = DEFAULT_CORPORATE_ACTION_OVERLAP_DAYS,
 ) -> dict[str, Any]:
     selected, held_ids = active_market_listings(session)
     selection_issues: list[dict[str, str]] = []
@@ -516,7 +526,7 @@ async def build_provider_import(
         if company is not None and company.id in active_companies
     }
     active_companies_without_listing = [
-        {"company": name, "lifecycle": state}
+        {"company_id": str(company_id), "company": name, "lifecycle": state}
         for company_id, (name, state) in sorted(
             active_companies.items(), key=lambda item: item[1][0]
         )
@@ -551,13 +561,14 @@ async def build_provider_import(
     provider.bind_listing_ids(listing_maps)
     default_start = start_date or (end_date - timedelta(days=lookback_days))
     market_plans: list[dict[str, Any]] = []
-    market_failures: list[dict[str, str]] = []
+    market_failures: list[dict[str, object]] = []
     for start, listing_ids in _group_market_queries(
         session,
         listing_maps,
         default_start=default_start,
         end_date=end_date,
         forced_start=start_date,
+        corporate_action_overlap_days=corporate_action_overlap_days,
     ):
         subjects = tuple(
             CanonicalSubjectRef(kind=CanonicalSubjectKind.LISTING, id=listing_id)
@@ -576,6 +587,8 @@ async def build_provider_import(
                 "source_record_id": failure.source_record_id,
                 "provider_symbol": failure.provider_symbol,
                 "message": failure.message,
+                "code": failure.code,
+                "retryable": failure.retryable,
             }
             for failure in provider.failures
         )
@@ -590,8 +603,9 @@ async def build_provider_import(
         if plan:
             market_plans.append(plan)
 
-    base_currency, required_fx_pairs = portfolio_fx_requirements(session)
-    if base_currency is not None:
+    base_currency, portfolio_pairs = portfolio_fx_requirements(session)
+    required_fx_pairs = set(fx_pairs) if fx_pairs is not None else portfolio_pairs
+    if fx_pairs is None and base_currency is not None:
         required_fx_pairs.update(
             (mapping.currency, base_currency)
             for mapping in listing_maps.values()
@@ -599,7 +613,7 @@ async def build_provider_import(
         )
     fx_unmapped = sorted(pair for pair in required_fx_pairs if pair not in FX_SYMBOLS)
     fx_plans: list[dict[str, Any]] = []
-    fx_failures: list[dict[str, str]] = []
+    fx_failures: list[dict[str, object]] = []
     fx_normalizer = YahooFxNormalizer()
     fx_groups: dict[date, list[tuple[str, str]]] = defaultdict(list)
     fx_pairs_not_due: list[str] = []
@@ -632,6 +646,8 @@ async def build_provider_import(
                 "source_record_id": failure.source_record_id,
                 "provider_symbol": failure.provider_symbol,
                 "message": failure.message,
+                "code": failure.code,
+                "retryable": failure.retryable,
             }
             for failure in provider.failures
         )

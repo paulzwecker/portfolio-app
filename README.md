@@ -383,6 +383,8 @@ TEST_DATABASE_URL=...
 ```
 
 Use application database credentials, not PostgreSQL administrator credentials.
+For a persistent database reachable from a remote development environment, use the
+[remote PostgreSQL setup](docs/remote-development-postgresql.md).
 
 ---
 

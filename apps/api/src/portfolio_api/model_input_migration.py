@@ -1,10 +1,9 @@
-"""Import reviewed, parity-proven legacy model inputs as native model revisions.
+"""Assess and import parity-proven legacy model inputs as native model revisions.
 
-This adapter reads cached OOXML values from the reviewed workbook snapshot,
-recalculates with the existing engines, and never evaluates workbook formulas or
-writes legacy output values to native state. Only explicitly reviewed model tabs may
-create canonical revisions; the other active DCF tabs are reported with their mapping
-or parity blockers.
+The adapter reads cached OOXML values from the reviewed workbook snapshot,
+recalculates with existing engines, and never evaluates workbook formulas or writes
+legacy output values to native state. Import still requires exact canonical identity
+and current application price validation.
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ import hashlib
 import json
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
-from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -54,17 +53,11 @@ from portfolio_api.settings import Settings
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_REPORT = (
-    REPOSITORY_ROOT
-    / "docs"
-    / "reconciliation"
-    / "native-model-input-import-batch-2-2026-10-05.json"
+    REPOSITORY_ROOT / "docs" / "reconciliation" / "native-model-input-import-2026-10-06.json"
 )
 MAPPING_VERSION = "legacy-native-input-v1"
-DCF_COHORT_MAPPING_VERSION = "legacy-ufcf-dcf-cohort-v1"
+PORTFOLIO_DCF_MAPPING_VERSION = "portfolio-ufcf-dcf-2026-10-06-v1"
 TOLERANCE = Decimal("0.0000001")
-# Workbook output cells are commonly cached to six decimal places. Half a unit at
-# that precision permits representation rounding without hiding economic differences.
-OUTPUT_ROUNDING_TOLERANCE = Decimal("0.0000005")
 SCENARIO_ORDER = ("BEAR", "BASE", "BULL")
 SCENARIO_COLUMNS = {
     "BEAR": ("E", "F", "G", "H", "I"),
@@ -73,26 +66,34 @@ SCENARIO_COLUMNS = {
 }
 TOST_SCENARIO_ROWS = {"BEAR": (37, 38), "BASE": (39, 40), "BULL": (41, 42)}
 TOST_VALUATION_ROWS = {"BEAR": 46, "BASE": 47, "BULL": 48}
-ACTIVE_DCF_SCREEN_KEYS = (
-    "P-ADYEN",
-    "P-AMD",
-    "P-AMZN",
-    "P-ASML",
-    "P-BKNG",
-    "P-CELH",
-    "P-GOOGL",
-    "P-HIMS",
-    "P-ISRG",
-    "P-MA",
-    "P-MELI",
-    "P-MSCI",
-    "P-MSFT",
-    "P-NVO",
-    "W-GEV",
-)
-EXPECTED_MODEL_KEYS = ("P-GOOGL", "W-TOST", *ACTIVE_DCF_SCREEN_KEYS)
-REVIEWED_IMPORT_KEYS = ("P-GOOGL", "W-TOST", "P-ASML", "P-ISRG", "P-MA")
-REVIEWED_DCF_IMPORT_KEYS = frozenset({"P-ASML", "P-ISRG", "P-MA"})
+PORTFOLIO_DCF_LISTING_REQUIREMENTS: dict[str, tuple[str, str, str, str]] = {
+    # Values are cross-checked against the current operational coverage receipt;
+    # the database identity query remains the final import guard.
+    "P-ADYEN": ("Adyen", "ADYEN", "AMS", "EUR"),
+    "P-AMD": ("AMD", "AMD", "NASDAQ", "USD"),
+    "P-AMZN": ("Amazon", "AMZN", "NASDAQ", "USD"),
+    "P-ASML": ("ASML Holding", "ASML", "AMS", "EUR"),
+    "P-BKNG": ("Booking Holdings", "BKNG", "NASDAQ", "USD"),
+    "P-CELH": ("Celsius Holdings", "CELH", "NASDAQ", "USD"),
+    "P-HIMS": ("Hims & Hers", "HIMS", "NYSE", "USD"),
+    "P-ISRG": ("Intuitive Surgical", "ISRG", "NASDAQ", "USD"),
+    "P-MA": ("Mastercard", "MA", "NYSE", "USD"),
+    "P-MELI": ("MercadoLibre", "MELI", "NASDAQ", "USD"),
+    "P-MSCI": ("MSCI Inc.", "MSCI", "NYSE", "USD"),
+    "P-MSFT": ("Microsoft", "MSFT", "NASDAQ", "USD"),
+    # The workbook links NVO to CPH:NOVO-B and explicitly labels DKK. This
+    # mapping is only safe while that exact listing remains the canonical one.
+    "P-NVO": ("Novo Nordisk", "NOVO-B", "CPH", "DKK"),
+    # These three tabs are title-classified as owner-cash models in the first
+    # inventory. Their explicit operating rows are UFCF DCFs, so they are tested
+    # against the existing DCF method and never forced into the owner-cash method.
+    "P-CPRT": ("Copart", "CPRT", "NASDAQ", "USD"),
+    "P-MORN": ("Morningstar", "MORN", "NASDAQ", "USD"),
+    "P-UBER": ("Uber Technologies", "UBER", "NYSE", "USD"),
+}
+PORTFOLIO_DCF_MODEL_KEYS = tuple(PORTFOLIO_DCF_LISTING_REQUIREMENTS)
+EXPECTED_MODEL_KEYS = ("P-GOOGL", *PORTFOLIO_DCF_MODEL_KEYS, "W-TOST")
+PARITY_PROVEN_MODEL_KEYS = ("P-GOOGL", "P-ISRG", "P-MA", "P-CPRT", "P-UBER", "W-TOST")
 
 
 @dataclass(frozen=True)
@@ -100,7 +101,7 @@ class MappedModel:
     model_key: str
     company_name: str
     ticker: str
-    venue: str | None
+    venue: str
     security_type: str
     model_type: FinancialModelType
     model_name: str
@@ -112,6 +113,8 @@ class MappedModel:
     source_references: dict[str, str]
     units: str
     legacy_return_semantics: str
+    legacy_return_basis: str
+    expected_irr_comparability: str
     mapping_version: str = MAPPING_VERSION
 
 
@@ -162,11 +165,15 @@ def _model_currency(workbook: Workbook, model_key: str, source_cell: str) -> str
     return match.group(1)
 
 
+def _source_cell_evidence(workbook: Workbook, model_key: str, address: str) -> str:
+    cell = workbook.cell(model_key, address)
+    return f"{model_key}!{address}; cached_value={cell.value!r}; formula={cell.formula!r}"
+
+
 def _revision_metadata(
     workbook: Workbook,
     model_key: str,
     accepted_at: datetime,
-    *,
     mapping_version: str = MAPPING_VERSION,
 ) -> dict[str, object]:
     return {
@@ -301,16 +308,31 @@ def _map_googl(workbook: Workbook, accepted_at: datetime) -> MappedModel:
             "against implied enterprise cost. It is retained for legacy parity and is not the "
             "canonical shareholder-distribution IRR definition."
         ),
+        legacy_return_basis="ENTERPRISE_UFCF_TERMINAL_VALUE_VS_IMPLIED_ENTERPRISE_COST",
+        expected_irr_comparability="NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR",
     )
 
 
-def _map_ufcf_dcf_cohort(
-    workbook: Workbook,
-    accepted_at: datetime,
-    model_key: str,
-    inventory_row: dict[str, Any],
-) -> MappedModel:
-    """Map the shared five-year UFCF DCF layout without inferring missing inputs."""
+def _map_portfolio_dcf(workbook: Workbook, model_key: str, accepted_at: datetime) -> MappedModel:
+    """Map a reviewed active Portfolio tab into the existing UFCF DCF schema.
+
+    The source cells are mapped explicitly and every candidate still has to pass
+    the same per-tab projections, normalized outputs, and return-stream checks.
+    """
+    try:
+        company_name, ticker, venue, expected_currency = PORTFOLIO_DCF_LISTING_REQUIREMENTS[
+            model_key
+        ]
+    except KeyError as error:
+        raise ValueError(f"No reviewed exact listing mapping exists for {model_key}") from error
+
+    currency = _model_currency(workbook, model_key, "B15")
+    if currency != expected_currency:
+        raise ValueError(
+            f"{model_key} source currency {currency} does not match the reviewed "
+            f"{venue}:{ticker} listing currency {expected_currency}"
+        )
+
     base_cells = {
         "base_revenue": "B17",
         "base_ebit_margin": "B18",
@@ -322,112 +344,138 @@ def _map_ufcf_dcf_cohort(
         "diluted_shares": "B24",
     }
     base = {name: _decimal(workbook, model_key, address) for name, address in base_cells.items()}
-    currency = _model_currency(workbook, model_key, "B15")
-    expected_currency = inventory_row.get("model_currency")
-    if not expected_currency or currency != expected_currency:
-        raise ValueError(
-            f"{model_key} source currency {currency} does not match resolved inventory "
-            f"currency {expected_currency!r}"
-        )
-
-    scenario_columns = {"BEAR": "E", "BASE": "J", "BULL": "O"}
     probability_cells = {"BEAR": "AO4", "BASE": "AO5", "BULL": "AO6"}
-    terminal_cells = {"BEAR": "B205", "BASE": "C205", "BULL": "D205"}
+    terminal_growth_cells = {"BEAR": "B205", "BASE": "C205", "BULL": "D205"}
+    scenario_years: dict[str, tuple[str, ...]] = {
+        "BEAR": SCENARIO_COLUMNS["BEAR"],
+        "BASE": SCENARIO_COLUMNS["BASE"],
+        "BULL": SCENARIO_COLUMNS["BULL"],
+    }
     scenarios: list[dict[str, object]] = []
-    input_cells: dict[str, str] = {f"base.{name}": address for name, address in base_cells.items()}
-    input_cells.update(
-        {
-            "model_currency": "B15",
-            "source_price_for_parity_only": "B4",
-        }
-    )
+    input_cells: dict[str, str] = {
+        **{f"base.{name}": address for name, address in base_cells.items()},
+        **{f"scenarios.{name}.probability": address for name, address in probability_cells.items()},
+        **{
+            f"scenarios.{name}.terminal_growth": address
+            for name, address in terminal_growth_cells.items()
+        },
+        "model_currency": "B15",
+        "source_price_for_parity_only": "B4",
+    }
+
     for scenario in SCENARIO_ORDER:
-        first_column = scenario_columns[scenario]
-        first_column_number = _column_number(first_column)
-        columns = [_column_name(first_column_number + offset) for offset in range(5)]
-        target_cells = [f"{column}24" for column in columns]
-        targets = {_decimal(workbook, model_key, address) for address in target_cells}
-        if len(targets) != 1:
+        columns = scenario_years[scenario]
+        if model_key in {"P-CPRT", "P-MORN", "P-UBER"}:
+            # These owner-titled tabs define the fade target as terminal growth.
+            # The workbook's B210:D210 formulas are the Year 10 UFCF growth
+            # endpoints; row 24 does not carry all three scenario targets.
+            target_cells = [f"{scenario_column}210" for scenario_column in "BCD"]
+            scenario_index = SCENARIO_ORDER.index(scenario)
+            target_cells = [target_cells[scenario_index]]
+        else:
+            target_cells = [f"{column}24" for column in columns]
+        target_values = {_decimal(workbook, model_key, address) for address in target_cells}
+        if len(target_values) != 1:
             raise ValueError(
-                f"{model_key} {scenario} Y10 UFCF growth target differs across "
-                f"{', '.join(target_cells)}"
+                f"{model_key} {scenario} Year 10 UFCF growth target differs across "
+                "forecast columns; the native schema accepts one explicit target"
             )
-        years = []
-        for forecast_year, column in enumerate(columns, start=1):
-            years.append(
-                {
-                    "forecast_year": forecast_year,
-                    "revenue_growth": _decimal(workbook, model_key, f"{column}16"),
-                    "ebit_margin": _decimal(workbook, model_key, f"{column}17"),
-                    "da_to_revenue": _decimal(workbook, model_key, f"{column}18"),
-                    "capex_to_revenue": _decimal(workbook, model_key, f"{column}19"),
-                    "nwc_to_revenue": _decimal(workbook, model_key, f"{column}20"),
-                    "tax_rate": _decimal(workbook, model_key, f"{column}21"),
-                    "discount_rate": _decimal(workbook, model_key, f"{column}22"),
-                }
-            )
-        input_cells[f"scenarios.{scenario}.probability"] = probability_cells[scenario]
-        input_cells[f"scenarios.{scenario}.terminal_growth"] = terminal_cells[scenario]
-        input_cells[f"scenarios.{scenario}.year10_ufcf_growth"] = ",".join(target_cells)
+        years = [
+            {
+                "forecast_year": year,
+                "revenue_growth": _decimal(workbook, model_key, f"{column}16"),
+                "ebit_margin": _decimal(workbook, model_key, f"{column}17"),
+                "da_to_revenue": _decimal(workbook, model_key, f"{column}18"),
+                "capex_to_revenue": _decimal(workbook, model_key, f"{column}19"),
+                "nwc_to_revenue": _decimal(workbook, model_key, f"{column}20"),
+                "tax_rate": _decimal(workbook, model_key, f"{column}21"),
+                "discount_rate": _decimal(workbook, model_key, f"{column}22"),
+            }
+            for year, column in enumerate(columns, start=1)
+        ]
+        first_target = target_cells[0]
         input_cells[f"scenarios.{scenario}.years"] = f"{columns[0]}16:{columns[-1]}22"
+        input_cells[f"scenarios.{scenario}.year10_ufcf_growth"] = ",".join(target_cells)
+        input_cells[f"scenarios.{scenario}.rationale"] = "source scenario labels and mapped range"
         scenarios.append(
             {
                 "scenario": scenario,
                 "probability": _decimal(workbook, model_key, probability_cells[scenario]),
-                "terminal_growth": _decimal(workbook, model_key, terminal_cells[scenario]),
-                "year10_ufcf_growth": next(iter(targets)),
+                "terminal_growth": _decimal(workbook, model_key, terminal_growth_cells[scenario]),
+                "year10_ufcf_growth": _decimal(workbook, model_key, first_target),
                 "rationale": (
-                    f"Imported {scenario.title()} assumptions from {model_key}!"
-                    f"{columns[0]}16:{columns[-1]}24."
+                    f"Mapped the explicit {scenario.title()} operating and Year 10 growth "
+                    f"assumptions from {model_key}; source cells are recorded in the receipt."
                 ),
                 "years": years,
             }
         )
 
-    mapping_version = DCF_COHORT_MAPPING_VERSION
     values = schemas.FinancialModelRevisionCreate.model_validate(
         {
-            **_revision_metadata(
-                workbook,
-                model_key,
-                accepted_at,
-                mapping_version=mapping_version,
-            ),
+            **_revision_metadata(workbook, model_key, accepted_at, PORTFOLIO_DCF_MAPPING_VERSION),
             "base": base,
             "scenarios": scenarios,
         }
     )
-    company_name = str(inventory_row["company_name"])
-    ticker = str(inventory_row["canonical_ticker"])
-    if not ticker or inventory_row.get("identity_status") != "MAPPED_BY_EXACT_TAB_SUFFIX":
-        raise ValueError(f"{model_key} does not have an exact inventory identity")
+    owner_title_evidence = model_key in {"P-CPRT", "P-MORN", "P-UBER"}
+    target_source_cells = (
+        {"BEAR": "B210", "BASE": "C210", "BULL": "D210"}
+        if owner_title_evidence
+        else {"BEAR": "E24", "BASE": "J24", "BULL": "O24"}
+    )
+    source_references = {
+        "company_source": _cell(workbook, model_key, "B12"),
+        "source_tab_title": model_key,
+        "valuation_formula": "; ".join(
+            _source_cell_evidence(workbook, model_key, address)
+            for address in ("L202", "M202", "N202")
+        ),
+        "expected_return_formula_or_published_value": _source_cell_evidence(
+            workbook, model_key, "AA212"
+        ),
+        "source_price_for_parity_only": _source_cell_evidence(workbook, model_key, "B4"),
+    }
+    for scenario, address in target_source_cells.items():
+        source_references[f"year10_growth_target.{scenario}"] = _source_cell_evidence(
+            workbook, model_key, address
+        )
     return MappedModel(
         model_key=model_key,
         company_name=company_name,
         ticker=ticker,
-        venue=None,
+        venue=venue,
         security_type="COMMON_STOCK",
         model_type=FinancialModelType.UFCF_DCF_10Y_FADE,
-        model_name=f"{company_name} 10-Year Secular Growth Fade DCF",
+        model_name=f"{company_name} 10-Year UFCF DCF",
         model_currency=currency,
         values=values,
         source_price=_decimal(workbook, model_key, "B4"),
         source_price_cell="B4",
         input_cell_map=input_cells,
-        source_references={
-            "company_source": _cell(workbook, model_key, "B12"),
-            "model_inputs": f"{model_key}!B15:B24; E16:S24; AO4:AO6; B205:D205",
-        },
+        source_references=source_references,
         units=(
-            f"Revenue, enterprise cash flows, and net cash/debt are {currency} billions; "
-            f"shares are billions; valuation and price are {currency} per common share."
+            f"Operating values, enterprise cash flows and net cash/debt are {currency} billions; "
+            f"shares are billions; valuation and parity quote are {currency} "
+            "per exact listing share."
         ),
         legacy_return_semantics=(
-            f"{model_key} legacy Expected Cash-Flow IRR uses probability-weighted enterprise "
-            "UFCF and terminal value against implied enterprise cost. It is retained for legacy "
-            "parity and is not the canonical shareholder-distribution IRR definition."
-        ),
-        mapping_version=mapping_version,
+            (
+                "The legacy tab title refers to owner cash, but its explicit operating rows and "
+                "valuation formulas implement probability-weighted enterprise UFCF and terminal "
+                "value against implied enterprise cost. It is therefore evaluated as the existing "
+                "UFCF DCF method, not forced into the owner-cash-flow archetype. "
+            )
+            if owner_title_evidence
+            else "The legacy Expected Cash-Flow IRR uses probability-weighted enterprise UFCF and "
+            "terminal value against implied enterprise cost; it is not canonical shareholder-"
+            "distribution IRR."
+        )
+        + " Preserve the source method label and do not silently treat it as canonical "
+        "shareholder-distribution IRR.",
+        legacy_return_basis="ENTERPRISE_UFCF_TERMINAL_VALUE_VS_IMPLIED_ENTERPRISE_COST",
+        expected_irr_comparability="NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR",
+        mapping_version=PORTFOLIO_DCF_MAPPING_VERSION,
     )
 
 
@@ -522,20 +570,40 @@ def _map_tost(workbook: Workbook, accepted_at: datetime) -> MappedModel:
             "stream and the legacy terminal-value convention. The source does not document "
             "owner cash flow as a guaranteed distribution. Preserve the source label and method."
         ),
+        legacy_return_basis="PROBABILITY_WEIGHTED_OWNER_CASH_FLOW_AND_LEGACY_TERMINAL_VALUE",
+        expected_irr_comparability="NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR",
     )
 
 
 def map_supported_models(workbook: Workbook, accepted_at: datetime) -> list[MappedModel]:
-    """Map only active tabs with reviewed tab-specific native parity tests."""
-    inventory = _legacy_inventory_rows()
+    """Map only tabs with complete source parity; other candidates stay in the assessment report."""
+    mappers = dict(_supported_model_mappers())
+    return [mappers[key](workbook, accepted_at) for key in PARITY_PROVEN_MODEL_KEYS]
+
+
+def _dcf_candidate_mapper(
+    model_key: str,
+) -> Callable[[Workbook, datetime], MappedModel]:
+    def mapper(workbook: Workbook, accepted_at: datetime) -> MappedModel:
+        return _map_portfolio_dcf(workbook, model_key, accepted_at)
+
+    return mapper
+
+
+def _supported_model_mappers() -> list[tuple[str, Callable[[Workbook, datetime], MappedModel]]]:
     return [
-        _map_googl(workbook, accepted_at),
-        _map_tost(workbook, accepted_at),
-        *(
-            _map_ufcf_dcf_cohort(workbook, accepted_at, key, inventory[key])
-            for key in sorted(REVIEWED_DCF_IMPORT_KEYS)
-        ),
+        ("P-GOOGL", _map_googl),
+        *((model_key, _dcf_candidate_mapper(model_key)) for model_key in PORTFOLIO_DCF_MODEL_KEYS),
+        ("W-TOST", _map_tost),
     ]
+
+
+def _mapping_version_for(model_key: str) -> str:
+    return (
+        PORTFOLIO_DCF_MAPPING_VERSION
+        if model_key in PORTFOLIO_DCF_LISTING_REQUIREMENTS
+        else MAPPING_VERSION
+    )
 
 
 def _legacy_inventory_rows() -> dict[str, dict[str, Any]]:
@@ -608,6 +676,65 @@ def _check(
         "tolerance": str(tolerance),
         "status": "PASS" if difference <= tolerance else "DATA_CHECK",
     }
+
+
+def _annotate_parity_blockers(report: dict[str, Any], error: str | None = None) -> None:
+    if report.get("status") == FinancialModelMigrationStatus.PARITY_PASS.value:
+        report["blocking_categories"] = []
+        report["blocking_summary"] = None
+        return
+
+    reason = error or ""
+    failures = [
+        comparison
+        for group_name in ("projection_reconciliation", "output_reconciliation")
+        for comparison in report.get(group_name, {}).get("comparisons", [])
+        if comparison.get("status") != "PASS"
+    ]
+    fields = [str(item.get("field", "")) for item in failures]
+    categories: list[str] = []
+    summary: str
+    if "Required cached source value is missing" in reason:
+        categories.append("MISSING_SOURCE_DATA")
+        summary = reason
+    elif "base.base_capex_to_revenue" in reason and "greater than or equal to 0" in reason:
+        categories.append("INVALID_SOURCE_ASSUMPTION")
+        summary = (
+            "The source capex-to-revenue assumption is negative and fails native input validation."
+        )
+    else:
+        if any(f".year_{year}." in field for field in fields for year in range(6, 11)):
+            categories.append("METHODOLOGY_MISMATCH")
+        if any(field == "legacy_return_stream.period_0" for field in fields):
+            categories.extend(("RETURN_NOT_COMPARABLE", "SHARE_BASIS_MISMATCH"))
+        elif any(
+            field in {"expected_cash_flow_irr", "expected_excess"}
+            or field.startswith("legacy_return_stream.")
+            for field in fields
+        ):
+            categories.append("RETURN_NOT_COMPARABLE")
+        if any(
+            field in {"bear_fv", "base_fv", "bull_fv", "weighted_fv", "weighted_upside"}
+            for field in fields
+        ):
+            categories.append("DATA_CHECK")
+        if not categories:
+            categories.append("DATA_CHECK")
+        categories = list(dict.fromkeys(categories))
+        if "METHODOLOGY_MISMATCH" in categories:
+            summary = "Year 6–10 source UFCF projections do not match the supported linear fade."
+        elif "SHARE_BASIS_MISMATCH" in categories:
+            summary = "The source return stream uses a different initial price/share basis."
+        elif "RETURN_NOT_COMPARABLE" in categories:
+            summary = (
+                "The source Expected IRR/return stream does not reconcile to the "
+                "supported DCF return stream."
+            )
+        else:
+            summary = "One or more normalized source outputs exceed the existing parity tolerance."
+
+    report["blocking_categories"] = categories
+    report["blocking_summary"] = summary
 
 
 def _reconcile_model(workbook: Workbook, mapped: MappedModel) -> dict[str, Any]:
@@ -749,7 +876,6 @@ def _reconcile_model(workbook: Workbook, mapped: MappedModel) -> dict[str, Any]:
                 source=f"{sheet}!{address}",
                 actual=result_fields[field],
                 expected=_decimal(workbook, sheet, address),
-                tolerance=OUTPUT_ROUNDING_TOLERANCE,
             )
         )
 
@@ -815,11 +941,7 @@ def _reconcile_model(workbook: Workbook, mapped: MappedModel) -> dict[str, Any]:
                 source=f"{sheet}!{source_cell}",
                 actual=actual,
                 expected=_decimal(workbook, sheet, source_cell),
-                tolerance=(
-                    Decimal("0.000001")
-                    if mapped.model_key == "P-GOOGL"
-                    else OUTPUT_ROUNDING_TOLERANCE
-                ),
+                tolerance=Decimal("0.000001") if mapped.model_key == "P-GOOGL" else TOLERANCE,
             )
         )
 
@@ -860,28 +982,25 @@ def _json_safe(value: Any) -> Any:
 
 
 def _identity(session: Session, mapped: MappedModel) -> tuple[Company, Listing]:
-    identity_terms = [
-        Company.name == mapped.company_name,
-        Company.is_demo.is_(False),
-        Listing.ticker == mapped.ticker,
-        Listing.currency == mapped.model_currency,
-        Security.security_type == mapped.security_type,
-        Security.is_demo.is_(False),
-        Listing.is_demo.is_(False),
-    ]
-    if mapped.venue is not None:
-        identity_terms.append(Listing.venue == mapped.venue)
     rows = session.execute(
         select(Company, Listing, Security)
         .join(Security, Security.company_id == Company.id)
         .join(Listing, Listing.security_id == Security.id)
-        .where(*identity_terms)
+        .where(
+            Company.name == mapped.company_name,
+            Company.is_demo.is_(False),
+            Listing.ticker == mapped.ticker,
+            Listing.venue == mapped.venue,
+            Listing.currency == mapped.model_currency,
+            Security.security_type == mapped.security_type,
+            Security.is_demo.is_(False),
+            Listing.is_demo.is_(False),
+        )
     ).all()
     if len(rows) != 1:
         raise ValueError(
             f"Exact non-demo identity/listing match required for {mapped.model_key}: "
-            f"{mapped.company_name} / {mapped.venue or 'unique listing'}:{mapped.ticker} / "
-            f"{mapped.model_currency}; "
+            f"{mapped.company_name} / {mapped.venue}:{mapped.ticker} / {mapped.model_currency}; "
             f"found {len(rows)}"
         )
     company, listing, _security = rows[0]
@@ -903,14 +1022,25 @@ def _base_report(
 ) -> dict[str, Any]:
     reconciliation = _reconcile_model(workbook, mapped)
     calculation = reconciliation.pop("calculation")
+    return_comparisons = [
+        comparison
+        for comparison in reconciliation["output_reconciliation"]["comparisons"]
+        if comparison["field"] in {"expected_cash_flow_irr", "expected_excess"}
+        or str(comparison["field"]).startswith("legacy_return_stream.")
+    ]
+    return_parity = (
+        "PARITY_PASS"
+        if return_comparisons and all(item["status"] == "PASS" for item in return_comparisons)
+        else "DATA_CHECK"
+    )
     report: dict[str, Any] = {
         "model_key": mapped.model_key,
         "company_name": mapped.company_name,
         "canonical_ticker": mapped.ticker,
         "lifecycle": inventory.get("lifecycle"),
         "model_type": mapped.model_type.value,
-        "mapping_version": mapped.mapping_version,
         "methodology_family": inventory.get("methodology_family"),
+        "native_methodology": mapped.model_type.value,
         "model_currency": mapped.model_currency,
         "listing_requirement": {
             "ticker": mapped.ticker,
@@ -934,6 +1064,14 @@ def _base_report(
         },
         "source_price_for_parity": _source_price_report(mapped),
         "legacy_return_semantics": mapped.legacy_return_semantics,
+        "expected_irr": {
+            "source_label": "Expected Cash-Flow IRR",
+            "source_return_basis": mapped.legacy_return_basis,
+            "native_method_return_parity": return_parity,
+            "canonical_shareholder_irr_comparability": mapped.expected_irr_comparability,
+            "legacy_semantics": mapped.legacy_return_semantics,
+            "reinterpreted_as_canonical_shareholder_irr": False,
+        },
         "projection_reconciliation": reconciliation["projection_reconciliation"],
         "output_reconciliation": reconciliation["output_reconciliation"],
         "status": reconciliation["status"],
@@ -996,85 +1134,6 @@ def _current_application_state(session: Session, model: FinancialModel) -> dict[
     }
 
 
-def _screen_active_dcf_cohort(
-    workbook: Workbook,
-    accepted_at: datetime,
-    inventory: dict[str, dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Reconcile active DCF tabs that are not in this accepted import batch."""
-    screened: list[dict[str, Any]] = []
-    for model_key in ACTIVE_DCF_SCREEN_KEYS:
-        if model_key in {"P-GOOGL", *REVIEWED_DCF_IMPORT_KEYS}:
-            continue
-        row = inventory[model_key]
-        base_result: dict[str, Any] = {
-            "model_key": model_key,
-            "company_name": row.get("company_name"),
-            "canonical_ticker": row.get("canonical_ticker"),
-            "lifecycle": row.get("lifecycle"),
-            "methodology_family": row.get("methodology_family"),
-            "inventory_status": row.get("migration_status"),
-            "model_currency": row.get("model_currency"),
-        }
-        if model_key == "P-NVO":
-            screened.append(
-                {
-                    **base_result,
-                    "status": FinancialModelMigrationStatus.BLOCKED.value,
-                    "reason": (
-                        "The DKK-per-share workbook basis requires confirmation of the exact "
-                        "Copenhagen B listing and a matching listing-specific price before import."
-                    ),
-                    "blockers": ["EXACT_LISTING_AND_CURRENCY_PRICE_BASIS_UNRESOLVED"],
-                }
-            )
-            continue
-        try:
-            mapped = _map_ufcf_dcf_cohort(workbook, accepted_at, model_key, row)
-        except ValidationError as error:
-            screened.append(
-                {
-                    **base_result,
-                    "status": FinancialModelMigrationStatus.DATA_CHECK.value,
-                    "reason": str(error),
-                    "blockers": ["SOURCE_ASSUMPTION_FAILED_CANONICAL_VALIDATION"],
-                }
-            )
-            continue
-        except (ValueError, KeyError) as error:
-            screened.append(
-                {
-                    **base_result,
-                    "status": FinancialModelMigrationStatus.PARTIAL_MAPPING.value,
-                    "reason": str(error),
-                    "blockers": ["REQUIRED_ASSUMPTION_MAPPING_INCOMPLETE"],
-                }
-            )
-            continue
-
-        report = _base_report(workbook, mapped, row)
-        if report["status"] != FinancialModelMigrationStatus.PARITY_PASS.value:
-            report["blockers"] = ["TAB_SPECIFIC_NATIVE_ENGINE_PARITY_NOT_ESTABLISHED"]
-            failed_fields = [
-                str(comparison["field"])
-                for section in (
-                    report["projection_reconciliation"],
-                    report["output_reconciliation"],
-                )
-                for comparison in cast(list[dict[str, object]], section["comparisons"])
-                if comparison["status"] != "PASS"
-            ]
-            report["failed_fields"] = failed_fields
-            report["reason"] = (
-                "Native engine parity failed; see failed_fields and the detailed source "
-                "comparisons for the exact differences."
-            )
-        else:
-            report["blockers"] = ["PARITY_PASS_NOT_INCLUDED_IN_THIS_REVIEWED_BATCH"]
-        screened.append(report)
-    return screened
-
-
 def _create_native_model(
     session: Session, company_id: UUID, listing_id: UUID, mapped: MappedModel
 ) -> tuple[FinancialModel, FinancialModelRevision]:
@@ -1118,32 +1177,26 @@ def import_native_model_inputs(
     if workbook.sha256 != inventory_doc["source"]["sha256"]:
         raise ValueError("Workbook hash differs from the model migration inventory source snapshot")
     inventory = _legacy_inventory_rows()
-    candidate_screening = _screen_active_dcf_cohort(workbook, accepted_at, inventory)
     results: list[dict[str, Any]] = []
-    for model_key in REVIEWED_IMPORT_KEYS:
+    for model_key, mapper in _supported_model_mappers():
         try:
-            if model_key == "P-GOOGL":
-                mapped = _map_googl(workbook, accepted_at)
-            elif model_key == "W-TOST":
-                mapped = _map_tost(workbook, accepted_at)
-            else:
-                mapped = _map_ufcf_dcf_cohort(
-                    workbook, accepted_at, model_key, inventory[model_key]
-                )
+            mapped = mapper(workbook, accepted_at)
             row = inventory[model_key]
             report = _base_report(workbook, mapped, row)
         except (ValueError, KeyError) as error:
-            results.append(
-                {
-                    "model_key": model_key,
-                    "status": FinancialModelMigrationStatus.PARTIAL_MAPPING.value,
-                    "reason": str(error),
-                    "accepted_model": None,
-                }
-            )
+            result: dict[str, Any] = {
+                "model_key": model_key,
+                "status": FinancialModelMigrationStatus.PARTIAL_MAPPING.value,
+                "reason": str(error),
+                "mapping_version": _mapping_version_for(model_key),
+                "accepted_model": None,
+            }
+            _annotate_parity_blockers(result, str(error))
+            results.append(result)
             continue
 
         report["mapping_version"] = mapped.mapping_version
+        _annotate_parity_blockers(report)
         if report["status"] != FinancialModelMigrationStatus.PARITY_PASS.value:
             results.append(report)
             continue
@@ -1240,14 +1293,17 @@ def import_native_model_inputs(
             report["identity_blocker"] = str(error)
             results.append(report)
 
+    mapping_versions = sorted(
+        {
+            str(item.get("mapping_version", _mapping_version_for(str(item["model_key"]))))
+            for item in results
+        }
+    )
     return {
         "report_version": "2.0.0",
-        "mapping_versions": {
-            "initial_batch": MAPPING_VERSION,
-            "portfolio_ufcf_dcf_subbatch": DCF_COHORT_MAPPING_VERSION,
-        },
+        "mapping_version": mapping_versions[0] if len(mapping_versions) == 1 else "MIXED",
+        "mapping_versions": mapping_versions,
         "mode": "APPLIED" if apply else "DRY_RUN",
-        "batch_id": "B1_PORTFOLIO_DCF_PARITY_BACKED_SUBBATCH",
         "workbook": f"reference/workbook/{workbook.path.name}",
         "workbook_sha256": workbook.sha256,
         "source_effective_date": None,
@@ -1262,11 +1318,86 @@ def import_native_model_inputs(
             for status in FinancialModelMigrationStatus
         },
         "models": results,
-        "candidate_screening": candidate_screening,
-        "candidate_screening_status_counts": {
-            status.value: sum(item.get("status") == status.value for item in candidate_screening)
-            for status in FinancialModelMigrationStatus
-        },
+    }
+
+
+def build_native_model_parity_report(
+    workbook: Workbook, *, assessed_at: datetime
+) -> dict[str, Any]:
+    """Create a read-only source-parity receipt without querying application state."""
+    if assessed_at.tzinfo is None or assessed_at.utcoffset() is None:
+        raise ValueError("assessed_at must be timezone-aware")
+    inventory_doc = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+    if workbook.sha256 != inventory_doc["source"]["sha256"]:
+        raise ValueError("Workbook hash differs from the model migration inventory source snapshot")
+    inventory = _legacy_inventory_rows()
+    results: list[dict[str, Any]] = []
+    for model_key, mapper in _supported_model_mappers():
+        try:
+            mapped = mapper(workbook, assessed_at)
+            report = _base_report(workbook, mapped, inventory[model_key])
+            report["mapping_version"] = mapped.mapping_version
+            _annotate_parity_blockers(report)
+            report["application_identity_validation"] = "NOT_CHECKED_PARITY_ONLY"
+            report["apply_status"] = "NOT_APPLIED"
+            results.append(report)
+        except (ValueError, KeyError) as error:
+            result = {
+                "model_key": model_key,
+                "mapping_version": _mapping_version_for(model_key),
+                "status": FinancialModelMigrationStatus.PARTIAL_MAPPING.value,
+                "reason": str(error),
+                "application_identity_validation": "NOT_CHECKED_PARITY_ONLY",
+                "apply_status": "NOT_APPLIED",
+                "accepted_model": None,
+            }
+            _annotate_parity_blockers(result, str(error))
+            results.append(result)
+
+    status_counts = {
+        status.value: sum(item.get("status") == status.value for item in results)
+        for status in FinancialModelMigrationStatus
+    }
+    mapping_versions = sorted({str(item["mapping_version"]) for item in results})
+    blocking_category_counts: dict[str, int] = {}
+    return_parity_counts: dict[str, int] = {}
+    return_comparability_counts: dict[str, int] = {}
+    for item in results:
+        for category in item.get("blocking_categories", []):
+            blocking_category_counts[category] = blocking_category_counts.get(category, 0) + 1
+        expected_irr = item.get("expected_irr")
+        if isinstance(expected_irr, dict):
+            parity = str(expected_irr["native_method_return_parity"])
+            comparability = str(expected_irr["canonical_shareholder_irr_comparability"])
+            return_parity_counts[parity] = return_parity_counts.get(parity, 0) + 1
+            return_comparability_counts[comparability] = (
+                return_comparability_counts.get(comparability, 0) + 1
+            )
+    return {
+        "report_version": "2.0.0",
+        "mapping_version": mapping_versions[0] if len(mapping_versions) == 1 else "MIXED",
+        "mapping_versions": mapping_versions,
+        "mode": "PARITY_ONLY",
+        "canonical_application_state": "NOT_QUERIED",
+        "workbook": f"reference/workbook/{workbook.path.name}",
+        "workbook_sha256": workbook.sha256,
+        "source_effective_date": None,
+        "source_effective_date_note": "The workbook has no trustworthy effective date.",
+        "assessed_at": _json_safe(assessed_at),
+        "input_sets_imported": 0,
+        "input_sets_already_imported": 0,
+        "parity_pass_model_keys": [
+            str(item["model_key"])
+            for item in results
+            if item.get("status") == FinancialModelMigrationStatus.PARITY_PASS.value
+        ],
+        "status_counts": status_counts,
+        "blocking_category_counts": blocking_category_counts,
+        "expected_irr_native_method_parity_counts": dict(sorted(return_parity_counts.items())),
+        "expected_irr_canonical_comparability_counts": dict(
+            sorted(return_comparability_counts.items())
+        ),
+        "models": results,
     }
 
 
@@ -1281,7 +1412,33 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--apply", action="store_true", help="accept parity-passing model revisions"
     )
+    parser.add_argument(
+        "--parity-only",
+        action="store_true",
+        help="write source parity results without querying or changing application state",
+    )
     args = parser.parse_args(argv)
+    if args.parity_only and args.apply:
+        parser.error("--parity-only cannot be combined with --apply")
+
+    assessed_at = datetime.now(UTC)
+    try:
+        workbook = load_source_workbook(args.workbook)
+        if args.parity_only:
+            report = build_native_model_parity_report(workbook, assessed_at=assessed_at)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(
+                json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+            print(
+                f"Wrote parity-only native model report to {args.output}; "
+                f"parity_pass={len(report['parity_pass_model_keys'])}, "
+                "application identity and acceptance were not checked"
+            )
+            return 0
+    except Exception as error:
+        print(f"Native model input parity assessment failed: {error}", file=sys.stderr)
+        return 2
 
     settings = Settings()
     engine = create_database_engine(settings)
@@ -1291,12 +1448,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    accepted_at = datetime.now(UTC)
     try:
-        workbook = load_source_workbook(args.workbook)
         with Session(engine) as session, session.begin():
             report = import_native_model_inputs(
-                session, workbook, accepted_at=accepted_at, apply=args.apply
+                session, workbook, accepted_at=assessed_at, apply=args.apply
             )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(

@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
+
+import pytest
 
 from portfolio_api.external_data import (
     CanonicalSubjectKind,
@@ -18,6 +20,7 @@ from portfolio_api.external_data import (
     ProviderQuery,
     RawProviderRecord,
 )
+from portfolio_api.market_data_ingestion import _group_market_queries
 from portfolio_api.yahoo_finance import (
     FX_SYMBOLS,
     YahooChartNormalizer,
@@ -387,13 +390,19 @@ def test_yahoo_fx_pair_is_explicit_and_uses_quote_currency_units() -> None:
     assert facts.observations[-1].rate == Decimal("0.9")
 
 
-def test_provider_fetch_uses_bound_listing_and_inclusive_dates() -> None:
+def test_provider_fetch_uses_bound_listing_and_inclusive_dates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     requested_urls: list[str] = []
 
     def transport(url: str) -> bytes:
         requested_urls.append(url)
         return chart_payload()
 
+    async def to_thread(function: Any, *args: Any, **kwargs: Any) -> Any:
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr("portfolio_api.yahoo_finance.asyncio.to_thread", to_thread)
     crosswalk = YahooListingCrosswalk(
         provider_id="YAHOO_FINANCE",
         provider_schema_version="yahoo-chart-v8",
@@ -416,3 +425,19 @@ def test_provider_fetch_uses_bound_listing_and_inclusive_dates() -> None:
     assert records[0].source_record_id == f"LISTING:{LISTING_ID}"
     assert "EXAMPLE" in requested_urls[0]
     assert "period1=" in requested_urls[0] and "period2=" in requested_urls[0]
+
+
+def test_incremental_listing_queries_recheck_recent_action_window() -> None:
+    class ExistingPriceSession:
+        def scalar(self, _statement: object) -> datetime:
+            return datetime(2026, 10, 5, 20, tzinfo=UTC)
+
+    grouped = _group_market_queries(
+        cast(Any, ExistingPriceSession()),
+        {LISTING_ID: mapping()},
+        default_start=date(2016, 10, 9),
+        end_date=date(2026, 10, 6),
+        forced_start=None,
+    )
+
+    assert grouped == [(date(2026, 10, 6) - timedelta(days=90), [LISTING_ID])]

@@ -475,3 +475,28 @@ and prior Research context separate from investment ranks. Current coverage,
 unavailable reasons, formula evidence and the immutable run IDs are in the
 [Research Rank report](research-rank.md),
 [Portfolio Rank report](portfolio-rank.md), and their linked reconciliation JSON.
+
+## Milestone consolidation — 2026-10-09
+
+The Milestone 6.1–6.3 worktree was reconciled onto the fetched `main` commit
+`aafef78ae461deaf68dd2760d2f778b3cabe82b1`. This verifies the source tree and
+offline migration graph only; no application database was queried, migrated, or
+written. The repository has one Alembic head, `6e6c2d4e8a19`, chained after
+`8f96876cc9e9`.
+
+| Check                                                              | Result                                                                                                   |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Web ESLint, Ruff, Prettier, Ruff formatting                        | Passed                                                                                                   |
+| Web TypeScript and strict API mypy                                 | Passed; 73 Python files                                                                                  |
+| Web Vitest                                                         | 86 passed                                                                                                |
+| API pytest with `TEST_DATABASE_URL` disabled                       | 163 passed, 49 database-dependent tests skipped                                                          |
+| OpenAPI export and generated TypeScript contracts                  | Passed; contracts are current                                                                            |
+| Offline Alembic heads/history and `git diff --check`               | Passed; one head, no whitespace errors                                                                   |
+| Default Next.js production build                                   | Blocked: Turbopack's CSS worker cannot bind a local port in this environment (`Operation not permitted`) |
+| PostgreSQL integration, schema drift, importer replay, browser E2E | Not run; database state was intentionally left untouched                                                 |
+
+The normal aggregate command passed lint, formatting, typechecks, unit tests and
+contract checks before reaching the production build. A direct webpack build was
+also attempted; Next.js could not parse the TypeScript `--showConfig` output in this
+environment. These build limitations are independent of the changed API and
+ingestion code; a production build remains unverified here.

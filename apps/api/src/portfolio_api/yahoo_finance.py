@@ -35,6 +35,7 @@ from portfolio_api.external_data import (
     NormalizationResult,
     ProviderQuery,
     RawProviderRecord,
+    parse_retry_after_seconds,
 )
 
 YAHOO_PROVIDER_ID = "YAHOO_FINANCE"
@@ -158,6 +159,8 @@ class ProviderFetchFailure:
     source_record_id: str
     provider_symbol: str
     message: str
+    code: str = "PROVIDER_REQUEST_FAILED"
+    retryable: bool = False
 
 
 Transport = Callable[[str], bytes]
@@ -231,11 +234,14 @@ class YahooFinanceProvider:
                         self._fetch_with_retries, symbol, query.start_date, query.end_date
                     )
                 except Exception as error:  # per-subject provider gaps are reported, not fabricated
+                    code, retryable = _transport_failure_state(error)
                     self.failures.append(
                         ProviderFetchFailure(
                             source_record_id=source_record_id,
                             provider_symbol=symbol,
                             message=f"{type(error).__name__}: {str(error)[:300]}",
+                            code=code,
+                            retryable=retryable,
                         )
                     )
                     return None
@@ -304,12 +310,32 @@ class YahooFinanceProvider:
             except urllib.error.HTTPError as error:
                 if error.code not in {429, 500, 502, 503, 504} or attempt >= self._retries:
                     raise
-                time.sleep(0.4 * (2**attempt))
+                time.sleep(_bounded_retry_delay(attempt, _retry_after_seconds(error)))
             except (TimeoutError, urllib.error.URLError):
                 if attempt >= self._retries:
                     raise
-                time.sleep(0.4 * (2**attempt))
+                time.sleep(_bounded_retry_delay(attempt, None))
         raise RuntimeError("Yahoo request exhausted retry policy")
+
+
+def _retry_after_seconds(error: urllib.error.HTTPError) -> float | None:
+    raw = error.headers.get("Retry-After") if error.headers else None
+    return parse_retry_after_seconds(raw)
+
+
+def _bounded_retry_delay(attempt: int, retry_after: float | None) -> float:
+    delay = min(30.0, max(0.4 * (2**attempt), retry_after or 0.0))
+    return float(delay)
+
+
+def _transport_failure_state(error: Exception) -> tuple[str, bool]:
+    if isinstance(error, urllib.error.HTTPError):
+        if error.code == 429:
+            return "RATE_LIMITED", True
+        return f"HTTP_{error.code}", 500 <= error.code <= 599
+    if isinstance(error, (TimeoutError, urllib.error.URLError, ConnectionError)):
+        return "NETWORK_ERROR", True
+    return "PROVIDER_REQUEST_FAILED", False
 
 
 class YahooChartNormalizer:
