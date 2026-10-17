@@ -51,6 +51,27 @@ class PaceResult:
     reason: str
 
 
+@dataclass(frozen=True)
+class PriceRegimeInput:
+    raw: str | None
+    normalized: str | None
+    source_ref: str | None
+    as_of: datetime | None
+    quality: Literal["PASS", "DATA_CHECK", "UNSPECIFIED"] | None
+    freshness: Literal["FRESH", "STALE", "DATA_CHECK", "NO_DATA"]
+    note: str | None = None
+
+
+@dataclass(frozen=True)
+class ExecutionPacePreview:
+    """Read-only result from the same deterministic builder used by persisted runs."""
+
+    portfolio_id: UUID
+    as_of: datetime
+    status: ExecutionPaceRunStatus
+    decisions: list[ExecutionPaceDecision]
+
+
 def valuation_zone(
     weighted_upside: Decimal | None,
 ) -> Literal["DEEP_DISCOUNT", "DISCOUNT", "NEAR_FAIR", "RICH", "VERY_RICH"] | None:
@@ -83,8 +104,90 @@ def normalize_price_regime(regime: str | None, trend_state: str | None) -> str |
         return raw
     if not raw:
         fallback = (trend_state or "").strip().upper()
-        return fallback or None
+        return {
+            "STRONG UPTREND": "UPTREND",
+            "UPTREND": "UPTREND",
+            "RECOVERING": "RECOVERY",
+            "WEAKENING": "WEAKENING",
+            "DOWNTREND": "DOWNTREND",
+        }.get(fallback)
     return None
+
+
+def _price_regime_input(
+    regime: s.PriceRegimeRead | None,
+    analytics: s.PriceHistoryAnalyticsRead | None,
+    as_of: datetime,
+) -> PriceRegimeInput:
+    """Prefer a fresh mapped source label, then use the documented canonical trend state.
+
+    The broader legacy regime classification is intentionally not recreated. The
+    fallback uses only the trend state already produced from exact-listing,
+    split-adjusted closes by ``split-adjusted-price-history-v1``.
+    """
+    if regime is not None:
+        age = (as_of.date() - regime.as_of.date()).days
+        freshness: Literal["FRESH", "STALE", "DATA_CHECK", "NO_DATA"] = (
+            "DATA_CHECK"
+            if regime.data_quality != "PASS" or age < 0
+            else "STALE"
+            if age > 5
+            else "FRESH"
+        )
+        normalized = normalize_price_regime(regime.regime, regime.trend_state)
+        if freshness == "FRESH" and normalized is not None:
+            return PriceRegimeInput(
+                regime.regime,
+                normalized,
+                regime.source_ref,
+                regime.as_of,
+                "PASS",
+                "FRESH",
+            )
+
+    if analytics is not None and analytics.status == "AVAILABLE" and analytics.as_of is not None:
+        age = (as_of.date() - analytics.as_of.date()).days
+        normalized = normalize_price_regime(None, analytics.trend_state)
+        if 0 <= age <= 5 and normalized is not None:
+            source_ref = (
+                f"canonical-market-analytics:{analytics.methodology_version}:"
+                f"{analytics.as_of.isoformat()}"
+            )
+            note = (
+                "Execution Pace uses the fresh canonical trend state because no fresh, "
+                "mapped legacy regime label is available."
+            )
+            return PriceRegimeInput(
+                f"CANONICAL TREND: {analytics.trend_state}",
+                normalized,
+                source_ref,
+                analytics.as_of,
+                "PASS",
+                "FRESH",
+                note,
+            )
+
+    if regime is None:
+        return PriceRegimeInput(None, None, None, None, None, "NO_DATA")
+    age = (as_of.date() - regime.as_of.date()).days
+    freshness = (
+        "DATA_CHECK"
+        if regime.data_quality != "PASS" or age < 0
+        else "STALE"
+        if age > 5
+        else "FRESH"
+    )
+    return PriceRegimeInput(
+        regime.regime,
+        normalize_price_regime(regime.regime, regime.trend_state),
+        regime.source_ref,
+        regime.as_of,
+        regime.data_quality,
+        freshness,
+        "The legacy price-regime label is stale, unavailable, or outside the migrated mapping."
+        if freshness != "FRESH" or normalize_price_regime(regime.regime, regime.trend_state) is None
+        else None,
+    )
 
 
 def derive_execution_pace(snapshot: s.ExecutionPaceInputSnapshot) -> PaceResult:
@@ -93,6 +196,16 @@ def derive_execution_pace(snapshot: s.ExecutionPaceInputSnapshot) -> PaceResult:
         return _review("No accepted, explicit target weight is available.")
     if snapshot.holding_snapshot_id is None or snapshot.current_weight is None:
         return _review("A complete current holding snapshot and current weight are required.")
+    if snapshot.holdings_freshness != "FRESH":
+        age = snapshot.holdings_age_days
+        return _review(
+            "The latest holdings confirmation is stale"
+            + (
+                f" ({age} days old); refresh the holdings before using Execution Pace."
+                if age is not None
+                else "; refresh the holdings before using Execution Pace."
+            )
+        )
     if snapshot.allocation_status != "VALUED":
         return _review("Current portfolio weights are incomplete or not fresh.")
     if snapshot.model_source_kind is None or snapshot.model_source_id is None:
@@ -255,7 +368,30 @@ def create_execution_pace_run(
     session: Session, value: s.ExecutionPaceRunCreate
 ) -> ExecutionPaceRun:
     """Capture a point-in-time portfolio decision run without mutating upstream state."""
-    as_of = (value.as_of or datetime.now(UTC)).astimezone(UTC)
+    preview = preview_execution_pace(session, as_of=value.as_of)
+    run = ExecutionPaceRun(
+        portfolio_id=preview.portfolio_id,
+        as_of=preview.as_of,
+        methodology_version=METHODOLOGY_VERSION,
+        status=preview.status,
+        actor=value.actor,
+        reason=value.reason,
+        source=value.source,
+    )
+    session.add(run)
+    session.flush()
+    for entry in preview.decisions:
+        entry.run_id = run.id
+        session.add(entry)
+    session.flush()
+    return run
+
+
+def preview_execution_pace(
+    session: Session, *, as_of: datetime | None = None
+) -> ExecutionPacePreview:
+    """Build a fresh Execution Pace preview without inserting decision history."""
+    cutoff = (as_of or datetime.now(UTC)).astimezone(UTC)
     portfolio = session.scalar(
         select(Portfolio).order_by(Portfolio.created_at, Portfolio.id).limit(1)
     )
@@ -264,15 +400,15 @@ def create_execution_pace_run(
             "An application portfolio must exist before Execution Pace can be recorded"
         )
 
-    portfolio_view = queries.overview(session, portfolio.id, as_of)
+    portfolio_view = queries.overview(session, portfolio.id, cutoff)
     contexts = {context.company.id: context for context in portfolio_view.companies}
     companies = list(session.scalars(select(Company).order_by(Company.name, Company.id)))
     lifecycle_rows = session.scalars(
         select(LifecycleEvent)
         .where(
             LifecycleEvent.company_id.in_([company.id for company in companies]),
-            LifecycleEvent.effective_at <= as_of,
-            LifecycleEvent.recorded_at <= as_of,
+            LifecycleEvent.effective_at <= cutoff,
+            LifecycleEvent.recorded_at <= cutoff,
         )
         .order_by(
             LifecycleEvent.company_id,
@@ -296,16 +432,26 @@ def create_execution_pace_run(
             )
             entries.append(_decision_row(company.id, result, snapshot))
             continue
-        estimate = queries.company_estimate_momentum(session, company.id, as_of.date(), as_of)
+        estimate = queries.company_estimate_momentum(session, company.id, cutoff.date(), cutoff)
         return_history = queries.company_expected_return_history(
-            session, company.id, as_of.date(), as_of
+            session, company.id, cutoff.date(), cutoff
         )
         model_point, model_issue = _select_current_model_point(
             return_history.history,
             held_listing_ids={position.listing_id for position in context.positions},
         )
+        current_calculation = next(
+            (
+                calculation
+                for calculation in return_history.current_calculations
+                if model_point is not None
+                and model_point.source_kind == "NATIVE_MODEL_REVISION"
+                and calculation.revision_id == model_point.revision_id
+            ),
+            None,
+        )
         market_rows = queries.company_market_data(
-            session, company.id, history_limit=0, market_as_of=as_of.date(), known_at=as_of
+            session, company.id, history_limit=0, market_as_of=cutoff.date(), known_at=cutoff
         )
         market = next(
             (
@@ -321,9 +467,10 @@ def create_execution_pace_run(
             portfolio_view=portfolio_view,
             estimate=estimate,
             model_point=model_point,
+            current_calculation=current_calculation,
             model_issue=model_issue,
             market=market,
-            as_of=as_of,
+            as_of=cutoff,
         )
         result = derive_execution_pace(snapshot)
         entries.append(_decision_row(company.id, result, snapshot))
@@ -342,22 +489,12 @@ def create_execution_pace_run(
         if review > 0 or unavailable > 0
         else ExecutionPaceRunStatus.COMPLETE
     )
-    run = ExecutionPaceRun(
+    return ExecutionPacePreview(
         portfolio_id=portfolio.id,
-        as_of=as_of,
-        methodology_version=METHODOLOGY_VERSION,
+        as_of=cutoff,
         status=run_status,
-        actor=value.actor,
-        reason=value.reason,
-        source=value.source,
+        decisions=entries,
     )
-    session.add(run)
-    session.flush()
-    for entry in entries:
-        entry.run_id = run.id
-        session.add(entry)
-    session.flush()
-    return run
 
 
 def _select_current_model_point(
@@ -406,6 +543,7 @@ def _build_snapshot(
     portfolio_view: s.PortfolioOverview,
     estimate: s.CompanyEstimateMomentumRead,
     model_point: s.ExpectedReturnHistoryPointRead | None,
+    current_calculation: s.CurrentNativeModelCalculationRead | None,
     model_issue: str | None,
     market: s.ListingMarketData | None,
     as_of: datetime,
@@ -418,12 +556,24 @@ def _build_snapshot(
     source_id = _model_source_id(model_point)
     latest = market.latest if market else None
     regime = market.price_regime if market else None
-    raw_regime = regime.regime if regime else None
-    normalized_regime = normalize_price_regime(raw_regime, regime.trend_state if regime else None)
-    if regime is not None and normalized_regime is None:
-        notes.append("The observed price-regime label is outside the migrated rule mapping.")
-    model_price = model_point.market_price if model_point else None
-    fair_value = model_point.weighted_fv if model_point else None
+    regime_input = _price_regime_input(regime, market.analytics if market else None, as_of)
+    if regime_input.note:
+        notes.append(regime_input.note)
+    model_price = (
+        current_calculation.market_price
+        if current_calculation is not None
+        else model_point.market_price
+        if model_point
+        else None
+    )
+    current_outputs = current_calculation.outputs if current_calculation is not None else None
+    fair_value = (
+        current_outputs.weighted_fv
+        if current_outputs is not None
+        else model_point.weighted_fv
+        if model_point
+        else None
+    )
     current_price = latest.split_adjusted_close if latest else None
     weighted_upside = (
         fair_value / current_price - Decimal(1)
@@ -431,28 +581,28 @@ def _build_snapshot(
         else None
     )
     zone = valuation_zone(weighted_upside)
+    bull_fv = (
+        current_outputs.bull_fv
+        if current_outputs is not None
+        else model_point.bull_fv
+        if model_point
+        else None
+    )
+    bear_fv = (
+        current_outputs.bear_fv
+        if current_outputs is not None
+        else model_point.bear_fv
+        if model_point
+        else None
+    )
     range_ratio = (
-        (model_point.bull_fv - model_point.bear_fv) / fair_value
-        if model_point is not None
-        and model_point.bull_fv is not None
-        and model_point.bear_fv is not None
-        and fair_value is not None
-        and fair_value > 0
+        (bull_fv - bear_fv) / fair_value
+        if bull_fv is not None and bear_fv is not None and fair_value is not None and fair_value > 0
         else None
     )
     price_age = (as_of.date() - latest.market_date.date()).days if latest is not None else None
-    regime_age = (as_of.date() - regime.as_of.date()).days if regime is not None else None
-    regime_freshness: Literal["FRESH", "STALE", "DATA_CHECK", "NO_DATA"] = (
-        "NO_DATA"
-        if regime is None
-        else "DATA_CHECK"
-        if regime.data_quality != "PASS" or regime_age is None or regime_age < 0
-        else "STALE"
-        if regime_age > 5
-        else "FRESH"
-    )
     snapshot = s.ExecutionPaceInputSnapshot(
-        context_version="execution-pace-inputs-v1",
+        context_version="execution-pace-inputs-v2",
         lifecycle=lifecycle,
         target_revision_id=portfolio_view.target_revision.id
         if portfolio_view.target_revision
@@ -464,6 +614,8 @@ def _build_snapshot(
         holding_effective_at=portfolio_view.snapshot.effective_at
         if portfolio_view.snapshot
         else None,
+        holdings_age_days=portfolio_view.holdings_age_days,
+        holdings_freshness=portfolio_view.holdings_freshness,
         allocation_status=context.allocation_status if portfolio_view.snapshot else None,
         current_weight=context.current_weight,
         target_weight=context.target_weight,
@@ -486,12 +638,36 @@ def _build_snapshot(
         return_semantics=model_point.return_semantics if model_point else None,
         model_effective_at=model_point.effective_at if model_point else None,
         model_recorded_at=model_point.recorded_at if model_point else None,
-        model_currency=model_point.model_currency if model_point else None,
-        model_output_quality=model_point.output_quality if model_point else None,
+        model_currency=(
+            current_outputs.model_currency
+            if current_outputs is not None
+            else model_point.model_currency
+            if model_point
+            else None
+        ),
+        model_output_quality=(
+            current_outputs.status
+            if current_outputs is not None
+            else model_point.output_quality
+            if model_point
+            else None
+        ),
         model_contract_status=model_point.contract_status if model_point else None,
         model_review_flag=model_point.output_status if model_point else None,
-        expected_irr=model_point.expected_cash_flow_irr if model_point else None,
-        hurdle=model_point.hurdle if model_point else None,
+        expected_irr=(
+            current_outputs.expected_cash_flow_irr
+            if current_outputs is not None
+            else model_point.expected_cash_flow_irr
+            if model_point
+            else None
+        ),
+        hurdle=(
+            current_outputs.hurdle
+            if current_outputs is not None
+            else model_point.hurdle
+            if model_point
+            else None
+        ),
         valuation_listing_id=model_point.valuation_listing_id if model_point else None,
         valuation_ticker=model_point.valuation_ticker if model_point else None,
         valuation_venue=model_point.valuation_venue if model_point else None,
@@ -509,6 +685,19 @@ def _build_snapshot(
         model_price_observation_id=model_price.observation_id if model_price else None,
         model_reference_price=model_price.model_reference_price if model_price else None,
         model_price_currency=model_price.model_currency if model_price else None,
+        accepted_reference_price=(
+            current_calculation.accepted_reference_price if current_calculation else None
+        ),
+        accepted_reference_price_observation_id=(
+            current_calculation.accepted_reference_price_observation_id
+            if current_calculation
+            else None
+        ),
+        accepted_reference_price_effective_at=(
+            current_calculation.accepted_reference_price_effective_at
+            if current_calculation
+            else None
+        ),
         weighted_fair_value=fair_value,
         weighted_upside=weighted_upside,
         valuation_zone=zone,
@@ -520,12 +709,12 @@ def _build_snapshot(
         estimate_provider_id=estimate.provider_id,
         estimate_latest_snapshot_date=estimate.latest_snapshot_date,
         estimate_momentum_reason=estimate.reason,
-        price_regime_source_ref=regime.source_ref if regime else None,
-        price_regime_as_of=regime.as_of if regime else None,
-        price_regime_quality=regime.data_quality if regime else None,
-        price_regime_raw=raw_regime,
-        price_regime=normalized_regime,
-        price_regime_freshness=regime_freshness,
+        price_regime_source_ref=regime_input.source_ref,
+        price_regime_as_of=regime_input.as_of,
+        price_regime_quality=regime_input.quality,
+        price_regime_raw=regime_input.raw,
+        price_regime=regime_input.normalized,
+        price_regime_freshness=regime_input.freshness,
         context_notes=notes,
     )
     # Retain a concrete stale-price note for users and auditors.
@@ -561,12 +750,14 @@ def _empty_snapshot(
     holding_snapshot_id: UUID | None,
 ) -> s.ExecutionPaceInputSnapshot:
     return s.ExecutionPaceInputSnapshot(
-        context_version="execution-pace-inputs-v1",
+        context_version="execution-pace-inputs-v2",
         lifecycle=lifecycle,
         target_revision_id=target_revision_id,
         target_effective_at=None,
         holding_snapshot_id=holding_snapshot_id,
         holding_effective_at=None,
+        holdings_age_days=None,
+        holdings_freshness="NO_DATA",
         allocation_status=None,
         current_weight=current_weight,
         target_weight=target_weight,
@@ -602,6 +793,9 @@ def _empty_snapshot(
         model_price_observation_id=None,
         model_reference_price=None,
         model_price_currency=None,
+        accepted_reference_price=None,
+        accepted_reference_price_observation_id=None,
+        accepted_reference_price_effective_at=None,
         weighted_fair_value=None,
         weighted_upside=None,
         valuation_zone=None,

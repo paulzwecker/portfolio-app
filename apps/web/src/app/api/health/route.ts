@@ -1,4 +1,5 @@
 import { isHealthResponse } from "@/lib/health";
+import { webAccessRejection } from "@/lib/server-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -6,12 +7,18 @@ export const runtime = "nodejs";
 const headers = { "Cache-Control": "no-store" };
 
 /** Keep the backend address and any connection errors on the server. */
-export async function GET() {
+export async function GET(request: Request) {
+  const accessRejection = webAccessRejection(request);
+  if (accessRejection) return accessRejection;
+
   try {
     const baseUrl = process.env.API_BASE_URL;
     if (!baseUrl) throw new Error("API_BASE_URL is missing.");
     const endpoint = new URL("health/ready", `${baseUrl.replace(/\/$/, "")}/`);
-    if (!["http:", "https:"].includes(endpoint.protocol)) {
+    if (
+      !["http:", "https:"].includes(endpoint.protocol) ||
+      (process.env.NODE_ENV === "production" && endpoint.protocol !== "https:")
+    ) {
       throw new Error("Invalid API protocol.");
     }
     const upstream = await fetch(endpoint, {

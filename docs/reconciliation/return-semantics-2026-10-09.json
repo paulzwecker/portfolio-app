@@ -1,0 +1,201 @@
+{
+  "reconciled_at": "2026-10-09",
+  "database": "local development PostgreSQL; credentials intentionally omitted",
+  "schema_revision": "8d3a20f719c4",
+  "method_definitions": [
+    {
+      "code": "UFCF_ENTERPRISE_IRR",
+      "version": 1,
+      "perspective": "ENTERPRISE",
+      "cash_flow_basis": "Probability-weighted annual unlevered free cash flow plus terminal enterprise value",
+      "comparison": "Direct only to same method/version; FX excluded across currencies",
+      "legacy_model_keys": [
+        "P-GOOGL",
+        "P-ASML",
+        "P-ISRG",
+        "P-MA",
+        "P-CPRT",
+        "P-UBER"
+      ]
+    },
+    {
+      "code": "OWNER_CASH_FLOW_EQUITY_IRR",
+      "version": 1,
+      "perspective": "EQUITY",
+      "cash_flow_basis": "Probability-weighted owner cash flow per diluted share with terminal owner cash flow and net cash/share",
+      "comparison": "Direct to same method/version; conditional equity comparison with residual income",
+      "legacy_model_keys": ["W-TOST"]
+    },
+    {
+      "code": "RESIDUAL_INCOME_EQUITY_IRR",
+      "version": 1,
+      "perspective": "EQUITY",
+      "cash_flow_basis": "Probability-weighted explicit dividends and terminal book value plus residual income per share",
+      "comparison": "Direct to same method/version; conditional equity comparison with owner cash flow",
+      "legacy_model_keys": ["W-HDFC"]
+    }
+  ],
+  "comparability_matrix": [
+    {
+      "left": "UFCF_ENTERPRISE_IRR@1",
+      "right": "UFCF_ENTERPRISE_IRR@1",
+      "status": "DIRECT",
+      "currency_rule": "same-currency direct; cross-currency rates remain local-currency rates and FX is excluded"
+    },
+    {
+      "left": "OWNER_CASH_FLOW_EQUITY_IRR@1",
+      "right": "OWNER_CASH_FLOW_EQUITY_IRR@1",
+      "status": "DIRECT",
+      "currency_rule": "same-currency direct; cross-currency rates remain local-currency rates and FX is excluded"
+    },
+    {
+      "left": "RESIDUAL_INCOME_EQUITY_IRR@1",
+      "right": "RESIDUAL_INCOME_EQUITY_IRR@1",
+      "status": "DIRECT",
+      "currency_rule": "same-currency direct; cross-currency rates remain local-currency rates and FX is excluded"
+    },
+    {
+      "left": "OWNER_CASH_FLOW_EQUITY_IRR@1",
+      "right": "RESIDUAL_INCOME_EQUITY_IRR@1",
+      "status": "CONDITIONAL_EQUITY",
+      "currency_rule": "preserve currency and method labels; cash-flow conventions differ"
+    },
+    {
+      "left": "UFCF_ENTERPRISE_IRR@1",
+      "right": "OWNER_CASH_FLOW_EQUITY_IRR@1 or RESIDUAL_INCOME_EQUITY_IRR@1",
+      "status": "NOT_COMPARABLE_PERSPECTIVE",
+      "currency_rule": "no enterprise-to-equity bridge is supported"
+    },
+    {
+      "left": "unclassified, unknown-version, or unknown-currency result",
+      "right": "any result",
+      "status": "DATA_CHECK_OR_UNAVAILABLE",
+      "currency_rule": "do not infer method or FX conversion"
+    }
+  ],
+  "classified_snapshot_counts": {
+    "legacy_revision_snapshots": {
+      "UFCF_ENTERPRISE_IRR@1": { "snapshots": 22, "companies": 6 },
+      "OWNER_CASH_FLOW_EQUITY_IRR@1": { "snapshots": 2, "companies": 1 },
+      "RESIDUAL_INCOME_EQUITY_IRR@1": { "snapshots": 1, "companies": 1 }
+    },
+    "current_contract_snapshots": {
+      "UFCF_ENTERPRISE_IRR@1": { "snapshots": 6, "companies": 6 },
+      "OWNER_CASH_FLOW_EQUITY_IRR@1": { "snapshots": 1, "companies": 1 },
+      "RESIDUAL_INCOME_EQUITY_IRR@1": { "snapshots": 1, "companies": 1 }
+    },
+    "unclassified_snapshots": {
+      "legacy_revision": { "snapshots": 205, "companies": 136 },
+      "current_contract": { "snapshots": 106, "companies": 106 }
+    }
+  },
+  "active_native_models": [
+    {
+      "company": "Alphabet",
+      "lifecycle": "PORTFOLIO",
+      "ticker": "GOOGL",
+      "listing_currency": "USD",
+      "model_currency": "USD",
+      "method": "UFCF_ENTERPRISE_IRR@1"
+    },
+    {
+      "company": "ASML Holding",
+      "lifecycle": "PORTFOLIO",
+      "ticker": "ASML",
+      "listing_currency": "EUR",
+      "model_currency": "EUR",
+      "method": "UFCF_ENTERPRISE_IRR@1"
+    },
+    {
+      "company": "Copart",
+      "lifecycle": "PORTFOLIO",
+      "ticker": "CPRT",
+      "listing_currency": "USD",
+      "model_currency": "USD",
+      "method": "UFCF_ENTERPRISE_IRR@1"
+    },
+    {
+      "company": "Intuitive Surgical",
+      "lifecycle": "PORTFOLIO",
+      "ticker": "ISRG",
+      "listing_currency": "USD",
+      "model_currency": "USD",
+      "method": "UFCF_ENTERPRISE_IRR@1"
+    },
+    {
+      "company": "Mastercard",
+      "lifecycle": "PORTFOLIO",
+      "ticker": "MA",
+      "listing_currency": "USD",
+      "model_currency": "USD",
+      "method": "UFCF_ENTERPRISE_IRR@1"
+    },
+    {
+      "company": "Uber Technologies",
+      "lifecycle": "PORTFOLIO",
+      "ticker": "UBER",
+      "listing_currency": "USD",
+      "model_currency": "USD",
+      "method": "UFCF_ENTERPRISE_IRR@1"
+    },
+    {
+      "company": "Toast",
+      "lifecycle": "WATCHLIST",
+      "ticker": "TOST",
+      "listing_currency": "USD",
+      "model_currency": "USD",
+      "method": "OWNER_CASH_FLOW_EQUITY_IRR@1"
+    }
+  ],
+  "newly_method_comparable_companies": [
+    "Alphabet",
+    "ASML Holding",
+    "Copart",
+    "Intuitive Surgical",
+    "Mastercard",
+    "Uber Technologies"
+  ],
+  "ranking_runs": {
+    "watchlist_v5": {
+      "run_id": "dfc9b27f-33d7-4f22-b477-50e49e008227",
+      "status": "UNAVAILABLE",
+      "population_entries": 219,
+      "ranked": 0,
+      "data_check": 59,
+      "inputs_unavailable": 12,
+      "not_eligible": 148,
+      "data_check_reasons": {
+        "unclassified_return_method": 23,
+        "unknown_legacy_currency": 35,
+        "stale_native_reference_price": 1
+      },
+      "prior_v4_run_id": "b0c1bcc0-9436-41d2-af18-9393987c527c",
+      "prior_v4_ranked": 0,
+      "prior_v3_run_id": "64ddcdf9-d5be-46b2-be47-c7c6dcf6b4b4",
+      "prior_v3_ranked": 14
+    },
+    "portfolio_v4": {
+      "run_id": "ecce3252-df8f-4da2-a411-d5c331878dca",
+      "status": "UNAVAILABLE",
+      "population_entries": 219,
+      "ranked": 0,
+      "data_check": 16,
+      "inputs_unavailable": 5,
+      "not_eligible": 198,
+      "data_check_reasons": {
+        "incomplete_current_market_weight_coverage": 16
+      },
+      "prior_v3_run_id": "3f5a9e98-34be-4875-a275-38834f3ec2b4",
+      "prior_v3_ranked": 0,
+      "prior_v2_run_id": "95224823-e9cb-4050-aad5-df6692f6dc4f",
+      "prior_v2_ranked": 3
+    }
+  },
+  "historical_price_basis": "Legacy output snapshots do not retain the exact historical quote; classified method does not imply reconstructable historical price basis.",
+  "bridge_policy": "No deterministic enterprise-to-equity bridge or FX-return forecast is supported; future debt/cash, debt-service, interest, financing, and payout schedules are absent.",
+  "notes": [
+    "Direct method comparability does not make cross-currency IRRs FX-adjusted.",
+    "The zero current ranking counts are explicit source coverage states; previous immutable ranking runs remain unchanged.",
+    "Portfolio Rank v4 had no candidates reach its return-method cohort calculation because current market-weight coverage was incomplete; the exact captured-price-basis rule did not further reduce its coverage."
+  ]
+}

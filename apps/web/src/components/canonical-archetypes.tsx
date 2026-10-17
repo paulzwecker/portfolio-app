@@ -1,10 +1,12 @@
 "use client";
 
 import { useId, useState } from "react";
+import { dateTime } from "@/lib/display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useResearch } from "@/components/research-frame";
+import { useResearch } from "@/hooks/use-research";
+import { FinancialOutputComparison } from "@/components/features/modeling/financial-output-comparison";
 import {
   isAdditionalModelContractImport,
   isAdditionalModelContractPreview,
@@ -16,7 +18,6 @@ import {
   type AdditionalModelPortableContract,
   type AdditionalModelContractPreview,
   type ExtendedFinancialModel,
-  type FinancialModelCalculationOutputs,
   type OwnerCashFlowInput,
   type OwnerCashFlowCalculationPreview,
   type OwnerCashFlowRevisionRead,
@@ -27,17 +28,6 @@ import {
 
 type Kind = "owner-cash-flow" | "residual-income";
 type Input = OwnerCashFlowInput | ResidualIncomeInput;
-type OutputView = Pick<
-  FinancialModelCalculationOutputs,
-  | "bear_fv"
-  | "base_fv"
-  | "bull_fv"
-  | "weighted_fv"
-  | "expected_cash_flow_irr"
-  | "hurdle"
-  | "weighted_upside"
-  | "expected_excess"
->;
 type Listing = {
   id: string;
   ticker: string;
@@ -119,37 +109,13 @@ function InputField({
   );
 }
 
-function OutputValues({ output }: { output: OutputView }) {
-  const rows = [
-    ["Bear FV", output.bear_fv, false],
-    ["Base FV", output.base_fv, false],
-    ["Bull FV", output.bull_fv, false],
-    ["Weighted FV", output.weighted_fv, false],
-    ["Expected IRR", output.expected_cash_flow_irr, true],
-    ["Hurdle", output.hurdle, true],
-    ["Upside", output.weighted_upside, true],
-    ["Expected excess", output.expected_excess, true],
-  ] as const;
-  return (
-    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {rows.map(([name, value, ratio]) => (
-        <div key={name} className="rounded-md border p-3">
-          <dt className="text-xs text-muted-foreground">{name}</dt>
-          <dd className="mt-1 font-mono text-sm font-semibold tabular-nums">
-            {value === null
-              ? "Unavailable"
-              : ratio
-                ? (Number(value) * 100).toFixed(1) + "%"
-                : Number(value).toFixed(2)}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 function ModelOutputs({ model }: { model: ExtendedFinancialModel }) {
-  return <OutputValues output={model.current_revision.outputs} />;
+  return (
+    <FinancialOutputComparison
+      output={model.current_revision.outputs}
+      currency={model.model_currency}
+    />
+  );
 }
 
 function DraftProjection({
@@ -254,9 +220,15 @@ function currentInput(model: ExtendedFinancialModel): Input {
 export function CanonicalArchetypeExplorer({
   companyId,
   listings,
+  focusedKind,
+  embedded = false,
 }: {
   companyId: string;
   listings: Listing[];
+  /** Restrict the editor to the selected method in the Company workspace. */
+  focusedKind?: Kind;
+  /** Omit the top-level section heading when composed by another workspace. */
+  embedded?: boolean;
 }) {
   const state = useResearch(
     "companies/" +
@@ -558,25 +530,48 @@ export function CanonicalArchetypeExplorer({
     }
   };
 
+  const visibleModels = focusedKind
+    ? models.filter((model) =>
+        focusedKind === "owner-cash-flow"
+          ? model.model_type === "OWNER_CASH_FLOW_10Y"
+          : model.model_type === "RESIDUAL_INCOME_10Y_FADE",
+      )
+    : models;
+
   return (
-    <section id="canonical-model-archetypes" className="mt-8 space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">Additional canonical models</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Owner cash-flow and residual-income methods use separate assumptions
-            and engines, with shared immutable revision and output history.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => begin("owner-cash-flow")}>
-            New owner cash-flow model
-          </Button>
-          <Button variant="outline" onClick={() => begin("residual-income")}>
-            New residual-income model
-          </Button>
-        </div>
-      </header>
+    <section id="canonical-model-archetypes" className="space-y-4">
+      {!embedded && (
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">
+              Additional canonical models
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+              Owner cash-flow and residual-income methods use separate
+              assumptions and engines, with shared immutable revision and output
+              history.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(!focusedKind || focusedKind === "owner-cash-flow") && (
+              <Button
+                variant="outline"
+                onClick={() => begin("owner-cash-flow")}
+              >
+                New owner cash-flow model
+              </Button>
+            )}
+            {(!focusedKind || focusedKind === "residual-income") && (
+              <Button
+                variant="outline"
+                onClick={() => begin("residual-income")}
+              >
+                New residual-income model
+              </Button>
+            )}
+          </div>
+        </header>
+      )}
       {state.error && (
         <p role="alert" className="rounded-md border p-3 text-sm">
           Model data could not be loaded. Retry after checking API and
@@ -599,15 +594,16 @@ export function CanonicalArchetypeExplorer({
           {error}
         </p>
       )}
-      {models.length === 0 && !state.error && (
+      {visibleModels.length === 0 && !state.error && (
         <Card>
           <CardContent className="py-5 text-sm text-muted-foreground">
-            No additional-method model is accepted for this company. Create a
-            method-specific model or import a reviewed v2 contract.
+            {focusedKind
+              ? `No accepted ${focusedKind === "owner-cash-flow" ? "owner cash-flow" : "residual-income"} model is available for this company. Create a method-specific model or import a reviewed v2 contract.`
+              : "No additional-method model is accepted for this company. Create a method-specific model or import a reviewed v2 contract."}
           </CardContent>
         </Card>
       )}
-      {models.map((model) => (
+      {visibleModels.map((model) => (
         <Card key={model.id}>
           <CardHeader>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -658,9 +654,8 @@ export function CanonicalArchetypeExplorer({
                 {model.current_revision.outputs.status}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                Recorded{" "}
-                {new Date(model.current_revision.recorded_at).toLocaleString()}{" "}
-                · {model.current_revision.actor}
+                Recorded {dateTime(model.current_revision.recorded_at)} ·{" "}
+                {model.current_revision.actor}
               </span>
             </div>
             <ModelOutputs model={model} />
@@ -681,13 +676,16 @@ export function CanonicalArchetypeExplorer({
                   <li key={revision.id} className="border-t pt-3">
                     <p className="text-sm font-medium">
                       Revision {revision.revision_number} ·{" "}
-                      {new Date(revision.recorded_at).toLocaleString()}
+                      {dateTime(revision.recorded_at)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {revision.rationale}
                     </p>
                     <div className="mt-3">
-                      <OutputValues output={revision.outputs} />
+                      <FinancialOutputComparison
+                        output={revision.outputs}
+                        currency={model.model_currency}
+                      />
                     </div>
                   </li>
                 ))}
@@ -786,8 +784,9 @@ export function CanonicalArchetypeExplorer({
                           </ul>
                         )}
                         <div className="mt-3">
-                          <OutputValues
+                          <FinancialOutputComparison
                             output={contractPreview.current_outputs}
+                            currency={model.model_currency}
                           />
                         </div>
                         {contractPreview.calculated_outputs && (
@@ -795,8 +794,9 @@ export function CanonicalArchetypeExplorer({
                             <p className="mb-2 text-xs font-medium">
                               Recalculated candidate outputs
                             </p>
-                            <OutputValues
+                            <FinancialOutputComparison
                               output={contractPreview.calculated_outputs}
+                              currency={model.model_currency}
                             />
                           </div>
                         )}
@@ -1050,7 +1050,10 @@ export function CanonicalArchetypeExplorer({
                     will be stored with the accepted revision.
                   </p>
                   <div className="mt-3">
-                    <OutputValues output={draft.preview.outputs} />
+                    <FinancialOutputComparison
+                      output={draft.preview.outputs}
+                      currency={draft.currency}
+                    />
                   </div>
                   {draft.preview.outputs.status === "PARTIAL" && (
                     <p className="mt-2 text-xs text-muted-foreground">

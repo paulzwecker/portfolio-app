@@ -17,7 +17,7 @@ def source_workbook() -> Workbook:
     return Workbook.read(DEFAULT_WORKBOOK, lambda name: name in EXPECTED_MODEL_KEYS)
 
 
-def test_parity_receipt_is_read_only_and_identifies_complete_portfolio_coverage() -> None:
+def test_parity_receipt_is_read_only_and_identifies_supported_coverage() -> None:
     report = build_native_model_parity_report(
         source_workbook(), assessed_at=datetime(2026, 10, 6, tzinfo=UTC)
     )
@@ -27,7 +27,7 @@ def test_parity_receipt_is_read_only_and_identifies_complete_portfolio_coverage(
     assert report["input_sets_imported"] == 0
     assert report["parity_pass_model_keys"] == list(PARITY_PROVEN_MODEL_KEYS)
     assert report["expected_irr_canonical_comparability_counts"] == {
-        "NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR": 16
+        "NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR": 21
     }
 
     models = {row["model_key"]: row for row in report["models"]}
@@ -52,9 +52,26 @@ def test_parity_receipt_is_read_only_and_identifies_complete_portfolio_coverage(
     )
     assert models["P-AMD"]["projection_reconciliation"]["passed"] == 30
     assert "SHARE_BASIS_MISMATCH" in models["P-AMD"]["blocking_categories"]
-    assert "METHODOLOGY_MISMATCH" in models["P-AMZN"]["blocking_categories"]
-    assert "METHODOLOGY_MISMATCH" in models["P-HIMS"]["blocking_categories"]
-    assert "METHODOLOGY_MISMATCH" in models["P-MSFT"]["blocking_categories"]
+    assert models["P-AMZN"]["status"] == "PARITY_PASS"
+    assert models["P-AMZN"]["return_methodology_code"] == "UFCF_ENTERPRISE_HMODEL_IRR"
+    assert models["P-HIMS"]["status"] == "PARITY_PASS"
+    assert models["P-HIMS"]["return_methodology_code"] == "UFCF_ENTERPRISE_HMODEL_IRR"
+    assert models["P-MSFT"]["status"] == "PARITY_PASS"
+    assert models["P-MSFT"]["return_methodology_code"] == "UFCF_ENTERPRISE_IRR"
+    for model_key in ("W-AXON", "W-FIX", "W-RBRK", "W-VEEV"):
+        assert models[model_key]["status"] == "PARITY_PASS"
+        assert models[model_key]["return_methodology_code"] == "OWNER_CASH_FLOW_EQUITY_IRR"
+        assert models[model_key]["projection_reconciliation"]["passed"] == 123
+        assert models[model_key]["output_reconciliation"]["passed"] == 22
+    assert models["W-PME"]["status"] == "DATA_CHECK"
+    assert "RETURN_NOT_COMPARABLE" in models["W-PME"]["blocking_categories"]
+    assert models["W-PME"]["model_currency"] == "AUD"
+    assert models["W-PME"]["listing_requirement"] == {
+        "ticker": "PME",
+        "venue": "ASX",
+        "currency": "AUD",
+        "security_type": "COMMON_STOCK",
+    }
     assert "INVALID_SOURCE_ASSUMPTION" in models["P-MSCI"]["blocking_categories"]
     assert "MISSING_SOURCE_DATA" in models["P-MORN"]["blocking_categories"]
 

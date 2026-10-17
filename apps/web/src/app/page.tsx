@@ -1,6 +1,7 @@
 import { BookOpen, ArrowUpRight } from "lucide-react";
 
-import { ServiceStatus } from "@/components/service-status";
+import { ServiceStatus } from "@/components/app/service-status";
+import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
@@ -8,18 +9,11 @@ import Link from "next/link";
 export default function Home() {
   return (
     <>
-      <div className="mb-9 max-w-xl">
-        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-primary uppercase">
-          A long-term perspective
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          Your research workspace
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          A considered view of the businesses you own, and the ones worth
-          studying.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="A long-term perspective"
+        title="Overview"
+        description="A considered view of the businesses you own, and the ones worth studying."
+      />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
         <Card className="overflow-hidden shadow-none">
           <div className="flex items-center justify-between gap-3 border-b px-6 py-4">

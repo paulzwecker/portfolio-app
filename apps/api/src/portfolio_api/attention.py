@@ -21,6 +21,7 @@ from portfolio_api.domain.models import (
     FinancialModel,
     FinancialModelOutput,
     FinancialModelRevision,
+    GoogleSheetsResearchSyncCandidate,
     Lifecycle,
     LifecycleEvent,
     Listing,
@@ -29,6 +30,8 @@ from portfolio_api.domain.models import (
     RankingDefinition,
     RankingEntry,
     RankingRun,
+    RiskAssessmentFinding,
+    RiskAssessmentRevision,
     Security,
     SourceDocument,
 )
@@ -67,6 +70,7 @@ def _event(
     current_value: object | None = None,
     unit: str | None = None,
     status: str = "INFORMATIONAL",
+    href: str | None = None,
 ) -> s.AttentionEventRead:
     when, precision = _date_time(effective_at)
     company_id = issuer.id if issuer else None
@@ -88,7 +92,14 @@ def _event(
         source_domain=source_domain,
         source_id=str(source_id) if source_id is not None else None,
         source_reference=source_reference,
-        href=f"/company/{company_id}" if company_id else None,
+        href=href
+        or (
+            f"/company/{company_id}#risk-assessments"
+            if company_id and event_type == "RISK_ASSESSMENT"
+            else f"/company/{company_id}"
+            if company_id
+            else None
+        ),
         prior_value=str(prior_value) if prior_value is not None else None,
         current_value=str(current_value) if current_value is not None else None,
         unit=unit,
@@ -107,6 +118,13 @@ def _sort_key(item: s.AttentionEventRead) -> tuple[datetime, datetime, str]:
 def _within(value: date | datetime | None, cutoff: datetime, as_of: datetime) -> bool:
     instant, _ = _date_time(value)
     return instant is not None and cutoff <= instant <= as_of
+
+
+def _recent_imported_output(
+    snapshot: ModelOutputSnapshot, cutoff: datetime, as_of: datetime
+) -> bool:
+    """Do not make an undated legacy output look current on its import day."""
+    return snapshot.effective_at is not None and _within(snapshot.effective_at, cutoff, as_of)
 
 
 def deduplicate_and_order(events: list[s.AttentionEventRead]) -> list[s.AttentionEventRead]:
@@ -161,6 +179,78 @@ def attention_feed(
     def add(**kwargs: Any) -> None:
         events.append(_event(**kwargs))
 
+    # Unaccepted Sheets research/thesis proposals need review but remain separate
+    # from accepted canonical thesis, forecast and model history.
+    candidates = (
+        session.scalars(
+            select(GoogleSheetsResearchSyncCandidate).where(
+                GoogleSheetsResearchSyncCandidate.company_id.in_(company_ids),
+                GoogleSheetsResearchSyncCandidate.first_observed_at >= cutoff,
+                GoogleSheetsResearchSyncCandidate.first_observed_at <= now,
+            )
+        ).all()
+        if company_ids
+        else []
+    )
+    for candidate in candidates:
+        if candidate.company_id is None:
+            continue
+        if candidate.accepted_at is not None and candidate.accepted_at <= now:
+            continue
+        if candidate.rejected_at is not None and candidate.rejected_at <= now:
+            continue
+        issuer = issuers.get(candidate.company_id)
+        if issuer is None:
+            continue
+        preview_status = (
+            candidate.preview_data.get("status")
+            if isinstance(candidate.preview_data, dict)
+            else None
+        )
+        review_status = candidate.status
+        if review_status in {"ACCEPTED", "REJECTED"}:
+            review_status = str(preview_status or "PENDING")
+        trigger_references = (
+            candidate.contract_data.get("trigger_references", [])
+            if isinstance(candidate.contract_data, dict)
+            else []
+        )
+        classifications = (
+            [
+                str(item.get("classification"))
+                for item in trigger_references
+                if isinstance(item, dict) and item.get("classification")
+            ]
+            if isinstance(trigger_references, list)
+            else []
+        )
+        classification_text = (
+            f" The linked trigger was classified {', '.join(classifications)}."
+            if classifications
+            else ""
+        )
+        severity = "HIGH" if review_status in {"CONFLICT", "INVALID"} else "MEDIUM"
+        proposal_kind = "thesis" if candidate.domain == "THESIS" else "research"
+        add(
+            issuer=issuer,
+            lifecycle=states.get(issuer.id),
+            event_type="RESEARCH_PROPOSAL",
+            severity=severity,
+            status="REVIEW",
+            title=f"External {proposal_kind} proposal needs review",
+            explanation=(
+                f"A {review_status.lower().replace('_', ' ')} proposal from "
+                f"{candidate.author_id or 'an external author'} is awaiting an explicit "
+                f"review decision.{classification_text}"
+            ),
+            effective_at=candidate.observed_at,
+            recorded_at=candidate.first_observed_at,
+            source_domain="google_sheets_research_candidate",
+            source_id=candidate.id,
+            source_reference=candidate.source_reference or candidate.source_url,
+            href="/model-sync",
+        )
+
     # Native model edits are inherently material revisions. A substantial IRR movement
     # is folded into the same source revision event, avoiding duplicate alerts.
     revisions = (
@@ -179,6 +269,8 @@ def attention_feed(
         by_model[model.id].append((revision, model))
     for model_chain in by_model.values():
         for revision_index, (model_revision, model_identity) in enumerate(model_chain):
+            if model_revision.recorded_at > now:
+                continue
             revision_time = (
                 model_revision.effective_at
                 if model_revision.actor == "IMPORT"
@@ -231,10 +323,15 @@ def attention_feed(
                 and prior_revision is not None
                 and prior_revision.model_type == model_revision.model_type
                 and prior_revision.methodology_version == model_revision.methodology_version
+                and prior_output is not None
+                and current_output is not None
+                and prior_output.return_methodology_id == current_output.return_methodology_id
             )
             if is_irr_change:
                 assert previous_irr is not None and current_irr is not None
+                assert current_output is not None
                 explanation = (
+                    f"{current_output.return_methodology.title}; "
                     f"{model_revision.model_type} revision {model_revision.revision_number}; "
                     f"deterministic output moved from {previous_irr:.1%} "
                     f"to {current_irr:.1%}. {model_revision.rationale}"
@@ -301,7 +398,7 @@ def attention_feed(
         if company_ids
         else []
     ):
-        if not _within(snapshot.effective_at or snapshot.recorded_at, cutoff, now):
+        if not _recent_imported_output(snapshot, cutoff, now):
             continue
         add(
             issuer=issuers.get(snapshot.company_id),
@@ -357,6 +454,11 @@ def attention_feed(
         tuple[UUID, str, str, str, str | None, str], list[ConsensusEstimateObservation]
     ] = defaultdict(list)
     for observation in estimates:
+        if observation.recorded_at > now:
+            continue
+        observation_time, _ = _date_time(observation.observed_at or observation.snapshot_date)
+        if observation_time is None or observation_time > now:
+            continue
         selected_source = selected_mapping.get(observation.company_id)
         if selected_source and observation.provider_mapping_id == selected_source.id:
             key = (
@@ -427,6 +529,8 @@ def attention_feed(
         if company_ids
         else []
     ):
+        if document.recorded_at > now:
+            continue
         if document.id in replaced_docs:
             continue
         filing_time = document.published_at or document.filed_at or document.recorded_at
@@ -648,6 +752,65 @@ def attention_feed(
         for key, value in states.items()
         if value in (Lifecycle.PORTFOLIO.value, Lifecycle.WATCHLIST.value)
     }
+
+    # Only new or worsening high-severity agent assessments warrant an alert. A complete
+    # assessment is still available in Portfolio/Company history without becoming noise.
+    risk_rows = session.execute(
+        select(RiskAssessmentRevision, RiskAssessmentFinding)
+        .join(
+            RiskAssessmentFinding,
+            RiskAssessmentFinding.revision_id == RiskAssessmentRevision.id,
+        )
+        .where(
+            RiskAssessmentRevision.published_at >= cutoff,
+            RiskAssessmentRevision.published_at <= now,
+            RiskAssessmentRevision.recorded_at <= now,
+            RiskAssessmentFinding.severity.in_(("HIGH", "CRITICAL")),
+            RiskAssessmentFinding.status == "ACTIVE",
+            RiskAssessmentFinding.change_direction.in_(("NEW", "WORSENING")),
+        )
+        .order_by(RiskAssessmentRevision.published_at.desc())
+    ).all()
+    for risk_revision, finding in risk_rows:
+        if company_id is not None and finding.company_id is None:
+            continue
+        issuer = issuers.get(finding.company_id) if finding.company_id is not None else None
+        if finding.company_id is not None and finding.company_id not in company_ids:
+            continue
+        accepted_baseline = risk_revision.baseline_status_at_accept.replace("_", " ").lower()
+        baseline_context = (
+            f" Accepted against a {accepted_baseline} baseline with reviewer acknowledgement."
+            if risk_revision.baseline_stale_acknowledged
+            else f" Accepted against a {accepted_baseline} baseline."
+        )
+        add(
+            issuer=issuer,
+            lifecycle=states.get(finding.company_id) if finding.company_id else None,
+            event_type="RISK_ASSESSMENT",
+            severity="HIGH",
+            status="REVIEW",
+            title=finding.title,
+            explanation=(
+                f"Agent-authored {finding.severity.lower()} risk finding "
+                f"({finding.change_direction.lower()}; confidence {finding.confidence.lower()}). "
+                f"{finding.rationale} Assessment {risk_revision.stream_key} revision "
+                f"{risk_revision.revision_number} is based on holdings snapshot "
+                f"{risk_revision.holdings_snapshot_id} and target revision "
+                f"{risk_revision.target_revision_id or 'none'}. "
+                f"{baseline_context} "
+                f"{finding.description}"
+            ),
+            effective_at=risk_revision.published_at,
+            recorded_at=risk_revision.recorded_at,
+            source_domain="risk_assessment",
+            source_id=f"{risk_revision.id}:{finding.id}",
+            source_reference=risk_revision.source_reference,
+            href=(
+                f"/company/{finding.company_id}#risk-assessments"
+                if finding.company_id
+                else "/portfolio#risk-assessments"
+            ),
+        )
     current_quotes = (
         session.scalars(
             select(PriceObservation)

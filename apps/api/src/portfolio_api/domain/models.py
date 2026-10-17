@@ -24,9 +24,13 @@ from sqlalchemy import (
     inspect,
     text,
 )
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from portfolio_api.database import Base
+from portfolio_api.return_semantics import (
+    DEFINITION_ID_BY_CODE,
+    native_methodology_for_revision,
+)
 
 
 def now() -> datetime:
@@ -56,6 +60,145 @@ class ScoreDimension(StrEnum):
 class ResearchCandidateTier(StrEnum):
     HIGH = "HIGH"
     LOW = "LOW"
+
+
+class CandidateResearchStage(StrEnum):
+    DISCOVERY = "DISCOVERY"
+    INITIAL_SCREEN = "INITIAL_SCREEN"
+    QUALITY_DURABILITY = "QUALITY_DURABILITY"
+    FUNDAMENTAL_COMPOUNDING = "FUNDAMENTAL_COMPOUNDING"
+    DEEP_DIVE = "DEEP_DIVE"
+    RESOLUTION = "RESOLUTION"
+
+
+class CandidateGateOutcome(StrEnum):
+    NOT_ASSESSED = "NOT_ASSESSED"
+    INCOMPLETE = "INCOMPLETE"
+    PASS = "PASS"
+    FAIL = "FAIL"
+    DATA_CHECK = "DATA_CHECK"
+
+
+class CandidateResearchDisposition(StrEnum):
+    WATCHLIST = "WATCHLIST"
+    INCUBATE = "INCUBATE"
+    DROP = "DROP"
+
+
+class CandidateGateEvidenceType(StrEnum):
+    RESEARCH_REVISION = "RESEARCH_REVISION"
+    THESIS_REVISION = "THESIS_REVISION"
+    THESIS_CLAIM = "THESIS_CLAIM"
+    SCORE_ASSESSMENT = "SCORE_ASSESSMENT"
+    FINANCIAL_MODEL_OUTPUT = "FINANCIAL_MODEL_OUTPUT"
+    LEGACY_MODEL_OUTPUT = "LEGACY_MODEL_OUTPUT"
+    SOURCE_DOCUMENT = "SOURCE_DOCUMENT"
+    SOURCE_URL = "SOURCE_URL"
+
+
+class ResearchForecastMetric(StrEnum):
+    REVENUE = "REVENUE"
+    EPS = "EPS"
+    EBIT = "EBIT"
+    EBITDA = "EBITDA"
+    FREE_CASH_FLOW = "FREE_CASH_FLOW"
+    DILUTED_SHARES = "DILUTED_SHARES"
+
+
+class ResearchPeriodType(StrEnum):
+    ANNUAL = "ANNUAL"
+    QUARTERLY = "QUARTERLY"
+
+
+class ResearchScenario(StrEnum):
+    POINT = "POINT"
+    BEAR = "BEAR"
+    BASE = "BASE"
+    BULL = "BULL"
+
+
+class ResearchObservationStatus(StrEnum):
+    AVAILABLE = "AVAILABLE"
+    UNAVAILABLE = "UNAVAILABLE"
+    DATA_CHECK = "DATA_CHECK"
+
+
+class ResearchConfidence(StrEnum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    UNASSESSED = "UNASSESSED"
+
+
+class ResearchRevisionStatus(StrEnum):
+    PUBLISHED = "PUBLISHED"
+    WITHDRAWN = "WITHDRAWN"
+
+
+class ResearchQueueTaskType(StrEnum):
+    CANDIDATE_STAGE = "CANDIDATE_STAGE"
+    THESIS_REVIEW = "THESIS_REVIEW"
+    THESIS_QUESTION = "THESIS_QUESTION"
+    MATERIAL_EVIDENCE = "MATERIAL_EVIDENCE"
+    RESEARCH_TRIGGER = "RESEARCH_TRIGGER"
+    MODEL_REUNDERWRITE = "MODEL_REUNDERWRITE"
+    MODEL_INTEGRITY = "MODEL_INTEGRITY"
+    WATCHLIST_READINESS = "WATCHLIST_READINESS"
+    STRUCTURAL_RISK = "STRUCTURAL_RISK"
+
+
+class ThesisRevisionStatus(StrEnum):
+    PUBLISHED = "PUBLISHED"
+    WITHDRAWN = "WITHDRAWN"
+
+
+class ThesisClaimType(StrEnum):
+    COMPETITIVE_ADVANTAGE = "COMPETITIVE_ADVANTAGE"
+    DURABILITY = "DURABILITY"
+    GROWTH_DRIVER = "GROWTH_DRIVER"
+    PRINCIPAL_RISK = "PRINCIPAL_RISK"
+    THESIS_BREAKER = "THESIS_BREAKER"
+    CATALYST = "CATALYST"
+    IMPORTANT_DEVELOPMENT = "IMPORTANT_DEVELOPMENT"
+    UNRESOLVED_QUESTION = "UNRESOLVED_QUESTION"
+
+
+class ThesisClaimStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    RESOLVED = "RESOLVED"
+    INVALIDATED = "INVALIDATED"
+
+
+class ThesisEvidenceRelationship(StrEnum):
+    SUPPORTS = "SUPPORTS"
+    CONTRADICTS = "CONTRADICTS"
+    CONTEXT = "CONTEXT"
+
+
+class ModelEvidenceRelationship(StrEnum):
+    SUPPORTS = "SUPPORTS"
+    CONTRADICTS = "CONTRADICTS"
+    CONTEXT = "CONTEXT"
+
+
+class ModelEvidenceType(StrEnum):
+    RESEARCH_REVISION = "RESEARCH_REVISION"
+    RESEARCH_FORECAST = "RESEARCH_FORECAST"
+    THESIS_REVISION = "THESIS_REVISION"
+    THESIS_CLAIM = "THESIS_CLAIM"
+
+
+class ResearchAssessmentType(StrEnum):
+    BUSINESS_OUTLOOK = "BUSINESS_OUTLOOK"
+    COMPETITIVE_POSITION = "COMPETITIVE_POSITION"
+    KEY_RISKS = "KEY_RISKS"
+
+
+class ResearchAssessmentStatus(StrEnum):
+    AVAILABLE = "AVAILABLE"
+    UNAVAILABLE = "UNAVAILABLE"
+    DATA_CHECK = "DATA_CHECK"
 
 
 class FundamentalMetric(StrEnum):
@@ -115,6 +258,20 @@ class SourceDocumentQuality(StrEnum):
 class ConsensusEstimateMetric(StrEnum):
     REVENUE = "REVENUE"
     EPS = "EPS"
+
+
+class ForecastAccuracyMetric(StrEnum):
+    REVENUE = "REVENUE"
+    EPS = "EPS"
+    EBIT = "EBIT"
+    EBITDA = "EBITDA"
+    FREE_CASH_FLOW = "FREE_CASH_FLOW"
+
+
+class ForecastAccuracySourceType(StrEnum):
+    AGENT_RESEARCH = "AGENT_RESEARCH"
+    FINANCIAL_MODEL = "FINANCIAL_MODEL"
+    ANALYST_CONSENSUS = "ANALYST_CONSENSUS"
 
 
 class ConsensusEstimatePeriodType(StrEnum):
@@ -619,6 +776,1094 @@ class ResearchPriorityInput(Base):
     actor: Mapped[str] = mapped_column(String(32), default=Actor.IMPORT)
 
 
+class CandidatePipelineRevision(Base):
+    """An immutable, complete Candidate research-pipeline state snapshot."""
+
+    __tablename__ = "candidate_pipeline_revisions"
+    __table_args__ = (
+        UniqueConstraint("company_id", "revision_number", name="uq_candidate_pipeline_revision"),
+        UniqueConstraint("company_id", "submission_id", name="uq_candidate_pipeline_submission"),
+        UniqueConstraint("company_id", "id", name="uq_candidate_pipeline_company_revision"),
+        ForeignKeyConstraint(
+            ["company_id", "base_revision_id"],
+            ["candidate_pipeline_revisions.company_id", "candidate_pipeline_revisions.id"],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("revision_number > 0", name="revision_number"),
+        CheckConstraint(
+            "stage IN ('DISCOVERY','INITIAL_SCREEN','QUALITY_DURABILITY',"
+            "'FUNDAMENTAL_COMPOUNDING','DEEP_DIVE','RESOLUTION')",
+            name="stage",
+        ),
+        CheckConstraint(
+            "disposition IS NULL OR disposition IN ('WATCHLIST','INCUBATE','DROP')",
+            name="disposition",
+        ),
+        CheckConstraint(
+            "disposition IS NULL OR disposition = 'DROP' OR stage = 'RESOLUTION'",
+            name="disposition_requires_resolution",
+        ),
+        CheckConstraint("actor IN ('LOCAL_USER','SYSTEM','IMPORT')", name="actor"),
+        CheckConstraint("length(author_id) > 0", name="author_id"),
+        CheckConstraint("length(rationale) > 0", name="rationale"),
+        CheckConstraint("length(content_fingerprint) = 64", name="content_fingerprint"),
+        Index("ix_candidate_pipeline_revisions_company_recorded", "company_id", "recorded_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    revision_number: Mapped[int] = mapped_column(Integer)
+    base_revision_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    submission_id: Mapped[UUID] = mapped_column()
+    stage: Mapped[str] = mapped_column(String(32))
+    disposition: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    next_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    unresolved_questions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    actor: Mapped[str] = mapped_column(String(32), default=Actor.LOCAL_USER)
+    author_id: Mapped[str] = mapped_column(String(160))
+    source: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    rationale: Mapped[str] = mapped_column(Text)
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
+class CandidatePipelineGateAssessment(Base):
+    """One gate state copied into an immutable Candidate pipeline revision."""
+
+    __tablename__ = "candidate_pipeline_gate_assessments"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "gate", name="uq_candidate_pipeline_revision_gate"),
+        CheckConstraint(
+            "gate IN ('DISCOVERY','INITIAL_SCREEN','QUALITY_DURABILITY',"
+            "'FUNDAMENTAL_COMPOUNDING','DEEP_DIVE')",
+            name="gate",
+        ),
+        CheckConstraint(
+            "outcome IN ('NOT_ASSESSED','INCOMPLETE','PASS','FAIL','DATA_CHECK')",
+            name="outcome",
+        ),
+        CheckConstraint(
+            "NOT normalized_per_share_basis_confirmed OR gate = 'FUNDAMENTAL_COMPOUNDING'",
+            name="per_share_basis_gate",
+        ),
+        CheckConstraint(
+            "outcome <> 'PASS' OR coalesce(length(rationale), 0) > 0",
+            name="pass_rationale",
+        ),
+        Index("ix_candidate_gate_revision", "revision_id", "gate"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("candidate_pipeline_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    gate: Mapped[str] = mapped_column(String(32))
+    outcome: Mapped[str] = mapped_column(String(16))
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    normalized_per_share_basis_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class CandidatePipelineEvidence(Base):
+    """A typed link from a gate assessment to existing canonical evidence."""
+
+    __tablename__ = "candidate_pipeline_evidence"
+    __table_args__ = (
+        CheckConstraint(
+            "evidence_type IN ('RESEARCH_REVISION','THESIS_REVISION','THESIS_CLAIM',"
+            "'SCORE_ASSESSMENT','FINANCIAL_MODEL_OUTPUT','LEGACY_MODEL_OUTPUT',"
+            "'SOURCE_DOCUMENT','SOURCE_URL')",
+            name="evidence_type",
+        ),
+        CheckConstraint(
+            "num_nonnulls(research_revision_id, thesis_revision_id, thesis_claim_id, "
+            "score_assessment_id, financial_model_output_id, model_output_snapshot_id, "
+            "source_document_id, source_url) = 1",
+            name="one_reference",
+        ),
+        CheckConstraint(
+            "(evidence_type = 'RESEARCH_REVISION' AND research_revision_id IS NOT NULL) OR "
+            "(evidence_type = 'THESIS_REVISION' AND thesis_revision_id IS NOT NULL) OR "
+            "(evidence_type = 'THESIS_CLAIM' AND thesis_claim_id IS NOT NULL) OR "
+            "(evidence_type = 'SCORE_ASSESSMENT' AND score_assessment_id IS NOT NULL) OR "
+            "(evidence_type = 'FINANCIAL_MODEL_OUTPUT' AND "
+            "financial_model_output_id IS NOT NULL) OR "
+            "(evidence_type = 'LEGACY_MODEL_OUTPUT' AND model_output_snapshot_id IS NOT NULL) OR "
+            "(evidence_type = 'SOURCE_DOCUMENT' AND source_document_id IS NOT NULL) OR "
+            "(evidence_type = 'SOURCE_URL' AND source_url IS NOT NULL)",
+            name="evidence_identity",
+        ),
+        CheckConstraint(
+            "source_url IS NULL OR source_url LIKE 'https://%'",
+            name="https_url",
+        ),
+        CheckConstraint(
+            "relationship IN ('SUPPORTS','CONTRADICTS','CONTEXT')",
+            name="relationship",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    gate_assessment_id: Mapped[UUID] = mapped_column(
+        ForeignKey("candidate_pipeline_gate_assessments.id", ondelete="RESTRICT"), index=True
+    )
+    evidence_type: Mapped[str] = mapped_column(String(32))
+    research_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_claim_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_claims.id", ondelete="RESTRICT"), nullable=True
+    )
+    score_assessment_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("score_assessments.id", ondelete="RESTRICT"), nullable=True
+    )
+    financial_model_output_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("financial_model_outputs.id", ondelete="RESTRICT"), nullable=True
+    )
+    model_output_snapshot_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("model_output_snapshots.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_document_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    relationship: Mapped[str] = mapped_column(String(16), default="SUPPORTS")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ResearchRevision(Base):
+    """One immutable, externally authored company research publication."""
+
+    __tablename__ = "research_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id", "stream_key", "revision_number", name="uq_research_stream_revision"
+        ),
+        UniqueConstraint(
+            "company_id",
+            "stream_key",
+            "external_revision_id",
+            name="uq_research_stream_external_revision",
+        ),
+        CheckConstraint("revision_number > 0", name="revision_number"),
+        CheckConstraint("length(stream_key) > 0", name="stream_key"),
+        CheckConstraint("length(external_revision_id) > 0", name="external_revision_id"),
+        CheckConstraint("length(author_id) > 0", name="author_id"),
+        CheckConstraint("length(source_id) > 0", name="source_id"),
+        CheckConstraint("length(source_reference) > 0", name="source_reference"),
+        CheckConstraint("length(rationale) > 0", name="rationale"),
+        CheckConstraint("status IN ('PUBLISHED','WITHDRAWN')", name="status"),
+        CheckConstraint("length(content_fingerprint) = 64", name="content_fingerprint"),
+        Index("ix_research_revisions_company_observed", "company_id", "observed_at"),
+        Index(
+            "ix_research_revisions_company_stream", "company_id", "stream_key", "revision_number"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    security_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("securities.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    stream_key: Mapped[str] = mapped_column(String(240))
+    revision_number: Mapped[int] = mapped_column(Integer)
+    contract_version: Mapped[str] = mapped_column(String(24))
+    external_revision_id: Mapped[str] = mapped_column(String(200))
+    supersedes_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    author_id: Mapped[str] = mapped_column(String(160))
+    source_id: Mapped[str] = mapped_column(String(160))
+    source_reference: Mapped[str] = mapped_column(String(1000))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    status: Mapped[str] = mapped_column(String(16))
+    rationale: Mapped[str] = mapped_column(Text)
+    uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
+class ResearchForecast(Base):
+    """One agent-authored forecast cell, distinct from consensus and model state."""
+
+    __tablename__ = "research_forecasts"
+    __table_args__ = (
+        UniqueConstraint(
+            "revision_id",
+            "metric",
+            "fiscal_year",
+            "fiscal_period",
+            "scenario",
+            name="uq_research_forecast_period_scenario",
+        ),
+        CheckConstraint(
+            "metric IN ('REVENUE','EPS','EBIT','EBITDA','FREE_CASH_FLOW','DILUTED_SHARES')",
+            name="metric",
+        ),
+        CheckConstraint("period_type IN ('ANNUAL','QUARTERLY')", name="period_type"),
+        CheckConstraint(
+            "(period_type = 'ANNUAL' AND fiscal_period = 'FY') OR "
+            "(period_type = 'QUARTERLY' AND fiscal_period IN ('Q1','Q2','Q3','Q4'))",
+            name="fiscal_period",
+        ),
+        CheckConstraint("fiscal_year BETWEEN 1800 AND 2200", name="fiscal_year"),
+        CheckConstraint("scenario IN ('POINT','BEAR','BASE','BULL')", name="scenario"),
+        CheckConstraint(
+            "availability_status IN ('AVAILABLE','UNAVAILABLE','DATA_CHECK')",
+            name="availability_status",
+        ),
+        CheckConstraint(
+            "(availability_status = 'AVAILABLE' AND value IS NOT NULL) OR "
+            "(availability_status = 'UNAVAILABLE' AND value IS NULL) OR "
+            "availability_status = 'DATA_CHECK'",
+            name="availability_value",
+        ),
+        CheckConstraint(
+            "(availability_status = 'AVAILABLE' AND availability_reason IS NULL) OR "
+            "(availability_status <> 'AVAILABLE' AND "
+            "coalesce(length(availability_reason), 0) > 0)",
+            name="availability_reason",
+        ),
+        CheckConstraint(
+            "(metric = 'DILUTED_SHARES' AND currency IS NULL AND unit = 'shares') OR "
+            "(metric = 'EPS' AND currency IS NOT NULL AND unit = 'currency/share') OR "
+            "(metric IN ('REVENUE','EBIT','EBITDA','FREE_CASH_FLOW') AND "
+            "currency IS NOT NULL AND unit = 'currency')",
+            name="metric_unit_currency",
+        ),
+        CheckConstraint(
+            "value IS NULL OR metric NOT IN ('REVENUE','DILUTED_SHARES') OR value >= 0",
+            name="nonnegative_metric",
+        ),
+        CheckConstraint("confidence IN ('HIGH','MEDIUM','LOW','UNASSESSED')", name="confidence"),
+        Index("ix_research_forecasts_revision", "revision_id", "metric", "fiscal_year"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    metric: Mapped[str] = mapped_column(String(32))
+    period_type: Mapped[str] = mapped_column(String(16))
+    fiscal_year: Mapped[int] = mapped_column(Integer)
+    fiscal_period: Mapped[str] = mapped_column(String(8))
+    period_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    scenario: Mapped[str] = mapped_column(String(16))
+    value: Mapped[Decimal | None] = mapped_column(Numeric(38, 12), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    unit: Mapped[str] = mapped_column(String(32))
+    availability_status: Mapped[str] = mapped_column(String(16))
+    availability_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    confidence: Mapped[str] = mapped_column(String(16), default="UNASSESSED")
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ResearchAssessment(Base):
+    """A narrative business assessment; it does not encode canonical score values."""
+
+    __tablename__ = "research_assessments"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "assessment_type", name="uq_research_assessment_type"),
+        CheckConstraint(
+            "assessment_type IN ('BUSINESS_OUTLOOK','COMPETITIVE_POSITION','KEY_RISKS')",
+            name="assessment_type",
+        ),
+        CheckConstraint("status IN ('AVAILABLE','UNAVAILABLE','DATA_CHECK')", name="status"),
+        CheckConstraint(
+            "(status = 'AVAILABLE' AND narrative IS NOT NULL) OR "
+            "(status = 'UNAVAILABLE' AND narrative IS NULL) OR status = 'DATA_CHECK'",
+            name="narrative_status",
+        ),
+        CheckConstraint(
+            "(status = 'AVAILABLE' AND status_reason IS NULL) OR "
+            "(status <> 'AVAILABLE' AND coalesce(length(status_reason), 0) > 0)",
+            name="status_reason",
+        ),
+        CheckConstraint("confidence IN ('HIGH','MEDIUM','LOW','UNASSESSED')", name="confidence"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    assessment_type: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16))
+    status_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[str] = mapped_column(String(16), default="UNASSESSED")
+    uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ResearchEvidence(Base):
+    """A source link or citation attached to an immutable research revision."""
+
+    __tablename__ = "research_evidence"
+    __table_args__ = (
+        CheckConstraint("length(source_name) > 0", name="source_name"),
+        CheckConstraint(
+            "source_document_id IS NOT NULL OR "
+            "(external_identifier IS NOT NULL AND length(external_identifier) > 0) OR "
+            "(source_url IS NOT NULL AND length(source_url) > 0)",
+            name="source_locator",
+        ),
+        CheckConstraint("source_url IS NULL OR source_url LIKE 'https://%'", name="https_url"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    source_document_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    source_name: Mapped[str] = mapped_column(String(200))
+    external_identifier: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    published_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ResearchQueueCompletion(Base):
+    """A durable review completion for one source-derived queue condition."""
+
+    __tablename__ = "research_queue_completions"
+    __table_args__ = (
+        UniqueConstraint(
+            "task_id", "condition_fingerprint", name="uq_research_queue_completion_condition"
+        ),
+        CheckConstraint("length(task_id) = 64", name="task_id"),
+        CheckConstraint("length(condition_fingerprint) = 64", name="condition_fingerprint"),
+        CheckConstraint(
+            "task_type IN ('CANDIDATE_STAGE','THESIS_REVIEW','THESIS_QUESTION',"
+            "'MATERIAL_EVIDENCE','RESEARCH_TRIGGER','MODEL_REUNDERWRITE','MODEL_INTEGRITY',"
+            "'WATCHLIST_READINESS','STRUCTURAL_RISK')",
+            name="task_type",
+        ),
+        CheckConstraint(
+            "trigger_classification IS NULL OR trigger_classification IN "
+            "('NOISE','INCREMENTAL','MAJOR-STRUCTURAL')",
+            name="trigger_classification",
+        ),
+        CheckConstraint("length(completed_by) > 0", name="completed_by"),
+        Index("ix_research_queue_completions_company_completed", "company_id", "completed_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    task_id: Mapped[str] = mapped_column(String(64))
+    condition_fingerprint: Mapped[str] = mapped_column(String(64))
+    task_type: Mapped[str] = mapped_column(String(32))
+    task_snapshot: Mapped[dict[str, object]] = mapped_column(JSON)
+    completed_by: Mapped[str] = mapped_column(String(160))
+    completion_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    trigger_classification: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ResearchTriggerType(StrEnum):
+    NEW_FILING = "NEW_FILING"
+    MODEL_REVISION = "MODEL_REVISION"
+    EXPECTED_IRR_CHANGE = "EXPECTED_IRR_CHANGE"
+    CONSENSUS_REVISION = "CONSENSUS_REVISION"
+    REPORTED_FACT_CORRECTION = "REPORTED_FACT_CORRECTION"
+    THESIS_EVIDENCE_LINKED = "THESIS_EVIDENCE_LINKED"
+    RISK_ASSESSMENT = "RISK_ASSESSMENT"
+
+
+class ThesisWatchClassification(StrEnum):
+    NOISE = "NOISE"
+    INCREMENTAL = "INCREMENTAL"
+    MAJOR_STRUCTURAL = "MAJOR-STRUCTURAL"
+
+
+class ResearchAgentRole(StrEnum):
+    DATA_UNIVERSE_STEWARD = "DATA_UNIVERSE_STEWARD"
+    PORTFOLIO_THESIS_SENTINEL = "PORTFOLIO_THESIS_SENTINEL"
+    MODEL_ALLOCATION_STEWARD = "MODEL_ALLOCATION_STEWARD"
+
+
+class ResearchAgentWorkEventType(StrEnum):
+    DELIVERY_SUCCEEDED = "DELIVERY_SUCCEEDED"
+    DELIVERY_FAILED = "DELIVERY_FAILED"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    BLOCKED = "BLOCKED"
+    SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE"
+    STALE_SOURCE = "STALE_SOURCE"
+    UNRESOLVED_REVIEW = "UNRESOLVED_REVIEW"
+
+
+class ResearchTrigger(Base):
+    """Append-only capture of a canonical source event that warrants research review."""
+
+    __tablename__ = "research_triggers"
+    __table_args__ = (
+        UniqueConstraint("event_key", "version", name="uq_research_trigger_event_version"),
+        UniqueConstraint("event_key", "fingerprint", name="uq_research_trigger_event_content"),
+        CheckConstraint("version > 0", name="version"),
+        CheckConstraint("length(event_key) > 0", name="event_key"),
+        CheckConstraint("length(fingerprint) = 64", name="fingerprint"),
+        CheckConstraint(
+            "trigger_type IN ('NEW_FILING','MODEL_REVISION','EXPECTED_IRR_CHANGE',"
+            "'CONSENSUS_REVISION','REPORTED_FACT_CORRECTION','THESIS_EVIDENCE_LINKED',"
+            "'RISK_ASSESSMENT')",
+            name="trigger_type",
+        ),
+        CheckConstraint("length(source_domain) > 0", name="source_domain"),
+        CheckConstraint("length(source_record_id) > 0", name="source_record_id"),
+        CheckConstraint(
+            "queue_task_id IS NULL OR length(queue_task_id) = 64", name="queue_task_id"
+        ),
+        CheckConstraint(
+            "queue_condition_fingerprint IS NULL OR length(queue_condition_fingerprint) = 64",
+            name="queue_condition_fingerprint",
+        ),
+        Index("ix_research_triggers_company_detected", "company_id", "detected_at"),
+        Index("ix_research_triggers_source", "source_domain", "source_record_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    event_key: Mapped[str] = mapped_column(String(600))
+    version: Mapped[int] = mapped_column(Integer)
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    trigger_type: Mapped[str] = mapped_column(String(40))
+    title: Mapped[str] = mapped_column(String(500))
+    reason: Mapped[str] = mapped_column(Text)
+    source_domain: Mapped[str] = mapped_column(String(120))
+    source_record_id: Mapped[str] = mapped_column(String(500))
+    source_reference: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source_observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    source_recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    source_snapshot: Mapped[dict[str, object]] = mapped_column(JSON)
+    queue_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    queue_condition_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class ResearchTriggerPublicationLink(Base):
+    """Immutable lineage from a trigger to an accepted research or thesis revision."""
+
+    __tablename__ = "research_trigger_publication_links"
+    __table_args__ = (
+        CheckConstraint(
+            "(research_revision_id IS NOT NULL AND thesis_revision_id IS NULL) OR "
+            "(research_revision_id IS NULL AND thesis_revision_id IS NOT NULL)",
+            name="one_revision_type",
+        ),
+        CheckConstraint(
+            "classification IN ('NOISE','INCREMENTAL','MAJOR-STRUCTURAL')",
+            name="classification",
+        ),
+        CheckConstraint("length(classification_rationale) > 0", name="classification_rationale"),
+        Index(
+            "uq_research_trigger_publication_research",
+            "trigger_id",
+            "research_revision_id",
+            unique=True,
+            postgresql_where=text("research_revision_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_research_trigger_publication_thesis",
+            "trigger_id",
+            "thesis_revision_id",
+            unique=True,
+            postgresql_where=text("thesis_revision_id IS NOT NULL"),
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    trigger_id: Mapped[UUID] = mapped_column(
+        ForeignKey("research_triggers.id", ondelete="RESTRICT"), index=True
+    )
+    research_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    classification: Mapped[str] = mapped_column(String(24))
+    classification_rationale: Mapped[str] = mapped_column(Text)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ResearchAgentWorkEvent(Base):
+    """Append-only delivery and acknowledgment history for external research agents."""
+
+    __tablename__ = "research_agent_work_events"
+    __table_args__ = (
+        CheckConstraint(
+            "agent_role IN ('DATA_UNIVERSE_STEWARD','PORTFOLIO_THESIS_SENTINEL',"
+            "'MODEL_ALLOCATION_STEWARD')",
+            name="agent_role",
+        ),
+        CheckConstraint(
+            "work_type IN ('TRIGGER','QUEUE_TASK','DATA_DOMAIN','PORTFOLIO_STATE')",
+            name="work_type",
+        ),
+        CheckConstraint("length(work_key) > 0", name="work_key"),
+        CheckConstraint("length(work_fingerprint) = 64", name="work_fingerprint"),
+        CheckConstraint(
+            "channel IN ('API','GOOGLE_SHEETS')",
+            name="channel",
+        ),
+        CheckConstraint(
+            "event_type IN ('DELIVERY_SUCCEEDED','DELIVERY_FAILED','ACKNOWLEDGED',"
+            "'IN_PROGRESS','COMPLETED','BLOCKED','SOURCE_UNAVAILABLE','STALE_SOURCE',"
+            "'UNRESOLVED_REVIEW')",
+            name="event_type",
+        ),
+        CheckConstraint("length(idempotency_key) > 0", name="idempotency_key"),
+        CheckConstraint("length(content_fingerprint) = 64", name="content_fingerprint"),
+        CheckConstraint(
+            "(event_type IN ('ACKNOWLEDGED','IN_PROGRESS','COMPLETED','BLOCKED',"
+            "'SOURCE_UNAVAILABLE','STALE_SOURCE','UNRESOLVED_REVIEW') "
+            "AND delivery_id IS NOT NULL) OR "
+            "(event_type IN ('DELIVERY_SUCCEEDED','DELIVERY_FAILED') AND delivery_id IS NULL)",
+            name="delivery_reference",
+        ),
+        CheckConstraint(
+            "event_type NOT IN ('DELIVERY_FAILED','BLOCKED','SOURCE_UNAVAILABLE',"
+            "'STALE_SOURCE','UNRESOLVED_REVIEW') OR (reason IS NOT NULL AND length(reason) > 0)",
+            name="reason_required",
+        ),
+        CheckConstraint(
+            "(proposal_domain IS NULL AND proposal_candidate_id IS NULL) OR "
+            "(proposal_domain IN ('MODEL','RESEARCH','THESIS','RISK') "
+            "AND proposal_candidate_id IS NOT NULL)",
+            name="proposal_reference",
+        ),
+        UniqueConstraint("idempotency_key", name="uq_research_agent_work_event_idempotency"),
+        Index(
+            "uq_research_agent_work_delivery",
+            "agent_role",
+            "work_type",
+            "work_key",
+            "work_fingerprint",
+            "channel",
+            unique=True,
+            postgresql_where=text("event_type = 'DELIVERY_SUCCEEDED'"),
+        ),
+        Index("ix_research_agent_work_events_delivery", "delivery_id", "recorded_at"),
+        Index(
+            "ix_research_agent_work_events_identity",
+            "agent_role",
+            "work_type",
+            "work_key",
+            "work_fingerprint",
+            "recorded_at",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    delivery_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_agent_work_events.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    agent_role: Mapped[str] = mapped_column(String(40))
+    work_type: Mapped[str] = mapped_column(String(24))
+    work_key: Mapped[str] = mapped_column(String(500))
+    work_fingerprint: Mapped[str] = mapped_column(String(64))
+    channel: Mapped[str] = mapped_column(String(24))
+    event_type: Mapped[str] = mapped_column(String(32))
+    idempotency_key: Mapped[str] = mapped_column(String(200))
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+    external_update_id: Mapped[str | None] = mapped_column(String(200), nullable=True, unique=True)
+    agent_run_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    actor_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    proposal_domain: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    proposal_candidate_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    source_reference: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    blocker_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class InvestmentThesisRevision(Base):
+    """One immutable company investment-thesis snapshot from a research author."""
+
+    __tablename__ = "investment_thesis_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id", "stream_key", "revision_number", name="uq_thesis_stream_revision"
+        ),
+        UniqueConstraint(
+            "company_id",
+            "stream_key",
+            "external_revision_id",
+            name="uq_thesis_stream_external_revision",
+        ),
+        CheckConstraint("revision_number > 0", name="revision_number"),
+        CheckConstraint("length(stream_key) > 0", name="stream_key"),
+        CheckConstraint("length(external_revision_id) > 0", name="external_revision_id"),
+        CheckConstraint("length(author_id) > 0", name="author_id"),
+        CheckConstraint("length(source_id) > 0", name="source_id"),
+        CheckConstraint("length(source_reference) > 0", name="source_reference"),
+        CheckConstraint("length(rationale) > 0", name="rationale"),
+        CheckConstraint("status IN ('PUBLISHED','WITHDRAWN')", name="status"),
+        CheckConstraint("confidence IN ('HIGH','MEDIUM','LOW','UNASSESSED')", name="confidence"),
+        CheckConstraint(
+            "(status = 'PUBLISHED' AND thesis_statement IS NOT NULL) OR "
+            "(status = 'WITHDRAWN' AND thesis_statement IS NULL)",
+            name="thesis_status",
+        ),
+        CheckConstraint("length(content_fingerprint) = 64", name="content_fingerprint"),
+        Index("ix_thesis_revisions_company_observed", "company_id", "observed_at"),
+        Index(
+            "ix_thesis_revisions_company_stream",
+            "company_id",
+            "stream_key",
+            "revision_number",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    security_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("securities.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    stream_key: Mapped[str] = mapped_column(String(240))
+    revision_number: Mapped[int] = mapped_column(Integer)
+    contract_version: Mapped[str] = mapped_column(String(24))
+    external_revision_id: Mapped[str] = mapped_column(String(200))
+    supersedes_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    author_id: Mapped[str] = mapped_column(String(160))
+    source_id: Mapped[str] = mapped_column(String(160))
+    source_reference: Mapped[str] = mapped_column(String(1000))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    status: Mapped[str] = mapped_column(String(16))
+    thesis_statement: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[str] = mapped_column(String(16), default="UNASSESSED")
+    rationale: Mapped[str] = mapped_column(Text)
+    uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
+class InvestmentThesisClaim(Base):
+    """A versioned, human-readable thesis claim or unresolved question."""
+
+    __tablename__ = "investment_thesis_claims"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "claim_key", name="uq_thesis_claim_revision_key"),
+        CheckConstraint("length(claim_key) > 0", name="claim_key"),
+        CheckConstraint(
+            "claim_type IN ('COMPETITIVE_ADVANTAGE','DURABILITY','GROWTH_DRIVER',"
+            "'PRINCIPAL_RISK','THESIS_BREAKER','CATALYST','IMPORTANT_DEVELOPMENT',"
+            "'UNRESOLVED_QUESTION')",
+            name="claim_type",
+        ),
+        CheckConstraint(
+            "status IN ('ACTIVE','UNDER_REVIEW','RESOLVED','INVALIDATED')", name="status"
+        ),
+        CheckConstraint("length(statement) > 0", name="statement"),
+        CheckConstraint("confidence IN ('HIGH','MEDIUM','LOW','UNASSESSED')", name="confidence"),
+        Index("ix_thesis_claims_revision_type", "revision_id", "claim_type"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    claim_key: Mapped[str] = mapped_column(String(80))
+    claim_type: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
+    statement: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[str] = mapped_column(String(16), default="UNASSESSED")
+    uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class InvestmentThesisEvidence(Base):
+    """Evidence attached to a claim, optionally linked to canonical source facts."""
+
+    __tablename__ = "investment_thesis_evidence"
+    __table_args__ = (
+        CheckConstraint(
+            "relationship IN ('SUPPORTS','CONTRADICTS','CONTEXT')", name="relationship"
+        ),
+        CheckConstraint("length(source_name) > 0", name="source_name"),
+        CheckConstraint(
+            "source_document_id IS NOT NULL OR reported_fundamental_observation_id IS NOT NULL OR "
+            "(external_identifier IS NOT NULL AND length(external_identifier) > 0) OR "
+            "(source_url IS NOT NULL AND length(source_url) > 0)",
+            name="source_locator",
+        ),
+        CheckConstraint("source_url IS NULL OR source_url LIKE 'https://%'", name="https_url"),
+        Index("ix_thesis_evidence_document", "source_document_id"),
+        Index("ix_thesis_evidence_fundamental", "reported_fundamental_observation_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    claim_id: Mapped[UUID] = mapped_column(
+        ForeignKey("investment_thesis_claims.id", ondelete="RESTRICT"), index=True
+    )
+    relationship: Mapped[str] = mapped_column(String(16))
+    source_document_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT"), nullable=True
+    )
+    reported_fundamental_observation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("reported_fundamental_observations.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_name: Mapped[str] = mapped_column(String(200))
+    external_identifier: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    published_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class RiskAssessmentRevision(Base):
+    """Accepted full-snapshot qualitative risk assessment tied to exact portfolio state."""
+
+    __tablename__ = "risk_assessment_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "portfolio_id", "stream_key", "revision_number", name="uq_risk_stream_revision"
+        ),
+        UniqueConstraint(
+            "portfolio_id",
+            "stream_key",
+            "external_revision_id",
+            name="uq_risk_stream_external_revision",
+        ),
+        CheckConstraint("revision_number > 0", name="revision_number"),
+        CheckConstraint("length(stream_key) > 0", name="stream_key"),
+        CheckConstraint("length(external_revision_id) > 0", name="external_revision_id"),
+        CheckConstraint("length(author_id) > 0", name="author_id"),
+        CheckConstraint("length(source_id) > 0", name="source_id"),
+        CheckConstraint("length(source_reference) > 0", name="source_reference"),
+        CheckConstraint("length(reviewer) > 0", name="reviewer"),
+        CheckConstraint("length(reviewer_note) > 0", name="reviewer_note"),
+        CheckConstraint(
+            "baseline_status_at_accept IN ('CURRENT','STALE_PORTFOLIO_STATE',"
+            "'STALE_HOLDINGS','INCOMPLETE_VALUATION')",
+            name="baseline_status",
+        ),
+        CheckConstraint(
+            "(baseline_status_at_accept = 'CURRENT' AND baseline_stale_acknowledged = false) OR "
+            "(baseline_status_at_accept <> 'CURRENT' AND baseline_stale_acknowledged = true)",
+            name="baseline_acknowledgement",
+        ),
+        CheckConstraint("coverage_status IN ('COMPLETE','PARTIAL')", name="coverage_status"),
+        CheckConstraint(
+            "coverage_status = 'COMPLETE' OR coverage_note IS NOT NULL", name="coverage_note"
+        ),
+        CheckConstraint("length(content_fingerprint) = 64", name="content_fingerprint"),
+        Index("ix_risk_revisions_portfolio_recorded", "portfolio_id", "recorded_at"),
+        Index(
+            "ix_risk_revisions_portfolio_stream", "portfolio_id", "stream_key", "revision_number"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    portfolio_id: Mapped[UUID] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="RESTRICT"), index=True
+    )
+    stream_key: Mapped[str] = mapped_column(String(160))
+    revision_number: Mapped[int] = mapped_column(Integer)
+    contract_version: Mapped[str] = mapped_column(String(24))
+    external_revision_id: Mapped[str] = mapped_column(String(200))
+    supersedes_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("risk_assessment_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    author_id: Mapped[str] = mapped_column(String(160))
+    source_id: Mapped[str] = mapped_column(String(160))
+    source_reference: Mapped[str] = mapped_column(String(1000))
+    authored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    reviewer: Mapped[str] = mapped_column(String(160))
+    reviewer_note: Mapped[str] = mapped_column(Text)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    baseline_status_at_accept: Mapped[str] = mapped_column(String(32))
+    baseline_stale_acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
+    portfolio_state_contract_version: Mapped[str] = mapped_column(String(24))
+    portfolio_state_fingerprint: Mapped[str] = mapped_column(String(80))
+    holdings_snapshot_id: Mapped[UUID] = mapped_column(
+        ForeignKey("holding_snapshots.id", ondelete="RESTRICT"), index=True
+    )
+    target_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("target_allocation_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    valuation_as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    coverage_status: Mapped[str] = mapped_column(String(16))
+    coverage_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary: Mapped[str] = mapped_column(Text)
+    rationale: Mapped[str] = mapped_column(Text)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
+class RiskAssessmentFinding(Base):
+    """One qualitative company or portfolio finding in an accepted assessment snapshot."""
+
+    __tablename__ = "risk_assessment_findings"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "finding_key", name="uq_risk_finding_revision_key"),
+        CheckConstraint("scope IN ('COMPANY','PORTFOLIO')", name="scope"),
+        CheckConstraint(
+            "(scope = 'COMPANY' AND company_id IS NOT NULL) OR scope = 'PORTFOLIO'",
+            name="company_scope",
+        ),
+        CheckConstraint(
+            "category IN ('BUSINESS','FINANCIAL','GEOGRAPHIC','CURRENCY','BUSINESS_MODEL',"
+            "'REGULATORY','GOVERNANCE','GEOPOLITICAL','PORTFOLIO_CONCENTRATION',"
+            "'PORTFOLIO_EXPOSURE','THESIS_CHANGE','OTHER')",
+            name="category",
+        ),
+        CheckConstraint("severity IN ('LOW','MEDIUM','HIGH','CRITICAL')", name="severity"),
+        CheckConstraint("confidence IN ('LOW','MEDIUM','HIGH','UNASSESSED')", name="confidence"),
+        CheckConstraint("status IN ('ACTIVE','UNDER_REVIEW','RESOLVED')", name="status"),
+        CheckConstraint(
+            "change_direction IN ('NEW','WORSENING','UNCHANGED','IMPROVING','RESOLVED')",
+            name="change_direction",
+        ),
+        CheckConstraint("length(finding_key) > 0", name="finding_key"),
+        CheckConstraint("length(title) > 0", name="title"),
+        Index("ix_risk_findings_company", "company_id", "revision_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("risk_assessment_revisions.id", ondelete="RESTRICT"), index=True
+    )
+    finding_key: Mapped[str] = mapped_column(String(80))
+    scope: Mapped[str] = mapped_column(String(16))
+    company_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    category: Mapped[str] = mapped_column(String(40))
+    title: Mapped[str] = mapped_column(String(240))
+    description: Mapped[str] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(16))
+    confidence: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(20))
+    change_direction: Mapped[str] = mapped_column(String(16))
+    rationale: Mapped[str] = mapped_column(Text)
+
+
+class RiskAssessmentEvidence(Base):
+    """Traceable evidence linked to a finding and optionally canonical research records."""
+
+    __tablename__ = "risk_assessment_evidence"
+    __table_args__ = (
+        CheckConstraint("length(source_name) > 0", name="source_name"),
+        CheckConstraint(
+            "source_document_id IS NOT NULL OR reported_fundamental_observation_id IS NOT NULL "
+            "OR thesis_revision_id IS NOT NULL OR thesis_claim_id IS NOT NULL "
+            "OR (external_identifier IS NOT NULL AND length(external_identifier) > 0) "
+            "OR (source_url IS NOT NULL AND length(source_url) > 0)",
+            name="source_locator",
+        ),
+        CheckConstraint("source_url IS NULL OR source_url LIKE 'https://%'", name="https_url"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    finding_id: Mapped[UUID] = mapped_column(
+        ForeignKey("risk_assessment_findings.id", ondelete="RESTRICT"), index=True
+    )
+    source_document_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    reported_fundamental_observation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("reported_fundamental_observations.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_claim_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_claims.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_name: Mapped[str] = mapped_column(String(200))
+    external_identifier: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    published_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GoogleSheetsRiskSyncRun(Base):
+    """One explicit read-only poll of the dedicated risk-assessment inbox."""
+
+    __tablename__ = "google_sheets_risk_sync_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('CONNECTED','SUCCEEDED','PARTIAL','BLOCKED','FAILED')", name="status"
+        ),
+        CheckConstraint(
+            "candidate_count >= 0 AND new_count >= 0 AND unchanged_count >= 0 AND issue_count >= 0",
+            name="counts_nonnegative",
+        ),
+        Index("ix_google_sheets_risk_sync_runs_started", "started_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    spreadsheet_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    spreadsheet_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(24))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    candidate_count: Mapped[int] = mapped_column(Integer, default=0)
+    new_count: Mapped[int] = mapped_column(Integer, default=0)
+    unchanged_count: Mapped[int] = mapped_column(Integer, default=0)
+    issue_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GoogleSheetsRiskSyncCandidate(Base):
+    """Captured risk contract evidence and its mutable preview/review status."""
+
+    __tablename__ = "google_sheets_risk_sync_candidates"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_google_sheets_risk_candidate_key"),
+        CheckConstraint(
+            "status IN ('PENDING','READY','STALE_BASELINE','CONFLICT','INVALID',"
+            "'ACCEPTED','REJECTED')",
+            name="status",
+        ),
+        Index("ix_google_sheets_risk_candidates_status_observed", "status", "first_observed_at"),
+        Index("ix_google_sheets_risk_candidates_portfolio", "portfolio_id", "first_observed_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    idempotency_key: Mapped[str] = mapped_column(String(64))
+    spreadsheet_id: Mapped[str] = mapped_column(String(128))
+    spreadsheet_title: Mapped[str] = mapped_column(String(255))
+    sheet_id: Mapped[int] = mapped_column(Integer)
+    sheet_title: Mapped[str] = mapped_column(String(100))
+    source_row_number: Mapped[int] = mapped_column(Integer)
+    source_url: Mapped[str] = mapped_column(Text)
+    last_seen_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("google_sheets_risk_sync_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    contract_text: Mapped[str] = mapped_column(Text)
+    contract_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    contract_version: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+    raw_sha256: Mapped[str] = mapped_column(String(64))
+    portfolio_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    stream_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    external_revision_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    author_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    source_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    source_reference: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    authored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    findings_count: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(24), default="PENDING")
+    issue: Mapped[str | None] = mapped_column(Text, nullable=True)
+    baseline_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    preview_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    reviewer: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    accepted_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("risk_assessment_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class GoogleSheetsResearchSyncRun(Base):
+    """One explicit poll of the dedicated research and thesis inboxes."""
+
+    __tablename__ = "google_sheets_research_sync_runs"
+    __table_args__ = (
+        CheckConstraint("status IN ('SUCCEEDED','PARTIAL','BLOCKED','FAILED')", name="status"),
+        CheckConstraint(
+            "candidate_count >= 0 AND new_count >= 0 AND unchanged_count >= 0 AND issue_count >= 0",
+            name="counts_nonnegative",
+        ),
+        Index("ix_google_sheets_research_sync_runs_started", "started_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    spreadsheet_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    spreadsheet_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(24))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    candidate_count: Mapped[int] = mapped_column(Integer, default=0)
+    new_count: Mapped[int] = mapped_column(Integer, default=0)
+    unchanged_count: Mapped[int] = mapped_column(Integer, default=0)
+    issue_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GoogleSheetsResearchSyncCandidate(Base):
+    """Immutable captured research/thesis contract and mutable review decision."""
+
+    __tablename__ = "google_sheets_research_sync_candidates"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_google_sheets_research_candidate_key"),
+        CheckConstraint("domain IN ('RESEARCH','THESIS')", name="domain"),
+        CheckConstraint(
+            "status IN ('PENDING','READY','CONFLICT','INVALID','ACCEPTED','REJECTED')",
+            name="status",
+        ),
+        Index(
+            "ix_google_sheets_research_candidates_status_observed", "status", "first_observed_at"
+        ),
+        Index(
+            "ix_google_sheets_research_candidates_company_observed",
+            "company_id",
+            "first_observed_at",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    idempotency_key: Mapped[str] = mapped_column(String(64))
+    domain: Mapped[str] = mapped_column(String(16))
+    spreadsheet_id: Mapped[str] = mapped_column(String(128))
+    spreadsheet_title: Mapped[str] = mapped_column(String(255))
+    sheet_id: Mapped[int] = mapped_column(Integer)
+    sheet_title: Mapped[str] = mapped_column(String(100))
+    source_row_number: Mapped[int] = mapped_column(Integer)
+    source_url: Mapped[str] = mapped_column(Text)
+    last_seen_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("google_sheets_research_sync_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    contract_text: Mapped[str] = mapped_column(Text)
+    contract_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    contract_version: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+    raw_sha256: Mapped[str] = mapped_column(String(64))
+    # Keep unresolved identities visible in the review queue instead of dropping
+    # a publication when a contract names an unknown canonical UUID.
+    company_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
+    security_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
+    stream_key: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    external_revision_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    base_revision_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    author_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    source_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    source_reference: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_count: Mapped[int] = mapped_column(Integer, default=0)
+    evidence_count: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(24), default="PENDING")
+    issue: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preview_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    accepted_research_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    accepted_thesis_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewer: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    reviewer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class ExecutionPaceRun(Base):
     """Immutable portfolio-wide snapshot of the Execution Pace calculation."""
 
@@ -1067,6 +2312,134 @@ class ExternalIngestionAttempt(Base):
     failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     failure_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
+class RecurringOperationRun(Base):
+    """Operational status for one bounded scheduled application job attempt."""
+
+    __tablename__ = "recurring_operation_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "job_name IN ('SEC_FUNDAMENTALS','SEC_FILINGS','FMP_CONSENSUS','SHEETS_DISCOVERY',"
+            "'RESEARCH_TRIGGER_SCAN','AGENT_WORK_FEED','DECISION_RECOMPUTE')",
+            name="job_name",
+        ),
+        CheckConstraint(
+            "status IN ('RUNNING','SUCCEEDED','PARTIAL','BLOCKED','FAILED','SKIPPED')",
+            name="status",
+        ),
+        Index("ix_recurring_operation_runs_job_started", "job_name", "started_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    job_name: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(16), default="RUNNING")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    result: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
+class RecurringOperationsWorkerState(Base):
+    """Singleton heartbeat for the local recurring-operations worker."""
+
+    __tablename__ = "recurring_operations_worker_state"
+    __table_args__ = (
+        CheckConstraint("worker_key = 'primary'", name="primary_worker"),
+        CheckConstraint("status IN ('STARTING','RUNNING','STOPPED','FAILED')", name="status"),
+    )
+    worker_key: Mapped[str] = mapped_column(String(16), primary_key=True, default="primary")
+    instance_id: Mapped[UUID] = mapped_column(default=uuid4)
+    status: Mapped[str] = mapped_column(String(16), default="STARTING")
+    process_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_heartbeat_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    stopped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
+
+class OperationalJobRequest(Base):
+    """Durable user request for one allowlisted background operation."""
+
+    __tablename__ = "operational_job_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "job_name IN ('MARKET_DATA','FX','MARKET_AND_FX','SEC_FUNDAMENTALS','SEC_FILINGS',"
+            "'SHEETS_DISCOVERY','RESEARCH_REFRESH','AGENT_WORK_FEED','COMPANY_REFRESH','REFRESH_ALL')",
+            name="job_name",
+        ),
+        CheckConstraint("scope_kind IN ('ACTIVE_UNIVERSE','COMPANY')", name="scope_kind"),
+        CheckConstraint(
+            "(scope_kind = 'COMPANY' AND company_id IS NOT NULL) OR "
+            "(scope_kind = 'ACTIVE_UNIVERSE' AND company_id IS NULL)",
+            name="scope_company",
+        ),
+        CheckConstraint(
+            "status IN ('QUEUED','RUNNING','SUCCEEDED','PARTIAL','BLOCKED','FAILED')",
+            name="status",
+        ),
+        CheckConstraint("attempt_count >= 0", name="attempt_count"),
+        Index("ix_operational_job_requests_status_requested", "status", "requested_at"),
+        Index(
+            "ix_operational_job_requests_fingerprint_requested",
+            "request_fingerprint",
+            "requested_at",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    job_name: Mapped[str] = mapped_column(String(40))
+    scope_kind: Mapped[str] = mapped_column(String(20))
+    company_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True
+    )
+    company_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    lifecycle: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    requested_by: Mapped[str] = mapped_column(String(32), default="LOCAL_USER")
+    request_fingerprint: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), default="QUEUED")
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    retry_of_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("operational_job_requests.id", ondelete="RESTRICT"), nullable=True
+    )
+    affected_domains: Mapped[list[str]] = mapped_column(JSON, default=list)
+    scope_detail: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    result: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
+
+class OperationalJobAttempt(Base):
+    """Append-oriented execution record for one request step."""
+
+    __tablename__ = "operational_job_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "request_id", "attempt_number", "step_name", name="uq_operational_job_step_attempt"
+        ),
+        CheckConstraint("attempt_number > 0", name="attempt_number"),
+        CheckConstraint(
+            "status IN ('RUNNING','SUCCEEDED','PARTIAL','BLOCKED','FAILED','SKIPPED','DEFERRED')",
+            name="status",
+        ),
+        Index("ix_operational_job_attempts_request_started", "request_id", "started_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    request_id: Mapped[UUID] = mapped_column(
+        ForeignKey("operational_job_requests.id", ondelete="RESTRICT"), index=True
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer)
+    step_name: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(16), default="RUNNING")
+    affected_domains: Mapped[list[str]] = mapped_column(JSON, default=list)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
 
 class SourceDocumentBatch(Base):
@@ -1525,6 +2898,34 @@ class ModelOutputImportBatch(Base):
     reconciliation: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
+class ReturnMethodologyDefinition(Base):
+    """Immutable, versioned economic definition for an Expected IRR calculation."""
+
+    __tablename__ = "return_methodology_definitions"
+    __table_args__ = (
+        UniqueConstraint("code", "version", name="uq_return_methodology_code_version"),
+        CheckConstraint("version > 0", name="version"),
+        CheckConstraint("perspective IN ('ENTERPRISE','EQUITY')", name="perspective"),
+        CheckConstraint(
+            "cross_method_policy IN ('SAME_METHOD_ONLY','CONDITIONAL_EQUITY_CROSS_METHOD')",
+            name="cross_method_policy",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(64))
+    version: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(160))
+    cash_flow_basis: Mapped[str] = mapped_column(Text)
+    perspective: Mapped[str] = mapped_column(String(20))
+    entry_value_basis: Mapped[str] = mapped_column(Text)
+    share_price_basis: Mapped[str] = mapped_column(Text)
+    comparability_group: Mapped[str] = mapped_column(String(80))
+    cross_method_policy: Mapped[str] = mapped_column(String(48))
+    limitation: Mapped[str] = mapped_column(Text)
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class ModelOutputSnapshot(Base):
     """Immutable normalized output snapshot; assumptions and calculations stay external."""
 
@@ -1548,6 +2949,15 @@ class ModelOutputSnapshot(Base):
             "(model_currency IS NULL AND currency_status = 'UNKNOWN') OR "
             "(model_currency IS NOT NULL AND currency_status = 'DOCUMENTED')",
             name="currency_status",
+        ),
+        CheckConstraint(
+            "return_methodology_status IN ('CLASSIFIED','UNCLASSIFIED')",
+            name="return_methodology_status",
+        ),
+        CheckConstraint(
+            "(return_methodology_id IS NULL AND return_methodology_status = 'UNCLASSIFIED') OR "
+            "(return_methodology_id IS NOT NULL AND return_methodology_status = 'CLASSIFIED')",
+            name="return_methodology_identity",
         ),
         CheckConstraint(
             "bear_probability IS NULL OR bear_probability BETWEEN 0 AND 1",
@@ -1581,6 +2991,13 @@ class ModelOutputSnapshot(Base):
     model_currency: Mapped[str | None] = mapped_column(String(3))
     currency_status: Mapped[str] = mapped_column(String(16))
     currency_source_ref: Mapped[str | None] = mapped_column(String(1000))
+    return_methodology_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("return_methodology_definitions.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    return_methodology_status: Mapped[str] = mapped_column(String(20), default="UNCLASSIFIED")
+    return_methodology: Mapped[ReturnMethodologyDefinition | None] = relationship(lazy="joined")
     model_status: Mapped[str | None] = mapped_column(Text)
     effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
@@ -1669,11 +3086,170 @@ class FinancialModelRevision(Base):
     methodology_version: Mapped[str] = mapped_column(String(40))
     source_revision_id: Mapped[str | None] = mapped_column(String(160))
     contract_digest: Mapped[str | None] = mapped_column(String(64))
+    proposal_author_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    proposal_authored_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    proposal_source_reference: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     actor: Mapped[str] = mapped_column(String(32))
     source: Mapped[str | None] = mapped_column(String(1000))
     rationale: Mapped[str] = mapped_column(Text)
     effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class FinancialModelRevisionEvidence(Base):
+    """Immutable links from an accepted model revision to canonical research state."""
+
+    __tablename__ = "financial_model_revision_evidence"
+    __table_args__ = (
+        CheckConstraint(
+            "evidence_type IN ('RESEARCH_REVISION','RESEARCH_FORECAST','THESIS_REVISION',"
+            "'THESIS_CLAIM')",
+            name="evidence_type",
+        ),
+        CheckConstraint(
+            "relationship IN ('SUPPORTS','CONTRADICTS','CONTEXT')",
+            name="relationship",
+        ),
+        CheckConstraint(
+            "(evidence_type = 'RESEARCH_REVISION' AND research_revision_id IS NOT NULL "
+            "AND research_forecast_id IS NULL AND thesis_revision_id IS NULL "
+            "AND thesis_claim_id IS NULL) "
+            "OR (evidence_type = 'RESEARCH_FORECAST' AND research_revision_id IS NULL "
+            "AND research_forecast_id IS NOT NULL AND thesis_revision_id IS NULL "
+            "AND thesis_claim_id IS NULL) "
+            "OR (evidence_type = 'THESIS_REVISION' AND research_revision_id IS NULL "
+            "AND research_forecast_id IS NULL AND thesis_revision_id IS NOT NULL "
+            "AND thesis_claim_id IS NULL) "
+            "OR (evidence_type = 'THESIS_CLAIM' AND research_revision_id IS NULL "
+            "AND research_forecast_id IS NULL AND thesis_revision_id IS NULL "
+            "AND thesis_claim_id IS NOT NULL)",
+            name="one_typed_reference",
+        ),
+        UniqueConstraint(
+            "revision_id",
+            "evidence_type",
+            "research_revision_id",
+            "research_forecast_id",
+            "thesis_revision_id",
+            "thesis_claim_id",
+            name="uq_model_revision_evidence_reference",
+        ),
+        Index("ix_model_revision_evidence_revision", "revision_id"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("financial_model_revisions.id", ondelete="RESTRICT")
+    )
+    evidence_type: Mapped[str] = mapped_column(String(32))
+    research_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    research_forecast_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("research_forecasts.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    thesis_claim_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investment_thesis_claims.id", ondelete="RESTRICT"), nullable=True
+    )
+    relationship: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GoogleSheetsSyncRun(Base):
+    """One explicit read-only poll of the configured model-contract inbox."""
+
+    __tablename__ = "google_sheets_sync_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('CONNECTED','SUCCEEDED','PARTIAL','BLOCKED','FAILED')",
+            name="status",
+        ),
+        CheckConstraint(
+            "candidate_count >= 0 AND new_count >= 0 AND unchanged_count >= 0 AND issue_count >= 0",
+            name="counts_nonnegative",
+        ),
+        Index("ix_google_sheets_sync_runs_started", "started_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    spreadsheet_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    spreadsheet_title: Mapped[str | None] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(24))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    candidate_count: Mapped[int] = mapped_column(Integer, default=0)
+    new_count: Mapped[int] = mapped_column(Integer, default=0)
+    unchanged_count: Mapped[int] = mapped_column(Integer, default=0)
+    issue_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(60))
+    error_message: Mapped[str | None] = mapped_column(Text)
+
+
+class GoogleSheetsSyncCandidate(Base):
+    """Captured portable contract evidence and its explicit human review state."""
+
+    __tablename__ = "google_sheets_sync_candidates"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_google_sheets_candidate_key"),
+        CheckConstraint(
+            "status IN ('PENDING','READY','CONFLICT','INVALID','NO_CHANGES','ACCEPTED','REJECTED')",
+            name="status",
+        ),
+        Index("ix_google_sheets_candidates_status_observed", "status", "first_observed_at"),
+        Index("ix_google_sheets_candidates_model", "model_id", "first_observed_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    idempotency_key: Mapped[str] = mapped_column(String(64))
+    spreadsheet_id: Mapped[str] = mapped_column(String(128))
+    spreadsheet_title: Mapped[str] = mapped_column(String(255))
+    sheet_id: Mapped[int] = mapped_column(Integer)
+    sheet_title: Mapped[str] = mapped_column(String(100))
+    source_row_number: Mapped[int] = mapped_column(Integer)
+    source_url: Mapped[str] = mapped_column(Text)
+    last_seen_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(
+            "google_sheets_sync_runs.id", ondelete="SET NULL", name="fk_sheets_candidate_run"
+        )
+    )
+    contract_text: Mapped[str] = mapped_column(Text)
+    contract_data: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    contract_version: Mapped[str | None] = mapped_column(String(24))
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+    raw_sha256: Mapped[str] = mapped_column(String(64))
+    external_revision_id: Mapped[str | None] = mapped_column(String(160))
+    base_revision_id: Mapped[UUID | None] = mapped_column()
+    model_id: Mapped[UUID | None] = mapped_column()
+    company_id: Mapped[UUID | None] = mapped_column()
+    valuation_listing_id: Mapped[UUID | None] = mapped_column()
+    model_type: Mapped[str | None] = mapped_column(String(60))
+    model_name: Mapped[str | None] = mapped_column(String(160))
+    source_model_key: Mapped[str | None] = mapped_column(String(120))
+    model_currency: Mapped[str | None] = mapped_column(String(3))
+    rationale: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(24), default="PENDING")
+    issue: Mapped[str | None] = mapped_column(Text)
+    preview_status: Mapped[str | None] = mapped_column(String(40))
+    preview_data: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    preview_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    previewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(
+            "financial_model_revisions.id",
+            ondelete="RESTRICT",
+            name="fk_sheets_candidate_revision",
+        )
+    )
+    reviewer: Mapped[str | None] = mapped_column(String(160))
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DcfModelAssumptions(Base):
@@ -1734,6 +3310,22 @@ class DcfYearAssumption(Base):
     capex_to_revenue: Mapped[Decimal] = mapped_column(Numeric(38, 18))
     nwc_to_revenue: Mapped[Decimal] = mapped_column(Numeric(38, 18))
     discount_rate: Mapped[Decimal] = mapped_column(Numeric(38, 18))
+
+
+class DcfTailGrowthAssumption(Base):
+    """Explicit annual UFCF growth assumptions for source models with a non-linear tail."""
+
+    __tablename__ = "dcf_tail_growth_assumptions"
+    __table_args__ = (
+        UniqueConstraint("scenario_id", "forecast_year", name="uq_dcf_tail_growth_year"),
+        CheckConstraint("forecast_year BETWEEN 6 AND 10", name="forecast_year"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    scenario_id: Mapped[UUID] = mapped_column(
+        ForeignKey("dcf_scenario_assumptions.id", ondelete="RESTRICT"), index=True
+    )
+    forecast_year: Mapped[int] = mapped_column(Integer)
+    ufcf_growth: Mapped[Decimal] = mapped_column(Numeric(38, 18))
 
 
 class DcfProjection(Base):
@@ -1908,6 +3500,10 @@ class FinancialModelOutput(Base):
         ),
     )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    return_methodology_id: Mapped[UUID] = mapped_column(
+        ForeignKey("return_methodology_definitions.id", ondelete="RESTRICT"), index=True
+    )
+    return_methodology: Mapped[ReturnMethodologyDefinition] = relationship(lazy="joined")
     revision_id: Mapped[UUID] = mapped_column(
         ForeignKey("financial_model_revisions.id", ondelete="RESTRICT"), index=True
     )
@@ -2009,12 +3605,30 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         FxObservation,
         ExternalRawPayload,
         ResearchPriorityInput,
+        CandidatePipelineRevision,
+        CandidatePipelineGateAssessment,
+        CandidatePipelineEvidence,
+        ResearchRevision,
+        ResearchForecast,
+        ResearchAssessment,
+        ResearchEvidence,
+        ResearchQueueCompletion,
+        ResearchTriggerPublicationLink,
+        ResearchAgentWorkEvent,
+        InvestmentThesisRevision,
+        InvestmentThesisClaim,
+        InvestmentThesisEvidence,
+        RiskAssessmentRevision,
+        RiskAssessmentFinding,
+        RiskAssessmentEvidence,
         ModelOutputImportBatch,
         ModelOutputSnapshot,
         FinancialModelRevision,
+        FinancialModelRevisionEvidence,
         DcfModelAssumptions,
         DcfScenarioAssumptions,
         DcfYearAssumption,
+        DcfTailGrowthAssumption,
         DcfProjection,
         OwnerCashFlowAssumptions,
         OwnerCashFlowScenarioAssumptions,
@@ -2025,10 +3639,195 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         ResidualIncomeProjection,
         FinancialModelOutput,
         FinancialModelMigrationAssessment,
+        ReturnMethodologyDefinition,
     )
     for item in session.dirty.union(session.deleted):
         if isinstance(item, immutable):
             raise ValueError("Historical observations are append-only")
+        if isinstance(item, GoogleSheetsSyncRun):
+            if item in session.deleted:
+                raise ValueError("Google Sheets synchronization runs are retained")
+            completed_history = inspect(item).attrs.completed_at.history
+            previously_completed = (
+                completed_history.deleted[0]
+                if completed_history.has_changes() and completed_history.deleted
+                else (None if completed_history.has_changes() else item.completed_at)
+            )
+            if previously_completed is not None:
+                raise ValueError("Completed Google Sheets synchronization runs are immutable")
+        if isinstance(item, GoogleSheetsSyncCandidate):
+            if item in session.deleted:
+                raise ValueError("Captured Google Sheets contract evidence is retained")
+            model_candidate_evidence = (
+                "idempotency_key",
+                "spreadsheet_id",
+                "spreadsheet_title",
+                "sheet_id",
+                "sheet_title",
+                "source_row_number",
+                "source_url",
+                "contract_text",
+                "contract_data",
+                "contract_version",
+                "content_fingerprint",
+                "raw_sha256",
+                "external_revision_id",
+                "base_revision_id",
+                "model_id",
+                "company_id",
+                "valuation_listing_id",
+                "model_type",
+                "model_name",
+                "source_model_key",
+                "model_currency",
+                "rationale",
+                "first_observed_at",
+            )
+            if any(
+                inspect(item).attrs[name].history.has_changes() for name in model_candidate_evidence
+            ):
+                raise ValueError("Captured Google Sheets contract evidence is immutable")
+            status_history = inspect(item).attrs.status.history
+            prior_status = status_history.deleted[0] if status_history.deleted else item.status
+            if prior_status in {"ACCEPTED", "REJECTED"} and status_history.has_changes():
+                raise ValueError("Final Google Sheets review decisions are immutable")
+            model_final_decision_fields = (
+                "accepted_revision_id",
+                "reviewer",
+                "decision_note",
+                "accepted_at",
+                "rejected_at",
+            )
+            if prior_status in {"ACCEPTED", "REJECTED"} and any(
+                inspect(item).attrs[name].history.has_changes()
+                for name in model_final_decision_fields
+            ):
+                raise ValueError("Final Google Sheets review decisions are immutable")
+        if isinstance(item, GoogleSheetsRiskSyncRun):
+            if item in session.deleted:
+                raise ValueError("Google Sheets risk synchronization runs are retained")
+            completed_history = inspect(item).attrs.completed_at.history
+            previously_completed = (
+                completed_history.deleted[0]
+                if completed_history.has_changes() and completed_history.deleted
+                else (None if completed_history.has_changes() else item.completed_at)
+            )
+            if previously_completed is not None:
+                raise ValueError("Completed Google Sheets risk synchronization runs are immutable")
+        if isinstance(item, GoogleSheetsRiskSyncCandidate):
+            if item in session.deleted:
+                raise ValueError("Captured risk-assessment contract evidence is retained")
+            risk_candidate_evidence = (
+                "idempotency_key",
+                "spreadsheet_id",
+                "spreadsheet_title",
+                "sheet_id",
+                "sheet_title",
+                "source_row_number",
+                "source_url",
+                "contract_text",
+                "contract_data",
+                "contract_version",
+                "content_fingerprint",
+                "raw_sha256",
+                "portfolio_id",
+                "stream_key",
+                "external_revision_id",
+                "author_id",
+                "source_id",
+                "source_reference",
+                "authored_at",
+                "published_at",
+                "summary",
+                "findings_count",
+                "first_observed_at",
+            )
+            if any(
+                inspect(item).attrs[name].history.has_changes() for name in risk_candidate_evidence
+            ):
+                raise ValueError("Captured risk-assessment contract evidence is immutable")
+            status_history = inspect(item).attrs.status.history
+            prior_status = status_history.deleted[0] if status_history.deleted else item.status
+            if prior_status in {"ACCEPTED", "REJECTED"} and status_history.has_changes():
+                raise ValueError("Final Google Sheets risk review decisions are immutable")
+            risk_final_decision_fields = (
+                "reviewer",
+                "reviewer_note",
+                "accepted_revision_id",
+                "accepted_at",
+                "rejected_at",
+            )
+            if prior_status in {"ACCEPTED", "REJECTED"} and any(
+                inspect(item).attrs[name].history.has_changes()
+                for name in risk_final_decision_fields
+            ):
+                raise ValueError("Final Google Sheets risk review decisions are immutable")
+        if isinstance(item, GoogleSheetsResearchSyncRun):
+            if item in session.deleted:
+                raise ValueError("Google Sheets research synchronization runs are retained")
+            completed_history = inspect(item).attrs.completed_at.history
+            previously_completed = (
+                completed_history.deleted[0]
+                if completed_history.has_changes() and completed_history.deleted
+                else (None if completed_history.has_changes() else item.completed_at)
+            )
+            if previously_completed is not None:
+                raise ValueError(
+                    "Completed Google Sheets research synchronization runs are immutable"
+                )
+        if isinstance(item, GoogleSheetsResearchSyncCandidate):
+            if item in session.deleted:
+                raise ValueError("Captured research and thesis contracts are retained")
+            research_candidate_evidence = (
+                "idempotency_key",
+                "domain",
+                "spreadsheet_id",
+                "spreadsheet_title",
+                "sheet_id",
+                "sheet_title",
+                "source_row_number",
+                "source_url",
+                "contract_text",
+                "contract_data",
+                "contract_version",
+                "content_fingerprint",
+                "raw_sha256",
+                "company_id",
+                "security_id",
+                "stream_key",
+                "external_revision_id",
+                "base_revision_id",
+                "author_id",
+                "source_id",
+                "source_reference",
+                "observed_at",
+                "rationale",
+                "item_count",
+                "evidence_count",
+                "first_observed_at",
+            )
+            if any(
+                inspect(item).attrs[name].history.has_changes()
+                for name in research_candidate_evidence
+            ):
+                raise ValueError("Captured research and thesis contract evidence is immutable")
+            status_history = inspect(item).attrs.status.history
+            prior_status = status_history.deleted[0] if status_history.deleted else item.status
+            if prior_status in {"ACCEPTED", "REJECTED"} and status_history.has_changes():
+                raise ValueError("Final Google Sheets research review decisions are immutable")
+            research_final_decision_fields = (
+                "accepted_research_revision_id",
+                "accepted_thesis_revision_id",
+                "reviewer",
+                "reviewer_note",
+                "accepted_at",
+                "rejected_at",
+            )
+            if prior_status in {"ACCEPTED", "REJECTED"} and any(
+                inspect(item).attrs[name].history.has_changes()
+                for name in research_final_decision_fields
+            ):
+                raise ValueError("Final Google Sheets research review decisions are immutable")
         if isinstance(item, FinancialModel):
             if item in session.deleted:
                 raise ValueError("Financial model identities cannot be deleted")
@@ -2042,6 +3841,8 @@ def protect_history(session: Session, flush_context: object, instances: object) 
             )
             if any(inspect(item).attrs[name].history.has_changes() for name in identity):
                 raise ValueError("Financial model identity is immutable")
+        if isinstance(item, ReturnMethodologyDefinition):
+            raise ValueError("Return methodology definitions are immutable; add a new version")
         if isinstance(item, ScoreDefinition):
             raise ValueError("Score definitions are immutable; add a new version")
         if isinstance(item, TargetRevision):
@@ -2052,6 +3853,16 @@ def protect_history(session: Session, flush_context: object, instances: object) 
             if was_accepted:
                 raise ValueError("Accepted target revisions are immutable")
     for item in session.new.union(session.dirty).union(session.deleted):
+        if isinstance(item, FinancialModelOutput) and item.return_methodology_id is None:
+            revision = session.get(FinancialModelRevision, item.revision_id)
+            if revision is None:
+                raise ValueError("Financial model output requires an accepted model revision")
+            code = native_methodology_for_revision(
+                str(revision.model_type), revision.methodology_version
+            )
+            if code is None:
+                raise ValueError("Financial model output has no registered return methodology")
+            item.return_methodology_id = DEFINITION_ID_BY_CODE[code]
         if isinstance(item, ScoreDefinition) and item in session.deleted:
             raise ValueError("Score definitions cannot be deleted")
         if isinstance(item, TargetAllocation):

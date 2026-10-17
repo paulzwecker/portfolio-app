@@ -1,7 +1,7 @@
 ﻿# Canonical Watchlist Rank
 
-Watchlist Rank v3 is the first calculated member of the existing ranking run
-infrastructure. It applies the documented `Universe Registry!M4:P` rule to
+Watchlist Rank uses the existing immutable ranking-run infrastructure. It applies
+the documented `Universe Registry!M4:P` rule to
 companies whose lifecycle is explicitly `WATCHLIST` as of the run:
 
 1. Expected IRR descending.
@@ -15,13 +15,19 @@ to explain the result.
 
 ## Input policy
 
-Native model revisions expose shareholder-cash-flow Expected IRR. Imported normalized
-legacy outputs preserve the legacy Expected IRR field. Those semantics are not
-assumed to be comparable. When at least one eligible native return is available, a
-run ranks the native cohort and marks legacy-only candidates `DATA_CHECK`. When no
-native return is available, a run may rank current legacy contract outputs that have
-PASS contract validation, complete or partial output quality, documented currency,
-no field-level IRR issue, and an unambiguous listing ticker. The entry snapshot keeps
+Every eligible return must have a versioned return-method definition. A run ranks
+one perspective cohort: enterprise UFCF or equity. Enterprise and equity returns
+cannot be mixed, and if both exist among eligible Watchlist companies every such
+candidate receives `DATA_CHECK`; the run does not pick a partial cohort. Owner
+cash-flow and residual-income returns are in the same equity cohort and may be
+ordered conditionally, with each method remaining visible. Legacy output is
+classified only for exact keys with migration evidence; unclassified values receive
+`DATA_CHECK`. Each point must also retain the exact valuation listing and the
+captured quote basis used for its return. Native and imported outputs may
+participate when their explicit method comparability groups agree. Eligible legacy
+outputs also require PASS
+contract validation, complete or partial output quality, documented currency, no
+field-level IRR issue, and an unambiguous listing ticker. The entry snapshot keeps
 the source record, model/revision identity where available, effective and recorded
 times, return semantic, currency, listing, native reference-price evidence,
 migration status and surrounding model outputs.
@@ -61,7 +67,7 @@ may reflect other undocumented state. We preserve the source cache as imported
 history and do not reverse-engineer or overwrite it. The structured evidence is in
 [`reconciliation/watchlist-rank-legacy-2026-10-05.json`](reconciliation/watchlist-rank-legacy-2026-10-05.json).
 
-## Current development run (2026-10-05)
+## Preserved pre-comparability run (2026-10-05)
 
 Definition v3 recorded run `64ddcdf9-d5be-46b2-be47-c7c6dcf6b4b4` over the 219-company
 universe, including 71 explicit Watchlist members. Fourteen members received ranks,
@@ -80,12 +86,28 @@ captured in the reconciliation JSON above. The latest run snapshots inputs and
 source context for ranked and `DATA_CHECK` entries, so eligibility failures can be
 reviewed against the exact observations available at run time.
 
+## Current return-method cohort run (2026-10-09)
+
+The active return-basis-aware v5 run
+`dfc9b27f-33d7-4f22-b477-50e49e008227` covers the 219-company population and
+preserves earlier runs unchanged. It has no
+ranked members yet: 23 legacy methods are unclassified, 35 legacy currencies are
+unknown, one native Toast reference quote is stale, and 12 members have no numeric
+Expected IRR. The remaining 148 companies are outside the explicit Watchlist
+population. This is the expected explicit result of the new methodology/currency
+and exact price-basis requirements over the current data; it does not mean the 14
+v3 positions or the v4 run were recomputed or erased. See the exact run and reason counts in
+[`reconciliation/return-semantics-2026-10-09.json`](reconciliation/return-semantics-2026-10-09.json).
+
 ## Current limitations
 
-- A single ordinal run cannot compare legacy normalized Expected IRR with native
-  shareholder-cash-flow IRR until an accepted equivalence/reconciliation rule exists.
-- The current native-first cohort policy can make coverage sparse while older
-  normalized outputs remain `DATA_CHECK`.
+- A single run cannot mix enterprise UFCF and equity-return populations. The
+  equity owner-cash-flow/residual-income comparison is conditional, not a claim of
+  identical shareholder cash-flow methodology.
+- Legacy outputs without exact method evidence remain `DATA_CHECK`; no legacy
+  output snapshot retains the exact quote basis used at calculation time. The
+  current v5 run therefore does not rank legacy returns until method, currency and
+  price-basis provenance are resolved.
 - Numeric durability/quality gate thresholds are unresolved. No gate result is
   emitted by the rank.
 - Portfolio Rank is now active with the documented Portfolio Score; current input

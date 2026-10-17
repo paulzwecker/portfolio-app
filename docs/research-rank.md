@@ -72,7 +72,11 @@ new run. Details are in
 [`reconciliation/research-rank-activation-2026-10-06.json`](reconciliation/research-rank-activation-2026-10-06.json).
 
 Universe supports recording and inspecting Research Rank runs; Company shows the
-company's current and prior run context. The same endpoints and immutable-run model
-can support a future Research Pipeline. No dedicated pipeline workflow or native
-bucket/seed authoring form is included yet; source values currently enter through
-the narrow, auditable importer.
+company's current and prior run context. The Candidate Pipeline now displays the
+latest eligible Research Rank entry alongside the independently imported tier and
+persistent priority seed. Those values help sort and explain the research queue;
+pipeline stages and gate outcomes do not enter the Research Rank formula or mutate
+an immutable run. Candidate-stage history is authored as its own append-only
+pipeline revisions. Existing workbook rows do not establish historical stage or
+gate outcomes, so no such history is inferred from them. See
+[`candidate-pipeline.md`](candidate-pipeline.md).

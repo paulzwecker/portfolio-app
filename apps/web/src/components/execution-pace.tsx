@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PendingOrError, useResearch } from "@/components/research-frame";
+import { PendingOrError } from "@/components/app/empty-state";
+import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyExecutionPace,
   isExecutionPaceRun,

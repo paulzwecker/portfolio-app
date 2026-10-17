@@ -9,7 +9,7 @@ evaluates workbook formulas or writes source prices into the market-data domain.
 Workbook source dates are not trustworthy; new accepted revisions use application
 acceptance time and retain the source effective date as unknown.
 
-Only these five tab mappings are enabled for accepted native revisions:
+The initial reviewed batch accepted these five tab mappings:
 
 | Tab       | Lifecycle | Native method                        | Listing/model currency | Mapping version             |
 | --------- | --------- | ------------------------------------ | ---------------------- | --------------------------- |
@@ -19,7 +19,7 @@ Only these five tab mappings are enabled for accepted native revisions:
 | `P-ISRG`  | Portfolio | 10-year secular-growth-fade UFCF DCF | ISRG · NASDAQ · USD    | `legacy-ufcf-dcf-cohort-v1` |
 | `P-MA`    | Portfolio | 10-year secular-growth-fade UFCF DCF | MA · NYSE · USD        | `legacy-ufcf-dcf-cohort-v1` |
 
-The three new mappings share the existing five-year UFCF DCF revision schema and
+The three batch-2 mappings share the existing five-year UFCF DCF revision schema and
 deterministic engine. They preserve their exact company, security/listing, and
 currency links; the importer requires one exact non-demo application listing match.
 Mapping versions are per batch so extending the importer does not change the
@@ -68,7 +68,7 @@ All three new application recalculations had fresh exact-listing prices at impor
 time and produced complete current outputs. Their source parity receipts remain
 separate from those time-varying current outputs.
 
-The active tracked population is 21 Portfolio and 71 Watchlist model tabs:
+At the end of batch 2, the active tracked population was 21 Portfolio and 71 Watchlist model tabs:
 
 | Lifecycle        | Native editable | Coverage | Published outputs still output-only |
 | ---------------- | --------------: | -------: | ----------------------------------: |
@@ -79,7 +79,7 @@ The active tracked population is 21 Portfolio and 71 Watchlist model tabs:
 The total is still modest because readiness requires both safe inputs and
 tab-specific parity. Output-contract availability alone is not import readiness.
 
-## Remaining active UFCF DCF screens
+## Active UFCF DCF screens at the batch-2 assessment
 
 The batch-2 report screens the other 11 active UFCF DCF tabs. No assumptions from
 these rows were accepted:
@@ -115,7 +115,7 @@ native/editable and retains imported-output-only, blocked and legacy-only states
 the other rows. It remains available at
 `GET /v1/companies/{company_id}/model-migration-status`.
 
-## Next migration work
+## Next migration work at the batch-2 assessment
 
 Start the next DCF remediation with `P-AMD`: resolve the source's current-market vs
 fully diluted share basis and require all return-stream checks to pass. Then trace
@@ -126,6 +126,141 @@ gaps are resolved. After the active DCF work, assess the materially different
 Portfolio owner-cash-flow variants (`P-CPRT`, `P-MORN`, `P-UBER`) one at a time.
 
 No next batch is implied by this recommendation.
+
+## Portfolio native-model coverage batch 3 — 2026-10-09
+
+The local PostgreSQL baseline was 6 of 21 Portfolio companies with native accepted
+models. This batch accepted exactly three new model/revision pairs and left the
+previous accepted revisions unchanged:
+
+| Tab    | Company     | Exact valuation listing | Model/revision input mapping     | Return methodology            |
+| ------ | ----------- | ----------------------- | -------------------------------- | ----------------------------- |
+| P-AMZN | Amazon      | AMZN · NASDAQ · USD     | Explicit UFCF growth, Years 6–10 | UFCF_ENTERPRISE_HMODEL_IRR v1 |
+| P-HIMS | Hims & Hers | HIMS · NYSE · USD       | Explicit UFCF growth, Years 6–10 | UFCF_ENTERPRISE_HMODEL_IRR v1 |
+| P-MSFT | Microsoft   | MSFT · NASDAQ · USD     | Explicit UFCF growth, Years 6–10 | UFCF_ENTERPRISE_IRR v1        |
+
+The parity-only source report now passes all nine mapped tabs: GOOGL, AMZN, HIMS,
+ISRG, MA, MSFT, CPRT, UBER, and Watchlist TOST. For each new model, all 30
+projection checks and 22 normalized output/return-stream checks pass. The importer
+uses the source's exact Bear/Base/Bull Year 6–10 growth rates from B206:D210.
+Amazon and Hims' Expected IRR terminal stream uses Year 10 UFCF plus a Gordon
+terminal without the 2.5 terminal-growth premium that their Fair Value formulas
+include. Microsoft's return stream includes the premium and retains the standard
+enterprise UFCF return definition. These are not converted to shareholder IRR.
+
+The source workbook has no trustworthy effective date. Each accepted revision
+uses application acceptance time and retains its source workbook hash/tab/cell
+provenance. The batch-3 apply report records three imports; its replay records
+zero new imports and four already-imported mapped rows (the three new Portfolio
+models and TOST). Existing Portfolio revisions were not duplicated. The detailed
+reports are [batch 3 dry run](reconciliation/portfolio-native-model-coverage-batch-3-dry-run-2026-10-09.json),
+[apply](reconciliation/portfolio-native-model-coverage-batch-3-apply-2026-10-09.json),
+and [replay](reconciliation/portfolio-native-model-coverage-batch-3-replay-2026-10-09.json).
+
+Current Portfolio native-model coverage is 9/21 (42.9%), up from 6/21 (28.6%).
+Watchlist remains 1/71 (Toast); total active native coverage is 10/92 (10.9%).
+The remaining 12 Portfolio companies without native accepted input revisions
+include output-only and still-blocked source models. The existing source inventory
+is the 2026-10-05 population snapshot; the newer reconciliation reports carry the
+subsequent readiness and acceptance evidence.
+
+The accepted calculations are complete but their exact-listing quotes were stale
+at acceptance (2026-10-02). Portfolio Rank's read-only current-input preview has
+zero ranked entries: 16 remain DATA_CHECK due incomplete current market weights,
+and five companies lack accepted targets. Amazon and Microsoft currently show the
+market-weight blocker; Hims has no target. No ranking run was added. No
+Execution Pace run exists; each new model's read-only preview is REVIEW because
+of incomplete holdings/targets and stale prices. Refreshing canonical market
+data and resolving held/target coverage is required before these models become
+actionable Portfolio inputs.
+
+### Remaining high-value blockers
+
+- AMD still needs its legacy current-market diluted-share basis reconciled with
+  the native fully diluted-share enterprise-cost basis. No share count was
+  changed to force parity.
+- ADYEN, BKNG, CELH, MELI, and NVO still have source return-stream or output
+  differences; NVO remains tied to the exact Copenhagen B listing and DKK.
+- MSCI's source base capex/revenue input remains invalid for the current UFCF DCF
+  schema; MORN's source hurdle cache remains missing.
+- P-SPGI remains a bespoke SOTP model; it is not forced into UFCF DCF.
+
+The next worthwhile migration slice is to resolve AMD's source share basis with
+an explicit economic mapping, then revisit remaining return/output discrepancies
+individually. Do not batch-import unresolved tabs.
+
+## Watchlist native-model coverage batch — 2026-10-09
+
+Using the reconciled local PostgreSQL database, this batch accepted native
+editable owner-cash-flow models for Axon Enterprise (`W-AXON`), Comfort Systems
+USA (`W-FIX`), Rubrik (`W-RBRK`) and Veeva Systems (`W-VEEV`). Each maps to its
+exact existing common-stock listing and USD model currency: AXON · NASDAQ, FIX ·
+NYSE, RBRK · NYSE and VEEV · NYSE. The models retain the shared
+`OWNER_CASH_FLOW_EQUITY_IRR` v1 methodology and the reviewed mapping version
+`watchlist-owner-cf-2026-10-09-v1`.
+
+The source-price parity checks passed for each new model: 123/123 projections and
+22/22 normalized output/return-stream checks. The source layout is preserved,
+including Axon's reported net debt at `B18`, which is explicitly sign-converted
+to the canonical net-cash convention. FIX's small cached-output rounding
+differences use a maximum `0.0000005` comparison tolerance, bounded by half of
+the source's six-decimal cached precision; assumptions were not adjusted to
+force parity. The complete source-cell comparisons and accepted revision
+receipts are in the [parity report](reconciliation/watchlist-native-model-coverage-parity-2026-10-09.json),
+[dry run](reconciliation/watchlist-native-model-coverage-dry-run-2026-10-09.json),
+[apply report](reconciliation/watchlist-native-model-coverage-apply-2026-10-09.json),
+and [idempotent replay](reconciliation/watchlist-native-model-coverage-replay-2026-10-09.json).
+
+The database accepted four new first revisions. Replaying the same import
+accepted zero new revisions and recognized all eight mapped, already accepted
+source models. The existing Toast revision and all Portfolio revisions were
+unchanged. No schema change or workbook date was inferred.
+
+Watchlist native editable coverage increased from 1/71 (1.4%) to 5/71 (7.0%).
+Portfolio coverage remains 9/21 (42.9%), so active Portfolio plus Watchlist
+native coverage is now 14/92 (15.2%). All five Watchlist-native models use the
+same owner-cash-flow equity method/version and USD currency, establishing a
+method-comparable cohort. This is not current Expected IRR availability: the
+latest exact-listing prices for the four new models are dated 2026-10-02 and
+stale under the application freshness policy. Their accepted model outputs
+therefore retain null current Expected IRR with `STALE` price status. Toast's
+latest quote is also outside the current Watchlist Rank freshness window.
+
+The read-only Watchlist Rank preview after acceptance contains 55
+`DATA_CHECK`, 16 `INPUTS_UNAVAILABLE` and zero ranked Watchlist entries. It
+does not create a ranking run; the existing immutable v5 run remains historical.
+The 55 data checks comprise 31 legacy outputs with unknown currency, 23 with an
+unclassified return method, and Toast's stale captured-price reference. The 16
+unavailable entries include 12 imported contracts without numeric Expected IRR
+and the four new models whose exact-listing prices are stale. Refreshing the
+four new prices is necessary, but not sufficient for a rank: the unresolved
+legacy methods and currencies still prevent the single-cohort rank from
+selecting a population. The new models do not change lifecycle, targets,
+holdings, model methodology or execution state.
+
+The following candidates remain deliberately unaccepted:
+
+| Tab     | Assessment        | Reason                                                                                                                                                                                     |
+| ------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `W-PME` | `DATA_CHECK`      | All 123 projection checks pass, but only 14/22 normalized outputs match. The source Fair Value/return path still needs an evidenced mapping; the AUD listing and currency remain explicit. |
+| `W-GEV` | `PARTIAL_MAPPING` | Base Year 10 UFCF growth is missing at source cell `J24`; no value was inferred.                                                                                                           |
+| `W-KXS` | Not mapped        | Its legacy model mixes CAD and USD unit bases. It remains out until an exact economic/currency mapping is evidenced.                                                                       |
+
+Other Watchlist owner-cash-flow tabs remain outside this accepted cohort unless
+their layout and methodology are independently mapped and pass the same strict
+projection/output parity. The legacy expected-return figures are preserved as
+owner-cash-flow equity returns, not relabeled as enterprise UFCF or as a
+forecast of actual shareholder distributions.
+
+The next high-value sequence is to refresh prices for the exact AXON/FIX/RBRK/VEEV
+listings and continue the reviewed B4 operating-company owner-cash-flow cohort
+only for tabs whose exact listing, currency and input layout are confirmed and
+whose full source parity passes. This also reduces the unclassified legacy
+return population that currently blocks Watchlist Rank. Keep `W-PME` blocked
+until its remaining output differences are explained. Defer `W-GEV` until its
+missing Base Year 10 source input is authoritatively recovered; its enterprise
+return method would also need a documented treatment alongside the equity-return
+cohort. No ranking run or further model migration is implied by this batch.
 
 ## Milestone 6.3 parity receipt and application-state boundary — 2026-10-06
 

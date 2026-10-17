@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from uuid import UUID
@@ -28,6 +29,15 @@ from portfolio_api.domain.models import (
 FISCAL_YEAR_MAPPING_BASIS = "NO_EXPLICIT_MODEL_FISCAL_YEAR_ANCHOR"
 MAX_RETURN_DATE_LAG_DAYS = 7
 ACCEPTED_PRICE_QUALITY = {"PASS", "PASS_VERIFIED_FALLBACK"}
+
+
+@dataclass(frozen=True)
+class SnapshotMarketReturn:
+    """A strict subsequent return plus the exact canonical price observations used."""
+
+    result: s.TemporalReturnRead
+    start: PriceObservation | None
+    end: PriceObservation | None
 
 
 def _day_end(value: date) -> datetime:
@@ -215,6 +225,116 @@ def _subsequent_return(
         basis="TOTAL_RETURN_CLOSE",
         reason=None,
     )
+
+
+def snapshot_market_return(
+    session: Session,
+    *,
+    listing_id: UUID,
+    start_observation_id: UUID | None,
+    signal_as_of: datetime,
+    signal_recorded_at: datetime,
+    horizon_days: int,
+    outcome_known_at: datetime,
+) -> SnapshotMarketReturn:
+    """Evaluate a signal against later exact-listing total-return prices.
+
+    The baseline is the exact observation captured by the immutable signal snapshot.
+    Its source and database timestamps must have been available when the signal run
+    was recorded. The later endpoint uses the same strict quality, total-return,
+    horizon-tolerance and knowledge-cutoff rules as temporal alignment.
+    """
+    if horizon_days < 1 or horizon_days > 3650:
+        raise ValueError("horizon_days must be between 1 and 3650")
+    if any(
+        value.tzinfo is None or value.utcoffset() is None
+        for value in (signal_as_of, signal_recorded_at, outcome_known_at)
+    ):
+        raise ValueError("signal timestamps must be timezone-aware")
+    signal_as_of = signal_as_of.astimezone(UTC)
+    signal_recorded_at = signal_recorded_at.astimezone(UTC)
+    outcome_known_at = outcome_known_at.astimezone(UTC)
+    if outcome_known_at < signal_recorded_at:
+        raise ValueError("outcome_known_at cannot precede the signal record")
+
+    target_date = signal_as_of.date() + timedelta(days=horizon_days)
+    if start_observation_id is None:
+        result = _subsequent_return(
+            session,
+            listing_id,
+            None,
+            as_of=signal_as_of.date(),
+            horizon_days=horizon_days,
+            outcome_known_at=outcome_known_at,
+        )
+        return SnapshotMarketReturn(result=result, start=None, end=None)
+
+    start = session.get(PriceObservation, start_observation_id)
+    if start is None:
+        result = _subsequent_return(
+            session,
+            listing_id,
+            None,
+            as_of=signal_as_of.date(),
+            horizon_days=horizon_days,
+            outcome_known_at=outcome_known_at,
+        ).model_copy(
+            update={
+                "status": "BASE_PRICE_NOT_FOUND",
+                "reason": (
+                    "The exact baseline price referenced by the signal snapshot is unavailable."
+                ),
+            }
+        )
+        return SnapshotMarketReturn(result=result, start=None, end=None)
+
+    unavailable_status: str | None = None
+    unavailable_reason: str | None = None
+    if start.listing_id != listing_id:
+        unavailable_status = "BASE_LISTING_MISMATCH"
+        unavailable_reason = "The captured baseline price belongs to a different listing."
+    elif start.market_date.date() > signal_as_of.date():
+        unavailable_status = "BASE_PRICE_AFTER_SIGNAL"
+        unavailable_reason = "The captured baseline market date follows the signal's as-of date."
+    elif start.recorded_at > signal_recorded_at:
+        unavailable_status = "BASE_PRICE_NOT_KNOWN_AT_SIGNAL"
+        unavailable_reason = "The captured baseline was recorded after the signal run."
+    elif start.observed_at is None:
+        unavailable_status = "BASE_PRICE_DATA_CHECK"
+        unavailable_reason = "The baseline price has no source observation timestamp."
+    elif start.observed_at > signal_recorded_at:
+        unavailable_status = "BASE_PRICE_NOT_KNOWN_AT_SIGNAL"
+        unavailable_reason = "The baseline source observation postdates the signal run."
+
+    if unavailable_status is not None:
+        result = _subsequent_return(
+            session,
+            listing_id,
+            None,
+            as_of=signal_as_of.date(),
+            horizon_days=horizon_days,
+            outcome_known_at=outcome_known_at,
+        ).model_copy(update={"status": unavailable_status, "reason": unavailable_reason})
+        return SnapshotMarketReturn(result=result, start=start, end=None)
+
+    result = _subsequent_return(
+        session,
+        listing_id,
+        start,
+        as_of=signal_as_of.date(),
+        horizon_days=horizon_days,
+        outcome_known_at=outcome_known_at,
+    )
+    end = None
+    if result.end_market_date is not None:
+        end = session.scalar(
+            _price_statement(
+                listing_id,
+                min(_day_end(target_date), _day_end(outcome_known_at.date())),
+                outcome_known_at,
+            ).where(PriceObservation.market_date == result.end_market_date)
+        )
+    return SnapshotMarketReturn(result=result, start=start, end=end)
 
 
 def _revision_for_as_of(

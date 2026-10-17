@@ -19,14 +19,26 @@ from portfolio_api.expected_return_attribution import (
     symmetric_shapley_decomposition,
 )
 from portfolio_api.main import create_app
+from portfolio_api.return_semantics import (
+    DEFINITION_BY_CODE,
+    DEFINITION_ID_BY_CODE,
+    UFCF_ENTERPRISE_IRR,
+)
 from portfolio_api.settings import Settings
 
 FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
+ATTRIBUTION_LISTING_ID = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
 
 
 def _attribution_point(
-    point_id: str, effective_at: datetime, expected_irr: Decimal | None
+    point_id: str,
+    effective_at: datetime,
+    expected_irr: Decimal | None,
+    *,
+    share_price_basis_status: str = "CAPTURED",
+    valuation_listing_id: UUID = ATTRIBUTION_LISTING_ID,
 ) -> s.ExpectedReturnHistoryPointRead:
+    method = DEFINITION_BY_CODE[UFCF_ENTERPRISE_IRR]
     return s.ExpectedReturnHistoryPointRead(
         point_id=point_id,
         source_kind="NATIVE_MODEL_REVISION",
@@ -43,15 +55,32 @@ def _attribution_point(
         model_label="Attribution fixture",
         model_currency="USD",
         currency_status="DOCUMENTED",
-        valuation_listing_id=None,
-        valuation_ticker=None,
-        valuation_venue=None,
-        valuation_listing_currency=None,
+        valuation_listing_id=valuation_listing_id,
+        valuation_ticker="ATTR",
+        valuation_venue="NASDAQ",
+        valuation_listing_currency="USD",
         is_current_at_cutoff=True,
         output_status="COMPLETE",
         output_quality="COMPLETE",
         contract_status=None,
         return_semantics="NATIVE_METHOD_OUTPUT",
+        return_methodology=s.ReturnMethodologyRead(
+            id=DEFINITION_ID_BY_CODE[method.code],
+            code=method.code,
+            version=method.version,
+            title=method.title,
+            cash_flow_basis=method.cash_flow_basis,
+            perspective=method.perspective,
+            entry_value_basis=method.entry_value_basis,
+            share_price_basis=method.share_price_basis,
+            comparability_group=method.comparability_group,
+            cross_method_policy=method.cross_method_policy,
+            limitation=method.limitation,
+            effective_from=effective_at,
+            recorded_at=effective_at,
+        ),
+        return_methodology_status="CLASSIFIED",
+        share_price_basis_status=share_price_basis_status,
         actor="LOCAL_USER",
         source_actor=None,
         revision_source=None,
@@ -126,6 +155,57 @@ def test_missing_endpoint_return_stays_null_without_database_or_zero_substitutio
     assert result.status == "MISSING_RETURN"
     assert result.prior.expected_cash_flow_irr == Decimal("0.12")
     assert result.current.expected_cash_flow_irr is None
+    assert result.expected_irr_change is None
+    assert result.residual is None
+    assert result.drivers == []
+
+
+@pytest.mark.parametrize(
+    "current_point",
+    [
+        _attribution_point(
+            "native:quote-not-retained",
+            datetime(2026, 10, 2, 12, tzinfo=UTC),
+            Decimal("0.14"),
+            share_price_basis_status="NOT_RETAINED",
+        ),
+        _attribution_point(
+            "native:listing-changed",
+            datetime(2026, 10, 2, 12, tzinfo=UTC),
+            Decimal("0.14"),
+            valuation_listing_id=UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+        ),
+    ],
+)
+def test_attribution_requires_a_retained_same_listing_price_basis(
+    monkeypatch: pytest.MonkeyPatch,
+    current_point: s.ExpectedReturnHistoryPointRead,
+) -> None:
+    company_id = uuid4()
+    prior = _attribution_point(
+        "native:prior",
+        datetime(2026, 10, 1, 12, tzinfo=UTC),
+        Decimal("0.12"),
+    )
+    current_point.model_id = prior.model_id
+    current_point.revision_number = 2
+    history = s.CompanyExpectedReturnHistoryRead(
+        company_id=company_id,
+        as_of=date(2026, 10, 2),
+        known_at=datetime(2026, 10, 2, 23, tzinfo=UTC),
+        status="AVAILABLE",
+        history=[prior, current_point],
+    )
+    monkeypatch.setattr(
+        "portfolio_api.expected_return_attribution.q.company_expected_return_history",
+        lambda *_args, **_kwargs: history,
+    )
+
+    result = company_expected_return_attribution(
+        cast(Session, None), company_id, prior.point_id, current_point.point_id
+    )
+
+    assert result.status == "RETURN_BASIS_UNAVAILABLE"
     assert result.expected_irr_change is None
     assert result.residual is None
     assert result.drivers == []

@@ -138,3 +138,24 @@ company-site discovery, full-text storage, document version comparison, content
 extraction, or AI interpretation is included. Coverage depends on reviewed SEC CIK
 mappings; unsupported and unmapped companies remain explicit. Future filing-derived
 facts should link to the exact accession/document ID that supports them.
+
+## Current operational coverage (2026-10-10)
+
+The local database records 20/21 Portfolio and 7/71 Watchlist SEC identity
+mappings, but contains no canonical filing/source-document rows. The SEC worker
+records a blocked run when `SEC_USER_AGENT` is absent; this is a configuration
+block, not evidence that those companies have no filings. Non-US sources are not
+covered by this adapter. See the [Milestone 6.10 operational report](reconciliation/operational-data-activation-2026-10-10.md)
+for the mapping evidence, provider status and current gaps.
+
+## Milestone 10F live SEC coverage (2026-10-16)
+
+The current database contains 5,721 SEC source-document records linked to all 27
+reviewed CIK identities (20/21 Portfolio and 7/71 Watchlist). The bounded replay
+reused all 5,721, imported no duplicate documents, and recorded zero metadata
+conflicts, unlinked amendments or document `DATA_CHECK` rows. Its `PARTIAL` status
+reflects 18,721 unsupported SEC forms explicitly excluded by the existing
+contract. It does not mean the supported filing metadata failed. The 64 unmapped
+Watchlist identities and Adyen's non-matching SEC depositary-receipt identity
+remain outside this coverage. See the [10F reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md)
+for the complete per-company and listing status.

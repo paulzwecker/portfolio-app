@@ -18,6 +18,7 @@ from portfolio_api.domain.models import (
     DcfModelAssumptions,
     DcfProjection,
     DcfScenarioAssumptions,
+    DcfTailGrowthAssumption,
     DcfYearAssumption,
     FinancialModel,
     FinancialModelOutput,
@@ -46,6 +47,7 @@ from portfolio_api.domain.models import (
     ResidualIncomeAssumptions,
     ResidualIncomeProjection,
     ResidualIncomeScenarioAssumptions,
+    ReturnMethodologyDefinition,
     ScoreAssessment,
     ScoreDefinition,
     ScoreDefinitionStatus,
@@ -66,8 +68,17 @@ from portfolio_api.financial_models import (
     MarketPriceInput,
     calculate_ufcf_dcf,
 )
+from portfolio_api.model_revision_evidence import (
+    persist_model_revision_evidence,
+    resolve_model_evidence_reference,
+)
 from portfolio_api.portfolio_ranking import build_portfolio_rank_entries
 from portfolio_api.research_ranking import build_research_rank_entries
+from portfolio_api.return_semantics import (
+    DEFINITION_ID_BY_CODE,
+    NATIVE_METHOD_BY_MODEL_TYPE,
+    native_methodology_for_revision,
+)
 from portfolio_api.watchlist_ranking import build_watchlist_rank_entries
 
 
@@ -76,6 +87,42 @@ class DomainError(Exception):
         super().__init__(detail)
         self.detail = detail
         self.status = status
+
+
+def _validate_model_proposal_evidence(
+    session: Session,
+    model: FinancialModel,
+    contract_version: str,
+    proposal: s.FinancialModelProposalProvenance | None,
+    evidence: list[s.FinancialModelEvidenceReference],
+) -> None:
+    version_requires_evidence = contract_version in {"1.2.0", "2.1.0"}
+    if version_requires_evidence and proposal is None:
+        raise DomainError(
+            "INSUFFICIENT_EVIDENCE: proposal author, timestamp and source reference are required",
+            422,
+        )
+    if version_requires_evidence and not evidence:
+        raise DomainError(
+            "INSUFFICIENT_EVIDENCE: cite at least one published research or thesis record",
+            422,
+        )
+    if not evidence:
+        return
+    listing = session.get(Listing, model.valuation_listing_id)
+    security = session.get(Security, listing.security_id) if listing is not None else None
+    if security is None or security.company_id != model.company_id:
+        raise DomainError("The model valuation listing identity is unavailable", 409)
+    try:
+        for reference in evidence:
+            resolve_model_evidence_reference(
+                session,
+                company_id=model.company_id,
+                security_id=security.id,
+                reference=reference,
+            )
+    except ValueError as error:
+        raise DomainError(f"Model proposal evidence is invalid: {error}", 422) from None
 
 
 def company(session: Session, company_id: UUID, *, lock: bool = False) -> Company:
@@ -174,6 +221,7 @@ def _calculation_preview(
     calculation: DcfCalculation,
     *,
     model_currency: str,
+    return_methodology: s.ReturnMethodologyRead,
     model_id: UUID | None = None,
     base_revision_id: UUID | None = None,
     current_revision_id: UUID | None = None,
@@ -187,6 +235,7 @@ def _calculation_preview(
             return value.quantize(Decimal("0.000000000000000001"), rounding=ROUND_HALF_UP)
 
     outputs = s.FinancialModelCalculationOutputsRead(
+        return_methodology=return_methodology,
         status=calculation.status,
         model_currency=model_currency,
         price_observation_id=calculation.price_observation_id,
@@ -268,7 +317,11 @@ def preview_financial_model_initial_calculation(
         )
     except ValueError as error:
         raise DomainError(str(error)) from None
-    return _calculation_preview(calculation, model_currency=value.model_currency)
+    return _calculation_preview(
+        calculation,
+        model_currency=value.model_currency,
+        return_methodology=_return_methodology_read(session, "UFCF_ENTERPRISE_IRR"),
+    )
 
 
 def preview_financial_model_revision_calculation(
@@ -285,15 +338,22 @@ def preview_financial_model_revision_calculation(
     if current is None or current.model_id != model.id:
         raise DomainError("Current model revision is inconsistent; reload before previewing", 409)
     market_price, _ = _latest_model_market_price(session, model)
+    return_methodology_code = _revision_return_methodology_code(
+        session, current.id, fallback="UFCF_ENTERPRISE_IRR"
+    )
     try:
         calculation = calculate_ufcf_dcf(
-            value, model_currency=model.model_currency, market_price=market_price
+            value,
+            model_currency=model.model_currency,
+            market_price=market_price,
+            return_methodology_code=return_methodology_code,
         )
     except ValueError as error:
         raise DomainError(str(error)) from None
     return _calculation_preview(
         calculation,
         model_currency=model.model_currency,
+        return_methodology=_return_methodology_read(session, return_methodology_code),
         model_id=model.id,
         base_revision_id=value.base_revision_id,
         current_revision_id=current.id,
@@ -307,6 +367,8 @@ def _append_dcf_revision(
     value: s.FinancialModelRevisionCreate,
     *,
     contract_digest: str | None = None,
+    return_methodology_code: str | None = None,
+    proposal: s.FinancialModelProposalProvenance | None = None,
 ) -> FinancialModelRevision:
     current_id = model.current_revision_id
     if current_id != value.base_revision_id:
@@ -323,28 +385,59 @@ def _append_dcf_revision(
     ):
         raise DomainError("That external revision identity has already been accepted", 409)
 
+    current = None
+    if current_id is not None:
+        current = session.get(FinancialModelRevision, current_id)
+        if current is None or current.model_id != model.id:
+            raise DomainError("Current model revision is inconsistent; reload before revising", 409)
+        current_methodology_code = _revision_return_methodology_code(session, current.id)
+        if (
+            return_methodology_code is not None
+            and return_methodology_code != current_methodology_code
+        ):
+            raise DomainError("A revision cannot silently change the return methodology", 409)
+        return_methodology_code = current_methodology_code
+    else:
+        return_methodology_code = return_methodology_code or native_methodology_for_revision(
+            str(FinancialModelType.UFCF_DCF_10Y_FADE),
+            (
+                "ufcf-dcf-explicit-tail-v1"
+                if any(scenario.tail_ufcf_growth is not None for scenario in value.scenarios)
+                else "ufcf-dcf-fade-v1"
+            ),
+        )
+    if return_methodology_code is None:
+        raise DomainError("This DCF revision has no registered Expected IRR methodology")
+
     market_price, _ = _latest_model_market_price(session, model)
     try:
         calculation = calculate_ufcf_dcf(
-            value, model_currency=model.model_currency, market_price=market_price
+            value,
+            model_currency=model.model_currency,
+            market_price=market_price,
+            return_methodology_code=return_methodology_code,
         )
     except ValueError as error:
         raise DomainError(str(error)) from None
 
     revision_number = 1
-    if current_id is not None:
-        current = session.get(FinancialModelRevision, current_id)
-        if current is None or current.model_id != model.id:
-            raise DomainError("Current model revision is inconsistent; reload before revising", 409)
+    if current is not None:
         revision_number = current.revision_number + 1
     revision = FinancialModelRevision(
         model_id=model.id,
         model_type=FinancialModelType.UFCF_DCF_10Y_FADE,
         revision_number=revision_number,
         base_revision_id=value.base_revision_id,
-        methodology_version="ufcf-dcf-fade-v1",
+        methodology_version=(
+            "ufcf-dcf-explicit-tail-v1"
+            if any(scenario.tail_ufcf_growth is not None for scenario in value.scenarios)
+            else "ufcf-dcf-fade-v1"
+        ),
         source_revision_id=value.source_revision_id,
         contract_digest=contract_digest,
+        proposal_author_id=proposal.author_id if proposal else None,
+        proposal_authored_at=proposal.authored_at if proposal else None,
+        proposal_source_reference=proposal.source_reference if proposal else None,
         actor=value.actor,
         source=value.source,
         rationale=value.rationale,
@@ -369,6 +462,11 @@ def _append_dcf_revision(
         session.add_all(
             DcfYearAssumption(scenario_id=row.id, **year.model_dump()) for year in scenario.years
         )
+        if scenario.tail_ufcf_growth is not None:
+            session.add_all(
+                DcfTailGrowthAssumption(scenario_id=row.id, **year.model_dump())
+                for year in scenario.tail_ufcf_growth
+            )
     session.add_all(
         DcfProjection(
             scenario_id=scenario_rows[projection.scenario].id,
@@ -393,6 +491,7 @@ def _append_dcf_revision(
     session.add(
         FinancialModelOutput(
             revision_id=revision.id,
+            return_methodology_id=_return_methodology_id(session, return_methodology_code),
             status=calculation.status,
             model_currency=model.model_currency,
             price_observation_id=calculation.price_observation_id,
@@ -424,7 +523,11 @@ def _append_dcf_revision(
 
 
 def create_financial_model(
-    session: Session, company_id: UUID, value: s.FinancialModelCreate
+    session: Session,
+    company_id: UUID,
+    value: s.FinancialModelCreate,
+    *,
+    return_methodology_code: str | None = None,
 ) -> FinancialModel:
     issuer = company(session, company_id, lock=True)
     listing = session.get(Listing, value.valuation_listing_id)
@@ -454,7 +557,12 @@ def create_financial_model(
     )
     session.add(model)
     session.flush()
-    _append_dcf_revision(session, model, value.initial_revision)
+    _append_dcf_revision(
+        session,
+        model,
+        value.initial_revision,
+        return_methodology_code=return_methodology_code,
+    )
     return model
 
 
@@ -474,6 +582,7 @@ def _archetype_preview(
     *,
     model_currency: str,
     model_type: FinancialModelType,
+    return_methodology: s.ReturnMethodologyRead,
     model_id: UUID | None = None,
     base_revision_id: UUID | None = None,
     current_revision_id: UUID | None = None,
@@ -487,6 +596,7 @@ def _archetype_preview(
             return value.quantize(Decimal("0.000000000000000001"), rounding=ROUND_HALF_UP)
 
     outputs = s.FinancialModelCalculationOutputsRead(
+        return_methodology=return_methodology,
         status=calculation.status,
         model_currency=model_currency,
         price_observation_id=calculation.price_observation_id,
@@ -573,6 +683,7 @@ def _append_archetype_revision(
     model_type: FinancialModelType,
     *,
     contract_digest: str | None = None,
+    proposal: s.FinancialModelProposalProvenance | None = None,
 ) -> FinancialModelRevision:
     if model.model_type != model_type:
         raise DomainError("The revision method does not match the financial model type", 409)
@@ -622,6 +733,9 @@ def _append_archetype_revision(
         ),
         source_revision_id=value.source_revision_id,
         contract_digest=contract_digest,
+        proposal_author_id=proposal.author_id if proposal else None,
+        proposal_authored_at=proposal.authored_at if proposal else None,
+        proposal_source_reference=proposal.source_reference if proposal else None,
         actor=value.actor,
         source=value.source,
         rationale=value.rationale,
@@ -707,6 +821,9 @@ def _append_archetype_revision(
     session.add(
         FinancialModelOutput(
             revision_id=revision.id,
+            return_methodology_id=_return_methodology_id(
+                session, NATIVE_METHOD_BY_MODEL_TYPE[model_type]
+            ),
             status=calculation.status,
             model_currency=model.model_currency,
             price_observation_id=calculation.price_observation_id,
@@ -733,6 +850,40 @@ def _append_archetype_revision(
     model.current_revision_id = revision.id
     session.flush()
     return revision
+
+
+def _return_methodology_id(session: Session, code: str) -> UUID:
+    expected_id = DEFINITION_ID_BY_CODE[code]
+    definition = session.get(ReturnMethodologyDefinition, expected_id)
+    if definition is None:
+        raise DomainError(
+            "Return methodology definitions are missing; run database migrations", 503
+        )
+    return definition.id
+
+
+def _revision_return_methodology_code(
+    session: Session, revision_id: UUID, *, fallback: str | None = None
+) -> str:
+    output = session.scalar(
+        select(FinancialModelOutput).where(FinancialModelOutput.revision_id == revision_id)
+    )
+    if output is not None:
+        definition = session.get(ReturnMethodologyDefinition, output.return_methodology_id)
+        if definition is not None:
+            return definition.code
+    if fallback is not None:
+        return fallback
+    raise DomainError("Stored revision return methodology is missing", 503)
+
+
+def _return_methodology_read(session: Session, code: str) -> s.ReturnMethodologyRead:
+    definition = session.get(ReturnMethodologyDefinition, _return_methodology_id(session, code))
+    if definition is None:
+        raise DomainError(
+            "Return methodology definitions are missing; run database migrations", 503
+        )
+    return s.ReturnMethodologyRead.model_validate(definition)
 
 
 def _create_archetype_model(
@@ -844,6 +995,7 @@ def preview_owner_cash_flow_initial(
         ),
         model_currency=value.model_currency,
         model_type=FinancialModelType.OWNER_CASH_FLOW_10Y,
+        return_methodology=_return_methodology_read(session, "OWNER_CASH_FLOW_EQUITY_IRR"),
     )
     return cast(s.OwnerCashFlowCalculationPreviewRead, result)
 
@@ -863,6 +1015,7 @@ def preview_residual_income_initial(
         ),
         model_currency=value.model_currency,
         model_type=FinancialModelType.RESIDUAL_INCOME_10Y_FADE,
+        return_methodology=_return_methodology_read(session, "RESIDUAL_INCOME_EQUITY_IRR"),
     )
     return cast(s.ResidualIncomeCalculationPreviewRead, result)
 
@@ -883,6 +1036,7 @@ def preview_owner_cash_flow_revision(
         ),
         model_currency=model.model_currency,
         model_type=FinancialModelType.OWNER_CASH_FLOW_10Y,
+        return_methodology=_return_methodology_read(session, "OWNER_CASH_FLOW_EQUITY_IRR"),
         model_id=model.id,
         base_revision_id=value.base_revision_id,
         current_revision_id=current.id if current else None,
@@ -907,6 +1061,7 @@ def preview_residual_income_revision(
         ),
         model_currency=model.model_currency,
         model_type=FinancialModelType.RESIDUAL_INCOME_10Y_FADE,
+        return_methodology=_return_methodology_read(session, "RESIDUAL_INCOME_EQUITY_IRR"),
         model_id=model.id,
         base_revision_id=value.base_revision_id,
         current_revision_id=current.id if current else None,
@@ -964,6 +1119,7 @@ def export_additional_model_contract(
             ),
         )
     return s.AdditionalModelPortableContractV2(
+        contract_version="2.1.0",
         exported_at=now(),
         model_id=read.id,
         company_id=read.company_id,
@@ -1008,6 +1164,39 @@ def _additional_input_changes(
     ]
 
 
+def _projection_changes(
+    previous: list[dict[str, object]], proposed: list[dict[str, object]]
+) -> list[tuple[str, str | None, str | None]]:
+    def index(rows: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+        indexed: dict[str, dict[str, object]] = {}
+        for row in rows:
+            scenario = row.get("scenario")
+            forecast_year = row.get("forecast_year")
+            key = f"{scenario}.{forecast_year}"
+            indexed[key] = {
+                field: value
+                for field, value in row.items()
+                if field not in {"id", "revision_id", "scenario_id", "scenario", "forecast_year"}
+            }
+        return indexed
+
+    before, after = index(previous), index(proposed)
+    changes: list[tuple[str, str | None, str | None]] = []
+    for row_key in sorted(before.keys() | after.keys()):
+        old_row, new_row = before.get(row_key, {}), after.get(row_key, {})
+        for field in sorted(old_row.keys() | new_row.keys()):
+            old_value, new_value = old_row.get(field), new_row.get(field)
+            if old_value != new_value:
+                changes.append(
+                    (
+                        f"{row_key}.{field}",
+                        None if old_value is None else str(old_value),
+                        None if new_value is None else str(new_value),
+                    )
+                )
+    return changes
+
+
 def preview_additional_model_contract(
     session: Session,
     model_id: UUID,
@@ -1021,6 +1210,13 @@ def preview_additional_model_contract(
         FinancialModelType.RESIDUAL_INCOME_10Y_FADE,
     }:
         raise DomainError("Extended financial model not found", 404)
+    _validate_model_proposal_evidence(
+        session,
+        model,
+        value.contract_version,
+        value.proposal,
+        value.supporting_evidence,
+    )
     read = queries.extended_financial_model(session, model.id)
     current_revision = session.get(FinancialModelRevision, read.current_revision_id)
     if current_revision is None:
@@ -1063,6 +1259,7 @@ def preview_additional_model_contract(
     status: Literal["READY", "NO_CHANGES", "RATIONALE_REQUIRED", "CONFLICT", "ALREADY_IMPORTED"]
     reason: str | None = None
     changes: list[s.AdditionalModelContractFieldChange] = []
+    projection_changes: list[s.AdditionalModelContractFieldChange] = []
     output_changes: list[s.AdditionalModelContractFieldChange] = []
     calculated: s.FinancialModelCalculationOutputsRead | None = None
     if already:
@@ -1101,6 +1298,9 @@ def preview_additional_model_contract(
                 owner_calculation,
                 model_currency=model.model_currency,
                 model_type=method_type,
+                return_methodology=_return_methodology_read(
+                    session, NATIVE_METHOD_BY_MODEL_TYPE[str(method_type)]
+                ),
                 model_id=model.id,
                 base_revision_id=current_revision.id,
                 current_revision_id=current_revision.id,
@@ -1131,6 +1331,9 @@ def preview_additional_model_contract(
                 residual_calculation,
                 model_currency=model.model_currency,
                 model_type=method_type,
+                return_methodology=_return_methodology_read(
+                    session, NATIVE_METHOD_BY_MODEL_TYPE[str(method_type)]
+                ),
                 model_id=model.id,
                 base_revision_id=current_revision.id,
                 current_revision_id=current_revision.id,
@@ -1140,6 +1343,13 @@ def preview_additional_model_contract(
         if method_type == FinancialModelType.OWNER_CASH_FLOW_10Y:
             preview = owner_preview
         calculated = preview.outputs
+        projection_changes = [
+            s.AdditionalModelContractFieldChange(path=path, previous=previous, proposed=proposed)
+            for path, previous, proposed in _projection_changes(
+                [row.model_dump(mode="json") for row in current_read.projections],
+                [row.model_dump(mode="json") for row in preview.projections],
+            )
+        ]
         output_fields = (
             "bear_fv",
             "base_fv",
@@ -1179,6 +1389,7 @@ def preview_additional_model_contract(
         current_revision_number=current_revision.revision_number,
         source_revision_id=value.candidate_revision.source_revision_id,
         changes=changes,
+        projection_changes=projection_changes,
         output_changes=output_changes,
         current_outputs=s.FinancialModelCalculationOutputsRead.model_validate(current_outputs),
         calculated_outputs=calculated,
@@ -1238,6 +1449,7 @@ def import_additional_model_contract(
             owner_revision_input,
             method_type,
             contract_digest=digest,
+            proposal=value.proposal,
         )
     else:
         if candidate.residual_income is None or candidate.rationale is None:
@@ -1251,6 +1463,19 @@ def import_additional_model_contract(
             residual_revision_input,
             method_type,
             contract_digest=digest,
+            proposal=value.proposal,
+        )
+    if value.supporting_evidence:
+        listing = session.get(Listing, model.valuation_listing_id)
+        security = session.get(Security, listing.security_id) if listing else None
+        if security is None:
+            raise DomainError("The model valuation listing identity is unavailable", 409)
+        persist_model_revision_evidence(
+            session,
+            revision_id=revision.id,
+            company_id=model.company_id,
+            security_id=security.id,
+            references=value.supporting_evidence,
         )
     return s.AdditionalModelContractImportRead(
         status="IMPORTED",
@@ -1285,6 +1510,14 @@ def export_financial_model_contract(session: Session, model_id: UUID) -> s.Finan
                 "terminal_growth": scenario.terminal_growth,
                 "year10_ufcf_growth": scenario.year10_ufcf_growth,
                 "rationale": scenario.rationale,
+                "tail_ufcf_growth": (
+                    [
+                        year.model_dump(exclude={"id", "scenario_id"})
+                        for year in scenario.tail_ufcf_growth
+                    ]
+                    if scenario.tail_ufcf_growth is not None
+                    else None
+                ),
                 "years": [
                     year.model_dump(
                         exclude={"id", "scenario_id"},
@@ -1296,7 +1529,7 @@ def export_financial_model_contract(session: Session, model_id: UUID) -> s.Finan
         ],
     )
     return s.FinancialModelContractV1(
-        contract_version="1.0.0",
+        contract_version="1.2.0",
         exported_at=now(),
         model=s.FinancialModelContractIdentity(
             model_id=model.id,
@@ -1335,6 +1568,13 @@ def _contract_input_fields(
         fields[f"{prefix}.terminal_growth"] = str(scenario.terminal_growth)
         fields[f"{prefix}.year10_ufcf_growth"] = str(scenario.year10_ufcf_growth)
         fields[f"{prefix}.rationale"] = scenario.rationale
+        if scenario.tail_ufcf_growth is None:
+            fields[f"{prefix}.tail_ufcf_growth"] = None
+        else:
+            for tail_year in scenario.tail_ufcf_growth:
+                fields[f"{prefix}.tail_ufcf_growth.{tail_year.forecast_year}"] = str(
+                    tail_year.ufcf_growth
+                )
         for year in scenario.years:
             year_prefix = f"{prefix}.years.{year.forecast_year}"
             for key, item in year.model_dump().items():
@@ -1356,6 +1596,13 @@ def _revision_input_fields(
         fields[f"{prefix}.terminal_growth"] = str(scenario.terminal_growth)
         fields[f"{prefix}.year10_ufcf_growth"] = str(scenario.year10_ufcf_growth)
         fields[f"{prefix}.rationale"] = scenario.rationale
+        if scenario.tail_ufcf_growth is None:
+            fields[f"{prefix}.tail_ufcf_growth"] = None
+        else:
+            for tail_year in scenario.tail_ufcf_growth:
+                fields[f"{prefix}.tail_ufcf_growth.{tail_year.forecast_year}"] = str(
+                    tail_year.ufcf_growth
+                )
         for year in scenario.years:
             year_prefix = f"{prefix}.years.{year.forecast_year}"
             for key, item in year.model_dump(exclude={"id", "scenario_id"}).items():
@@ -1462,6 +1709,14 @@ def _financial_model_contract_preview(
     ):
         raise DomainError("The portable contract identifies a different model or listing", 409)
 
+    _validate_model_proposal_evidence(
+        session,
+        model,
+        value.contract_version,
+        value.proposal,
+        value.supporting_evidence,
+    )
+
     source_id = value.candidate_revision.source_revision_id
     digest = _contract_digest(value)
     imported = session.scalar(
@@ -1491,6 +1746,7 @@ def _financial_model_contract_preview(
                 else "This external revision identity was already used with different content."
             ),
             changes=[],
+            projection_changes=[],
             output_changes=[],
             current_outputs=current_summary,
             calculated_outputs=None,
@@ -1513,6 +1769,7 @@ def _financial_model_contract_preview(
             already_imported_revision_id=None,
             reason="The named base revision does not belong to this model.",
             changes=[],
+            projection_changes=[],
             output_changes=[],
             current_outputs=current_summary,
             calculated_outputs=None,
@@ -1569,15 +1826,31 @@ def _financial_model_contract_preview(
     rationale_changed = old_fields["revision.rationale"] != new_fields["revision.rationale"]
 
     calculation_summary: s.FinancialModelContractOutputSummary | None = None
+    calculation_preview: s.FinancialModelCalculationPreviewRead | None = None
     if snapshot_matches:
         market_price, _ = _latest_model_market_price(session, model)
         try:
+            return_methodology_code = _revision_return_methodology_code(
+                session, base_row.id, fallback="UFCF_ENTERPRISE_IRR"
+            )
             calculation = calculate_ufcf_dcf(
-                revision_value, model_currency=model.model_currency, market_price=market_price
+                revision_value,
+                model_currency=model.model_currency,
+                market_price=market_price,
+                return_methodology_code=return_methodology_code,
             )
             calculation_summary = _contract_output_summary(
                 model_currency=model.model_currency,
                 calculation=calculation,
+            )
+            calculation_preview = _calculation_preview(
+                calculation,
+                model_currency=model.model_currency,
+                return_methodology=_return_methodology_read(session, return_methodology_code),
+                model_id=model.id,
+                base_revision_id=base_row.id,
+                current_revision_id=current.id,
+                current_revision_number=current.revision_number,
             )
         except ValueError as error:
             raise DomainError(str(error)) from None
@@ -1603,6 +1876,32 @@ def _financial_model_contract_preview(
         already_imported_revision_id=None,
         reason=reason,
         changes=changes,
+        projection_changes=(
+            [
+                s.FinancialModelContractFieldChange(path=path, previous=previous, proposed=proposed)
+                for path, previous, proposed in _projection_changes(
+                    [
+                        {
+                            **projection.model_dump(mode="json"),
+                            "scenario": next(
+                                scenario.scenario
+                                for scenario in current.scenarios
+                                if scenario.id == projection.scenario_id
+                            ),
+                        }
+                        for projection in current.projections
+                    ],
+                    [
+                        projection.model_dump(mode="json")
+                        for projection in (
+                            calculation_preview.projections if calculation_preview else []
+                        )
+                    ],
+                )
+            ]
+            if calculation_preview is not None
+            else []
+        ),
         output_changes=_output_changes(current_summary, calculation_summary),
         current_outputs=current_summary,
         calculated_outputs=calculation_summary,
@@ -1650,7 +1949,20 @@ def import_financial_model_contract(
         model,
         revision_value,
         contract_digest=digest,
+        proposal=value.proposal,
     )
+    if value.supporting_evidence:
+        listing = session.get(Listing, model.valuation_listing_id)
+        security = session.get(Security, listing.security_id) if listing else None
+        if security is None:
+            raise DomainError("The model valuation listing identity is unavailable", 409)
+        persist_model_revision_evidence(
+            session,
+            revision_id=revision.id,
+            company_id=model.company_id,
+            security_id=security.id,
+            references=value.supporting_evidence,
+        )
     return s.FinancialModelContractImportRead(
         status="IMPORTED",
         model=queries.financial_model(session, model_id),

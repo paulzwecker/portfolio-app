@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import sys
+import unicodedata
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -566,6 +567,56 @@ def _normalize_companyfacts_json(
     return tuple(observations), dict(counters), issues
 
 
+_SEC_LEGAL_SUFFIXES = {
+    "co",
+    "company",
+    "corp",
+    "corporation",
+    "inc",
+    "incorporated",
+    "ltd",
+    "limited",
+}
+_SEC_LEGAL_SUFFIX_EQUIVALENTS = {
+    "company": "co",
+    "corporation": "corp",
+    "incorporated": "inc",
+    "limited": "ltd",
+}
+
+
+def _normalized_sec_entity_name(value: str) -> tuple[str, ...]:
+    """Normalize SEC display differences without treating another issuer as an alias.
+
+    Unicode punctuation/spacing and common terminal company-law designators are
+    presentation differences across SEC endpoints. Other words remain exact; this
+    deliberately does not accept former names such as Facebook as Meta.
+    """
+
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    tokens = re.findall(r"[a-z0-9]+", normalized)
+    suffix_start = len(tokens)
+    while suffix_start > 0 and tokens[suffix_start - 1] in _SEC_LEGAL_SUFFIXES:
+        suffix_start -= 1
+    prefix = tokens[:suffix_start]
+    suffix = [_SEC_LEGAL_SUFFIX_EQUIVALENTS.get(token, token) for token in tokens[suffix_start:]]
+    return (*prefix, *suffix)
+
+
+def _companyfacts_response_matches_cik(payload: Any, cik: str) -> bool:
+    """Require the response body to identify the same CIK as the requested path."""
+
+    if not isinstance(payload, dict):
+        return False
+    observed_cik = payload.get("cik")
+    if isinstance(observed_cik, bool) or not isinstance(observed_cik, int | str):
+        return False
+    try:
+        return str(int(observed_cik)).zfill(10) == cik
+    except (ValueError, OverflowError):
+        return False
+
+
 def normalize_sec_company_facts(
     record: RawProviderRecord,
     company_id: UUID,
@@ -636,6 +687,80 @@ class FundamentalSourceResolution:
     current_sources: tuple[ReportedFundamentalObservation, ...]
     selected: ReportedFundamentalObservation | None
     status: Literal["AVAILABLE", "CONFLICT", "DATA_CHECK"]
+
+
+def fiscal_period_identity(
+    history: Sequence[ReportedFundamentalObservation],
+    eligible: Sequence[ReportedFundamentalObservation],
+) -> tuple[int | None, str | None]:
+    """Resolve fact-period labels, never a later comparative filing's FY/FP.
+
+    SEC FY/FP describe the filing context. A contemporaneous disclosure is
+    usable as period-label evidence; calendar frames are not fiscal calendars.
+    Only observations already eligible at the query cutoff may supply anchors.
+    """
+    period_end = history[0].period_end.date()
+    kind = history[0].period_type
+
+    def direct(
+        rows: Sequence[ReportedFundamentalObservation], annual: bool
+    ) -> set[tuple[int, str]]:
+        return {
+            (item.fiscal_year, "FY" if annual else item.fiscal_period or "")
+            for item in rows
+            if item.fiscal_year is not None
+            and item.filed_at is not None
+            and 0
+            <= (item.filed_at.date() - item.period_end.date()).days
+            <= (180 if annual else 100)
+            and (
+                (
+                    annual
+                    and item.fiscal_period == "FY"
+                    and item.form in {"10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"}
+                )
+                or (
+                    not annual
+                    and item.fiscal_period in {"Q1", "Q2", "Q3"}
+                    and item.form
+                    in {
+                        "10-Q",
+                        "10-Q/A",
+                        "6-K",
+                        "6-K/A",
+                        # Some issuers disclose an explicit quarter in an
+                        # annual report; the bounded filing lag prevents a
+                        # later comparative from becoming an anchor.
+                        "10-K",
+                        "10-K/A",
+                        "20-F",
+                        "20-F/A",
+                        "40-F",
+                        "40-F/A",
+                    }
+                )
+            )
+        }
+
+    same_end = [item for item in eligible if item.period_end.date() == period_end]
+    if kind == "ANNUAL":
+        labels = direct([item for item in same_end if item.period_type == "ANNUAL"], True)
+    elif kind == "QUARTERLY":
+        labels = direct([item for item in same_end if item.period_type == "QUARTERLY"], False)
+    else:
+        annual_labels = direct([item for item in same_end if item.period_type == "ANNUAL"], True)
+        labels = annual_labels or direct(same_end, False)
+    if len(labels) == 1:
+        return next(iter(labels))
+    if labels:
+        return None, None
+    # An observed annual end identifies Q4 exactly; no interpolation of the
+    # other quarters or future fiscal calendars is required.
+    if kind == "QUARTERLY":
+        annual_labels = direct([item for item in same_end if item.period_type == "ANNUAL"], True)
+        if len(annual_labels) == 1:
+            return next(iter(annual_labels))[0], "Q4"
+    return None, None
 
 
 def resolve_fundamental_period(
@@ -739,15 +864,22 @@ def ingest_sec_company_facts(
     )
     if len(identifiers) != 1 or identifiers[0].identifier_value != cik:
         raise ValueError("An exact, unambiguous SEC CIK mapping is required before ingestion")
-    payload: Any = json.loads(record.payload or b"{}")
-    sec_name = payload.get("entityName") if isinstance(payload, dict) else None
-    if (
-        not isinstance(sec_name, str)
-        or sec_name.strip().casefold() != identifiers[0].provider_company_name.strip().casefold()
-    ):
-        raise ValueError("SEC entity name does not match the recorded provider identity mapping")
     if record.source_record_id != f"CIK{cik}" or record.provider_id != SEC_PROVIDER_ID:
         raise ValueError("SEC response identity does not match the mapped CIK")
+    try:
+        payload: Any = json.loads(record.payload or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("SEC Company Facts response is not valid JSON") from error
+    if not _companyfacts_response_matches_cik(payload, cik):
+        raise ValueError("SEC Company Facts payload CIK does not match the mapped CIK")
+    sec_name = payload.get("entityName") if isinstance(payload, dict) else None
+    mapped_name = identifiers[0].provider_company_name
+    if (
+        not isinstance(sec_name, str)
+        or not _normalized_sec_entity_name(sec_name)
+        or _normalized_sec_entity_name(sec_name) != _normalized_sec_entity_name(mapped_name)
+    ):
+        raise ValueError("SEC Company Facts issuer name is not equivalent to the verified mapping")
 
     query = ProviderQuery(
         domain=ExternalDataDomain.REPORTED_FUNDAMENTALS,
@@ -953,11 +1085,41 @@ async def sync_reported_fundamentals(
     results: list[dict[str, object]] = []
     for record in records:
         cik = record.source_record_id.removeprefix("CIK") if record.source_record_id else ""
-        company = by_cik[cik]
+        company = by_cik.get(cik)
+        if company is None:
+            results.append(
+                {
+                    "company_id": None,
+                    "status": "DATA_CHECK",
+                    "failure_code": "UNMAPPED_SEC_RESPONSE",
+                    "failure_message": "The SEC response CIK is not in the requested identity set.",
+                    "source_record_id": record.source_record_id,
+                    "observed_at": record.retrieved_at.isoformat(),
+                    "payload_sha256": record.payload_sha256,
+                }
+            )
+            continue
+        try:
+            imported = ingest_sec_company_facts(session, company, cik, record)
+        except ValueError as error:
+            # A single stale or mismatched issuer mapping must not roll back valid facts for
+            # every other requested company. Preserve the failure as run-level evidence.
+            results.append(
+                {
+                    "company_id": str(company),
+                    "status": "DATA_CHECK",
+                    "failure_code": "SEC_RECORD_VALIDATION",
+                    "failure_message": str(error),
+                    "source_record_id": record.source_record_id,
+                    "observed_at": record.retrieved_at.isoformat(),
+                    "payload_sha256": record.payload_sha256,
+                }
+            )
+            continue
         results.append(
             {
                 "company_id": str(company),
-                **ingest_sec_company_facts(session, company, cik, record),
+                **imported,
             }
         )
     return results

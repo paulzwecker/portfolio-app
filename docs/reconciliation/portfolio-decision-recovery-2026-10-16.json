@@ -1,0 +1,123 @@
+{
+  "milestone": "10D",
+  "as_of": "2026-10-16",
+  "classification": "CONDITIONALLY_READY_WITH_DECISION_COVERAGE_GAPS",
+  "preview_mode": "ROLLBACK_ONLY",
+  "canonical_state_changed": false,
+  "holdings": {
+    "snapshot_id": "68e1e044-ebff-5e7b-82ad-af139191f72e",
+    "effective_at": "2026-10-04T20:53:02.583257Z",
+    "age_days": 12,
+    "freshness": "STALE",
+    "completeness": "COMPLETE",
+    "security_positions": 22,
+    "cash_currencies": ["EUR", "USD"]
+  },
+  "valuation": {
+    "status": "VALUED",
+    "mode": "CURRENT_MARK_TO_MARKET",
+    "base_currency": "EUR",
+    "market_value": "57825.38722904000000000000000",
+    "last_held_quote_session": "2026-10-15",
+    "fx_data_through": "2026-10-16T01:18:25+02:00",
+    "fresh_held_position_prices": 22,
+    "held_position_price_gaps": 0,
+    "held_position_fx_gaps": 0,
+    "portfolio_listing_analytics_available": 22,
+    "portfolio_listing_analytics_total": 22
+  },
+  "targets": {
+    "accepted_revision_id": "0137fe6d-e264-5fe3-bae8-74849b095c95",
+    "missing_portfolio_targets": ["AMD", "CELH", "HIMS", "MSCI", "NVO"],
+    "auto_assigned": false
+  },
+  "eligibility": {
+    "before_confirmation_current_preview": {
+      "portfolio_rank": {
+        "ranked": 0,
+        "data_check": 16,
+        "inputs_unavailable": 5,
+        "not_eligible": 198,
+        "primary_blockers": [
+          "16 current/target candidates have stale holdings confirmations.",
+          "Five held Portfolio companies have no authored target."
+        ]
+      },
+      "watchlist_rank": {
+        "ranked": 0,
+        "data_check": 59,
+        "inputs_unavailable": 12,
+        "not_eligible": 148,
+        "primary_blockers": {
+          "unknown_legacy_currency": 31,
+          "unclassified_legacy_method": 23,
+          "mixed_or_incompatible_return_basis": 5,
+          "missing_numeric_expected_irr": 12
+        }
+      },
+      "execution_pace": {
+        "available": 0,
+        "review": 21,
+        "not_applicable": 198,
+        "primary_blockers": {
+          "stale_holdings_confirmation": 16,
+          "missing_explicit_target": 5
+        }
+      }
+    },
+    "after_simulated_unchanged_confirmation_rollback_only": {
+      "simulated_snapshot_persisted": false,
+      "portfolio_value_unchanged": true,
+      "holdings_freshness": "FRESH",
+      "portfolio_rank": {
+        "ranked": 0,
+        "data_check": 13,
+        "inputs_unavailable": 8,
+        "not_eligible": 198,
+        "remaining_blockers": {
+          "mixed_or_unresolved_methodology_cohort": 8,
+          "legacy_price_basis_not_retained": 4,
+          "legacy_contract_not_complete_pass": 1,
+          "missing_target_or_score_inputs": 8
+        }
+      },
+      "watchlist_rank": {
+        "ranked": 0,
+        "data_check": 59,
+        "inputs_unavailable": 12,
+        "not_eligible": 148,
+        "unchanged_by_holdings_confirmation": true
+      },
+      "execution_pace": {
+        "available": 3,
+        "review": 18,
+        "not_applicable": 198,
+        "available_companies": [
+          { "company": "Intuitive Surgical", "pace": "WAIT_LIMIT" },
+          { "company": "Mastercard", "pace": "WAIT_LIMIT" },
+          { "company": "Microsoft", "pace": "WAIT_LIMIT" }
+        ],
+        "remaining_review_blockers": {
+          "model_output_missing_effective_timestamp": 8,
+          "estimate_momentum_history_unavailable_for_selected_branch": 5,
+          "missing_explicit_target": 5
+        }
+      }
+    }
+  },
+  "price_regime_input": {
+    "legacy_snapshot_as_of": "2026-10-01",
+    "legacy_snapshot_fresh": false,
+    "canonical_fallback": "split-adjusted-price-history-v1 trend_state",
+    "minimum_history_sessions": 252,
+    "fresh_analytics_count": 22,
+    "fallback_used_for_available_decisions": 3,
+    "broad_legacy_regime_inferred": false
+  },
+  "persistence_check": {
+    "holding_snapshot_id_after_rollback": "68e1e044-ebff-5e7b-82ad-af139191f72e",
+    "latest_persisted_portfolio_rank_run_id": "9bc75bfb-8650-4f7c-b728-2fa93006f11f",
+    "latest_persisted_watchlist_rank_run_id": "ff7ab98b-e952-427f-8d7e-0abb6729c008",
+    "latest_persisted_execution_run_id": "9486b26f-d4ea-435c-894a-27ee5f9db0c0"
+  }
+}

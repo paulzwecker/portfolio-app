@@ -23,6 +23,7 @@ from portfolio_api.domain.models import (
     FinancialModelOutput,
     FinancialModelRevision,
     FinancialModelType,
+    ReturnMethodologyDefinition,
 )
 from portfolio_api.domain.services import DomainError
 from portfolio_api.financial_model_archetypes import (
@@ -42,6 +43,7 @@ type AttributionStatus = Literal[
     "OUTPUTS_ONLY",
     "MISSING_RETURN",
     "RETURN_SEMANTICS_CHANGE",
+    "RETURN_BASIS_UNAVAILABLE",
     "MODEL_SERIES_CHANGE",
     "METHODOLOGY_CHANGE",
     "INPUTS_UNAVAILABLE",
@@ -120,6 +122,7 @@ def company_expected_return_attribution(
             "Both endpoints need an effective timestamp for a point-in-time comparison.",
             context,
         )
+
     old_irr, new_irr = prior.expected_cash_flow_irr, current.expected_cash_flow_irr
     if old_irr is None or new_irr is None:
         return _unavailable(
@@ -132,7 +135,16 @@ def company_expected_return_attribution(
             "At least one endpoint has no valid Expected IRR. Missing values are not zero.",
             context,
         )
-    if prior.return_semantics != current.return_semantics:
+    if (
+        prior.return_semantics != current.return_semantics
+        or prior.return_methodology_status != "CLASSIFIED"
+        or current.return_methodology_status != "CLASSIFIED"
+        or prior.return_methodology is None
+        or current.return_methodology is None
+        or prior.return_methodology.code != current.return_methodology.code
+        or prior.return_methodology.version != current.return_methodology.version
+        or prior.model_currency != current.model_currency
+    ):
         return _unavailable(
             company_id,
             "RETURN_SEMANTICS_CHANGE",
@@ -140,8 +152,27 @@ def company_expected_return_attribution(
             current_state,
             None,
             None,
-            "Legacy normalized fields and native shareholder-cash-flow IRR "
-            "are not assumed comparable.",
+            "The endpoints use different or unclassified return definitions, or different model "
+            "currencies. Their Expected IRRs are not compared or attributed.",
+            context,
+        )
+
+    if (
+        prior.share_price_basis_status != "CAPTURED"
+        or current.share_price_basis_status != "CAPTURED"
+        or prior.valuation_listing_id is None
+        or current.valuation_listing_id is None
+        or prior.valuation_listing_id != current.valuation_listing_id
+    ):
+        return _unavailable(
+            company_id,
+            "RETURN_BASIS_UNAVAILABLE",
+            prior_state,
+            current_state,
+            None,
+            None,
+            "The endpoints do not retain a comparable exact-listing share-price basis. Their "
+            "Expected IRRs are shown as source values but are not compared or attributed.",
             context,
         )
 
@@ -304,6 +335,11 @@ def _native_counterfactuals(
     )
     if old_output is None or new_output is None:
         return None
+    if old_output.return_methodology_id != new_output.return_methodology_id:
+        return None
+    return_methodology = session.get(ReturnMethodologyDefinition, new_output.return_methodology_id)
+    if return_methodology is None:
+        return None
     if (
         old_output.price_status != "FRESH"
         or new_output.price_status != "FRESH"
@@ -345,7 +381,13 @@ def _native_counterfactuals(
     for mask in range(1 << len(FACTOR_CODES)):
         revision = _merge_inputs(old_input, new_input, mask)
         price = new_price if mask & 1 else old_price
-        calculation = _calculate(model.model_type, revision, model.model_currency, price)
+        calculation = _calculate(
+            model.model_type,
+            revision,
+            model.model_currency,
+            price,
+            return_methodology_code=return_methodology.code,
+        )
         if calculation.expected_cash_flow_irr is None:
             return None
         worlds[mask] = calculation.expected_cash_flow_irr
@@ -532,11 +574,18 @@ def _calculate(
     revision: AttributionInput,
     currency: str,
     price: MarketPriceInput,
+    *,
+    return_methodology_code: str = "UFCF_ENTERPRISE_IRR",
 ) -> DcfCalculation | ArchetypeCalculation:
     if model_type == FinancialModelType.UFCF_DCF_10Y_FADE:
         if not isinstance(revision, s.DcfCalculationInput):
             raise ValueError("Stored inputs do not match UFCF DCF")
-        return calculate_ufcf_dcf(revision, model_currency=currency, market_price=price)
+        return calculate_ufcf_dcf(
+            revision,
+            model_currency=currency,
+            market_price=price,
+            return_methodology_code=return_methodology_code,
+        )
     if model_type == FinancialModelType.OWNER_CASH_FLOW_10Y:
         if not isinstance(revision, s.OwnerCashFlowInput):
             raise ValueError("Stored inputs do not match owner cash flow")
@@ -563,6 +612,13 @@ def _state_read(
         model_type=point.model_type,
         methodology_version=point.methodology_version,
         return_semantics=point.return_semantics,
+        return_methodology=point.return_methodology,
+        return_methodology_status=point.return_methodology_status,
+        valuation_listing_id=point.valuation_listing_id,
+        valuation_ticker=point.valuation_ticker,
+        valuation_venue=point.valuation_venue,
+        valuation_listing_currency=point.valuation_listing_currency,
+        share_price_basis_status=point.share_price_basis_status,
         model_currency=point.model_currency,
         expected_cash_flow_irr=point.expected_cash_flow_irr,
         hurdle=point.hurdle,
@@ -590,6 +646,16 @@ def _context_changes(
         and prior.return_semantics == current.return_semantics
         and prior.model_type == current.model_type
         and prior.methodology_version == current.methodology_version
+        and prior.return_methodology_status == "CLASSIFIED"
+        and current.return_methodology_status == "CLASSIFIED"
+        and prior.return_methodology is not None
+        and current.return_methodology is not None
+        and prior.return_methodology.code == current.return_methodology.code
+        and prior.return_methodology.version == current.return_methodology.version
+        and prior.share_price_basis_status == "CAPTURED"
+        and current.share_price_basis_status == "CAPTURED"
+        and prior.valuation_listing_id is not None
+        and prior.valuation_listing_id == current.valuation_listing_id
     )
     same_currency = (
         prior.model_currency is not None and prior.model_currency == current.model_currency

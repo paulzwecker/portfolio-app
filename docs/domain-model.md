@@ -3,9 +3,10 @@
 Status: Milestones 1A-1C, controlled legacy-record import, listing-specific market
 facts, normalized output ingestion, the Company Explorer, three representative
 canonical financial-model methodologies, provider-neutral external-data
-contracts, Yahoo market-data ingestion, SEC reported fundamentals, and canonical
-consensus-estimate snapshots plus a partial, point-in-time Estimate Momentum
-derivation are implemented. Cached source ranks remain distinct from rank calculations. Native model-input coverage across
+contracts, Yahoo market-data ingestion, SEC reported fundamentals, canonical
+consensus-estimate snapshots, point-in-time Estimate Momentum, and versioned
+agent-authored research forecasts and assessments are implemented. Cached source
+ranks remain distinct from rank calculations. Native model-input coverage across
 the tracked workbook population remains very low; see the source-grounded
 [model migration inventory](model-migration-inventory.md).
 
@@ -90,11 +91,13 @@ merged or overwritten.
 Position values use fresh split-adjusted closes in listing currency. Portfolio
 base values require explicit fresh, dated direct or inverse FX observations. The
 active provider crosswalk now includes the held TSM ADR and SPYY ETF as their exact
-listings, and provides USD/EUR and DKK/EUR observations. The currently imported
-portfolio snapshot has complete fresh price/FX coverage; the ten active Watchlist
-companies without safe canonical listing mappings remain explicit gaps. Market
-facts do not change lifecycle, targets, scores, rank history, model assumptions or
-execution. See [market-data.md](market-data.md).
+listings, and provides USD/EUR and DKK/EUR observations. As of the 2026-10-16
+identity reconciliation, all 92 active Portfolio/Watchlist companies have exact
+canonical listings; the ten prior Watchlist listing gaps are resolved. Listing
+identity does not imply quote or FX coverage: those observations remain dependent
+on separate successful ingestion. Market facts do not change lifecycle, targets,
+scores, rank history, model assumptions or execution. See
+[market-data.md](market-data.md) and the [identity reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md).
 
 ## Reported fundamentals
 
@@ -111,9 +114,10 @@ Missing metrics stay `NOT_IMPORTED`; potential changed comparative filings are
 appended as `POTENTIAL_RESTATEMENT` with `DATA_CHECK`. `known_at` queries limit facts
 to what the application had observed and recorded by that time. Free cash flow is
 declared as a derived analytic but is not computed here; total debt, growth and
-ratios are also outside the reported-fact layer. No real SEC crosswalk or statement
-fact is loaded yet; see [reported-fundamentals.md](reported-fundamentals.md) for
-coverage and the mapping/import workflow.
+ratios are also outside the reported-fact layer. Current reviewed SEC and exact
+listing coverage is recorded in the dated [issuer identity and international filing
+reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md);
+issuer facts, legal reporting entities and trading listings remain separate.
 
 ## Consensus estimates
 
@@ -140,6 +144,40 @@ as distinct outputs. The imported legacy estimate baseline is not sufficient to 
 a value. Unavailable workbook persistence/breadth components remain uncalculated. See
 [`estimate-momentum.md`](estimate-momentum.md).
 
+## Agent-authored research forecasts and assessments
+
+`ResearchRevision` is the immutable publication boundary for an external Sheets
+research agent. It groups the exact company and optional security identity, stable
+research stream, external revision, author/source, observation and recorded times,
+rationale, uncertainty, status, content fingerprint, and its forecasts, assessments
+and evidence. A revision may supersede only the current revision in its own stream;
+replays are idempotent, and stale bases are rejected.
+
+`ResearchForecast` stores exact metric/period/scenario values or explicit null
+availability with a reason. `ResearchAssessment` stores only a short allowlist of
+qualitative outlook/position/risk narratives, not numeric scores. `ResearchEvidence`
+links to canonical source documents, external identifiers or HTTPS references.
+These objects are separate from third-party consensus, accepted model assumptions and
+projections, and the four canonical investment score dimensions. Research forecasts
+do not currently feed Expected IRR, temporal forecast-vs-actual alignment or ranking.
+See [`research-forecasts.md`](research-forecasts.md) for the versioned external API
+contract and point-in-time query semantics.
+
+## Investment thesis and evidence
+
+`InvestmentThesisRevision` is a separate immutable full-snapshot opinion stream.
+`InvestmentThesisClaim` records keyed claims for competitive advantages, durability,
+growth drivers, principal risks, thesis breakers, catalysts, important developments
+and unresolved questions. `InvestmentThesisEvidence` links claims to canonical
+source documents and exact reported-fundamental observations or explicit external
+references, with a support/contradict/context relationship. Linked facts remain
+factual records with their own source dates, provider, value, currency, quality and
+recorded time; an authored thesis statement remains an opinion. New snapshots must
+supersede the current stream revision, and previous thesis decisions remain
+append-only and point-in-time readable. Thesis content does not set lifecycle,
+scores, targets, model state or decisions. The versioned contract and API are
+documented in [`investment-thesis.md`](investment-thesis.md).
+
 ## Filings and source documents
 
 `SourceDocumentBatch` records immutable provider ingestion receipts and points to
@@ -165,9 +203,9 @@ The Company route is a read-oriented research surface over existing canonical
 domains. It brings company/security/listing identity, explicit lifecycle, the latest
 observed holding and accepted target, independent score dimensions, stored ranking
 run state, listing-aware prices, normalized model-output snapshots and available
-history, consensus estimates and filing/source-document metadata into one navigable
-view. It adds no financial or ranking calculation and does not treat presentation
-state as a new domain owner.
+history, consensus estimates, agent-authored research history, and filing/source
+metadata into one navigable view. It adds no financial or ranking calculation and
+does not treat presentation state as a new domain owner.
 
 The page presents identity, lifecycle and portfolio context first; then quality and
 risk; factual market observations and freshness; normalized valuation/return
@@ -195,16 +233,18 @@ The model in this document is intentionally evolutionary. It defines domain owne
 ## Temporal forecast and outcome alignment
 
 Temporal comparison is a query over accepted model revisions, consensus snapshots,
-reported fundamentals and listing-specific daily price observations. Forecast
-knowledge and later outcome knowledge use separate cutoffs. Both effective/source
-time and application recorded/observed time are bounded; a later filing or same-day
-future-effective revision cannot appear in an earlier point-in-time view. Missing,
-ambiguous, stale and unsupported inputs stay explicit. The initial comparison is
-annual Revenue only and does not compute model-quality or ranking scores. Current
-model revisions lack an explicit forecast fiscal-year anchor, so requested-FY
-model values remain null instead of deriving fiscal periods from revision
-timestamps. See
-[`temporal-alignment.md`](temporal-alignment.md) for current rules and limitations.
+published agent research forecasts and reported fundamentals. Forecast knowledge and
+later outcome knowledge use separate cutoffs. Effective/source publication,
+observation and application recorded times are bounded; a later filing or
+same-day date-only publication cannot leak into an earlier forecast comparison.
+Missing, ambiguous, stale, unanchored and unsupported inputs stay explicit. The
+Forecast vs. outcome view also combines exact-listing market outcomes; the separate
+Forecast accuracy view computes source-preserving forecast errors without computing
+investment return, researcher rankings or scenario calibration. Fiscal periods,
+currency and units must match. Current model projections have no explicit fiscal-year
+anchor, and the current canonical reported facts support exact scoring for Revenue
+only. See [`temporal-alignment.md`](temporal-alignment.md) and
+[`forecast-accuracy.md`](forecast-accuracy.md) for rules and coverage.
 
 ## 1. Authority and ownership
 
@@ -931,15 +971,15 @@ Focused inspection of `Portfolio_Watchlist.xlsx` records these separate rules in
   ticker ascending for ties. Its active decision population is companies with a
   positive observed current weight or target weight. Exact inputs, component
   contributions, current/target weights, model output source and methodology are
-  snapshotted. Native shareholder-cash-flow and legacy normalized Expected IRR are
-  never mixed.
+  snapshotted. Each model output carries a versioned return methodology; this rank
+  requires one exact method/version cohort because the hurdle basis also feeds its
+  documented score.
 - **Watchlist Rank** orders Expected IRR descending, then canonical listing ticker
-  ascending, for explicit `WATCHLIST` lifecycle members. Definition v3 is active and
-  creates immutable current runs. It uses native shareholder-cash-flow IRR when
-  available. Legacy normalized Expected IRR values can be ranked only as a separate
-  cohort when no native values participate; a run never sorts the two return
-  semantics together. If a native cohort exists, legacy-only entries are `DATA_CHECK`
-  until comparable native inputs are available. Missing IRR remains unavailable and
+  ascending, for explicit `WATCHLIST` lifecycle members. Definition v4 is active and
+  creates immutable current runs. It requires a single comparable perspective
+  cohort. Enterprise UFCF and equity returns cannot be mixed; owner-cash-flow and
+  residual-income equity returns can be ordered conditionally with method labels
+  preserved. Missing or unclassified IRR remains unavailable/data-check and
   never becomes zero. Each ranked entry snapshots its IRR, methodology/revision or
   import source, currency, listing, price date where applicable, score assessments,
   fundamental CAGR, fair value and hurdle context. Cached workbook positions are not
@@ -1217,15 +1257,13 @@ It is not a fixed-horizon price prediction.
 
 ### 15.2 Expected Cash-Flow IRR
 
-Expected Cash-Flow IRR is calculated once from probability-weighted expected shareholder cash flows.
-
-Do not average Bear/Base/Bull IRRs.
-
-For dividend-paying companies:
-
-- modeled dividends are explicit shareholder cash flows
-- terminal proceeds are separate
-- dividends must not be double counted in terminal value
+Expected IRR is an explicitly versioned, method-specific measure. Supported
+definitions include standard enterprise UFCF with a terminal-growth premium,
+enterprise UFCF with a pure Gordon terminal, owner-cash-flow equity, and
+residual-income equity returns. Their economic cash-flow bases are not silently
+converted into one another. Each method uses probability-weighted cash flows
+rather than averaging scenario IRRs. The exact definition, price basis, currency
+policy and comparison rules are in [return-semantics.md](return-semantics.md).
 
 ---
 
@@ -1558,7 +1596,6 @@ The following decisions should be deferred until their corresponding domain is i
 - provider-specific crosswalk, precedence and retention decisions under the
   [external-data architecture](external-data-architecture.md)
 - honest known-at query APIs for each canonical data domain
-- research-source relational model
 - native model-authoring and assumption-versioning strategy
 - assumption-versioning strategy
 - estimate-history schema
@@ -1576,3 +1613,41 @@ Implement the smallest verified domain slice that preserves the investment syste
 Prefer explicit, understandable domain models over clever generic frameworks.
 
 Correctness, auditability, and economic meaning take priority over minimizing table count or code volume.
+
+## 26. Google Sheets risk assessment history
+
+Risk-assessment contracts are versioned full snapshots linked to one portfolio,
+stream, exact holdings snapshot, accepted target revision and published
+portfolio-state fingerprint. Accepted revisions, findings and evidence links are
+append-only. A separate inbox candidate/run layer retains review and conflict
+history. A stale or incomplete portfolio baseline is stored as stale and requires
+reviewer acknowledgement; acceptance does not update the cited baseline.
+
+Company/portfolio risk findings are qualitative research judgments. Their severity,
+confidence, rationale and evidence are not the canonical numeric Risk score and
+they do not produce portfolio concentration calculations. Holdings, targets,
+financial-model assumptions, lifecycle, rankings and Execution Pace remain owned by
+their existing domains. See [risk-assessments.md](risk-assessments.md).
+
+## 27. Candidate research pipeline
+
+`candidate_pipeline_revisions` stores complete, immutable Candidate research
+snapshots; each points to its prior revision and has a unique caller submission ID.
+`candidate_pipeline_gate_assessments` stores five explicit gate states per
+snapshot, and `candidate_pipeline_evidence` stores typed references to canonical
+research, thesis, score, model-output, or source-document records (or an HTTPS
+source URL). The API checks company ownership for every canonical evidence link.
+
+The pipeline has its own Discovery, Initial Screen, Quality / Durability,
+Fundamental Compounding, Deep Dive, and Recommendation stages. Forward progression
+is sequential and requires an explicit pass for the preceding gate. Quality and
+Durability passes cite the current assessed score dimensions but use no
+undocumented numeric threshold. Fundamental Compounding uses a current complete
+normalized output at or above 15% Forward Fundamental CAGR and a reviewer-confirmed
+per-share basis. Research recommendations remain separate from lifecycle; they do
+not create Watchlist membership, holdings, or targets. Candidate tier/seed and
+Research Rank remain their separate research-priority inputs.
+
+Legacy workbook state has no reliable historical gate record, so imported
+Candidates start with no pipeline revision rather than inferred completion. See
+[`candidate-pipeline.md`](candidate-pipeline.md).

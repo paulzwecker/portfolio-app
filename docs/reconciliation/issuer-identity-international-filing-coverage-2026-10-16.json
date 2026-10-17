@@ -1,0 +1,352 @@
+{
+  "milestone": "10F",
+  "title": "Issuer Identity & International Filing Coverage",
+  "as_of": "2026-10-16",
+  "classification": "CONDITIONALLY_IMPROVED",
+  "identity_review": {
+    "rejected_sec_companyfacts_records_reviewed": 12,
+    "confirmed_same_issuer_by_exact_cik_submissions_and_sec_crosswalk": 12,
+    "true_identity_mismatches": 0,
+    "renames_or_parent_subsidiary_cases": 0,
+    "cik_mapping_changes": 0,
+    "validation_policy": "Exact provider/source CIK and exact payload CIK are required. Only Unicode, punctuation, case, and equivalent terminal Inc/Incorporated, Corp/Corporation, Ltd/Limited, and Co/Company forms are normalized. Other issuer-name tokens must match.",
+    "cases": [
+      {
+        "company": "Copart",
+        "cik": "0000900075",
+        "mapping_name": "COPART INC",
+        "companyfacts_name": "COPART, INC."
+      },
+      {
+        "company": "MercadoLibre",
+        "cik": "0001099590",
+        "mapping_name": "MERCADOLIBRE INC",
+        "companyfacts_name": "MercadoLibre, Inc."
+      },
+      {
+        "company": "Mastercard",
+        "cik": "0001141391",
+        "mapping_name": "Mastercard Inc",
+        "companyfacts_name": "Mastercard Incorporated"
+      },
+      {
+        "company": "Microsoft",
+        "cik": "0000789019",
+        "mapping_name": "MICROSOFT CORP",
+        "companyfacts_name": "MICROSOFT CORPORATION"
+      },
+      {
+        "company": "dLocal",
+        "cik": "0001846832",
+        "mapping_name": "dLocal Ltd",
+        "companyfacts_name": "DLocal Limited"
+      },
+      {
+        "company": "Novo Nordisk",
+        "cik": "0000353278",
+        "mapping_name": "NOVO NORDISK A S",
+        "companyfacts_name": "NOVO NORDISK A/S"
+      },
+      {
+        "company": "Intuitive Surgical",
+        "cik": "0001035267",
+        "mapping_name": "INTUITIVE SURGICAL INC",
+        "companyfacts_name": "Intuitive Surgical, Inc."
+      },
+      {
+        "company": "Morningstar",
+        "cik": "0001289419",
+        "mapping_name": "Morningstar, Inc.",
+        "companyfacts_name": "MORNINGSTAR, INC."
+      },
+      {
+        "company": "Taiwan Semiconductor Manufacturing",
+        "cik": "0001046179",
+        "mapping_name": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
+        "companyfacts_name": "Taiwan Semiconductor Manufacturing Company Limited"
+      },
+      {
+        "company": "Veeva Systems",
+        "cik": "0001393052",
+        "mapping_name": "VEEVA SYSTEMS INC",
+        "companyfacts_name": "Veeva Systems Inc."
+      },
+      {
+        "company": "Comfort Systems USA",
+        "cik": "0001035983",
+        "mapping_name": "COMFORT SYSTEMS USA INC",
+        "companyfacts_name": "COMFORT SYSTEMS USA, INC."
+      },
+      {
+        "company": "Axon Enterprise",
+        "cik": "0001069183",
+        "mapping_name": "AXON ENTERPRISE INC",
+        "companyfacts_name": "AXON ENTERPRISE, INC."
+      }
+    ]
+  },
+  "active_universe": {
+    "portfolio_companies": 21,
+    "watchlist_companies": 71,
+    "total_companies": 92
+  },
+  "coverage_before": {
+    "canonical_listing_companies": 82,
+    "portfolio_listing_companies": 21,
+    "watchlist_listing_companies": 61,
+    "companies_missing_exact_listing": 10,
+    "reviewed_sec_cik_companies": 27,
+    "portfolio_sec_fact_companies": 11,
+    "watchlist_sec_fact_companies": 4,
+    "reported_fundamental_observations": 13382,
+    "reported_fundamental_data_check_observations": 408,
+    "sec_source_documents": 5721,
+    "sec_source_document_companies": 27
+  },
+  "coverage_after": {
+    "canonical_listing_companies": 92,
+    "portfolio_listing_companies": 21,
+    "watchlist_listing_companies": 71,
+    "companies_missing_exact_listing": 0,
+    "reviewed_sec_cik_companies": 27,
+    "portfolio_sec_fact_companies": 20,
+    "watchlist_sec_fact_companies": 7,
+    "reported_fundamental_observations": 26808,
+    "reported_fundamental_data_check_observations": 900,
+    "data_check_by_revision_context": {
+      "POTENTIAL_RESTATEMENT": 891,
+      "AMENDED_FILING": 9
+    },
+    "sec_source_documents": 5721,
+    "sec_source_document_companies": 27,
+    "portfolio_sec_document_companies": 20,
+    "watchlist_sec_document_companies": 7
+  },
+  "companyfacts_runs": [
+    {
+      "run_id": "b2720941-32df-44fa-b74e-215bca7df51b",
+      "status": "PARTIAL",
+      "mapped_cik_count": 27,
+      "imported_companies": 12,
+      "already_imported_companies": 15,
+      "facts_inserted": 13426,
+      "facts_reused": 13382,
+      "normalization_errors": 0,
+      "normalization_warnings": 27,
+      "missing_provider_responses": 0,
+      "result": "PARTIAL due to active companies without reviewed SEC CIK and intentionally unmapped taxonomy concepts"
+    },
+    {
+      "run_id": "40e2e88a-431e-45d1-b3d8-4095fa0e7109",
+      "status": "PARTIAL",
+      "mapped_cik_count": 27,
+      "already_imported_companies": 27,
+      "facts_inserted": 0,
+      "facts_reused": 26808,
+      "normalization_errors": 0,
+      "missing_provider_responses": 0,
+      "result": "Idempotent replay; canonical fact count unchanged"
+    }
+  ],
+  "source_document_run": {
+    "run_id": "54911873-c315-4319-96dc-be3030434714",
+    "status": "PARTIAL",
+    "mapped_cik_count": 27,
+    "documents_imported": 0,
+    "documents_reused": 5721,
+    "unsupported_forms_excluded": 18721,
+    "unchanged_history_files_skipped": 25,
+    "metadata_conflicts": 0,
+    "unlinked_amendments": 0,
+    "data_check_documents": 0
+  },
+  "listing_additions": [
+    {
+      "company": "Accelleron Industries",
+      "listing": "SWX:ACLN",
+      "security_class": "Registered shares",
+      "currency": "CHF",
+      "provider_symbol": "ACLN.SW",
+      "identity_source": "https://accelleron.com/investors/share-information"
+    },
+    {
+      "company": "BONESUPPORT Holding AB",
+      "listing": "STO:BONEX",
+      "security_class": "Ordinary shares",
+      "currency": "SEK",
+      "provider_symbol": "BONEX.ST",
+      "identity_source": "https://www.bonesupport.com/en-eu/investors/the-share/"
+    },
+    {
+      "company": "Exosens",
+      "listing": "PAR:EXENS",
+      "security_class": "Ordinary shares",
+      "currency": "EUR",
+      "provider_symbol": "EXENS.PA",
+      "identity_source": "https://live.euronext.com/sites/default/files/esg_document_files/2026-03/601064_Exosens_URD%202025_VA_2026-03-26_10%3A49.pdf"
+    },
+    {
+      "company": "Fabrinet",
+      "listing": "NYSE:FN",
+      "security_class": "Ordinary shares",
+      "currency": "USD",
+      "provider_symbol": "FN",
+      "identity_source": "https://www.sec.gov/Archives/edgar/data/1408710/000140871026000028/fn-20260626.htm"
+    },
+    {
+      "company": "INVISIO AB",
+      "listing": "STO:IVSO",
+      "security_class": "Ordinary shares",
+      "currency": "SEK",
+      "provider_symbol": "IVSO.ST",
+      "identity_source": "https://corp.invisio.com/news-and-events/pressrelease/invisio-upgraded-to-large-cap-list-on-nasdaq-stockholm"
+    },
+    {
+      "company": "Medistim ASA",
+      "listing": "OSL:MEDI",
+      "security_class": "Ordinary shares",
+      "currency": "NOK",
+      "provider_symbol": "MEDI.OL",
+      "identity_source": "https://live.euronext.com/en/product/equities/NO0010159684-XOSL/company-information"
+    },
+    {
+      "company": "Meta Platforms",
+      "listing": "NASDAQ:META",
+      "security_class": "Class A common stock",
+      "currency": "USD",
+      "provider_symbol": "META",
+      "identity_source": "https://www.sec.gov/Archives/edgar/data/1326801/000162828026003942/meta-20251231.htm"
+    },
+    {
+      "company": "Nova Ltd",
+      "listing": "NASDAQ:NVMI",
+      "security_class": "Ordinary shares",
+      "currency": "USD",
+      "provider_symbol": "NVMI",
+      "identity_source": "https://www.sec.gov/Archives/edgar/data/1109345/000117891326000504/zk2634307.htm"
+    },
+    {
+      "company": "Rheinmetall AG",
+      "listing": "ETR:RHM",
+      "security_class": "Bearer shares",
+      "currency": "EUR",
+      "provider_symbol": "RHM.DE",
+      "identity_source": "https://www.rheinmetall.com/en/investor-relations/share/basic-information"
+    },
+    {
+      "company": "VINCORION SE",
+      "listing": "ETR:V1NC",
+      "security_class": "Bearer shares (Stückaktien)",
+      "currency": "EUR",
+      "provider_symbol": "V1NC.DE",
+      "identity_source": "https://ir.vincorion.com/basicinformation"
+    }
+  ],
+  "remaining_identity_gaps": {
+    "unmapped_portfolio_sec_cik": ["Adyen"],
+    "adyen_known_but_rejected_identity": {
+      "cik": "0001788707",
+      "source": "https://data.sec.gov/submissions/CIK0001788707.json",
+      "reason": "This SEC record does not identify the ordinary-share reporting entity tracked by the application."
+    },
+    "unmapped_watchlist_sec_cik_count": 64,
+    "unmapped_watchlist_sec_cik": [
+      "GE Vernova",
+      "Nemetschek",
+      "Kinsale Capital",
+      "Samsara",
+      "AppFolio",
+      "Kinaxis",
+      "TransMedics",
+      "Natera",
+      "Toast",
+      "Pro Medicus",
+      "Guidewire Software",
+      "Nu Holdings",
+      "Sectra",
+      "Spotify",
+      "Dynavox Group",
+      "MIPS AB",
+      "SiteMinder",
+      "HUB24",
+      "DoorDash",
+      "Shopify",
+      "Airbnb",
+      "Sea Limited",
+      "Monolithic Power Systems",
+      "AppLovin",
+      "CrowdStrike",
+      "Datadog",
+      "Saab",
+      "Cloudflare",
+      "On Holding",
+      "Life360",
+      "Klaviyo",
+      "MakeMyTrip",
+      "monday.com",
+      "Grab Holdings",
+      "Amer Sports",
+      "INVISIO AB",
+      "VINCORION SE",
+      "Palomar Holdings",
+      "Atour Lifestyle",
+      "Remitly Global",
+      "Constellation Software",
+      "Affirm Holdings",
+      "Palantir Technologies",
+      "Carvana",
+      "Robinhood Markets",
+      "Snowflake",
+      "Symbotic",
+      "Astera Labs",
+      "Brookfield Asset Management",
+      "Ares Management",
+      "Puuilo",
+      "DISCO Corporation",
+      "VAT Group",
+      "KLA Corporation",
+      "BE Semiconductor Industries",
+      "Judges Scientific",
+      "nVent Electric",
+      "Interactive Brokers Group",
+      "AAON, Inc.",
+      "Exosens",
+      "Rheinmetall AG",
+      "Accelleron Industries",
+      "BONESUPPORT Holding AB",
+      "Medistim ASA"
+    ],
+    "unmapped_watchlist_cik_is_not_assumed_to_mean_sec_reporting": true,
+    "exact_active_listing_gaps": 0
+  },
+  "international_adapter_decision": {
+    "implemented": false,
+    "reason": "No non-US source has yet met the combined permitted automated access, stable primary publication timestamp, exact identity, fiscal-period and maintenance requirements as a bounded cohort.",
+    "assessments": [
+      {
+        "jurisdiction": "EU",
+        "source": "ESEF issuer annual reports and national OAMs",
+        "status": "RESEARCH_CANDIDATE",
+        "limitation": "ESEF is a reporting format; issuer/OAM discovery and publication metadata are jurisdiction-specific."
+      },
+      {
+        "jurisdiction": "Japan",
+        "source": "EDINET API",
+        "status": "BLOCKED_CONFIGURATION",
+        "limitation": "Registration and API-key setup plus Japanese operational documentation are required."
+      },
+      {
+        "jurisdiction": "Canada",
+        "source": "SEDAR+",
+        "status": "NOT_AUTOMATED",
+        "limitation": "Current terms restrict automated search and extraction."
+      },
+      {
+        "jurisdiction": "Australia/Taiwan/UK/Switzerland",
+        "source": "Regulator and issuer filings",
+        "status": "RESEARCH_CANDIDATE",
+        "limitation": "Access terms, structured taxonomy and genuine publication timestamps require issuer-specific verification."
+      }
+    ]
+  }
+}

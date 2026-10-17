@@ -500,3 +500,51 @@ contract checks before reaching the production build. A direct webpack build was
 also attempted; Next.js could not parse the TypeScript `--showConfig` output in this
 environment. These build limitations are independent of the changed API and
 ingestion code; a production build remains unverified here.
+
+## Milestone 6.11 — operational readiness — 2026-10-10
+
+The live canonical PostgreSQL review remains **NOT_READY** for routine portfolio
+management. Fresh Yahoo exact-listing quotes improved from 5/21 to 21/21 Portfolio
+companies and are fresh for all 61/61 Watchlist companies with resolved listings.
+However, the October 4 holdings snapshot is beyond its freshness window, USD cash
+cannot be converted at that snapshot cutoff, five Portfolio targets remain
+unauthored, Portfolio and Watchlist Rank each have zero ranked companies, and
+Execution Pace is `REVIEW` for all 21 Portfolio companies. Reported fundamentals
+and primary consensus remain unconfigured. No unattended ingestion schedule was
+enabled.
+
+`npm run check` passed (88 frontend and 232 API tests), `npm run test:integration`
+passed (43 database-backed tests), `npm run db:check` found no drift, and the live
+production browser suite passed 30 desktop/mobile checks with four tests skipped
+because they require an isolated demo seed or write-enabled test database. A
+repeated bounded Yahoo run received 418 rows and inserted zero duplicate canonical
+observations. The current native model quote calculation remains read-only and
+keeps the accepted reference price/revision unchanged.
+
+The human-readable coverage, decision, provider, history and remediation assessment
+is in [Portfolio Operational Readiness — 2026-10-10](reconciliation/portfolio-operational-readiness-2026-10-10.md);
+machine-readable evidence is in
+[portfolio-operational-readiness-2026-10-10.json](reconciliation/portfolio-operational-readiness-2026-10-10.json).
+
+## Milestone 9A — forecast accuracy — 2026-10-15
+
+The application now exposes read-only historical accuracy comparisons for agent
+research forecasts, accepted native model projections and continuity-selected
+consensus against later canonical reported facts. The comparison preserves fiscal
+period, source/methodology, forecast and actual publication/observation/recorded
+times, units/currency and restatement links. Unaligned model scenarios and exact
+metric gaps remain unavailable. No real-data error or aggregate is currently
+available: the local database has zero published agent forecasts, 67 consensus
+observations (zero with an observation timestamp or absolute fiscal period end), no
+reported-fundamental observations, and 15 native model revisions without fiscal-year
+anchors. Machine-readable rules and current coverage are documented in
+[forecast-accuracy.md](forecast-accuracy.md).
+
+| Check                                      | Result                                                                                                                                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                            | Passed: lint, format, web TypeScript, API mypy, 103 Vitest tests, 303 pytest tests, generated contracts, production build                                                                     |
+| Focused forecast accuracy PostgreSQL tests | 7 passed: fiscal alignment, revisions/restatements, source continuity, currency, point-in-time leakage, zero actuals, minimum samples, model anchor gaps and API contract/timezone validation |
+| Company Explorer responsive browser check  | Passed at 390px and 1440px with mocked source/actual history and explicit empty state                                                                                                         |
+
+No forecast history was reconstructed from current values, and no factual or model
+records were inserted by this milestone.

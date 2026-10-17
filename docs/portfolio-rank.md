@@ -34,18 +34,21 @@ it is not an instruction to adjust the target.
 
 A run takes a point-in-time snapshot of current holdings and accepted targets,
 dated listing prices and FX, lifecycle, the latest accepted four-dimension score
-assessments, and the selected normalized model output. The run requires a complete
-holdings snapshot, an accepted target revision, a current weight that can be valued,
-all four assessed scores, and the output fields required by the formula. A missing
-target or score is not zero. Missing membership evidence is unavailable; incomplete
-valuation or inconsistent definitions are `DATA_CHECK`.
+assessments, and the selected normalized model output. The run requires a complete,
+fresh holdings confirmation, an accepted target revision, a current weight that can
+be valued, all four assessed scores, and the output fields required by the formula.
+A complete but old holdings snapshot can still be marked to market for display, but
+its stale exposure cannot support a current target-gap ranking. A missing target or
+score is not zero. Missing membership evidence is unavailable; incomplete valuation,
+stale holdings, or inconsistent definitions are `DATA_CHECK`.
 
-The legacy normalized Expected IRR and native shareholder-cash-flow Expected IRR
-are distinct methodologies. A run ranks the native cohort if at least one complete
-native candidate exists; otherwise it can rank a comparable complete legacy cohort.
-It never mixes the two. Complete legacy-only peers in a native run remain
-`DATA_CHECK` until a comparable native model is available. This deliberately makes
-coverage narrower than the source cached rank while preserving return semantics.
+Each candidate must have a classified versioned return methodology. Because the
+formula includes both Expected IRR and Expected Excess, a run requires one exact
+methodology code/version cohort: the hurdle basis differs across methods. If more
+than one method is otherwise eligible, those candidates receive `DATA_CHECK`; the
+run does not choose or mix a partial cohort. Exact matching method definitions may
+include native and legacy sources, but imported source parity and price-basis
+limitations remain visible in their snapshots.
 
 Runs and entry input snapshots are append-only. The score and its exact inputs,
 component contributions, lifecycle, market weight, target weight, allocation gap,
@@ -62,12 +65,26 @@ cached Portfolio Score and ticker tie order. `test_portfolio_rank.py` includes t
 GOOGL source-score fixture (57.66995863) and score-bound, direction, floor/cap,
 tie-order, and no-allocation-mutation coverage.
 
-The first canonical application run ranks 3 of 21 current/target portfolio
+The pre-comparability canonical v2 run ranks 3 of 21 current/target portfolio
 companies. Eight are unavailable because a target or score input is missing. Ten
 are `DATA_CHECK`: eight have legacy Expected IRR while native models participate in
 the run, one model reference price predates a later exact-listing quote, and one
 legacy contract is not a complete `PASS`. The current live result is recorded in
 [`reconciliation/portfolio-rank-activation-2026-10-06.json`](reconciliation/portfolio-rank-activation-2026-10-06.json).
+
+## Current return-method cohort run (2026-10-09)
+
+Active return-basis-aware definition v4 recorded run
+`ecce3252-df8f-4da2-a411-d5c331878dca` over
+the 219-company universe: 0 ranked, 16 `DATA_CHECK`, 5 `INPUTS_UNAVAILABLE` and
+198 `NOT_ELIGIBLE`. All 16 current/target portfolio data checks are blocked by
+`PRICE_COVERAGE_INCOMPLETE`, which prevents comparable current market weights; the
+five missing target allocations remain unavailable. No candidates reached the
+method-cohort calculation, so the stricter retained-price-basis and exact-method
+requirements do not further reduce the run's ranking coverage. The prior v3 run
+and earlier v2 run's three ranks remain immutable history. Exact active-run counts
+and reasons are in
+[`reconciliation/return-semantics-2026-10-09.json`](reconciliation/return-semantics-2026-10-09.json).
 
 The workbook and canonical outputs remain separate. A workbook score is useful for
 formula parity, but it does not override the canonical model's return definition or

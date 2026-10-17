@@ -123,7 +123,7 @@ derived separately from one selected provider stream. It does not change consens
 or model state; see [`estimate-momentum.md`](estimate-momentum.md) for its partial legacy
 methodology migration, data coverage and limitations.
 
-## Coverage and Estimate Momentum readiness (2026-10-05)
+## Historical coverage and Estimate Momentum readiness (2026-10-05)
 
 The reconciled legacy snapshot contains 67 nonblank estimate values across 79 company
 rows; all 79 workbook tickers resolve through the workbook's exact registry identity, and
@@ -143,3 +143,38 @@ formula-derived signal remains excluded from consensus import. Its limited formu
 comparison is recorded in
 [`estimate-momentum-legacy-2026-10-05.json`](reconciliation/estimate-momentum-legacy-2026-10-05.json)
 and does not claim point-in-time parity.
+
+## Current operational coverage (2026-10-10)
+
+No primary FMP mappings or canonical FMP observations are present in the local
+database. The bounded worker run is recorded as `BLOCKED / MISSING_FMP_API_KEY`;
+the adapter did not make an unauthenticated request. The legacy imported estimate
+rows remain 64 Portfolio and 3 Watchlist observations in `DATA_CHECK`, not valid
+historical consensus snapshots. Estimate Momentum therefore remains unavailable
+because there is no selected provider history with absolute forecast periods,
+currency and repeated observation timestamps. A new current estimate must never
+be backfilled as a prior point-in-time value. See the [Milestone 6.10 operational
+report](reconciliation/operational-data-activation-2026-10-10.md).
+
+## Free-source feasibility (2026-10-11)
+
+The source review found no unconditional, verified zero-cost estimate source for
+the application. Alpha Vantage is a conditional individual-use candidate; its
+official documentation claims annual/quarter Revenue and EPS estimates,
+analyst counts and revision history, but the response schema, fiscal/currency
+semantics and dated revision depth have not been validated. FMP's current
+documentation claims Revenue, EPS, EBIT, EBITDA and timestamped historical
+estimate revisions. The existing application adapter does not query that feed,
+and FMP's published personal-use terms do not authorize raw-data storage and
+application display without a specific agreement. Yahoo Finance, finanzen.net
+and MarketScreener are not automated fallbacks under their current published
+access terms. See the [source feasibility report](reconciliation/consensus-free-source-feasibility-2026-10-11.md)
+and [machine-readable assessment](reconciliation/consensus-free-source-feasibility-2026-10-11.json).
+
+The Alpha Vantage probe is a one-symbol raw-response diagnostic only. It is not
+registered in production ingestion, does not normalize or persist observations,
+and must only be used when the operator's account and deployment qualify under
+the provider's terms. The published terms do not clearly establish retention
+and redisplay rights for canonical app storage, so clarify those rights before
+any import. Its current lack of a live key means no source fields are yet
+verified.

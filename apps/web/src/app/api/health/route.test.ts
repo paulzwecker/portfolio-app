@@ -10,13 +10,18 @@ const healthy = {
   checked_at: "2026-10-04T10:00:00Z",
 };
 
-beforeEach(() => vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000"));
+beforeEach(() => {
+  vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("WEB_ACCESS_USERNAME", "");
+  vi.stubEnv("WEB_ACCESS_PASSWORD", "");
+});
 
 describe("health proxy", () => {
   it("forwards a validated response without caching and bounds the request", async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json(healthy));
     vi.stubGlobal("fetch", fetchMock);
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/health"));
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual(healthy);
@@ -36,7 +41,7 @@ describe("health proxy", () => {
       "fetch",
       vi.fn().mockResolvedValue(Response.json(health, { status: 503 })),
     );
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/health"));
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual(health);
   });
@@ -50,7 +55,9 @@ describe("health proxy", () => {
           Response.json({ ...healthy, debug: "private configuration" }),
         ),
     );
-    expect(await (await GET()).json()).toEqual(healthy);
+    expect(
+      await (await GET(new Request("http://localhost/api/health"))).json(),
+    ).toEqual(healthy);
   });
 
   it.each([
@@ -60,7 +67,7 @@ describe("health proxy", () => {
     new Response("upstream stack trace", { status: 500 }),
   ])("redacts unexpected upstream responses", async (upstream) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(upstream));
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/health"));
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({
       detail:
@@ -73,7 +80,7 @@ describe("health proxy", () => {
     new DOMException("Timed out", "TimeoutError"),
   ])("redacts transport and timeout failures", async (error) => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(error));
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/health"));
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("secret");
   });
@@ -82,7 +89,30 @@ describe("health proxy", () => {
     vi.stubEnv("API_BASE_URL", "");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    expect((await GET()).status).toBe(503);
+    expect((await GET(new Request("http://localhost/api/health"))).status).toBe(
+      503,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not call an HTTP backend from a production deployment", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("WEB_ACCESS_USERNAME", "researcher");
+    vi.stubEnv("WEB_ACCESS_PASSWORD", "preview-password-long-enough");
+    const authorization = Buffer.from(
+      "researcher:preview-password-long-enough",
+      "utf8",
+    ).toString("base64");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET(
+      new Request("https://app.example/api/health", {
+        headers: { authorization: `Basic ${authorization}` },
+      }),
+    );
+
+    expect(response.status).toBe(503);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

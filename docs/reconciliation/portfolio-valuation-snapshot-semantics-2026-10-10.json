@@ -1,0 +1,131 @@
+{
+  "report_version": "1.0.0",
+  "milestone": "6.10b Portfolio Valuation & Snapshot Semantics",
+  "reviewed_at_utc": "2026-10-10T21:33:10Z",
+  "database": "local PostgreSQL",
+  "portfolio_id": "a58be2cb-24f2-5470-9aa4-6960344ec945",
+  "root_cause": {
+    "holdings_effective_at": "2026-10-04T20:53:02.583257Z",
+    "holdings_recorded_at": "2026-10-04T20:53:17.278862Z",
+    "holdings_age_days": 6,
+    "old_behavior": "Current valuation required market prices and cash FX to be within five days of the holdings snapshot and marked the aggregate incomplete solely because that complete snapshot was older than five days.",
+    "corrected_behavior": "Current mark-to-market selects the latest accepted holdings known at the valuation cutoff, then independently selects exact-listing price and clean FX observations eligible at that cutoff. Historical as-of queries bound all effective and recorded/observed timestamps to the requested cutoff."
+  },
+  "before": {
+    "exact_held_listings_with_fresh_market_quotes": "22/22",
+    "valued_positions": "0/22",
+    "portfolio_value": null,
+    "company_weights": "0/21",
+    "target_gaps": "0/16",
+    "usd_cash_fx": "FX_UNAVAILABLE because FX was looked up at the 2026-10-04 holdings date",
+    "portfolio_rank": {
+      "ranked": 0,
+      "data_check": 16,
+      "inputs_unavailable": 5
+    },
+    "execution_pace": {
+      "available": 0,
+      "review": 21
+    }
+  },
+  "after": {
+    "valuation_status": "VALUED",
+    "valuation_mode": "CURRENT_MARK_TO_MARKET",
+    "valuation_cutoff_utc": "2026-10-10T21:33:09.599453Z",
+    "market_data_through": "2026-10-09T00:00:00Z",
+    "fx_data_through": "2026-10-09T21:29:27Z",
+    "portfolio_currency": "EUR",
+    "total_market_value_eur": "58453.85133778000000000000000",
+    "security_positions": 22,
+    "valued_positions": "22/22",
+    "company_weights": "21/21",
+    "target_gaps": "16/16",
+    "explicit_targets": "16/21",
+    "combined_security_and_cash_weight": "1.0000000000000000000000000000",
+    "holdings_freshness": "STALE",
+    "holdings_age_days": 6,
+    "currency_exposure": {
+      "EUR_cash": {
+        "balance": "1301.6800000000",
+        "base_value_eur": "1301.6800000000",
+        "portfolio_weight": "0.02226850703947877945979740281"
+      },
+      "USD_cash": {
+        "balance": "3433.4500000000",
+        "fx_usd_to_eur": "0.89240000000000",
+        "fx_effective_at": "2026-10-09T21:29:27Z",
+        "base_value_eur": "3064.010780000000000000000000",
+        "portfolio_weight": "0.05241760311556516643573060877"
+      }
+    },
+    "position_timing": {
+      "non_synchronous_quote_fx": 19,
+      "timing_unknown": 0,
+      "fx_not_required": 3
+    },
+    "largest_company_exposures": [
+      {
+        "company": "Alphabet",
+        "market_value_eur": "5021.142144000000000000000000",
+        "current_weight": "0.08589925264265224274727298027",
+        "target_weight": "0.090000000000"
+      },
+      {
+        "company": "ASML Holding",
+        "market_value_eur": "4804.80000000000000000000",
+        "current_weight": "0.08219817668189389062475766780",
+        "target_weight": "0.090000000000"
+      },
+      {
+        "company": "Amazon",
+        "market_value_eur": "4683.850640000000000000000000",
+        "current_weight": "0.08012903397817219780529079299",
+        "target_weight": "0.090000000000"
+      },
+      {
+        "company": "MercadoLibre",
+        "market_value_eur": "4393.338074700000000000000000",
+        "current_weight": "0.07515908659829381863700158850",
+        "target_weight": "0.110000000000"
+      },
+      {
+        "company": "AMD",
+        "market_value_eur": "4341.347520000000000000000000",
+        "current_weight": "0.07426965752715240404739904922",
+        "target_weight": null
+      }
+    ],
+    "portfolio_rank_preview": {
+      "ranked": 0,
+      "data_check": 16,
+      "inputs_unavailable": 5,
+      "stale_holdings_reviews": 16,
+      "missing_target_rows": 5
+    },
+    "execution_pace_preview": {
+      "available": 0,
+      "review": 21,
+      "stale_holdings_reviews": 16,
+      "missing_target_reviews": 5
+    }
+  },
+  "missing_targets": ["AMD", "CELH", "HIMS", "MSCI", "NVO"],
+  "integrity": {
+    "holdings_snapshot_modified": false,
+    "targets_modified": false,
+    "accepted_model_revisions_modified": false,
+    "ranking_or_execution_history_modified": false,
+    "repeatable_read_only_valuation": true,
+    "historical_as_of_future_leakage_test": "passed",
+    "naive_historical_cutoff_api_response": "422",
+    "exact_listing_and_fx_requirements_test": "passed"
+  },
+  "verification": {
+    "npm_run_check": "passed: lint, format, frontend typecheck, API mypy, 89 frontend tests, 236 backend tests, OpenAPI contract check, and production build",
+    "database_integration": "passed: 46 integration tests; the final read-only history-count regression was rerun separately and passed",
+    "browser_e2e": "passed: 24 desktop/mobile tests; 10 live-only tests were skipped by the default suite configuration",
+    "final_frontend_checks_after_timestamp_display_update": "passed: web lint, format check, web typecheck, 89 frontend tests, contracts check, production build, and responsive portfolio E2E",
+    "final_database_regression_after_history_count_update": "passed: 1 targeted PostgreSQL integration test; 26 deselected",
+    "git_diff_check": "passed"
+  }
+}

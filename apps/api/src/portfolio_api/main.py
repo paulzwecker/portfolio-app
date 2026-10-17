@@ -1,11 +1,14 @@
 """FastAPI entry point. Startup never creates or upgrades database objects."""
 
+import hmac
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import cast
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.engine import Engine
+from starlette.middleware.base import RequestResponseEndpoint
 
 from portfolio_api.database import create_database_engine
 from portfolio_api.domain.routes import router
@@ -15,9 +18,11 @@ from portfolio_api.settings import Settings
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    configured_settings = settings or Settings()
+
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        engine = create_database_engine(settings if settings is not None else Settings())
+        engine = create_database_engine(configured_settings)
         application.state.database_engine = engine
         application.state.migration_heads = expected_heads()
         try:
@@ -36,7 +41,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    application.state.settings = configured_settings
     application.include_router(router)
+
+    @application.middleware("http")
+    async def require_server_proxy_token(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        if configured_settings.app_env == "development" or request.url.path in {
+            "/health/live",
+            "/health/ready",
+        }:
+            return await call_next(request)
+        expected = configured_settings.api_access_token
+        supplied = request.headers.get("x-api-access-token", "")
+        if expected is None or not hmac.compare_digest(
+            supplied.encode("utf-8"), expected.get_secret_value().encode("utf-8")
+        ):
+            return JSONResponse(
+                {"detail": "Authentication required."},
+                status_code=401,
+                headers={"Cache-Control": "no-store"},
+            )
+        return await call_next(request)
 
     @application.get("/health/live", response_model=LivenessResponse, tags=["health"])
     def liveness() -> LivenessResponse:

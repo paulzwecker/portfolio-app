@@ -27,6 +27,15 @@ schemas. A normalizer converts one provider's payload into the domain contract;
 the canonical observation is keyed to application identity and follows that
 domain's units, currency, temporal and quality rules.
 
+Google Sheets model synchronization is intentionally outside this factual-provider
+pipeline. A portable model contract is an externally authored revision proposal,
+not a market, consensus or reported fact. The dedicated read-only Sheets reader
+checks only its configured contract inbox, retains the retrieved contract and
+fingerprint as review evidence, and submits accepted candidates through the existing
+financial-model revision operation. It does not treat arbitrary workbook cells as
+provider observations or raw financial facts. See
+[`google-sheets-sync.md`](google-sheets-sync.md).
+
 ## Shared provider contract
 
 `apps/api/src/portfolio_api/external_data.py` defines the small shared interface:

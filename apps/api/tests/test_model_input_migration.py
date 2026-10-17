@@ -25,7 +25,12 @@ from portfolio_api.domain.models import (
     Listing,
     ModelOutputImportBatch,
     ModelOutputSnapshot,
+    ReturnMethodologyDefinition,
     Security,
+)
+from portfolio_api.domain.schemas import (
+    FinancialModelRevisionCreate,
+    OwnerCashFlowRevisionCreate,
 )
 from portfolio_api.legacy_import import Workbook
 from portfolio_api.main import create_app
@@ -34,6 +39,7 @@ from portfolio_api.model_input_migration import (
     EXPECTED_MODEL_KEYS,
     PARITY_PROVEN_MODEL_KEYS,
     PORTFOLIO_DCF_LISTING_REQUIREMENTS,
+    WATCHLIST_OWNER_CASH_LISTING_REQUIREMENTS,
     _reconcile_model,
     _source_price,
     import_native_model_inputs,
@@ -109,8 +115,39 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
     assert tost_result["projection_reconciliation"]["passed"] == 123
     assert tost_result["output_reconciliation"]["compared"] == 22
     assert tost_result["output_reconciliation"]["passed"] == 22
+    for model_key in ("W-AXON", "W-FIX", "W-RBRK", "W-VEEV"):
+        model = by_key[model_key]
+        assert model.mapping_version == "watchlist-owner-cf-2026-10-09-v1"
+        assert model.return_methodology_code == "OWNER_CASH_FLOW_EQUITY_IRR"
+        assert model.input_cell_map["scenarios.BASE.owner_cash_flow_margin"] == "C40:L40"
+        result = _reconcile_model(workbook, model)
+        assert result["status"] == "PARITY_PASS", model_key
+        assert result["projection_reconciliation"]["passed"] == 123
+        assert result["output_reconciliation"]["passed"] == 22
+    axon = by_key["W-AXON"]
+    assert isinstance(axon.values, OwnerCashFlowRevisionCreate)
+    assert axon.input_cell_map["base.net_cash"] == "B18"
+    assert axon.values.base.net_cash == Decimal("-1.065")
     for model_key in ("P-ISRG", "P-MA", "P-CPRT", "P-UBER"):
         result = _reconcile_model(workbook, by_key[model_key])
+        assert result["status"] == "PARITY_PASS", model_key
+        assert result["projection_reconciliation"]["passed"] == 30
+        assert result["output_reconciliation"]["passed"] == 22
+
+    for model_key in ("P-AMZN", "P-HIMS", "P-MSFT"):
+        model = by_key[model_key]
+        assert isinstance(model.values, FinancialModelRevisionCreate)
+        assert model.mapping_version == "portfolio-ufcf-tail-2026-10-09-v1"
+        assert model.input_cell_map["scenarios.BEAR.tail_ufcf_growth"] == "B206:B210"
+        assert model.values.scenarios[0].tail_ufcf_growth is not None
+        assert [item.forecast_year for item in model.values.scenarios[0].tail_ufcf_growth] == [
+            6,
+            7,
+            8,
+            9,
+            10,
+        ]
+        result = _reconcile_model(workbook, model)
         assert result["status"] == "PARITY_PASS", model_key
         assert result["projection_reconciliation"]["passed"] == 30
         assert result["output_reconciliation"]["passed"] == 22
@@ -134,7 +171,7 @@ def test_source_quote_is_used_only_for_parity_and_keeps_effective_date_unknown()
     )
 
 
-def test_import_creates_six_native_revisions_once_and_records_parity_assessments(
+def test_import_creates_parity_proven_native_revisions_once_and_records_assessments(
     postgres_engine: Engine,
 ) -> None:
     accepted_at = datetime.now(UTC) - timedelta(minutes=1)
@@ -142,7 +179,6 @@ def test_import_creates_six_native_revisions_once_and_records_parity_assessments
     with Session(postgres_engine) as session, session.begin():
         exact_listings = {
             "P-GOOGL": ("Alphabet", "GOOGL", "NASDAQ", "USD"),
-            "W-TOST": ("Toast", "TOST", "NYSE", "USD"),
             **{
                 key: (name, ticker, venue, currency)
                 for key, (
@@ -151,6 +187,13 @@ def test_import_creates_six_native_revisions_once_and_records_parity_assessments
                     venue,
                     currency,
                 ) in PORTFOLIO_DCF_LISTING_REQUIREMENTS.items()
+                if key in PARITY_PROVEN_MODEL_KEYS
+            },
+            **{
+                key: (name, ticker, venue, currency)
+                for key, (name, ticker, venue, currency) in (
+                    WATCHLIST_OWNER_CASH_LISTING_REQUIREMENTS.items()
+                )
                 if key in PARITY_PROVEN_MODEL_KEYS
             },
         }
@@ -166,8 +209,17 @@ def test_import_creates_six_native_revisions_once_and_records_parity_assessments
                 currency=currency,
             )
         first = import_native_model_inputs(session, workbook, accepted_at=accepted_at, apply=True)
-        assert first["input_sets_imported"] == 6
-        assert first["status_counts"]["PARITY_PASS"] == 6
+        expected_import_count = len(PARITY_PROVEN_MODEL_KEYS)
+        assert first["input_sets_imported"] == expected_import_count, [
+            (
+                row["model_key"],
+                row.get("status"),
+                row.get("apply_status"),
+                row.get("identity_blocker"),
+            )
+            for row in first["models"]
+        ]
+        assert first["status_counts"]["PARITY_PASS"] == expected_import_count
         assert [
             row["model_key"] for row in first["models"] if row.get("apply_status") == "IMPORTED"
         ] == list(PARITY_PROVEN_MODEL_KEYS)
@@ -177,7 +229,7 @@ def test_import_creates_six_native_revisions_once_and_records_parity_assessments
             session, workbook, accepted_at=accepted_at + timedelta(seconds=30), apply=True
         )
         assert replay["input_sets_imported"] == 0
-        assert replay["input_sets_already_imported"] == 6, [
+        assert replay["input_sets_already_imported"] == expected_import_count, [
             (
                 row.get("model_key"),
                 row.get("status"),
@@ -191,12 +243,42 @@ def test_import_creates_six_native_revisions_once_and_records_parity_assessments
             for row in replay["models"]
             if row.get("apply_status") == "ALREADY_IMPORTED"
         ] == list(PARITY_PROVEN_MODEL_KEYS)
-        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 6
-        assert session.scalar(select(func.count()).select_from(FinancialModelRevision)) == 6
         assert (
-            session.scalar(select(func.count()).select_from(FinancialModelMigrationAssessment)) == 6
+            session.scalar(select(func.count()).select_from(FinancialModel))
+            == expected_import_count
         )
-        assert session.scalar(select(func.count()).select_from(FinancialModelOutput)) == 6
+        assert session.scalar(select(func.count()).select_from(FinancialModelRevision)) == (
+            expected_import_count
+        )
+        assert (
+            session.scalar(select(func.count()).select_from(FinancialModelMigrationAssessment))
+            == expected_import_count
+        )
+        assert session.scalar(select(func.count()).select_from(FinancialModelOutput)) == (
+            expected_import_count
+        )
+        return_methods = dict(
+            session.execute(
+                select(FinancialModel.source_model_key, ReturnMethodologyDefinition.code)
+                .join(
+                    FinancialModelRevision,
+                    FinancialModelRevision.model_id == FinancialModel.id,
+                )
+                .join(
+                    FinancialModelOutput,
+                    FinancialModelOutput.revision_id == FinancialModelRevision.id,
+                )
+                .join(
+                    ReturnMethodologyDefinition,
+                    ReturnMethodologyDefinition.id == FinancialModelOutput.return_methodology_id,
+                )
+            ).all()
+        )
+        assert return_methods["P-AMZN"] == "UFCF_ENTERPRISE_HMODEL_IRR"
+        assert return_methods["P-HIMS"] == "UFCF_ENTERPRISE_HMODEL_IRR"
+        assert return_methods["P-MSFT"] == "UFCF_ENTERPRISE_IRR"
+        for model_key in ("W-AXON", "W-FIX", "W-RBRK", "W-VEEV"):
+            assert return_methods[model_key] == "OWNER_CASH_FLOW_EQUITY_IRR"
         revisions = session.scalars(select(FinancialModelRevision)).all()
         assert {row.actor for row in revisions} == {"IMPORT"}
         assert all(row.effective_at == accepted_at for row in revisions)
@@ -328,7 +410,24 @@ def test_migration_mapping_is_limited_to_the_inventory_first_batch() -> None:
             / "docs/reconciliation/model-migration-inventory-2026-10-06.json"
         ).read_text(encoding="utf-8")
     )
-    assert inventory["recommended_batches"][0]["model_tabs"] == sorted(PARITY_PROVEN_MODEL_KEYS)
+    assert inventory["recommended_batches"][0]["model_tabs"] == [
+        "P-CPRT",
+        "P-GOOGL",
+        "P-ISRG",
+        "P-MA",
+        "P-UBER",
+        "W-TOST",
+    ]
+    assert set(PARITY_PROVEN_MODEL_KEYS) - set(WATCHLIST_OWNER_CASH_LISTING_REQUIREMENTS) >= {
+        "P-GOOGL",
+        "P-AMZN",
+        "P-HIMS",
+        "P-MSFT",
+        "P-ISRG",
+        "P-MA",
+        "P-CPRT",
+        "P-UBER",
+    }
     assert {
         model.model_key for model in map_supported_models(source_workbook(), datetime.now(UTC))
     } == set(PARITY_PROVEN_MODEL_KEYS)

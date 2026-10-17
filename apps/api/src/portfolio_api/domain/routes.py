@@ -2,33 +2,126 @@
 
 from collections.abc import Iterator
 from datetime import UTC, date, datetime, time
-from typing import Annotated, cast
-from uuid import UUID
+from typing import Annotated, Literal, cast
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from portfolio_api import candidate_pipeline as candidate_research
+from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
+from portfolio_api.decision_evaluation import company_decision_evaluation
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services as operations
 from portfolio_api.domain.models import (
+    ForecastAccuracyMetric,
+    ForecastAccuracySourceType,
     FundamentalPeriodType,
     Lifecycle,
+    OperationalJobRequest,
     Portfolio,
     RankingType,
+    ResearchPeriodType,
+    ResearchTriggerType,
+    ReturnMethodologyDefinition,
     ScoreDimension,
     SourceDocumentType,
 )
 from portfolio_api.execution_pace import create_execution_pace_run
 from portfolio_api.expected_return_attribution import company_expected_return_attribution
+from portfolio_api.financial_statements import company_financial_statements
+from portfolio_api.forecast_accuracy import company_forecast_accuracy
+from portfolio_api.google_sheets_sync import (
+    accept_sync_candidate,
+    google_sheets_status,
+    list_sync_candidates,
+    list_sync_runs,
+    preview_sync_candidate,
+    reject_sync_candidate,
+    run_sync_check,
+    test_google_sheets_connection,
+)
+from portfolio_api.investment_thesis import (
+    company_investment_thesis,
+    publish_investment_thesis_revision,
+    thesis_revision_read,
+)
+from portfolio_api.manual_operations import (
+    create_job_request,
+    job_request_read,
+    list_job_requests,
+    retry_job_request,
+)
 from portfolio_api.model_migration_status import company_model_migration_status
+from portfolio_api.portfolio_sheet_sync import (
+    PortfolioSheetPublishError,
+    publish_portfolio_state,
+)
+from portfolio_api.recurring_operations import recurring_operations_status
 from portfolio_api.reported_fundamentals import METRIC_DEFINITIONS
+from portfolio_api.research_agent_operations import (
+    ResearchAgentOperationError,
+    deliver_agent_work,
+    list_agent_events,
+    proposal_status,
+    record_agent_acknowledgment,
+    record_delivery_failure,
+    record_portfolio_sheet_delivery,
+    record_sheet_agent_work_deliveries,
+    record_sheet_delivery_failure,
+    record_thesis_sheet_deliveries,
+    run_acknowledgment_inbox_check,
+    work_event_read,
+)
+from portfolio_api.research_forecasts import (
+    company_research,
+    publish_research_revision,
+    research_revision_read,
+)
+from portfolio_api.research_queue import (
+    complete_research_queue_task,
+    get_research_queue,
+    research_queue_history,
+)
+from portfolio_api.research_sheet_sync import (
+    accept_research_candidate,
+    check_research_sync_connection,
+    list_research_sync_candidates,
+    list_research_sync_runs,
+    preview_research_candidate,
+    reject_research_candidate,
+    research_sync_status,
+    run_research_sync_check,
+)
+from portfolio_api.research_triggers import (
+    list_research_triggers,
+    normalize_trigger_cutoff,
+    refresh_research_triggers,
+    research_trigger_context,
+)
+from portfolio_api.return_semantics import methodology_payload
+from portfolio_api.risk_assessments import (
+    accept_risk_candidate,
+    company_risk_assessments,
+    list_risk_sync_candidates,
+    list_risk_sync_runs,
+    portfolio_risk_assessments,
+    preview_risk_candidate,
+    reject_risk_candidate,
+    risk_sync_status,
+    run_risk_sync_check,
+    test_risk_sync_connection,
+)
+from portfolio_api.settings import Settings
 from portfolio_api.source_documents import create_company_source_document
 from portfolio_api.temporal_alignment import company_temporal_alignment
+from portfolio_api.thesis_watch_sheet_sync import publish_thesis_watch_feed
 
 router = APIRouter(prefix="/v1", tags=["Portfolio research"])
 
@@ -57,6 +150,306 @@ def session_for(request: Request) -> Iterator[Session]:
 Db = Annotated[Session, Depends(session_for, scope="function")]
 
 
+@router.get(
+    "/google-sheets-research-sync/status",
+    response_model=s.GoogleSheetsResearchSyncStatusRead,
+)
+def get_google_sheets_research_sync_status(db: Db) -> s.GoogleSheetsResearchSyncStatusRead:
+    return research_sync_status(db, Settings())
+
+
+@router.post(
+    "/google-sheets-research-sync/connection-test",
+    response_model=s.GoogleSheetsResearchConnectionTestRead,
+)
+def post_google_sheets_research_connection_test() -> s.GoogleSheetsResearchConnectionTestRead:
+    return check_research_sync_connection(Settings())
+
+
+@router.post(
+    "/google-sheets-research-sync/check",
+    response_model=s.GoogleSheetsResearchSyncCheckRead,
+)
+def post_google_sheets_research_sync_check(db: Db) -> s.GoogleSheetsResearchSyncCheckRead:
+    return run_research_sync_check(db, Settings())
+
+
+@router.get(
+    "/google-sheets-research-sync/runs",
+    response_model=list[s.GoogleSheetsResearchSyncRunRead],
+)
+def get_google_sheets_research_sync_runs(
+    db: Db, limit: Annotated[int, Query(ge=1, le=100)] = 25
+) -> list[s.GoogleSheetsResearchSyncRunRead]:
+    return list_research_sync_runs(db, limit)
+
+
+@router.get(
+    "/google-sheets-research-sync/candidates",
+    response_model=list[s.GoogleSheetsResearchCandidateRead],
+)
+def get_google_sheets_research_sync_candidates(
+    db: Db,
+    status: Annotated[
+        str | None,
+        Query(pattern="^(PENDING|READY|CONFLICT|INVALID|ACCEPTED|REJECTED)$"),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> list[s.GoogleSheetsResearchCandidateRead]:
+    return list_research_sync_candidates(db, status, limit)
+
+
+@router.post(
+    "/google-sheets-research-sync/candidates/{candidate_id}/preview",
+    response_model=s.GoogleSheetsResearchCandidateRead,
+)
+def post_google_sheets_research_candidate_preview(
+    candidate_id: UUID, db: Db
+) -> s.GoogleSheetsResearchCandidateRead:
+    return preview_research_candidate(db, candidate_id)
+
+
+@router.post(
+    "/google-sheets-research-sync/candidates/{candidate_id}/accept",
+    response_model=s.GoogleSheetsResearchCandidateRead,
+)
+def post_google_sheets_research_candidate_accept(
+    candidate_id: UUID, value: s.GoogleSheetsResearchSyncReviewRequest, db: Db
+) -> s.GoogleSheetsResearchCandidateRead:
+    return accept_research_candidate(db, candidate_id, value.reviewer, value.reviewer_note)
+
+
+@router.post(
+    "/google-sheets-research-sync/candidates/{candidate_id}/reject",
+    response_model=s.GoogleSheetsResearchCandidateRead,
+)
+def post_google_sheets_research_candidate_reject(
+    candidate_id: UUID, value: s.GoogleSheetsResearchSyncRejectRequest, db: Db
+) -> s.GoogleSheetsResearchCandidateRead:
+    return reject_research_candidate(db, candidate_id, value.reviewer, value.reviewer_note)
+
+
+@router.get("/google-sheets-sync/status", response_model=s.GoogleSheetsSyncStatusRead)
+def get_google_sheets_sync_status(db: Db) -> s.GoogleSheetsSyncStatusRead:
+    return google_sheets_status(db, Settings())
+
+
+@router.post(
+    "/google-sheets-sync/connection-test",
+    response_model=s.GoogleSheetsConnectionTestRead,
+)
+def post_google_sheets_connection_test() -> s.GoogleSheetsConnectionTestRead:
+    return test_google_sheets_connection(Settings())
+
+
+@router.post("/google-sheets-sync/check", response_model=s.GoogleSheetsSyncCheckRead)
+def post_google_sheets_sync_check(db: Db) -> s.GoogleSheetsSyncCheckRead:
+    return run_sync_check(db, Settings())
+
+
+@router.get("/google-sheets-risk-sync/status", response_model=s.GoogleSheetsRiskSyncStatusRead)
+def get_google_sheets_risk_sync_status(db: Db) -> s.GoogleSheetsRiskSyncStatusRead:
+    return risk_sync_status(db, Settings())
+
+
+@router.post(
+    "/google-sheets-risk-sync/connection-test",
+    response_model=s.GoogleSheetsConnectionTestRead,
+)
+def post_google_sheets_risk_connection_test() -> s.GoogleSheetsConnectionTestRead:
+    return test_risk_sync_connection(Settings())
+
+
+@router.post("/google-sheets-risk-sync/check", response_model=s.GoogleSheetsRiskSyncCheckRead)
+def post_google_sheets_risk_sync_check(db: Db) -> s.GoogleSheetsRiskSyncCheckRead:
+    return run_risk_sync_check(db, Settings())
+
+
+@router.get("/google-sheets-risk-sync/runs", response_model=list[s.GoogleSheetsRiskSyncRunRead])
+def get_google_sheets_risk_sync_runs(
+    db: Db, limit: Annotated[int, Query(ge=1, le=100)] = 25
+) -> list[s.GoogleSheetsRiskSyncRunRead]:
+    return list_risk_sync_runs(db, limit)
+
+
+@router.get(
+    "/google-sheets-risk-sync/candidates",
+    response_model=list[s.GoogleSheetsRiskCandidateRead],
+)
+def get_google_sheets_risk_sync_candidates(
+    db: Db,
+    status: Annotated[
+        str | None,
+        Query(pattern="^(PENDING|READY|STALE_BASELINE|CONFLICT|INVALID|ACCEPTED|REJECTED)$"),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> list[s.GoogleSheetsRiskCandidateRead]:
+    return list_risk_sync_candidates(db, status, limit)
+
+
+@router.post(
+    "/google-sheets-risk-sync/candidates/{candidate_id}/preview",
+    response_model=s.GoogleSheetsRiskCandidateRead,
+)
+def post_google_sheets_risk_candidate_preview(
+    candidate_id: UUID, db: Db
+) -> s.GoogleSheetsRiskCandidateRead:
+    return preview_risk_candidate(db, candidate_id)
+
+
+@router.post(
+    "/google-sheets-risk-sync/candidates/{candidate_id}/accept",
+    response_model=s.GoogleSheetsRiskCandidateRead,
+)
+def post_google_sheets_risk_candidate_accept(
+    candidate_id: UUID, value: s.GoogleSheetsRiskSyncReviewRequest, db: Db
+) -> s.GoogleSheetsRiskCandidateRead:
+    return accept_risk_candidate(
+        db,
+        candidate_id,
+        value.reviewer,
+        value.reviewer_note,
+        value.acknowledge_stale_baseline,
+    )
+
+
+@router.post(
+    "/google-sheets-risk-sync/candidates/{candidate_id}/reject",
+    response_model=s.GoogleSheetsRiskCandidateRead,
+)
+def post_google_sheets_risk_candidate_reject(
+    candidate_id: UUID, value: s.GoogleSheetsRiskSyncRejectRequest, db: Db
+) -> s.GoogleSheetsRiskCandidateRead:
+    return reject_risk_candidate(db, candidate_id, value.reviewer, value.reviewer_note)
+
+
+@router.post(
+    "/google-sheets-sync/portfolio-state/publish",
+    response_model=s.GoogleSheetsPortfolioStatePublishRead,
+)
+def post_google_sheets_portfolio_state_publish(
+    value: s.GoogleSheetsPortfolioStatePublishRequest, db: Db
+) -> s.GoogleSheetsPortfolioStatePublishRead | JSONResponse:
+    try:
+        result = publish_portfolio_state(db, value.portfolio_id, Settings())
+        response = s.GoogleSheetsPortfolioStatePublishRead.model_validate(result.__dict__)
+        record_portfolio_sheet_delivery(db, response)
+        return response
+    except PortfolioSheetPublishError as error:
+        record_sheet_delivery_failure(
+            db,
+            role="MODEL_ALLOCATION_STEWARD",
+            work_type="PORTFOLIO_STATE",
+            work_key=str(value.portfolio_id),
+            attempt_id=str(uuid4()),
+            reason=f"{error.code}: {error}",
+            fingerprint_source={"portfolio_id": str(value.portfolio_id)},
+        )
+        return JSONResponse(
+            status_code=error.status,
+            content={"detail": f"{error.code}: {error}"},
+        )
+
+
+@router.post(
+    "/google-sheets-sync/thesis-watch/publish",
+    response_model=s.GoogleSheetsThesisWatchPublishRead,
+)
+def post_google_sheets_thesis_watch_publish(
+    value: s.GoogleSheetsThesisWatchPublishRequest, db: Db
+) -> s.GoogleSheetsThesisWatchPublishRead | JSONResponse:
+    try:
+        result = publish_thesis_watch_feed(db, Settings(), limit=value.limit, offset=value.offset)
+        record_thesis_sheet_deliveries(db, result)
+        return result
+    except PortfolioSheetPublishError as error:
+        record_sheet_delivery_failure(
+            db,
+            role="PORTFOLIO_THESIS_SENTINEL",
+            work_type="TRIGGER",
+            work_key=f"THESIS_WATCH_FEED:{value.offset}:{value.limit}",
+            attempt_id=str(uuid4()),
+            reason=f"{error.code}: {error}",
+            fingerprint_source={"offset": value.offset, "limit": value.limit},
+        )
+        return JSONResponse(
+            status_code=error.status,
+            content={"detail": f"{error.code}: {error}"},
+        )
+
+
+@router.get("/google-sheets-sync/runs", response_model=list[s.GoogleSheetsSyncRunRead])
+def get_google_sheets_sync_runs(
+    db: Db, limit: Annotated[int, Query(ge=1, le=100)] = 25
+) -> list[s.GoogleSheetsSyncRunRead]:
+    return list_sync_runs(db, limit)
+
+
+@router.get(
+    "/google-sheets-sync/candidates",
+    response_model=list[s.GoogleSheetsSyncCandidateRead],
+)
+def get_google_sheets_sync_candidates(
+    db: Db,
+    status: Annotated[
+        str | None,
+        Query(pattern="^(PENDING|READY|CONFLICT|INVALID|NO_CHANGES|ACCEPTED|REJECTED)$"),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> list[s.GoogleSheetsSyncCandidateRead]:
+    return list_sync_candidates(db, status, limit)
+
+
+@router.post(
+    "/google-sheets-sync/candidates/{candidate_id}/preview",
+    response_model=s.GoogleSheetsSyncCandidateRead,
+)
+def post_google_sheets_candidate_preview(
+    candidate_id: UUID, db: Db
+) -> s.GoogleSheetsSyncCandidateRead:
+    return preview_sync_candidate(db, candidate_id)
+
+
+@router.post(
+    "/google-sheets-sync/candidates/{candidate_id}/accept",
+    response_model=s.GoogleSheetsSyncCandidateRead,
+)
+def post_google_sheets_candidate_accept(
+    candidate_id: UUID, value: s.GoogleSheetsSyncReviewRequest, db: Db
+) -> s.GoogleSheetsSyncCandidateRead:
+    return accept_sync_candidate(db, candidate_id, value.reviewer, value.decision_note)
+
+
+@router.post(
+    "/google-sheets-sync/candidates/{candidate_id}/reject",
+    response_model=s.GoogleSheetsSyncCandidateRead,
+)
+def post_google_sheets_candidate_reject(
+    candidate_id: UUID, value: s.GoogleSheetsSyncRejectRequest, db: Db
+) -> s.GoogleSheetsSyncCandidateRead:
+    return reject_sync_candidate(db, candidate_id, value.reviewer, value.decision_note)
+
+
+@router.get("/return-methodologies", response_model=s.ReturnMethodologiesRead)
+def get_return_methodologies(db: Db) -> s.ReturnMethodologiesRead:
+    definitions = list(
+        db.scalars(
+            select(ReturnMethodologyDefinition).order_by(
+                ReturnMethodologyDefinition.code, ReturnMethodologyDefinition.version
+            )
+        )
+    )
+    payload = methodology_payload()
+    return s.ReturnMethodologiesRead(
+        definitions=[s.ReturnMethodologyRead.model_validate(row) for row in definitions],
+        rules=[
+            s.ReturnComparabilityRuleRead.model_validate(item)
+            for item in cast(list[dict[str, str]], payload["rules"])
+        ],
+        currency_policy=str(payload["currency_policy"]),
+    )
+
+
 @router.get("/attention", response_model=s.AttentionFeedRead)
 def get_attention_feed(
     db: Db,
@@ -64,7 +457,7 @@ def get_attention_feed(
     event_type: Annotated[
         str | None,
         Query(
-            pattern="^(MODEL_REVISION|MODEL_OUTPUT_IMPORT|EXPECTED_IRR_CHANGE|CONSENSUS_REVISION|NEW_FILING|PRICE_MOVE|RANK_CHANGE|EXECUTION_PACE_CHANGE|DATA_QUALITY)$"
+            pattern="^(MODEL_REVISION|MODEL_OUTPUT_IMPORT|EXPECTED_IRR_CHANGE|CONSENSUS_REVISION|NEW_FILING|PRICE_MOVE|RANK_CHANGE|EXECUTION_PACE_CHANGE|DATA_QUALITY|RISK_ASSESSMENT)$"
         ),
     ] = None,
     lifecycle: Lifecycle | None = None,
@@ -119,6 +512,278 @@ def get_universe_ranking_summary(
 
 
 @router.get(
+    "/candidate-pipeline",
+    response_model=list[s.CandidatePipelineQueueEntry],
+)
+def get_candidate_pipeline(
+    db: Db, search: Annotated[str | None, Query(max_length=200)] = None
+) -> list[s.CandidatePipelineQueueEntry]:
+    return candidate_research.candidate_pipeline_queue(db, search)
+
+
+@router.get(
+    "/companies/{company_id}/candidate-pipeline",
+    response_model=s.CompanyCandidatePipelineRead,
+)
+def get_company_candidate_pipeline(company_id: UUID, db: Db) -> s.CompanyCandidatePipelineRead:
+    try:
+        return candidate_research.company_candidate_pipeline(db, company_id)
+    except operations.DomainError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.post(
+    "/companies/{company_id}/candidate-pipeline-revisions",
+    response_model=s.CandidatePipelinePublicationResult,
+    status_code=201,
+)
+def post_candidate_pipeline_revision(
+    company_id: UUID,
+    value: s.CandidatePipelineRevisionCreate,
+    db: Db,
+    response: Response,
+) -> s.CandidatePipelinePublicationResult:
+    try:
+        revision, result = candidate_research.record_candidate_pipeline_revision(
+            db, company_id, value
+        )
+        if result == "ALREADY_RECORDED":
+            response.status_code = 200
+        return s.CandidatePipelinePublicationResult(
+            result=result,
+            revision=candidate_research.revision_read(db, company_id, revision.id),
+        )
+    except operations.DomainError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.get("/research-queue", response_model=s.ResearchQueueRead)
+def get_research_review_queue(
+    db: Db,
+    lifecycle: Lifecycle | None = None,
+    search: Annotated[str | None, Query(max_length=200)] = None,
+    include_complete: bool = False,
+) -> s.ResearchQueueRead:
+    return get_research_queue(
+        db, lifecycle=lifecycle, search=search, include_complete=include_complete
+    )
+
+
+@router.get("/research-triggers", response_model=s.ResearchTriggerReadResult)
+def get_research_triggers(
+    db: Db,
+    as_of: datetime | None = None,
+    company_id: UUID | None = None,
+    trigger_type: ResearchTriggerType | None = None,
+    processing_state: Annotated[
+        str | None, Query(pattern="^(OPEN|REVIEWED|SUPERSEDED|STALE)$")
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0, le=5000)] = 0,
+) -> s.ResearchTriggerReadResult:
+    try:
+        cutoff = normalize_trigger_cutoff(as_of)
+        return list_research_triggers(
+            db,
+            as_of=cutoff,
+            company_id=company_id,
+            trigger_type=trigger_type,
+            processing_state=processing_state,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+
+
+@router.get(
+    "/research-triggers/{trigger_id}/context",
+    response_model=s.ResearchTriggerContextRead,
+)
+def get_research_trigger_context(trigger_id: UUID, db: Db) -> s.ResearchTriggerContextRead:
+    try:
+        return research_trigger_context(db, trigger_id)
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from None
+
+
+@router.post("/research-triggers/refresh", response_model=s.ResearchTriggerRefreshResult)
+def post_research_triggers_refresh(
+    db: Db,
+    as_of: datetime | None = None,
+    company_id: UUID | None = None,
+    lookback_days: Annotated[int, Query(ge=1, le=365)] = 30,
+) -> s.ResearchTriggerRefreshResult:
+    try:
+        cutoff = normalize_trigger_cutoff(as_of)
+        return refresh_research_triggers(
+            db,
+            as_of=cutoff,
+            lookback_days=lookback_days,
+            company_id=company_id,
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+
+
+@router.get("/research-queue/history", response_model=list[s.ResearchQueueCompletionRead])
+def get_research_review_history(
+    db: Db, limit: Annotated[int, Query(ge=1, le=500)] = 100
+) -> list[s.ResearchQueueCompletionRead]:
+    return research_queue_history(db, limit=limit)
+
+
+@router.post(
+    "/research-agent-operations/{agent_role}/work",
+    response_model=s.ResearchAgentWorkContractV1,
+)
+def post_research_agent_work(
+    agent_role: s.ResearchAgentRoleValue,
+    value: s.ResearchAgentWorkRequest,
+    db: Db,
+) -> s.ResearchAgentWorkContractV1:
+    try:
+        return deliver_agent_work(db, agent_role, value)
+    except ResearchAgentOperationError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.post(
+    "/google-sheets-agent-operations/{agent_role}/work/publish",
+    response_model=s.GoogleSheetsAgentWorkPublishRead,
+)
+def post_google_sheets_agent_work_publish(
+    agent_role: s.ResearchAgentRoleValue,
+    value: s.GoogleSheetsAgentWorkPublishRequest,
+    db: Db,
+) -> s.GoogleSheetsAgentWorkPublishRead | JSONResponse:
+    work_request = s.ResearchAgentWorkRequest(
+        as_of=value.as_of,
+        limit=value.limit,
+        offset=value.offset,
+        portfolio_id=value.portfolio_id,
+    )
+    try:
+        work = deliver_agent_work(db, agent_role, work_request, channel="GOOGLE_SHEETS")
+        result = publish_agent_work_feed(db, work, Settings())
+        if result.read_back_verified:
+            record_sheet_agent_work_deliveries(db, work, result.published_at)
+        return result
+    except PortfolioSheetPublishError as error:
+        for item in work.items:
+            record_delivery_failure(
+                db,
+                role=work.agent_role,
+                work_type=item.work_type,
+                work_key=item.work_key,
+                fingerprint=item.work_fingerprint,
+                attempt_id=str(uuid4()),
+                channel="GOOGLE_SHEETS",
+                reason=f"{error.code}: {error}",
+            )
+        return JSONResponse(
+            status_code=error.status,
+            content={"detail": f"{error.code}: {error}"},
+        )
+    except ResearchAgentOperationError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.post(
+    "/research-agent-operations/acknowledgments",
+    response_model=s.ResearchAgentAcknowledgmentResult,
+)
+def post_research_agent_acknowledgment(
+    value: s.ResearchAgentAcknowledgmentContractV1, db: Db
+) -> s.ResearchAgentAcknowledgmentResult:
+    try:
+        return record_agent_acknowledgment(db, value)
+    except ResearchAgentOperationError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.post(
+    "/research-agent-operations/delivery-failures",
+    response_model=s.ResearchAgentDeliveryFailureResult,
+)
+def post_research_agent_delivery_failure(
+    value: s.ResearchAgentDeliveryFailure, db: Db
+) -> s.ResearchAgentDeliveryFailureResult:
+    try:
+        event, result = record_delivery_failure(
+            db,
+            role=value.agent_role,
+            work_type=value.work_type,
+            work_key=value.work_key,
+            fingerprint=value.work_fingerprint,
+            attempt_id=value.attempt_id,
+            channel=value.channel,
+            reason=value.reason,
+            observed_at=value.observed_at,
+        )
+        return s.ResearchAgentDeliveryFailureResult(result=result, event=work_event_read(event))
+    except ResearchAgentOperationError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.get(
+    "/research-agent-operations/events",
+    response_model=list[s.ResearchAgentWorkEventRead],
+)
+def get_research_agent_events(
+    db: Db,
+    agent_role: str | None = None,
+    work_key: Annotated[str | None, Query(max_length=500)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> list[s.ResearchAgentWorkEventRead]:
+    try:
+        return list_agent_events(db, role=agent_role, work_key=work_key, limit=limit)
+    except ResearchAgentOperationError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.get(
+    "/research-agent-operations/proposals/{proposal_domain}/{candidate_id}",
+    response_model=s.ResearchAgentProposalStatusRead,
+)
+def get_research_agent_proposal_status(
+    proposal_domain: s.ResearchAgentProposalDomain,
+    candidate_id: UUID,
+    db: Db,
+) -> s.ResearchAgentProposalStatusRead:
+    try:
+        return proposal_status(db, proposal_domain, candidate_id)
+    except ResearchAgentOperationError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.post(
+    "/google-sheets-agent-operations/check",
+    response_model=s.ResearchAgentAcknowledgmentSyncRead,
+)
+def post_google_sheets_agent_acknowledgment_check(
+    db: Db,
+) -> s.ResearchAgentAcknowledgmentSyncRead:
+    return run_acknowledgment_inbox_check(db, Settings())
+
+
+@router.post(
+    "/research-queue/{task_id}/complete",
+    response_model=s.ResearchQueueCompletionResult,
+)
+def post_research_queue_completion(
+    task_id: Annotated[str, Path(pattern=r"^[0-9a-f]{64}$")],
+    value: s.ResearchQueueCompletionCreate,
+    db: Db,
+) -> s.ResearchQueueCompletionResult:
+    try:
+        task, result = complete_research_queue_task(db, task_id, value)
+        return s.ResearchQueueCompletionResult(result=result, task=task)
+    except operations.DomainError as error:
+        raise HTTPException(error.status, error.detail) from None
+
+
+@router.get(
     "/universe/execution-pace-summary",
     response_model=list[s.UniverseExecutionPaceSummary],
 )
@@ -140,6 +805,84 @@ def get_universe_market_summary(
 ) -> list[s.UniverseMarketSummary]:
     _validate_market_cutoffs(as_of, known_at)
     return q.universe_market_summary(db, lifecycle, search, as_of, known_at)
+
+
+@router.get("/market-data/status", response_model=s.MarketRefreshStatusRead)
+def get_market_refresh_status(db: Db) -> s.MarketRefreshStatusRead:
+    return q.market_refresh_status(db)
+
+
+@router.get(
+    "/recurring-operations/status",
+    response_model=s.RecurringOperationsStatusRead,
+)
+def get_recurring_operations_status(request: Request, db: Db) -> s.RecurringOperationsStatusRead:
+    settings = cast(Settings, request.app.state.settings)
+    return recurring_operations_status(db, settings)
+
+
+@router.get("/operations/job-requests", response_model=list[s.OperationalJobRequestRead])
+def get_operational_job_requests(
+    db: Db,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> list[s.OperationalJobRequestRead]:
+    return list_job_requests(db, limit)
+
+
+@router.get("/operations/job-requests/{request_id}", response_model=s.OperationalJobRequestRead)
+def get_operational_job_request(request_id: UUID, db: Db) -> s.OperationalJobRequestRead:
+    request = db.get(OperationalJobRequest, request_id)
+    if request is None:
+        raise HTTPException(404, "Operational job request was not found.")
+    return job_request_read(db, request)
+
+
+@router.post(
+    "/operations/job-requests",
+    response_model=s.OperationalJobRequestRead,
+    status_code=202,
+)
+def post_operational_job_request(
+    request: Request,
+    value: s.OperationalJobRequestCreate,
+    db: Db,
+) -> s.OperationalJobRequestRead:
+    settings = cast(Settings, request.app.state.settings)
+    if not settings.recurring_operations_enabled:
+        raise HTTPException(
+            503,
+            "The background operations worker is disabled; no refresh request was queued.",
+        )
+    try:
+        job_request, deduplicated = create_job_request(db, value)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+    return job_request_read(db, job_request, deduplicated=deduplicated)
+
+
+@router.post(
+    "/operations/job-requests/{request_id}/retry",
+    response_model=s.OperationalJobRequestRead,
+    status_code=202,
+)
+def post_operational_job_request_retry(
+    request: Request,
+    request_id: UUID,
+    db: Db,
+) -> s.OperationalJobRequestRead:
+    settings = cast(Settings, request.app.state.settings)
+    if not settings.recurring_operations_enabled:
+        raise HTTPException(
+            503,
+            "The background operations worker is disabled; no retry was queued.",
+        )
+    try:
+        job_request = retry_job_request(db, request_id)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from None
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from None
+    return job_request_read(db, job_request)
 
 
 @router.get(
@@ -266,6 +1009,90 @@ def get_company(company_id: UUID, db: Db) -> s.CompanyDetail:
     return q.detail(db, company_id)
 
 
+@router.get("/companies/{company_id}/research", response_model=s.CompanyResearchRead)
+def get_company_research(
+    company_id: UUID,
+    db: Db,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyResearchRead:
+    _validate_market_cutoffs(as_of, known_at)
+    if as_of is not None and known_at is not None:
+        cutoff = datetime.combine(as_of, time.max, UTC)
+        if known_at.astimezone(UTC) > cutoff:
+            raise HTTPException(422, "known_at cannot be later than the as_of cutoff")
+    return company_research(db, company_id, as_of, known_at)
+
+
+@router.post("/research-revisions", response_model=s.ResearchPublicationResult, status_code=201)
+def post_research_revision(
+    value: s.ResearchRevisionPublishContract,
+    db: Db,
+    response: Response,
+) -> s.ResearchPublicationResult:
+    revision, result = publish_research_revision(db, value)
+    if result == "ALREADY_PUBLISHED":
+        response.status_code = 200
+    return s.ResearchPublicationResult(
+        result=result,
+        revision=research_revision_read(db, revision),
+    )
+
+
+@router.get("/companies/{company_id}/thesis", response_model=s.CompanyInvestmentThesisRead)
+def get_company_investment_thesis(
+    company_id: UUID,
+    db: Db,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyInvestmentThesisRead:
+    _validate_market_cutoffs(as_of, known_at)
+    if as_of is not None and known_at is not None:
+        cutoff = datetime.combine(as_of, time.max, UTC)
+        if known_at.astimezone(UTC) > cutoff:
+            raise HTTPException(422, "known_at cannot be later than the as_of cutoff")
+    return company_investment_thesis(db, company_id, as_of, known_at)
+
+
+@router.get(
+    "/companies/{company_id}/risk-assessments",
+    response_model=s.CompanyRiskAssessmentsRead,
+)
+def get_company_risk_assessments(
+    company_id: UUID, db: Db, limit: Annotated[int, Query(ge=1, le=100)] = 50
+) -> s.CompanyRiskAssessmentsRead:
+    return company_risk_assessments(db, company_id, limit)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/risk-assessments",
+    response_model=s.PortfolioRiskAssessmentsRead,
+)
+def get_portfolio_risk_assessments(
+    portfolio_id: UUID, db: Db, limit: Annotated[int, Query(ge=1, le=100)] = 50
+) -> s.PortfolioRiskAssessmentsRead:
+    return portfolio_risk_assessments(db, portfolio_id, limit)
+
+
+@router.post(
+    "/investment-thesis-revisions",
+    response_model=s.InvestmentThesisPublicationResult,
+    status_code=201,
+)
+def post_investment_thesis_revision(
+    value: s.InvestmentThesisRevisionPublishContract,
+    db: Db,
+    response: Response,
+) -> s.InvestmentThesisPublicationResult:
+    revision, result = publish_investment_thesis_revision(db, value)
+    if result == "ALREADY_PUBLISHED":
+        response.status_code = 200
+    return s.InvestmentThesisPublicationResult(
+        result=result,
+        revision=thesis_revision_read(db, revision),
+    )
+
+
 @router.get("/companies/{company_id}/market-data", response_model=list[s.ListingMarketData])
 def get_company_market_data(
     company_id: UUID,
@@ -308,6 +1135,29 @@ def get_reported_fundamental_definitions() -> list[s.ReportedFundamentalDefiniti
         )
     )
     return definitions
+
+
+@router.get(
+    "/companies/{company_id}/financial-statements",
+    response_model=s.CompanyFinancialStatementsRead,
+)
+def get_company_financial_statements(
+    company_id: UUID,
+    db: Db,
+    period_type: Literal["ANNUAL", "QUARTERLY"] = "ANNUAL",
+    period_limit: Annotated[int, Query(ge=1, le=40)] = 10,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> s.CompanyFinancialStatementsRead:
+    _validate_market_cutoffs(as_of, known_at)
+    return company_financial_statements(
+        db,
+        company_id,
+        period_type=period_type,
+        period_limit=period_limit,
+        as_of=as_of,
+        known_at=known_at,
+    )
 
 
 @router.get(
@@ -409,6 +1259,66 @@ def get_company_temporal_alignment(
         outcome_known_at=outcome_known_at,
         horizon_days=horizon_days,
     )
+
+
+@router.get(
+    "/companies/{company_id}/forecast-accuracy",
+    response_model=s.CompanyForecastAccuracyRead,
+)
+def get_company_forecast_accuracy(
+    company_id: UUID,
+    db: Db,
+    metric: ForecastAccuracyMetric | None = None,
+    source: ForecastAccuracySourceType | None = None,
+    period_type: ResearchPeriodType | None = None,
+    fiscal_year: Annotated[int | None, Query(ge=1800, le=2200)] = None,
+    fiscal_period: Annotated[str | None, Query(max_length=8)] = None,
+    outcome_known_at: datetime | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> s.CompanyForecastAccuracyRead:
+    if outcome_known_at is not None and (
+        outcome_known_at.tzinfo is None or outcome_known_at.utcoffset() is None
+    ):
+        raise HTTPException(422, "outcome_known_at must include a timezone offset")
+    try:
+        return company_forecast_accuracy(
+            db,
+            company_id,
+            metric=metric,
+            source=source,
+            period_type=period_type.value if period_type else None,
+            fiscal_year=fiscal_year,
+            fiscal_period=fiscal_period,
+            outcome_known_at=outcome_known_at,
+            limit=limit,
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+
+
+@router.get(
+    "/companies/{company_id}/decision-evaluation",
+    response_model=s.CompanyDecisionEvaluationRead,
+)
+def get_company_decision_evaluation(
+    company_id: UUID,
+    db: Db,
+    outcome_known_at: datetime | None = None,
+    horizons_days: Annotated[list[int] | None, Query(max_length=3)] = None,
+) -> s.CompanyDecisionEvaluationRead:
+    if outcome_known_at is not None and (
+        outcome_known_at.tzinfo is None or outcome_known_at.utcoffset() is None
+    ):
+        raise HTTPException(422, "outcome_known_at must include a timezone offset")
+    try:
+        return company_decision_evaluation(
+            db,
+            company_id,
+            outcome_known_at=outcome_known_at,
+            horizons_days=horizons_days,
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
 
 
 @router.get(
@@ -799,8 +1709,15 @@ def post_portfolio(value: s.PortfolioCreate, db: Db) -> s.PortfolioRead:
 
 
 @router.get("/portfolios/{portfolio_id}/overview", response_model=s.PortfolioOverview)
-def get_overview(portfolio_id: UUID, db: Db) -> s.PortfolioOverview:
-    return q.overview(db, portfolio_id)
+def get_overview(
+    portfolio_id: UUID,
+    db: Db,
+    as_of: Annotated[
+        datetime | None, Query(description="Historical valuation and knowledge cutoff")
+    ] = None,
+) -> s.PortfolioOverview:
+    _validate_market_cutoffs(as_of, None)
+    return q.overview(db, portfolio_id, as_of)
 
 
 @router.get("/portfolios/{portfolio_id}/holding-snapshots", response_model=list[s.SnapshotRead])

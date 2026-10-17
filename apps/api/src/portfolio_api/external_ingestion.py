@@ -286,22 +286,31 @@ def _scope_for_domain(
     start_date: date | None,
     end_date: date,
     lookback_days: int,
+    company_ids: set[UUID] | None = None,
 ) -> dict[str, Any]:
     if domain in {
         ExternalDataDomain.FX,
         ExternalDataDomain.MARKET_DATA,
         ExternalDataDomain.CORPORATE_ACTIONS,
     }:
-        selected, _held_ids = active_market_listings(session)
+        selected, _held_ids = active_market_listings(session, company_ids)
         scope: dict[str, Any] = {
-            "scope": "active",
+            "scope": "company" if company_ids is not None else "active",
             "start_date": start_date.isoformat() if start_date else None,
             "end_date": end_date.isoformat(),
             "lookback_days": lookback_days,
         }
+        if company_ids is not None:
+            scope["company_ids"] = [str(item) for item in sorted(company_ids, key=str)]
         if domain == ExternalDataDomain.FX:
             base_currency, required_fx_pairs = portfolio_fx_requirements(session)
-            if ("TWD", "EUR") in FX_SYMBOLS:
+            if company_ids is not None:
+                required_fx_pairs = {
+                    (listing.currency, base_currency)
+                    for listing, _security, _company in selected
+                    if base_currency and listing.currency and listing.currency != base_currency
+                }
+            if company_ids is None and ("TWD", "EUR") in FX_SYMBOLS:
                 required_fx_pairs.add(("TWD", "EUR"))
             crosswalk = load_yahoo_crosswalk(CROSSWALK_PATH)
             if base_currency is not None:
@@ -327,20 +336,23 @@ def _scope_for_domain(
             ]
         return scope
     states = active_company_states(session)
-    company_ids = _company_order(states)
+    if company_ids is not None:
+        states = {key: value for key, value in states.items() if key in company_ids}
+    scoped_company_ids = _company_order(states)
     company_scope: dict[str, Any] = {
-        "company_ids": [str(item) for item in company_ids],
+        "scope": "company" if company_ids is not None else "active",
+        "company_ids": [str(item) for item in scoped_company_ids],
         "company_states": [
             {"company_id": str(company_id), "lifecycle": states[company_id]}
-            for company_id in company_ids
+            for company_id in scoped_company_ids
         ],
         "lifecycle_counts": _lifecycle_counts(states),
     }
     if domain in {ExternalDataDomain.REPORTED_FUNDAMENTALS, ExternalDataDomain.SOURCE_DOCUMENTS}:
-        company_scope["verified_cik_mappings"] = _sec_mapping_scope(session, company_ids)
+        company_scope["verified_cik_mappings"] = _sec_mapping_scope(session, scoped_company_ids)
     elif domain == ExternalDataDomain.CONSENSUS_ESTIMATES:
         company_scope["fmp_mapping_ids"] = [
-            str(item.id) for item in _fmp_mappings(session, company_ids)
+            str(item.id) for item in _fmp_mappings(session, scoped_company_ids)
         ]
     return company_scope
 
@@ -1084,6 +1096,7 @@ def _yahoo_operation(
     lookback_days: int,
     corporate_action_overlap_days: int,
     listing_keys: set[tuple[str, str]] | None,
+    company_ids: set[UUID] | None,
     fx_pairs: set[tuple[str, str]] | None,
 ) -> dict[ExternalDataDomain, DomainOutcome]:
     crosswalk = load_yahoo_crosswalk(crosswalk_path)
@@ -1096,8 +1109,10 @@ def _yahoo_operation(
             end_date=end_date,
             start_date=start_date,
             lookback_days=lookback_days,
+            scope="company" if company_ids is not None else "active",
             corporate_action_overlap_days=corporate_action_overlap_days,
             listing_keys=listing_keys,
+            company_ids=company_ids,
             fx_pairs=fx_pairs,
         )
     )
@@ -1138,6 +1153,8 @@ def run_scheduled(
     replay_of_run_id: UUID | None = None,
     replay_scope: dict[str, Any] | None = None,
     fx_pair_filter: set[tuple[str, str]] | None = None,
+    company_ids: set[UUID] | None = None,
+    request_nonce: UUID | None = None,
     run_date: date | None = None,
     yahoo_crosswalk_path: Any = CROSSWALK_PATH,
 ) -> dict[str, Any]:
@@ -1169,6 +1186,7 @@ def run_scheduled(
                 start_date=start_date,
                 end_date=end_date,
                 lookback_days=lookback_days,
+                company_ids=company_ids,
             )
         )
         if domain == ExternalDataDomain.FX and fx_pair_filter is not None:
@@ -1179,7 +1197,7 @@ def run_scheduled(
             domain,
             scope,
             run_date=run_date,
-            replay_nonce=replay_of_run_id,
+            replay_nonce=request_nonce or replay_of_run_id,
             replay_of_run_id=replay_of_run_id,
         )
         if claim.created:
@@ -1216,6 +1234,12 @@ def run_scheduled(
             and isinstance(item[0], str)
             and isinstance(item[1], str)
         }
+        raw_company_ids = market_scope.get("company_ids")
+        scoped_company_ids = (
+            {UUID(item) for item in raw_company_ids if isinstance(item, str)}
+            if isinstance(raw_company_ids, list)
+            else company_ids
+        )
         if replay_of_run_id is not None and replay_scope is not None:
             start_value = replay_scope.get("start_date")
             end_value = replay_scope.get("end_date")
@@ -1235,6 +1259,7 @@ def run_scheduled(
                 lookback_days=lookback_days,
                 corporate_action_overlap_days=corporate_action_overlap_days,
                 listing_keys=listing_keys,
+                company_ids=scoped_company_ids,
                 fx_pairs=fx_pairs,
             )
 
@@ -1247,6 +1272,12 @@ def run_scheduled(
         if states is None:
             states = active_company_states(session)
         state_snapshot = dict(states)
+        if company_ids is not None:
+            state_snapshot = {
+                company_id: lifecycle
+                for company_id, lifecycle in state_snapshot.items()
+                if company_id in company_ids
+            }
         mapping_ids = None
         mapping_scope = None
         if replay_scope is not None and domain in {
@@ -1294,9 +1325,12 @@ def run_scheduled(
                 start_date=start_date,
                 end_date=end_date,
                 lookback_days=lookback_days,
+                company_ids=company_ids,
             )
         )
-        key = _idempotency_key(PROVIDERS[domain], domain, scope, run_date, replay_of_run_id)
+        key = _idempotency_key(
+            PROVIDERS[domain], domain, scope, run_date, request_nonce or replay_of_run_id
+        )
         existing = session.scalar(
             select(ExternalIngestionRun).where(ExternalIngestionRun.idempotency_key == key)
         )

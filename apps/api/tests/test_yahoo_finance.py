@@ -171,12 +171,45 @@ def test_checked_in_crosswalk_covers_exact_held_listing_identities() -> None:
         security_type="ETF",
     )
 
-    assert len(crosswalk.mappings) == 84
+    assert len(crosswalk.mappings) == 94
     assert {item.currency for item in crosswalk.mappings} - {"EUR"} <= {
         base for base, quote in FX_SYMBOLS if quote == "EUR"
     }
     assert held_tsm is not None and held_tsm.provider_symbol == "TSM"
     assert held_spyy is not None and held_spyy.provider_symbol == "SPYY.DE"
+
+
+def test_reviewed_watchlist_listing_gap_crosswalk_is_primary_source_linked() -> None:
+    from portfolio_api.market_data_ingestion import CROSSWALK_PATH
+
+    crosswalk = load_yahoo_crosswalk(CROSSWALK_PATH)
+    expected = {
+        ("SWX", "ACLN", "CHF", "ACLN.SW"),
+        ("STO", "BONEX", "SEK", "BONEX.ST"),
+        ("PAR", "EXENS", "EUR", "EXENS.PA"),
+        ("NYSE", "FN", "USD", "FN"),
+        ("STO", "IVSO", "SEK", "IVSO.ST"),
+        ("OSL", "MEDI", "NOK", "MEDI.OL"),
+        ("NASDAQ", "META", "USD", "META"),
+        ("NASDAQ", "NVMI", "USD", "NVMI"),
+        ("ETR", "RHM", "EUR", "RHM.DE"),
+        ("ETR", "V1NC", "EUR", "V1NC.DE"),
+    }
+    resolved = {
+        (item.venue, item.ticker, item.currency, item.provider_symbol): item
+        for item in crosswalk.mappings
+        if item.identity_status == "READY_FOR_CANONICAL_IMPORT"
+    }
+
+    assert expected <= resolved.keys()
+    for identity in expected:
+        item = resolved[identity]
+        assert item.verification_status == "VERIFIED"
+        assert item.canonical_company_id is not None
+        assert item.canonical_security_id is not None
+        assert item.canonical_listing_id is not None
+        assert item.identity_source_ref is not None
+        assert item.identity_source_ref.startswith("https://")
 
 
 def test_raw_batch_identity_can_be_reprocessed_under_a_new_normalizer_version() -> None:
@@ -210,6 +243,9 @@ def test_yahoo_normalizer_keeps_price_bases_dividends_and_splits_distinct() -> N
     facts = result.observation
     assert facts is not None
     assert len(facts.prices) == 2
+    # Yahoo's daily-bar timestamp identifies the exchange session, not when
+    # that historical value first became available from the provider.
+    assert all(item.observed_at is None for item in facts.prices)
     assert facts.prices[0].provider_close == Decimal("200.5")
     assert facts.prices[0].split_adjusted_close == Decimal("200.5")
     assert facts.prices[0].total_return_close == Decimal("190.25")
@@ -347,8 +383,9 @@ def test_yahoo_fx_pair_is_explicit_and_uses_quote_currency_units() -> None:
     assert FX_SYMBOLS[("CHF", "EUR")] == "CHFEUR=X"
     assert FX_SYMBOLS[("GBP", "EUR")] == "GBPEUR=X"
     assert FX_SYMBOLS[("JPY", "EUR")] == "JPYEUR=X"
+    assert FX_SYMBOLS[("NOK", "EUR")] == "NOKEUR=X"
     assert FX_SYMBOLS[("SEK", "EUR")] == "SEKEUR=X"
-    assert FX_SYMBOLS[("TWD", "EUR")] == "TWDEUR=X"
+    assert FX_SYMBOLS[("TWD", "EUR")] == "EURTWD=X"
     payload = {
         "chart": {
             "result": [
@@ -388,6 +425,181 @@ def test_yahoo_fx_pair_is_explicit_and_uses_quote_currency_units() -> None:
     assert facts.observations[0].effective_at.date() == date(2026, 10, 2)
     assert facts.observations[-1].is_current_quote
     assert facts.observations[-1].rate == Decimal("0.9")
+
+
+def test_yahoo_nok_eur_cross_is_direct_and_preserves_pair_direction() -> None:
+    payload = {
+        "chart": {
+            "result": [
+                {
+                    "meta": {
+                        "symbol": "NOKEUR=X",
+                        "currency": "EUR",
+                        "instrumentType": "CURRENCY",
+                    },
+                    "timestamp": [int(datetime(2026, 10, 2, tzinfo=UTC).timestamp())],
+                    "indicators": {"quote": [{"close": [0.084]}]},
+                }
+            ],
+            "error": None,
+        }
+    }
+    record = raw_record(
+        json.dumps(payload).encode(),
+        domain=ExternalDataDomain.FX,
+        source_record_id="FX:NOK/EUR",
+    )
+
+    result = YahooFxNormalizer().normalize(record)
+
+    assert result.disposition == NormalizationDisposition.ACCEPTED
+    facts = result.observation
+    assert facts is not None
+    assert (facts.base_currency, facts.quote_currency) == ("NOK", "EUR")
+    assert facts.observations[0].provider_symbol == "NOKEUR=X"
+    assert facts.observations[0].provider_base_currency == "NOK"
+    assert facts.observations[0].provider_quote_currency == "EUR"
+    assert facts.observations[0].rate == Decimal("0.084")
+
+
+def test_yahoo_fx_inverts_only_the_verified_reverse_currency_cross() -> None:
+    timestamps = [
+        int(datetime(2026, 10, 2, tzinfo=UTC).timestamp()),
+        int(datetime(2026, 10, 5, tzinfo=UTC).timestamp()),
+    ]
+    payload = {
+        "chart": {
+            "result": [
+                {
+                    "meta": {
+                        "symbol": "EURTWD=X",
+                        "currency": "TWD",
+                        "exchangeName": "CCY",
+                        "instrumentType": "CURRENCY",
+                        "regularMarketPrice": 31.25,
+                        "regularMarketTime": int(datetime(2026, 10, 5, 18, tzinfo=UTC).timestamp()),
+                    },
+                    "timestamp": timestamps,
+                    "indicators": {
+                        "quote": [{"close": [32.0, 31.5], "volume": [None, None]}],
+                        "adjclose": [{"adjclose": [32.0, 31.5]}],
+                    },
+                }
+            ],
+            "error": None,
+        }
+    }
+    record = raw_record(
+        json.dumps(payload).encode(),
+        domain=ExternalDataDomain.FX,
+        source_record_id="FX:TWD/EUR",
+    )
+
+    result = YahooFxNormalizer().normalize(record)
+
+    assert result.disposition == NormalizationDisposition.ACCEPTED
+    facts = result.observation
+    assert facts is not None
+    assert (facts.base_currency, facts.quote_currency) == ("TWD", "EUR")
+    assert facts.provider_symbol == "EURTWD=X"
+    assert (
+        facts.observations[0].provider_base_currency,
+        facts.observations[0].provider_quote_currency,
+    ) == ("EUR", "TWD")
+    assert facts.observations[0].inverted is True
+    assert facts.observations[0].rate == Decimal("0.03125")
+    assert facts.observations[-1].rate == Decimal("0.032")
+
+
+def test_yahoo_fx_inverse_still_requires_exact_provider_symbol_and_currency() -> None:
+    payload = {
+        "chart": {
+            "result": [
+                {
+                    "meta": {
+                        "symbol": "EURTWD=X",
+                        "currency": "USD",
+                        "exchangeName": "CCY",
+                        "instrumentType": "CURRENCY",
+                    },
+                    "timestamp": [int(datetime(2026, 10, 2, tzinfo=UTC).timestamp())],
+                    "indicators": {"quote": [{"close": [32.0]}]},
+                }
+            ],
+            "error": None,
+        }
+    }
+    record = raw_record(
+        json.dumps(payload).encode(),
+        domain=ExternalDataDomain.FX,
+        source_record_id="FX:TWD/EUR",
+    )
+
+    result = YahooFxNormalizer().normalize(record)
+
+    assert result.disposition == NormalizationDisposition.REJECTED
+    assert result.issues[0].code == "FX_QUOTE_CURRENCY_MISMATCH"
+
+
+def test_provider_resolves_twd_eur_to_the_exact_historical_reverse_cross(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requested_urls: list[str] = []
+
+    def transport(url: str) -> bytes:
+        requested_urls.append(url)
+        return json.dumps(
+            {
+                "chart": {
+                    "result": [
+                        {
+                            "meta": {
+                                "symbol": "EURTWD=X",
+                                "currency": "TWD",
+                                "instrumentType": "CURRENCY",
+                            },
+                            "timestamp": [int(datetime(2026, 10, 2, tzinfo=UTC).timestamp())],
+                            "indicators": {"quote": [{"close": [32.0]}]},
+                        }
+                    ],
+                    "error": None,
+                }
+            }
+        ).encode()
+
+    async def to_thread(function: Any, *args: Any, **kwargs: Any) -> Any:
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr("portfolio_api.yahoo_finance.asyncio.to_thread", to_thread)
+    crosswalk = YahooListingCrosswalk(
+        provider_id="YAHOO_FINANCE",
+        provider_schema_version="yahoo-chart-v8",
+        verified_at=RETRIEVED_AT,
+        mappings=(),
+    )
+    provider = YahooFinanceProvider(crosswalk, transport=transport, retries=0)
+    query = ProviderQuery(
+        domain=ExternalDataDomain.FX,
+        subjects=(
+            CanonicalSubjectRef(
+                kind=CanonicalSubjectKind.CURRENCY_PAIR,
+                base_currency="TWD",
+                quote_currency="EUR",
+            ),
+        ),
+        start_date=date(2016, 10, 6),
+        end_date=date(2026, 10, 10),
+        requested_at=RETRIEVED_AT,
+    )
+
+    records = asyncio.run(provider.fetch(query))
+
+    assert len(records) == 1
+    assert "/EURTWD=X?" in requested_urls[0]
+    normalized = YahooFxNormalizer().normalize(records[0])
+    assert normalized.disposition == NormalizationDisposition.ACCEPTED
+    assert normalized.observation is not None
+    assert normalized.observation.observations[0].rate == Decimal("0.03125")
 
 
 def test_provider_fetch_uses_bound_listing_and_inclusive_dates(

@@ -14,6 +14,9 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services as ops
 from portfolio_api.domain.models import (
     Company,
+    DcfModelAssumptions,
+    DcfScenarioAssumptions,
+    DcfYearAssumption,
     FinancialModel,
     FinancialModelOutput,
     FinancialModelRevision,
@@ -30,6 +33,11 @@ from portfolio_api.domain.models import (
     Security,
 )
 from portfolio_api.domain.seed import seed
+from portfolio_api.return_semantics import (
+    DEFINITION_ID_BY_CODE,
+    OWNER_CASH_FLOW_EQUITY_IRR,
+    UFCF_ENTERPRISE_IRR,
+)
 from portfolio_api.watchlist_ranking import expected_irr_positions
 
 
@@ -113,6 +121,7 @@ def _add_legacy_output(
     ticker: str,
     expected_irr: Decimal | None,
     recorded_at: datetime,
+    methodology_code: str = UFCF_ENTERPRISE_IRR,
 ) -> None:
     fingerprint = sha256(f"fixture:{ticker}".encode()).hexdigest()
     session.add(
@@ -129,6 +138,8 @@ def _add_legacy_output(
             model_currency="USD",
             currency_status="DOCUMENTED",
             currency_source_ref="fixture:model-currency",
+            return_methodology_id=DEFINITION_ID_BY_CODE[methodology_code],
+            return_methodology_status="CLASSIFIED",
             model_status="Current output",
             effective_at=recorded_at - timedelta(days=1),
             recorded_at=recorded_at,
@@ -222,6 +233,7 @@ def _add_native_output(
     session.add(revision)
     session.flush()
     model.current_revision_id = revision.id
+    _add_dcf_revision_inputs(session, revision.id)
     session.add(
         FinancialModelOutput(
             revision_id=revision.id,
@@ -248,6 +260,52 @@ def _add_native_output(
     session.flush()
 
 
+def _add_dcf_revision_inputs(session: Session, revision_id: UUID) -> None:
+    session.add(
+        DcfModelAssumptions(
+            revision_id=revision_id,
+            base_revenue=Decimal("100"),
+            base_ebit_margin=Decimal("0.20"),
+            base_tax_rate=Decimal("0.25"),
+            base_da_to_revenue=Decimal("0.03"),
+            base_capex_to_revenue=Decimal("0.02"),
+            base_nwc_to_revenue=Decimal("0.04"),
+            net_cash_debt=Decimal("-5"),
+            diluted_shares=Decimal("10"),
+        )
+    )
+    for scenario, probability, terminal_growth, final_growth, initial_growth in (
+        ("BEAR", "0.20", "0.02", "0.02", "0.08"),
+        ("BASE", "0.60", "0.025", "0.04", "0.12"),
+        ("BULL", "0.20", "0.03", "0.06", "0.16"),
+    ):
+        scenario_row = DcfScenarioAssumptions(
+            revision_id=revision_id,
+            scenario=scenario,
+            probability=Decimal(probability),
+            terminal_growth=Decimal(terminal_growth),
+            year10_ufcf_growth=Decimal(final_growth),
+            rationale=f"{scenario} test assumptions.",
+        )
+        session.add(scenario_row)
+        session.flush()
+        for year in range(1, 6):
+            session.add(
+                DcfYearAssumption(
+                    scenario_id=scenario_row.id,
+                    forecast_year=year,
+                    revenue_growth=Decimal(initial_growth) - Decimal(year - 1) / 100,
+                    ebit_margin=Decimal("0.20"),
+                    tax_rate=Decimal("0.25"),
+                    da_to_revenue=Decimal("0.03"),
+                    capex_to_revenue=Decimal("0.02"),
+                    nwc_to_revenue=Decimal("0.04"),
+                    discount_rate=Decimal("0.10"),
+                )
+            )
+    session.flush()
+
+
 @pytest.mark.integration
 def test_watchlist_run_ranks_only_explicit_members_and_snapshots_inputs(
     postgres_engine: Engine,
@@ -270,6 +328,19 @@ def test_watchlist_run_ranks_only_explicit_members_and_snapshots_inputs(
         _add_legacy_output(db, batch, cedar, "CDRN", Decimal("0.15"), batch_time)
         _add_legacy_output(db, batch, alpha, "AAA", Decimal("0.15"), batch_time)
         _add_legacy_output(db, batch, missing, "MIS", None, batch_time)
+        cedar_listing = db.scalar(
+            select(Listing)
+            .join(Security, Security.id == Listing.security_id)
+            .where(Security.company_id == cedar.id, Listing.ticker == "CDRN")
+        )
+        alpha_listing = db.scalar(
+            select(Listing)
+            .join(Security, Security.id == Listing.security_id)
+            .where(Security.company_id == alpha.id, Listing.ticker == "AAA")
+        )
+        assert cedar_listing and alpha_listing
+        _add_native_output(db, cedar, cedar_listing.id, Decimal("0.15"), batch_time)
+        _add_native_output(db, alpha, alpha_listing.id, Decimal("0.15"), batch_time)
         db.flush()
 
         with patch("portfolio_api.domain.services.now", return_value=batch_time):
@@ -296,9 +367,13 @@ def test_watchlist_run_ranks_only_explicit_members_and_snapshots_inputs(
         alpha_context = entries[alpha.id].input_snapshot
         assert alpha_context is not None
         assert isinstance(alpha_context, s.WatchlistRankInputSnapshot)
-        assert alpha_context.return_semantics == "LEGACY_NORMALIZED_FIELD"
-        assert alpha_context.expected_irr == Decimal("0.15")
+        assert alpha_context.return_semantics == "NATIVE_METHOD_OUTPUT"
+        assert alpha_context.return_source.current_calculation is not None
+        assert alpha_context.expected_irr == (
+            alpha_context.return_source.current_calculation.expected_cash_flow_irr
+        )
         assert alpha_context.return_source.listing_ticker == "AAA"
+        assert alpha_context.return_source.share_price_basis_status == "CAPTURED"
         assert alpha_context.compounder_quality.status == "NOT_ASSESSED"
         assert alpha_context.decision_context == "QUALITY_GATE_THRESHOLDS_NOT_DOCUMENTED"
         assert q.company_read(db, alpha).lifecycle == Lifecycle.WATCHLIST
@@ -310,7 +385,7 @@ def test_watchlist_run_ranks_only_explicit_members_and_snapshots_inputs(
 
 
 @pytest.mark.integration
-def test_native_and_legacy_expected_irr_are_never_mixed_in_one_run(
+def test_watchlist_rank_refuses_to_mix_enterprise_and_equity_returns(
     postgres_engine: Engine,
 ) -> None:
     with Session(postgres_engine) as db, db.begin():
@@ -340,7 +415,15 @@ def test_native_and_legacy_expected_irr_are_never_mixed_in_one_run(
             reconciliation={"fixture": True},
         )
         db.add(batch)
-        _add_legacy_output(db, batch, cedar, "CDRN", Decimal("0.30"), as_of - timedelta(seconds=1))
+        _add_legacy_output(
+            db,
+            batch,
+            cedar,
+            "CDRN",
+            Decimal("0.30"),
+            as_of - timedelta(seconds=1),
+            methodology_code=OWNER_CASH_FLOW_EQUITY_IRR,
+        )
         _add_native_output(
             db, native_company, listing.id, Decimal("0.10"), as_of - timedelta(seconds=1)
         )
@@ -362,10 +445,10 @@ def test_native_and_legacy_expected_irr_are_never_mixed_in_one_run(
                 ),
             )
         entries = {item.company.id: item.entry for item in q.ranking_run_detail(db, run.id).entries}
-        assert entries[native_company.id].status == RankingEntryStatus.RANKED, entries[
+        assert entries[native_company.id].status == RankingEntryStatus.DATA_CHECK, entries[
             native_company.id
         ].reason
-        assert entries[native_company.id].position == 1
+        assert entries[native_company.id].position is None
         native_context = entries[native_company.id].input_snapshot
         assert native_context is not None
         assert isinstance(native_context, s.WatchlistRankInputSnapshot)
@@ -376,11 +459,17 @@ def test_native_and_legacy_expected_irr_are_never_mixed_in_one_run(
         assert legacy_context is not None
         assert isinstance(legacy_context, s.WatchlistRankInputSnapshot)
         assert legacy_context.expected_irr == Decimal("0.30")
-        assert "not assumed comparable" in entries[cedar.id].reason
+        assert "return basis" in entries[native_company.id].reason
+        assert "retained exact-listing" in entries[cedar.id].reason
         assert entries[stale_company.id].status == RankingEntryStatus.DATA_CHECK
         stale_context = entries[stale_company.id].input_snapshot
         assert stale_context is not None
         assert isinstance(stale_context, s.WatchlistRankInputSnapshot)
         assert stale_context.return_semantics == "NATIVE_METHOD_OUTPUT"
-        assert stale_context.expected_irr == Decimal("0.40")
-        assert "later exact-listing price" in entries[stale_company.id].reason
+        assert stale_context.return_source.current_calculation is not None
+        assert stale_context.expected_irr == (
+            stale_context.return_source.current_calculation.expected_cash_flow_irr
+        )
+        assert stale_context.return_source.accepted_reference_price == Decimal("10")
+        assert stale_context.return_source.current_calculation.current_price == Decimal("11")
+        assert "incompatible return basis" in entries[stale_company.id].reason

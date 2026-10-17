@@ -18,28 +18,51 @@ from pydantic import (
 
 from portfolio_api.domain.models import (
     Actor,
+    CandidateGateEvidenceType,
+    CandidateGateOutcome,
+    CandidateResearchDisposition,
+    CandidateResearchStage,
     DcfScenario,
     ExecutionPace,
     ExecutionPaceDecisionStatus,
     ExecutionPaceRunStatus,
     FinancialModelType,
+    ForecastAccuracyMetric,
+    ForecastAccuracySourceType,
     FundamentalDataQuality,
     FundamentalMetric,
     FundamentalPeriodType,
     FundamentalRevisionContext,
     FundamentalStatement,
     Lifecycle,
+    ModelEvidenceRelationship,
+    ModelEvidenceType,
     RankingDefinitionStatus,
     RankingEntryStatus,
     RankingImplementationStatus,
     RankingRunStatus,
     RankingType,
+    ResearchAssessmentStatus,
+    ResearchAssessmentType,
+    ResearchConfidence,
+    ResearchForecastMetric,
+    ResearchObservationStatus,
+    ResearchPeriodType,
+    ResearchQueueTaskType,
+    ResearchRevisionStatus,
+    ResearchScenario,
+    ResearchTriggerType,
     ScoreAssessmentStatus,
     ScoreDefinitionStatus,
     ScoreDimension,
     ScoreDirectionality,
     SourceDocumentQuality,
     SourceDocumentType,
+    ThesisClaimStatus,
+    ThesisClaimType,
+    ThesisEvidenceRelationship,
+    ThesisRevisionStatus,
+    ThesisWatchClassification,
 )
 
 
@@ -233,7 +256,14 @@ class HoldingContext(Contract):
     quantity: FixedDecimal | None
     latest_price: FixedDecimal | None
     price_date: datetime | None
+    price_observed_at: datetime | None = None
     price_currency: Currency | None
+    portfolio_weight: FixedDecimal | None = None
+    fx_rate: FixedDecimal | None = None
+    fx_effective_at: datetime | None = None
+    valuation_sync_status: Literal[
+        "NOT_REQUIRED", "SYNCHRONOUS", "NON_SYNCHRONOUS", "TIMING_UNKNOWN", "UNAVAILABLE"
+    ] = "NOT_REQUIRED"
     price_freshness: Literal["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"] = "NO_DATA"
     native_market_value: FixedDecimal | None
     base_market_value: FixedDecimal | None
@@ -259,6 +289,9 @@ class CashValuation(Contract):
     currency: Currency
     balance: FixedDecimal | None
     base_market_value: FixedDecimal | None
+    portfolio_weight: FixedDecimal | None = None
+    fx_rate: FixedDecimal | None = None
+    fx_effective_at: datetime | None = None
     valuation_status: Literal["VALUED", "FX_UNAVAILABLE", "BALANCE_UNAVAILABLE"]
 
 
@@ -280,6 +313,12 @@ class PortfolioOverview(Contract):
         "INCOMPLETE_PRICE_COVERAGE",
         "INCOMPLETE_FX_COVERAGE",
     ] = "NO_HOLDING_SNAPSHOT"
+    valuation_mode: Literal["CURRENT_MARK_TO_MARKET", "HISTORICAL_AS_OF"] = "HISTORICAL_AS_OF"
+    valuation_as_of: datetime | None = None
+    market_data_through: datetime | None = None
+    fx_data_through: datetime | None = None
+    holdings_age_days: int | None = None
+    holdings_freshness: Literal["FRESH", "STALE", "NO_DATA"] = "NO_DATA"
     base_market_value: FixedDecimal | None
     valuation_currency: Currency
     cash_valuations: list[CashValuation]
@@ -299,6 +338,42 @@ class CompanyDetail(Contract):
     target_revision_id: UUID | None
 
 
+class ReturnMethodologyRead(Contract):
+    id: UUID
+    code: str
+    version: int
+    title: str
+    cash_flow_basis: str
+    perspective: Literal["ENTERPRISE", "EQUITY"]
+    entry_value_basis: str
+    share_price_basis: str
+    comparability_group: str
+    cross_method_policy: Literal["SAME_METHOD_ONLY", "CONDITIONAL_EQUITY_CROSS_METHOD"]
+    limitation: str
+    effective_from: datetime
+    recorded_at: datetime
+
+
+class ReturnComparabilityRuleRead(Contract):
+    left_methodology: str
+    right_methodology: str
+    status: Literal[
+        "DIRECT",
+        "CONDITIONAL_EQUITY",
+        "NOT_COMPARABLE_PERSPECTIVE",
+        "NOT_COMPARABLE_METHOD",
+        "NOT_COMPARABLE_VERSION",
+        "UNKNOWN_METHOD",
+    ]
+    rationale: str
+
+
+class ReturnMethodologiesRead(Contract):
+    definitions: list[ReturnMethodologyRead]
+    rules: list[ReturnComparabilityRuleRead]
+    currency_policy: str
+
+
 class ModelOutputSnapshotRead(Contract):
     id: UUID
     company_id: UUID
@@ -311,6 +386,9 @@ class ModelOutputSnapshotRead(Contract):
     model_currency: Currency | None
     currency_status: Literal["DOCUMENTED", "UNKNOWN"]
     currency_source_ref: str | None
+    return_methodology: ReturnMethodologyRead | None
+    return_methodology_status: Literal["CLASSIFIED", "UNCLASSIFIED"]
+    share_price_basis_status: Literal["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"] = "NOT_RETAINED"
     model_status: str | None
     effective_at: datetime | None
     recorded_at: datetime
@@ -406,6 +484,27 @@ class ExpectedReturnMarketPriceRead(Contract):
     reason: str | None
 
 
+class CurrentNativeModelCalculationRead(Contract):
+    """Ephemeral current quote calculation; it is not an accepted model revision."""
+
+    model_id: UUID
+    model_name: str
+    model_type: Literal["UFCF_DCF_10Y_FADE", "OWNER_CASH_FLOW_10Y", "RESIDUAL_INCOME_10Y_FADE"]
+    revision_id: UUID
+    revision_number: int
+    methodology_version: str
+    effective_at: datetime
+    recorded_at: datetime
+    calculated_as_of: datetime
+    known_at: datetime
+    accepted_output_id: UUID
+    accepted_reference_price: FixedDecimal | None
+    accepted_reference_price_observation_id: UUID | None
+    accepted_reference_price_effective_at: datetime | None
+    market_price: ExpectedReturnMarketPriceRead
+    outputs: "FinancialModelCalculationOutputsRead"
+
+
 class ExpectedReturnHistoryPointRead(Contract):
     point_id: str
     source_kind: Literal[
@@ -435,6 +534,9 @@ class ExpectedReturnHistoryPointRead(Contract):
     output_quality: str | None
     contract_status: str | None
     return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"]
+    return_methodology: ReturnMethodologyRead | None = None
+    return_methodology_status: Literal["CLASSIFIED", "UNCLASSIFIED"] = "UNCLASSIFIED"
+    share_price_basis_status: Literal["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"] = "UNAVAILABLE"
     actor: str
     source_actor: str | None
     revision_source: str | None
@@ -465,6 +567,7 @@ class CompanyExpectedReturnHistoryRead(Contract):
     known_at: datetime
     status: Literal["AVAILABLE", "PARTIAL", "NO_HISTORY"]
     history: list[ExpectedReturnHistoryPointRead]
+    current_calculations: list[CurrentNativeModelCalculationRead] = Field(default_factory=list)
 
 
 class ExpectedReturnAttributionStateRead(Contract):
@@ -485,6 +588,13 @@ class ExpectedReturnAttributionStateRead(Contract):
     )
     methodology_version: str | None
     return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"]
+    return_methodology: ReturnMethodologyRead | None = None
+    return_methodology_status: Literal["CLASSIFIED", "UNCLASSIFIED"] = "UNCLASSIFIED"
+    valuation_listing_id: UUID | None
+    valuation_ticker: str | None
+    valuation_venue: str | None
+    valuation_listing_currency: Currency | None
+    share_price_basis_status: Literal["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"]
     model_currency: Currency | None
     expected_cash_flow_irr: FixedDecimal | None
     hurdle: FixedDecimal | None
@@ -534,6 +644,7 @@ class CompanyExpectedReturnAttributionRead(Contract):
         "OUTPUTS_ONLY",
         "MISSING_RETURN",
         "RETURN_SEMANTICS_CHANGE",
+        "RETURN_BASIS_UNAVAILABLE",
         "MODEL_SERIES_CHANGE",
         "METHODOLOGY_CHANGE",
         "INPUTS_UNAVAILABLE",
@@ -555,9 +666,12 @@ class CompanyExpectedReturnAttributionRead(Contract):
 
     @model_validator(mode="after")
     def preserve_unavailable_and_residual_semantics(self) -> Self:
-        if self.status in {"MISSING_RETURN", "RETURN_SEMANTICS_CHANGE", "UNDATED"} and (
-            self.expected_irr_change is not None or self.residual is not None or self.drivers
-        ):
+        if self.status in {
+            "MISSING_RETURN",
+            "RETURN_SEMANTICS_CHANGE",
+            "RETURN_BASIS_UNAVAILABLE",
+            "UNDATED",
+        } and (self.expected_irr_change is not None or self.residual is not None or self.drivers):
             raise ValueError("Unavailable comparisons cannot contain numeric effects")
         if self.status == "ATTRIBUTED":
             if (
@@ -684,6 +798,150 @@ class PriceRegimeRead(Contract):
     source_ref: str
 
 
+class PriceHistoryAnalyticsRead(Contract):
+    """Query-layer analytics over exact canonical daily observations."""
+
+    status: Literal["AVAILABLE", "PARTIAL", "UNAVAILABLE"]
+    methodology_version: str
+    observation_count: int
+    as_of: datetime | None
+    daily_return: FixedDecimal | None
+    dma_20: FixedDecimal | None
+    dma_50: FixedDecimal | None
+    dma_200: FixedDecimal | None
+    high_52w: FixedDecimal | None
+    drawdown_52w: FixedDecimal | None
+    price_return_1m: FixedDecimal | None
+    price_return_3m: FixedDecimal | None
+    price_return_6m: FixedDecimal | None
+    realized_vol_20d: FixedDecimal | None
+    trend_state: str | None
+    correction_state: str | None
+
+
+class MarketRefreshStatusRead(Contract):
+    state: Literal["AVAILABLE", "STALE", "REFRESHING", "PARTIAL", "UNAVAILABLE"]
+    last_attempt_at: datetime | None
+    last_successful_update: datetime | None
+    market_run_id: UUID | None
+    fx_run_id: UUID | None
+    message: str | None
+
+
+RecurringOperationJobName = Literal[
+    "SEC_FUNDAMENTALS",
+    "SEC_FILINGS",
+    "FMP_CONSENSUS",
+    "SHEETS_DISCOVERY",
+    "RESEARCH_TRIGGER_SCAN",
+    "AGENT_WORK_FEED",
+    "DECISION_RECOMPUTE",
+]
+RecurringOperationJobStatus = Literal[
+    "NOT_RUN", "RUNNING", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED", "SKIPPED"
+]
+RecurringOperationsWorkerStatus = Literal[
+    "STARTING", "RUNNING", "FAILED", "STALE", "STOPPED", "NOT_STARTED", "DISABLED"
+]
+
+
+class RecurringOperationJobRead(Contract):
+    job_name: RecurringOperationJobName
+    status: RecurringOperationJobStatus
+    cadence_seconds: int
+    last_attempt_at: datetime | None
+    last_successful_at: datetime | None
+    next_attempt_at: datetime | None
+    failure_code: str | None
+    failure_message: str | None
+    result: dict[str, object]
+
+
+class RecurringOperationsStatusRead(Contract):
+    enabled: bool
+    worker_state: RecurringOperationsWorkerStatus
+    worker_started_at: datetime | None
+    worker_last_seen_at: datetime | None
+    sec_user_agent_configured: bool
+    google_sheets_configured: bool
+    google_sheets_credentials_available: bool
+    google_sheets_poll_seconds: int
+    fmp_consensus_ingestion_enabled: bool
+    jobs: list[RecurringOperationJobRead]
+    market_data: MarketRefreshStatusRead
+
+
+OperationalJobName = Literal[
+    "MARKET_DATA",
+    "FX",
+    "MARKET_AND_FX",
+    "SEC_FUNDAMENTALS",
+    "SEC_FILINGS",
+    "SHEETS_DISCOVERY",
+    "RESEARCH_REFRESH",
+    "AGENT_WORK_FEED",
+    "COMPANY_REFRESH",
+    "REFRESH_ALL",
+]
+OperationalJobScope = Literal["ACTIVE_UNIVERSE", "COMPANY"]
+OperationalJobActor = Literal["LOCAL_USER"]
+OperationalJobStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"]
+OperationalJobAttemptStatus = Literal[
+    "RUNNING", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED", "SKIPPED", "DEFERRED"
+]
+
+
+class OperationalJobRequestCreate(Contract):
+    job_name: OperationalJobName
+    scope_kind: OperationalJobScope = "ACTIVE_UNIVERSE"
+    company_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def scope_has_exact_company(self) -> Self:
+        if (self.scope_kind == "COMPANY") != (self.company_id is not None):
+            raise ValueError("A company ID is required only for company-scoped requests.")
+        return self
+
+
+class OperationalJobAttemptRead(Contract):
+    id: UUID
+    attempt_number: int
+    step_name: str
+    status: OperationalJobAttemptStatus
+    affected_domains: list[str]
+    started_at: datetime
+    finished_at: datetime | None
+    result: dict[str, object]
+    error_code: str | None
+    error_message: str | None
+
+
+class OperationalJobRequestRead(Contract):
+    id: UUID
+    job_name: OperationalJobName
+    scope_kind: OperationalJobScope
+    company_id: UUID | None
+    company_name: str | None
+    lifecycle: Lifecycle | None
+    requested_by: OperationalJobActor
+    status: OperationalJobStatus
+    requested_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    next_attempt_at: datetime | None
+    attempt_count: int
+    retry_of_id: UUID | None
+    affected_domains: list[str]
+    scope_detail: dict[str, object]
+    result: dict[str, object]
+    error_code: str | None
+    error_message: str | None
+    retry_available: bool
+    deduplicated: bool = False
+    cooldown_until: datetime
+    attempts: list[OperationalJobAttemptRead]
+
+
 class CorporateActionRead(Contract):
     id: UUID
     listing_id: UUID
@@ -707,8 +965,11 @@ class ListingMarketData(Contract):
     listing: ListingRead
     latest: PriceObservationRead | None
     freshness: Literal["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"]
+    availability: Literal["AVAILABLE", "STALE", "REFRESHING", "PARTIAL", "UNAVAILABLE"]
     age_days: int | None
     price_regime: PriceRegimeRead | None
+    analytics: PriceHistoryAnalyticsRead
+    last_market_update: datetime | None
     history: list[PriceObservationRead]
 
 
@@ -1010,6 +1271,239 @@ class CompanyTemporalAlignmentRead(Contract):
     actual: TemporalAlignedValueRead
 
 
+class ForecastAccuracyActualRead(Contract):
+    status: str
+    metric: str | None
+    period_type: str | None
+    fiscal_year: int | None
+    fiscal_period: str | None
+    period_end: date | None
+    value: FixedDecimal | None
+    currency: Currency | None
+    unit: str | None
+    provider_id: str | None
+    source_reference: str | None
+    source_observation_id: UUID | None
+    published_at: datetime | None
+    observed_at: datetime | None
+    recorded_at: datetime | None
+    revision_context: str | None
+    supersedes_observation_id: UUID | None
+    data_quality: str | None
+    reason: str | None
+
+
+class ForecastAccuracyErrorRead(Contract):
+    status: str
+    signed_error: FixedDecimal | None
+    absolute_error: FixedDecimal | None
+    signed_percentage_error: FixedDecimal | None
+    absolute_percentage_error: FixedDecimal | None
+    reason: str | None
+
+
+class ForecastAccuracyObservationRead(Contract):
+    source_type: ForecastAccuracySourceType
+    source_name: str
+    source_reference: str | None
+    author_id: str | None
+    stream_key: str | None
+    methodology: str | None
+    methodology_version: str | None
+    model_type: FinancialModelType | None
+    scenario: str | None
+    scenario_probability: FixedDecimal | None
+    forecast_id: UUID | None
+    revision_id: UUID | None
+    revision_number: int | None
+    supersedes_revision_id: UUID | None
+    supersedes_observation_id: UUID | None
+    metric: ForecastAccuracyMetric
+    period_type: ResearchPeriodType | None
+    fiscal_year: int | None
+    fiscal_period: str | None
+    forecast_period_label: str | None
+    period_end: date | None
+    forecast_year: int | None
+    forecast_basis: str | None
+    value: FixedDecimal | None
+    currency: Currency | None
+    unit: str | None
+    confidence: str | None
+    analyst_count: int | None
+    observed_at: datetime | None
+    effective_at: datetime | None
+    recorded_at: datetime | None
+    forecast_known_at: datetime | None
+    horizon_days: int | None
+    horizon_bucket: str | None
+    status: str
+    status_reason: str | None
+    actual: ForecastAccuracyActualRead
+    error: ForecastAccuracyErrorRead
+
+
+class ForecastAccuracySummaryRead(Contract):
+    source_type: ForecastAccuracySourceType
+    source_name: str
+    methodology: str | None
+    methodology_version: str | None
+    metric: ForecastAccuracyMetric
+    period_type: ResearchPeriodType
+    horizon_bucket: str
+    sample_count: int
+    minimum_sample_count: int
+    status: str
+    mean_absolute_percentage_error: FixedDecimal | None
+    mean_signed_percentage_error: FixedDecimal | None
+    reason: str | None
+
+
+class CompanyForecastAccuracyRead(Contract):
+    company_id: UUID
+    outcome_known_at: datetime
+    selected_metric: ForecastAccuracyMetric | None
+    selected_source: ForecastAccuracySourceType | None
+    selected_period_type: ResearchPeriodType | None
+    selected_fiscal_year: int | None
+    selected_fiscal_period: str | None
+    total_count: int
+    returned_count: int
+    truncated: bool
+    observations: list[ForecastAccuracyObservationRead]
+    summaries: list[ForecastAccuracySummaryRead]
+
+
+class ScenarioForecastPointRead(Contract):
+    scenario: str
+    probability: FixedDecimal | None
+    value: FixedDecimal | None
+
+
+class ScenarioEvaluationRead(Contract):
+    model_name: str
+    model_type: FinancialModelType
+    methodology_version: str | None
+    revision_id: UUID
+    revision_number: int
+    forecast_known_at: datetime
+    metric: ForecastAccuracyMetric
+    forecast_year: int
+    fiscal_year: int | None
+    fiscal_period: str | None
+    period_end: date | None
+    currency: Currency | None
+    unit: str | None
+    scenarios: list[ScenarioForecastPointRead]
+    actual_status: str
+    actual_value: FixedDecimal | None
+    actual_published_at: datetime | None
+    actual_observed_at: datetime | None
+    actual_recorded_at: datetime | None
+    score_status: str
+    continuous_ranked_probability_score: FixedDecimal | None
+    probability_calibration_status: str
+    reason: str | None
+
+
+class ValuationScenarioContextRead(Contract):
+    snapshot_id: UUID
+    model_key: str
+    snapshot_kind: str
+    snapshot_status: str
+    methodology: str | None
+    methodology_version: int | None
+    currency: Currency | None
+    bear_fair_value: FixedDecimal | None
+    bear_probability: FixedDecimal | None
+    base_fair_value: FixedDecimal | None
+    base_probability: FixedDecimal | None
+    bull_fair_value: FixedDecimal | None
+    bull_probability: FixedDecimal | None
+    effective_at: datetime | None
+    recorded_at: datetime
+    source: str
+    evaluation_status: str
+    reason: str
+
+
+class DecisionOutcomeRead(Contract):
+    horizon_days: int
+    status: str
+    target_date: date
+    start_market_date: datetime | None
+    end_market_date: datetime | None
+    total_return: FixedDecimal | None
+    annualized_return: FixedDecimal | None
+    basis: str
+    start_observation_id: UUID | None
+    end_observation_id: UUID | None
+    start_provider: str | None
+    end_provider: str | None
+    currency: Currency | None
+    reason: str | None
+
+
+class DecisionSignalEvaluationRead(Contract):
+    signal_type: str
+    signal_id: UUID
+    run_id: UUID
+    run_as_of: datetime
+    recorded_at: datetime
+    source_methodology: str
+    status: str
+    value: str | None
+    position: int | None
+    expected_irr: FixedDecimal | None
+    return_methodology: str | None
+    return_methodology_version: int | None
+    return_perspective: str | None
+    valuation_listing_id: UUID | None
+    valuation_ticker: str | None
+    valuation_venue: str | None
+    listing_currency: Currency | None
+    model_currency: Currency | None
+    estimate_momentum_direction: str | None
+    estimate_momentum_availability: str | None
+    estimate_momentum_freshness: str | None
+    estimate_momentum_quality: str | None
+    price_observation_id: UUID | None
+    outcomes: list[DecisionOutcomeRead]
+    reason: str
+
+
+class DecisionEvaluationSummaryRead(Contract):
+    signal_type: str
+    run_id: UUID
+    run_as_of: datetime
+    source_methodology: str
+    horizon_days: int
+    grouping: str
+    group_value: str
+    listing_currency: Currency | None
+    sample_count: int
+    minimum_sample_count: int
+    status: str
+    spearman_correlation: FixedDecimal | None
+    mean_annualized_return: FixedDecimal | None
+    median_annualized_return: FixedDecimal | None
+    interpretation: str
+
+
+class CompanyDecisionEvaluationRead(Contract):
+    company_id: UUID
+    outcome_known_at: datetime
+    horizon_days: list[int]
+    minimum_cross_section_sample: int
+    scenario_evaluations: list[ScenarioEvaluationRead]
+    valuation_scenarios: list[ValuationScenarioContextRead]
+    signals: list[DecisionSignalEvaluationRead]
+    summaries: list[DecisionEvaluationSummaryRead]
+    portfolio_implementation_status: str
+    portfolio_implementation_reason: str
+    limitations: list[str]
+
+
 class SourceDocumentCreate(Contract):
     """Register an issuer-published source reference without uploading its content."""
 
@@ -1210,6 +1704,471 @@ class ScoreHistoryEntry(Contract):
     assessment: ScoreAssessmentRead
 
 
+ResearchValue = Annotated[
+    FixedDecimal, BeforeValidator(exact), Field(max_digits=38, decimal_places=12)
+]
+
+
+class ResearchEvidenceInput(Contract):
+    source_document_id: UUID | None = None
+    source_name: Annotated[str, Field(min_length=1, max_length=200)]
+    external_identifier: Annotated[str, Field(min_length=1, max_length=500)] | None = None
+    source_url: AnyHttpUrl | None = None
+    published_at: date | None = None
+    excerpt: Annotated[str, Field(max_length=4000)] | None = None
+    note: Annotated[str, Field(max_length=2000)] | None = None
+
+    @field_validator("source_url")
+    @classmethod
+    def evidence_url_must_be_https(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is not None and value.scheme != "https":
+            raise ValueError("Research source URLs must use HTTPS")
+        return value
+
+    @model_validator(mode="after")
+    def source_location_required(self) -> Self:
+        if (
+            self.source_document_id is None
+            and self.external_identifier is None
+            and self.source_url is None
+        ):
+            raise ValueError("Provide a source document, external identifier or HTTPS URL")
+        return self
+
+
+class ResearchForecastInput(Contract):
+    metric: ResearchForecastMetric
+    period_type: ResearchPeriodType
+    fiscal_year: Annotated[int, Field(ge=1800, le=2200)]
+    fiscal_period: Literal["FY", "Q1", "Q2", "Q3", "Q4"]
+    period_end: date | None = None
+    scenario: ResearchScenario = ResearchScenario.POINT
+    value: ResearchValue | None
+    currency: Currency | None = None
+    unit: Literal["currency", "currency/share", "shares"]
+    availability_status: ResearchObservationStatus = ResearchObservationStatus.AVAILABLE
+    availability_reason: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
+    confidence: ResearchConfidence = ResearchConfidence.UNASSESSED
+    rationale: Annotated[str, Field(max_length=4000)] | None = None
+    uncertainty: Annotated[str, Field(max_length=2000)] | None = None
+
+    @model_validator(mode="after")
+    def forecast_semantics(self) -> Self:
+        if self.period_type == ResearchPeriodType.ANNUAL and self.fiscal_period != "FY":
+            raise ValueError("Annual research forecasts must use fiscal_period FY")
+        if self.period_type == ResearchPeriodType.QUARTERLY and self.fiscal_period == "FY":
+            raise ValueError("Quarterly research forecasts must use Q1, Q2, Q3 or Q4")
+        expected_unit = {
+            ResearchForecastMetric.EPS: "currency/share",
+            ResearchForecastMetric.DILUTED_SHARES: "shares",
+        }.get(self.metric, "currency")
+        if self.unit != expected_unit:
+            raise ValueError(f"{self.metric.value} requires unit {expected_unit}")
+        if (self.metric == ResearchForecastMetric.DILUTED_SHARES) != (self.currency is None):
+            raise ValueError("Only DILUTED_SHARES omits currency; monetary metrics require it")
+        if (
+            self.metric in (ResearchForecastMetric.REVENUE, ResearchForecastMetric.DILUTED_SHARES)
+            and self.value is not None
+            and self.value < 0
+        ):
+            raise ValueError(f"{self.metric.value} cannot be negative")
+        if self.availability_status == ResearchObservationStatus.AVAILABLE:
+            if self.value is None:
+                raise ValueError("AVAILABLE research forecasts require a value")
+            if self.availability_reason is not None:
+                raise ValueError("AVAILABLE research forecasts cannot have an unavailable reason")
+        elif (
+            self.value is not None
+            and self.availability_status == ResearchObservationStatus.UNAVAILABLE
+        ):
+            raise ValueError("UNAVAILABLE research forecasts must keep value null")
+        if (
+            self.availability_status != ResearchObservationStatus.AVAILABLE
+            and not self.availability_reason
+        ):
+            raise ValueError("Unavailable or data-check forecasts require a reason")
+        return self
+
+
+class ResearchAssessmentInput(Contract):
+    assessment_type: ResearchAssessmentType
+    status: ResearchAssessmentStatus = ResearchAssessmentStatus.AVAILABLE
+    narrative: Annotated[str, Field(min_length=1, max_length=8000)] | None = None
+    status_reason: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
+    confidence: ResearchConfidence = ResearchConfidence.UNASSESSED
+    uncertainty: Annotated[str, Field(max_length=2000)] | None = None
+
+    @model_validator(mode="after")
+    def narrative_matches_status(self) -> Self:
+        if self.status == ResearchAssessmentStatus.AVAILABLE:
+            if self.narrative is None:
+                raise ValueError("AVAILABLE assessments require narrative text")
+            if self.status_reason is not None:
+                raise ValueError("AVAILABLE assessments cannot have an unavailable reason")
+        elif self.status == ResearchAssessmentStatus.UNAVAILABLE and self.narrative is not None:
+            raise ValueError("UNAVAILABLE assessments require null narrative text")
+        if self.status != ResearchAssessmentStatus.AVAILABLE and not self.status_reason:
+            raise ValueError("Unavailable or data-check assessments require a reason")
+        return self
+
+
+class ResearchTriggerReferenceInput(Contract):
+    trigger_id: UUID
+    classification: ThesisWatchClassification
+    classification_rationale: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+class ResearchTriggerReferenceRead(Contract):
+    trigger_id: UUID
+    event_key: str
+    trigger_type: ResearchTriggerType
+    title: str
+    classification: ThesisWatchClassification
+    classification_rationale: str
+    source_reference: str | None
+    effective_at: datetime | None
+    source_observed_at: datetime | None
+    source_recorded_at: datetime
+    detected_at: datetime
+
+
+class ResearchRevisionPublishContract(Contract):
+    """Portable v1 publication contract for the external company research workflow."""
+
+    contract_type: Literal["ResearchRevisionContractV1"]
+    contract_version: Literal["1.0.0", "1.1.0"]
+    company_id: UUID
+    security_id: UUID | None = None
+    stream_key: Annotated[str, Field(min_length=1, max_length=240)]
+    external_revision_id: Annotated[str, Field(min_length=1, max_length=200)]
+    supersedes_revision_id: UUID | None = None
+    author_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source_reference: Annotated[str, Field(min_length=1, max_length=1000)]
+    observed_at: datetime
+    status: ResearchRevisionStatus = ResearchRevisionStatus.PUBLISHED
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)]
+    uncertainty: Annotated[str, Field(max_length=4000)] | None = None
+    forecasts: list[ResearchForecastInput] = Field(default_factory=list, max_length=500)
+    assessments: list[ResearchAssessmentInput] = Field(default_factory=list, max_length=20)
+    evidence: list[ResearchEvidenceInput] = Field(default_factory=list, max_length=100)
+    trigger_references: list[ResearchTriggerReferenceInput] = Field(
+        default_factory=list, max_length=20
+    )
+
+    @field_validator("observed_at")
+    @classmethod
+    def observed_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("observed_at must include a timezone offset")
+        value = value.astimezone(UTC)
+        if value > datetime.now(UTC):
+            raise ValueError("Future research observations are not supported")
+        return value
+
+    @model_validator(mode="after")
+    def unique_content_and_publication_state(self) -> Self:
+        forecast_keys = [
+            (row.metric, row.fiscal_year, row.fiscal_period, row.scenario) for row in self.forecasts
+        ]
+        if len(forecast_keys) != len(set(forecast_keys)):
+            raise ValueError("A research revision cannot repeat a metric/period/scenario")
+        assessment_types = [row.assessment_type for row in self.assessments]
+        if len(assessment_types) != len(set(assessment_types)):
+            raise ValueError("A research revision cannot repeat an assessment type")
+        trigger_ids = [row.trigger_id for row in self.trigger_references]
+        if len(trigger_ids) != len(set(trigger_ids)):
+            raise ValueError("A research revision cannot repeat a trigger reference")
+        if self.trigger_references and self.contract_version != "1.1.0":
+            raise ValueError("Trigger references require ResearchRevisionContractV1 version 1.1.0")
+        if self.trigger_references:
+            if not self.source_reference.startswith("https://"):
+                raise ValueError("Trigger-linked research requires an HTTPS source reference")
+            if not self.evidence:
+                raise ValueError("Trigger-linked research requires source evidence")
+        if self.status == ResearchRevisionStatus.PUBLISHED:
+            if not self.forecasts and not self.assessments:
+                raise ValueError("A published revision requires a forecast or assessment")
+        elif self.forecasts or self.assessments:
+            raise ValueError("A withdrawn revision cannot contain current forecast/assessment data")
+        return self
+
+
+class ResearchForecastRead(Contract):
+    id: UUID
+    metric: ResearchForecastMetric
+    period_type: ResearchPeriodType
+    fiscal_year: int
+    fiscal_period: str
+    period_end: date | None
+    scenario: ResearchScenario
+    value: FixedDecimal | None
+    currency: Currency | None
+    unit: str
+    availability_status: ResearchObservationStatus
+    availability_reason: str | None
+    confidence: ResearchConfidence
+    rationale: str | None
+    uncertainty: str | None
+
+
+class ResearchAssessmentRead(Contract):
+    id: UUID
+    assessment_type: ResearchAssessmentType
+    status: ResearchAssessmentStatus
+    status_reason: str | None
+    narrative: str | None
+    confidence: ResearchConfidence
+    uncertainty: str | None
+
+
+class ResearchEvidenceRead(Contract):
+    id: UUID
+    source_document_id: UUID | None
+    source_document_title: str | None
+    source_name: str
+    external_identifier: str | None
+    source_url: str | None
+    published_at: date | None
+    excerpt: str | None
+    note: str | None
+
+
+class ResearchRevisionRead(Contract):
+    id: UUID
+    company_id: UUID
+    security_id: UUID | None
+    stream_key: str
+    revision_number: int
+    contract_version: str
+    external_revision_id: str
+    supersedes_revision_id: UUID | None
+    author_id: str
+    source_id: str
+    source_reference: str
+    observed_at: datetime
+    recorded_at: datetime
+    status: ResearchRevisionStatus
+    rationale: str
+    uncertainty: str | None
+    content_fingerprint: str
+    forecasts: list[ResearchForecastRead]
+    assessments: list[ResearchAssessmentRead]
+    evidence: list[ResearchEvidenceRead]
+    trigger_references: list[ResearchTriggerReferenceRead] = Field(default_factory=list)
+
+
+class ResearchStreamRead(Contract):
+    stream_key: str
+    current_revision: ResearchRevisionRead
+    history: list[ResearchRevisionRead]
+
+
+class CompanyResearchRead(Contract):
+    company_id: UUID
+    as_of: date | None
+    known_at: datetime | None
+    streams: list[ResearchStreamRead]
+
+
+class ResearchPublicationResult(Contract):
+    result: Literal["PUBLISHED", "ALREADY_PUBLISHED"]
+    revision: ResearchRevisionRead
+
+
+class InvestmentThesisEvidenceInput(Contract):
+    relationship: ThesisEvidenceRelationship
+    source_document_id: UUID | None = None
+    reported_fundamental_observation_id: UUID | None = None
+    source_name: Annotated[str, Field(min_length=1, max_length=200)]
+    external_identifier: Annotated[str, Field(min_length=1, max_length=500)] | None = None
+    source_url: AnyHttpUrl | None = None
+    published_at: date | None = None
+    excerpt: Annotated[str, Field(max_length=4000)] | None = None
+    note: Annotated[str, Field(max_length=2000)] | None = None
+
+    @field_validator("source_url")
+    @classmethod
+    def evidence_url_must_be_https(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is not None and value.scheme != "https":
+            raise ValueError("Thesis evidence URLs must use HTTPS")
+        return value
+
+    @model_validator(mode="after")
+    def evidence_has_source(self) -> Self:
+        if not any(
+            (
+                self.source_document_id,
+                self.reported_fundamental_observation_id,
+                self.external_identifier,
+                self.source_url,
+            )
+        ):
+            raise ValueError("Provide a canonical document/fact or external source reference")
+        return self
+
+
+class InvestmentThesisClaimInput(Contract):
+    claim_key: Annotated[str, Field(min_length=1, max_length=80, pattern=r"^[a-z0-9][a-z0-9._-]*$")]
+    claim_type: ThesisClaimType
+    status: ThesisClaimStatus = ThesisClaimStatus.ACTIVE
+    statement: Annotated[str, Field(min_length=1, max_length=8000)]
+    confidence: ResearchConfidence = ResearchConfidence.UNASSESSED
+    uncertainty: Annotated[str, Field(max_length=2000)] | None = None
+    evidence: list[InvestmentThesisEvidenceInput] = Field(default_factory=list, max_length=100)
+
+
+class InvestmentThesisRevisionPublishContract(Contract):
+    """Portable v1 full-snapshot thesis contract for external research authors."""
+
+    contract_type: Literal["InvestmentThesisContractV1"]
+    contract_version: Literal["1.0.0", "1.1.0"]
+    company_id: UUID
+    security_id: UUID | None = None
+    stream_key: Annotated[str, Field(min_length=1, max_length=240)]
+    external_revision_id: Annotated[str, Field(min_length=1, max_length=200)]
+    supersedes_revision_id: UUID | None = None
+    author_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source_reference: Annotated[str, Field(min_length=1, max_length=1000)]
+    observed_at: datetime
+    status: ThesisRevisionStatus = ThesisRevisionStatus.PUBLISHED
+    thesis_statement: Annotated[str, Field(min_length=1, max_length=12000)] | None = None
+    confidence: ResearchConfidence = ResearchConfidence.UNASSESSED
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)]
+    uncertainty: Annotated[str, Field(max_length=4000)] | None = None
+    claims: list[InvestmentThesisClaimInput] = Field(default_factory=list, max_length=200)
+    trigger_references: list[ResearchTriggerReferenceInput] = Field(
+        default_factory=list, max_length=20
+    )
+
+    @field_validator("observed_at")
+    @classmethod
+    def observed_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("observed_at must include a timezone offset")
+        value = value.astimezone(UTC)
+        if value > datetime.now(UTC):
+            raise ValueError("Future thesis observations are not supported")
+        return value
+
+    @model_validator(mode="after")
+    def full_snapshot_and_unique_claims(self) -> Self:
+        claim_keys = [claim.claim_key for claim in self.claims]
+        if len(claim_keys) != len(set(claim_keys)):
+            raise ValueError("A thesis revision cannot repeat a claim_key")
+        trigger_ids = [row.trigger_id for row in self.trigger_references]
+        if len(trigger_ids) != len(set(trigger_ids)):
+            raise ValueError("A thesis revision cannot repeat a trigger reference")
+        if self.trigger_references and self.contract_version != "1.1.0":
+            raise ValueError("Trigger references require InvestmentThesisContractV1 version 1.1.0")
+        if self.trigger_references:
+            if not self.source_reference.startswith("https://"):
+                raise ValueError(
+                    "Trigger-linked thesis revisions require an HTTPS source reference"
+                )
+            if not any(claim.evidence for claim in self.claims):
+                raise ValueError(
+                    "Trigger-linked thesis revisions require source evidence on a claim"
+                )
+        if self.status == ThesisRevisionStatus.PUBLISHED:
+            if self.thesis_statement is None:
+                raise ValueError("Published thesis revisions require a thesis statement")
+        elif self.thesis_statement is not None or self.claims:
+            raise ValueError("A withdrawn thesis revision cannot contain current thesis claims")
+        return self
+
+
+class InvestmentThesisFactRead(Contract):
+    id: UUID
+    metric: FundamentalMetric
+    statement: FundamentalStatement
+    period_type: FundamentalPeriodType
+    period_start: datetime | None
+    period_end: datetime
+    fiscal_year: int | None
+    fiscal_period: str | None
+    filed_at: datetime | None
+    observed_at: datetime
+    recorded_at: datetime
+    value: FixedDecimal
+    currency: Currency | None
+    unit: str
+    provider_id: str
+    data_quality: FundamentalDataQuality
+    source_url: str
+
+
+class InvestmentThesisEvidenceRead(Contract):
+    id: UUID
+    relationship: ThesisEvidenceRelationship
+    source_document_id: UUID | None
+    source_document_title: str | None
+    source_document_type: SourceDocumentType | None
+    source_document_url: str | None
+    reported_fundamental_observation_id: UUID | None
+    reported_fundamental: InvestmentThesisFactRead | None
+    source_name: str
+    external_identifier: str | None
+    source_url: str | None
+    published_at: date | None
+    excerpt: str | None
+    note: str | None
+
+
+class InvestmentThesisClaimRead(Contract):
+    id: UUID
+    claim_key: str
+    claim_type: ThesisClaimType
+    status: ThesisClaimStatus
+    statement: str
+    confidence: ResearchConfidence
+    uncertainty: str | None
+    evidence: list[InvestmentThesisEvidenceRead]
+
+
+class InvestmentThesisRevisionRead(Contract):
+    id: UUID
+    company_id: UUID
+    security_id: UUID | None
+    stream_key: str
+    revision_number: int
+    contract_version: str
+    external_revision_id: str
+    supersedes_revision_id: UUID | None
+    author_id: str
+    source_id: str
+    source_reference: str
+    observed_at: datetime
+    recorded_at: datetime
+    status: ThesisRevisionStatus
+    thesis_statement: str | None
+    confidence: ResearchConfidence
+    rationale: str
+    uncertainty: str | None
+    content_fingerprint: str
+    claims: list[InvestmentThesisClaimRead]
+    trigger_references: list[ResearchTriggerReferenceRead] = Field(default_factory=list)
+
+
+class InvestmentThesisStreamRead(Contract):
+    stream_key: str
+    current_revision: InvestmentThesisRevisionRead
+    history: list[InvestmentThesisRevisionRead]
+
+
+class CompanyInvestmentThesisRead(Contract):
+    company_id: UUID
+    as_of: date | None
+    known_at: datetime | None
+    streams: list[InvestmentThesisStreamRead]
+
+
+class InvestmentThesisPublicationResult(Contract):
+    result: Literal["PUBLISHED", "ALREADY_PUBLISHED"]
+    revision: InvestmentThesisRevisionRead
+
+
 class UniverseScoreSummary(Contract):
     company: CompanyRead
     scores: list[ScoreCurrentRead]
@@ -1269,6 +2228,9 @@ class WatchlistRankReturnSource(Contract):
     model_key: str | None
     model_type: str | None
     methodology_version: str | None
+    return_methodology: ReturnMethodologyRead | None = None
+    return_methodology_status: Literal["CLASSIFIED", "UNCLASSIFIED"] = "UNCLASSIFIED"
+    share_price_basis_status: Literal["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"] = "UNAVAILABLE"
     contract_version: str | None
     source_revision_id: str | None
     source: str | None
@@ -1293,12 +2255,18 @@ class WatchlistRankReturnSource(Contract):
     listing_ticker: str | None
     listing_venue: str | None
     migration_status: Literal["PARITY_PASS", "PARTIAL_MAPPING", "DATA_CHECK", "BLOCKED"] | None
+    accepted_reference_price: FixedDecimal | None = None
+    accepted_reference_price_observation_id: UUID | None = None
+    accepted_reference_price_effective_at: datetime | None = None
+    accepted_output_status: str | None = None
+    current_calculation: "FinancialModelCalculationOutputsRead | None" = None
 
 
 class WatchlistRankInputSnapshot(Contract):
-    context_version: Literal["watchlist-rank-inputs-v1"]
+    context_version: Literal["watchlist-rank-inputs-v1", "watchlist-rank-inputs-v2"]
     expected_irr: FixedDecimal | None
     return_semantics: Literal["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"]
+    return_comparability_cohort: str | None = None
     return_source: WatchlistRankReturnSource
     durability_10y: WatchlistRankScoreSnapshot
     compounder_quality: WatchlistRankScoreSnapshot
@@ -1328,6 +2296,9 @@ class PortfolioRankModelSource(Contract):
     model_key: str
     model_type: str | None
     methodology_version: str | None
+    return_methodology: ReturnMethodologyRead | None = None
+    return_methodology_status: Literal["CLASSIFIED", "UNCLASSIFIED"] = "UNCLASSIFIED"
+    share_price_basis_status: Literal["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"] = "UNAVAILABLE"
     source: str | None
     effective_at: datetime | None
     recorded_at: datetime
@@ -1349,6 +2320,11 @@ class PortfolioRankModelSource(Contract):
     listing_id: UUID | None
     listing_ticker: str | None
     listing_venue: str | None
+    accepted_reference_price: FixedDecimal | None = None
+    accepted_reference_price_observation_id: UUID | None = None
+    accepted_reference_price_effective_at: datetime | None = None
+    accepted_output_status: str | None = None
+    current_calculation: "FinancialModelCalculationOutputsRead | None" = None
 
 
 class PortfolioRankScoreContributions(Contract):
@@ -1363,7 +2339,9 @@ class PortfolioRankScoreContributions(Contract):
 
 
 class PortfolioRankInputSnapshot(Contract):
-    context_version: Literal["portfolio-rank-inputs-v1"]
+    context_version: Literal[
+        "portfolio-rank-inputs-v1", "portfolio-rank-inputs-v2", "portfolio-rank-inputs-v3"
+    ]
     score_formula: Literal["LEGACY_IRR_FIRST_ALLOCATION_V1"]
     portfolio_score: FixedDecimal | None
     current_weight: FixedDecimal | None
@@ -1375,9 +2353,12 @@ class PortfolioRankInputSnapshot(Contract):
     ]
     holding_snapshot_id: UUID | None
     holding_effective_at: datetime | None
+    holdings_age_days: int | None = None
+    holdings_freshness: Literal["FRESH", "STALE", "NO_DATA"] = "NO_DATA"
     target_revision_id: UUID | None
     target_effective_at: datetime | None
     expected_irr: FixedDecimal | None
+    return_comparability_cohort: str | None = None
     expected_excess: FixedDecimal | None
     hurdle: FixedDecimal | None
     bear_fair_value: FixedDecimal | None
@@ -1406,6 +2387,321 @@ class ResearchRankInputSnapshot(Contract):
     bucket_source_ref: str | None
     priority_seed_source_ref: str | None
     context_note: str
+
+
+class CandidatePipelineEvidenceInput(Contract):
+    evidence_type: CandidateGateEvidenceType
+    reference_id: UUID | None = None
+    source_url: AnyHttpUrl | None = None
+    relationship: ThesisEvidenceRelationship = ThesisEvidenceRelationship.SUPPORTS
+    note: Annotated[str, Field(max_length=2000)] | None = None
+
+    @model_validator(mode="after")
+    def one_typed_reference(self) -> Self:
+        if self.evidence_type == CandidateGateEvidenceType.SOURCE_URL:
+            if self.reference_id is not None or self.source_url is None:
+                raise ValueError("SOURCE_URL evidence requires only an HTTPS source_url")
+            if self.source_url.scheme != "https":
+                raise ValueError("Candidate research source URLs must use HTTPS")
+        elif self.reference_id is None or self.source_url is not None:
+            raise ValueError("Canonical evidence requires one reference_id and no source_url")
+        return self
+
+
+class CandidatePipelineGateInput(Contract):
+    gate: CandidateResearchStage
+    outcome: CandidateGateOutcome
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)] | None = None
+    normalized_per_share_basis_confirmed: bool = False
+    evidence: list[CandidatePipelineEvidenceInput] = Field(default_factory=list, max_length=40)
+
+    @model_validator(mode="after")
+    def decision_has_context(self) -> Self:
+        if self.gate == CandidateResearchStage.RESOLUTION:
+            raise ValueError("RESOLUTION is not a review gate")
+        if self.outcome == CandidateGateOutcome.NOT_ASSESSED:
+            if self.evidence or self.rationale:
+                raise ValueError("An unassessed gate cannot include a decision or evidence")
+        elif not self.rationale:
+            raise ValueError("A reviewed gate requires rationale")
+        if self.outcome == CandidateGateOutcome.PASS and not self.evidence:
+            raise ValueError("A passed gate requires canonical or source evidence")
+        if (
+            self.normalized_per_share_basis_confirmed
+            and self.gate != CandidateResearchStage.FUNDAMENTAL_COMPOUNDING
+        ):
+            raise ValueError("Per-share basis confirmation applies only to compounding")
+        if (
+            self.outcome == CandidateGateOutcome.PASS
+            and self.gate == CandidateResearchStage.FUNDAMENTAL_COMPOUNDING
+            and not self.normalized_per_share_basis_confirmed
+        ):
+            raise ValueError(
+                "A passed compounding gate requires explicit normalized per-share basis review"
+            )
+        return self
+
+
+class CandidatePipelineRevisionCreate(Contract):
+    expected_revision_id: UUID | None = None
+    submission_id: UUID
+    stage: CandidateResearchStage
+    disposition: CandidateResearchDisposition | None = None
+    next_action: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    unresolved_questions: list[Annotated[str, Field(min_length=1, max_length=1000)]] = Field(
+        default_factory=list, max_length=50
+    )
+    actor: Actor
+    author_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source: Annotated[str, Field(max_length=1000)] | None = None
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)]
+    effective_at: datetime
+    gates: list[CandidatePipelineGateInput] = Field(min_length=5, max_length=5)
+
+    @field_validator("effective_at")
+    @classmethod
+    def effective_time_is_real(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("effective_at must include a timezone offset")
+        value = value.astimezone(UTC)
+        if value > datetime.now(UTC):
+            raise ValueError("Future-effective Candidate research records are not supported")
+        return value
+
+    @model_validator(mode="after")
+    def complete_pipeline_snapshot(self) -> Self:
+        expected_gates = {
+            CandidateResearchStage.DISCOVERY,
+            CandidateResearchStage.INITIAL_SCREEN,
+            CandidateResearchStage.QUALITY_DURABILITY,
+            CandidateResearchStage.FUNDAMENTAL_COMPOUNDING,
+            CandidateResearchStage.DEEP_DIVE,
+        }
+        if {gate.gate for gate in self.gates} != expected_gates:
+            raise ValueError("A Candidate revision must snapshot each of its five review gates")
+        if (
+            self.stage == CandidateResearchStage.RESOLUTION
+            and self.disposition is None
+            and self.next_action is None
+        ):
+            raise ValueError("A pending resolution requires a next action")
+        if (
+            self.disposition
+            in {
+                CandidateResearchDisposition.WATCHLIST,
+                CandidateResearchDisposition.INCUBATE,
+            }
+            and self.stage != CandidateResearchStage.RESOLUTION
+        ):
+            raise ValueError("Watchlist or Incubate recommendations require the resolution stage")
+        if self.disposition is not None:
+            if self.next_action is not None:
+                raise ValueError("A completed research disposition cannot have a next action")
+            if self.disposition == CandidateResearchDisposition.DROP and not any(
+                gate.outcome == CandidateGateOutcome.FAIL for gate in self.gates
+            ):
+                raise ValueError("A Drop recommendation requires an explicitly failed gate")
+        elif self.stage != CandidateResearchStage.RESOLUTION and self.next_action is None:
+            raise ValueError("An active Candidate research revision requires a next action")
+        return self
+
+
+class CandidatePipelineEvidenceRead(CandidatePipelineEvidenceInput):
+    id: UUID
+
+
+class CandidatePipelineGateRead(Contract):
+    id: UUID
+    gate: CandidateResearchStage
+    outcome: CandidateGateOutcome
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)] | None = None
+    normalized_per_share_basis_confirmed: bool = False
+    evidence: list[CandidatePipelineEvidenceRead] = Field(default_factory=list)
+
+
+class CandidatePipelineRevisionRead(Contract):
+    id: UUID
+    company_id: UUID
+    revision_number: int
+    base_revision_id: UUID | None
+    submission_id: UUID
+    stage: CandidateResearchStage
+    disposition: CandidateResearchDisposition | None
+    next_action: str | None
+    unresolved_questions: list[str]
+    actor: Actor
+    author_id: str
+    source: str | None
+    rationale: str
+    effective_at: datetime
+    recorded_at: datetime
+    content_fingerprint: str
+    gates: list[CandidatePipelineGateRead]
+
+
+class CandidatePipelineRevisionSummaryRead(Contract):
+    id: UUID
+    company_id: UUID
+    revision_number: int
+    base_revision_id: UUID | None
+    stage: CandidateResearchStage
+    disposition: CandidateResearchDisposition | None
+    next_action: str | None
+    unresolved_questions: list[str]
+    author_id: str
+    rationale: str
+    effective_at: datetime
+    recorded_at: datetime
+    current_gate_outcome: CandidateGateOutcome
+
+
+class CandidatePipelineQueueEntry(Contract):
+    company: CompanyRead
+    status: Literal["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE"]
+    stage: CandidateResearchStage | None
+    disposition: CandidateResearchDisposition | None
+    candidate_tier: Literal["HIGH", "LOW"] | None
+    priority_seed: FixedDecimal | None
+    priority_recorded_at: datetime | None
+    research_rank_position: int | None
+    research_rank_status: RankingEntryStatus | None
+    research_rank_reason: str | None
+    current_revision: CandidatePipelineRevisionSummaryRead | None
+
+
+class CandidatePipelineEvidenceOption(Contract):
+    evidence_type: CandidateGateEvidenceType
+    reference_id: UUID
+    label: str
+    current: bool
+    availability_status: str
+    forward_fundamental_cagr: FixedDecimal | None = None
+
+
+class CompanyCandidatePipelineRead(Contract):
+    company: CompanyRead
+    lifecycle: Lifecycle | None
+    queue_entry: CandidatePipelineQueueEntry
+    history: list[CandidatePipelineRevisionRead]
+    evidence_options: list[CandidatePipelineEvidenceOption]
+
+
+class CandidatePipelinePublicationResult(Contract):
+    result: Literal["RECORDED", "ALREADY_RECORDED"]
+    revision: CandidatePipelineRevisionRead
+
+
+class ResearchQueueSource(Contract):
+    source_type: str
+    source_record_id: str
+    title: str
+    source_url: str | None = None
+    effective_at: datetime | None = None
+    published_at: date | None = None
+    recorded_at: datetime | None = None
+
+
+class ResearchQueueTask(Contract):
+    task_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    condition_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    company: CompanyRead
+    task_type: ResearchQueueTaskType
+    title: str
+    reason: str
+    lifecycle_priority: int
+    research_rank_position: int | None = None
+    trigger_rule: str
+    judgment_required: bool
+    owner_workflow: Literal["LOCAL_ANALYST", "RESEARCH_AGENT", "DATA_REVIEW"]
+    source_effective_at: datetime | None = None
+    source_published_at: date | None = None
+    source_recorded_at: datetime | None = None
+    due_at: datetime | None = None
+    sources: list[ResearchQueueSource]
+    status: Literal["OPEN", "COMPLETE"] = "OPEN"
+    completed_by: str | None = None
+    completed_at: datetime | None = None
+    completion_note: str | None = None
+    trigger_classification: ThesisWatchClassification | None = None
+
+
+class ResearchTriggerRead(Contract):
+    id: UUID
+    company: CompanyRead
+    event_key: str
+    version: int
+    fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    trigger_type: ResearchTriggerType
+    title: str
+    reason: str
+    source_domain: str
+    source_record_id: str
+    source_reference: str | None
+    effective_at: datetime | None
+    source_observed_at: datetime | None
+    source_recorded_at: datetime
+    detected_at: datetime
+    source_snapshot: dict[str, object]
+    queue_task_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None
+    queue_condition_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None
+    processing_state: Literal["OPEN", "REVIEWED", "SUPERSEDED", "STALE"]
+
+
+class ResearchTriggerReadResult(Contract):
+    as_of: datetime
+    triggers: list[ResearchTriggerRead]
+
+
+class ResearchTriggerPublicationRead(Contract):
+    revision_type: Literal["RESEARCH", "THESIS"]
+    revision_id: UUID
+    classification: ThesisWatchClassification
+    classification_rationale: str
+    recorded_at: datetime
+
+
+class ResearchTriggerRefreshResult(Contract):
+    as_of: datetime
+    lookback_days: int
+    examined: int
+    created: int
+    replayed: int
+    triggers: list[ResearchTriggerRead]
+
+
+class ResearchQueueCounts(Contract):
+    open: int
+    complete: int
+    portfolio: int
+    watchlist: int
+    candidate: int
+
+
+class ResearchQueueRead(Contract):
+    as_of: datetime
+    tasks: list[ResearchQueueTask]
+    counts: ResearchQueueCounts
+
+
+class ResearchQueueCompletionCreate(Contract):
+    condition_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    completed_by: Annotated[str, Field(min_length=1, max_length=160)]
+    completion_note: Annotated[str, Field(max_length=5000)] | None = None
+    trigger_classification: ThesisWatchClassification | None = None
+
+
+class ResearchQueueCompletionRead(Contract):
+    id: UUID
+    task: ResearchQueueTask
+    completed_by: str
+    completion_note: str | None
+    trigger_classification: ThesisWatchClassification | None = None
+    completed_at: datetime
+
+
+class ResearchQueueCompletionResult(Contract):
+    result: Literal["COMPLETED", "ALREADY_COMPLETED"]
+    task: ResearchQueueTask
 
 
 class RankingEntryRead(Contract):
@@ -1471,12 +2767,14 @@ class ExecutionPaceRunCreate(Contract):
 
 
 class ExecutionPaceInputSnapshot(Contract):
-    context_version: Literal["execution-pace-inputs-v1"]
+    context_version: Literal["execution-pace-inputs-v1", "execution-pace-inputs-v2"]
     lifecycle: Lifecycle | None
     target_revision_id: UUID | None
     target_effective_at: datetime | None
     holding_snapshot_id: UUID | None
     holding_effective_at: datetime | None
+    holdings_age_days: int | None = None
+    holdings_freshness: Literal["FRESH", "STALE", "NO_DATA"] = "NO_DATA"
     allocation_status: str | None
     current_weight: FixedDecimal | None
     target_weight: FixedDecimal | None
@@ -1512,6 +2810,9 @@ class ExecutionPaceInputSnapshot(Contract):
     model_price_observation_id: UUID | None
     model_reference_price: FixedDecimal | None
     model_price_currency: Currency | None
+    accepted_reference_price: FixedDecimal | None = None
+    accepted_reference_price_observation_id: UUID | None = None
+    accepted_reference_price_effective_at: datetime | None = None
     weighted_fair_value: FixedDecimal | None
     weighted_upside: FixedDecimal | None
     valuation_zone: Literal["DEEP_DISCOUNT", "DISCOUNT", "NEAR_FAIR", "RICH", "VERY_RICH"] | None
@@ -1606,6 +2907,8 @@ class AttentionEventRead(Contract):
         "RANK_CHANGE",
         "EXECUTION_PACE_CHANGE",
         "DATA_QUALITY",
+        "RISK_ASSESSMENT",
+        "RESEARCH_PROPOSAL",
     ]
     severity: Literal["HIGH", "MEDIUM", "LOW"]
     status: Literal["REVIEW", "INFORMATIONAL"]
@@ -1673,6 +2976,11 @@ class DcfYearAssumptionInput(Contract):
     discount_rate: Annotated[ModelNumber, Field(ge=0, lt=1)]
 
 
+class DcfTailGrowthAssumptionInput(Contract):
+    forecast_year: Annotated[int, Field(ge=6, le=10)]
+    ufcf_growth: Annotated[ModelNumber, Field(ge=-0.99, le=10)]
+
+
 class DcfScenarioInput(Contract):
     scenario: DcfScenario
     probability: Probability
@@ -1680,6 +2988,7 @@ class DcfScenarioInput(Contract):
     year10_ufcf_growth: Annotated[ModelNumber, Field(ge=-0.99, le=10)]
     rationale: Annotated[str, Field(min_length=1, max_length=4000)]
     years: list[DcfYearAssumptionInput] = Field(min_length=5, max_length=5)
+    tail_ufcf_growth: list[DcfTailGrowthAssumptionInput] | None = None
 
 
 class DcfCalculationInput(Contract):
@@ -1696,6 +3005,21 @@ class DcfCalculationInput(Contract):
             years = {year.forecast_year for year in scenario.years}
             if years != {1, 2, 3, 4, 5}:
                 raise ValueError("Each scenario must provide exactly years 1 through 5")
+            if scenario.tail_ufcf_growth is not None:
+                tail_years = {year.forecast_year for year in scenario.tail_ufcf_growth}
+                if tail_years != {6, 7, 8, 9, 10}:
+                    raise ValueError(
+                        "An explicit UFCF tail must provide exactly years 6 through 10"
+                    )
+                year10_growth = next(
+                    year.ufcf_growth
+                    for year in scenario.tail_ufcf_growth
+                    if year.forecast_year == 10
+                )
+                if year10_growth != scenario.year10_ufcf_growth:
+                    raise ValueError(
+                        "Explicit Year 10 UFCF growth must match the terminal growth endpoint"
+                    )
             terminal_discount_rate = next(
                 year.discount_rate for year in scenario.years if year.forecast_year == 5
             )
@@ -1886,6 +3210,11 @@ class DcfYearAssumptionRead(DcfYearAssumptionInput):
     scenario_id: UUID
 
 
+class DcfTailGrowthAssumptionRead(DcfTailGrowthAssumptionInput):
+    id: UUID
+    scenario_id: UUID
+
+
 class DcfScenarioRead(Contract):
     id: UUID
     revision_id: UUID
@@ -1895,6 +3224,7 @@ class DcfScenarioRead(Contract):
     year10_ufcf_growth: ModelNumber
     rationale: str
     years: list[DcfYearAssumptionRead]
+    tail_ufcf_growth: list[DcfTailGrowthAssumptionRead] | None
 
 
 class DcfProjectionRead(Contract):
@@ -1937,6 +3267,7 @@ class DcfProjectionCalculationPreviewRead(Contract):
 class FinancialModelOutputsRead(Contract):
     id: UUID
     revision_id: UUID
+    return_methodology: ReturnMethodologyRead
     status: Literal["COMPLETE", "PARTIAL"]
     model_currency: Currency
     price_observation_id: UUID | None
@@ -1967,6 +3298,7 @@ class FinancialModelOutputsRead(Contract):
 
 
 class FinancialModelCalculationOutputsRead(Contract):
+    return_methodology: ReturnMethodologyRead
     status: Literal["COMPLETE", "PARTIAL"]
     model_currency: Currency
     price_observation_id: UUID | None
@@ -2006,6 +3338,50 @@ class FinancialModelCalculationPreviewRead(Contract):
     projections: list[DcfProjectionCalculationPreviewRead] = Field(min_length=30, max_length=30)
 
 
+class FinancialModelEvidenceReference(Contract):
+    evidence_type: ModelEvidenceType
+    reference_id: UUID
+    relationship: ModelEvidenceRelationship
+    note: Annotated[str, Field(max_length=2000)] | None = None
+
+
+class FinancialModelEvidenceRead(FinancialModelEvidenceReference):
+    summary: str | None
+    evidence_status: str
+    author_id: str | None
+    source_reference: str | None
+    observed_at: datetime | None
+    recorded_at: datetime
+    resolution_status: Literal["VERIFIED", "UNRESOLVED"] = "VERIFIED"
+    resolution_issue: str | None = None
+    trigger_references: list[ResearchTriggerReferenceRead] = Field(default_factory=list)
+
+
+class FinancialModelProposalProvenance(Contract):
+    author_id: Annotated[str, Field(min_length=1, max_length=160)]
+    authored_at: datetime
+    source_reference: Annotated[str, Field(min_length=1, max_length=1000, pattern=r"^https://")]
+
+    @field_validator("authored_at")
+    @classmethod
+    def authored_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("authored_at must include a timezone offset")
+        value = value.astimezone(UTC)
+        if value > datetime.now(UTC):
+            raise ValueError("Future model proposal timestamps are not supported")
+        return value
+
+
+def _validate_unique_model_evidence(
+    evidence: list[FinancialModelEvidenceReference],
+) -> list[FinancialModelEvidenceReference]:
+    keys = [(item.evidence_type, item.reference_id) for item in evidence]
+    if len(keys) != len(set(keys)):
+        raise ValueError("A model proposal cannot cite the same evidence record twice")
+    return evidence
+
+
 class FinancialModelRevisionSummary(Contract):
     id: UUID
     model_id: UUID
@@ -2013,6 +3389,10 @@ class FinancialModelRevisionSummary(Contract):
     base_revision_id: UUID | None
     methodology_version: str
     source_revision_id: str | None
+    proposal_author_id: str | None = None
+    proposal_authored_at: datetime | None = None
+    proposal_source_reference: str | None = None
+    supporting_evidence: list[FinancialModelEvidenceRead] = Field(default_factory=list)
     actor: Actor
     source: str | None
     rationale: str
@@ -2039,6 +3419,236 @@ class FinancialModelRead(Contract):
     current_revision_id: UUID
     current_revision: FinancialModelRevisionRead
     history: list[FinancialModelRevisionSummary]
+
+
+class ResearchTriggerModelContextRead(Contract):
+    model_id: UUID
+    model_type: FinancialModelType
+    model_name: str
+    valuation_listing: ListingRead
+    model_currency: Currency
+    current_revision_id: UUID
+    revision_number: int
+    methodology_version: str
+    actor: Actor
+    source: str | None
+    rationale: str
+    effective_at: datetime
+    recorded_at: datetime
+    outputs: FinancialModelOutputsRead
+    supporting_evidence: list[FinancialModelEvidenceRead]
+
+
+class ResearchTriggerContextRead(Contract):
+    context_as_of: datetime
+    trigger: ResearchTriggerRead
+    securities: list[SecurityRead]
+    listings: list[ListingRead]
+    research: CompanyResearchRead
+    thesis: CompanyInvestmentThesisRead
+    models: list[ResearchTriggerModelContextRead]
+    accepted_publications: list[ResearchTriggerPublicationRead]
+
+
+ResearchAgentRoleValue = Literal[
+    "DATA_UNIVERSE_STEWARD",
+    "PORTFOLIO_THESIS_SENTINEL",
+    "MODEL_ALLOCATION_STEWARD",
+]
+ResearchAgentWorkEventValue = Literal[
+    "DELIVERY_SUCCEEDED",
+    "DELIVERY_FAILED",
+    "ACKNOWLEDGED",
+    "IN_PROGRESS",
+    "COMPLETED",
+    "BLOCKED",
+    "SOURCE_UNAVAILABLE",
+    "STALE_SOURCE",
+    "UNRESOLVED_REVIEW",
+]
+ResearchAgentProposalDomain = Literal["MODEL", "RESEARCH", "THESIS", "RISK"]
+
+
+class ResearchAgentWorkRequest(Contract):
+    as_of: datetime | None = None
+    limit: int = Field(default=50, ge=1, le=50)
+    offset: int = Field(default=0, ge=0, le=5000)
+    portfolio_id: UUID | None = None
+
+
+class ResearchAgentWorkItemRead(Contract):
+    delivery_id: UUID
+    work_type: Literal["TRIGGER", "QUEUE_TASK", "DATA_DOMAIN", "PORTFOLIO_STATE"]
+    work_key: str
+    work_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    delivery_channel: Literal["API", "GOOGLE_SHEETS"]
+    delivered_at: datetime
+    current_status: Literal[
+        "DELIVERED",
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "BLOCKED",
+        "SOURCE_UNAVAILABLE",
+        "STALE_SOURCE",
+        "UNRESOLVED_REVIEW",
+    ] = "DELIVERED"
+    current_reason: str | None = None
+    payload: dict[str, object]
+
+
+class ResearchAgentWorkContractV1(Contract):
+    contract_type: Literal["ResearchAgentWorkContractV1"] = "ResearchAgentWorkContractV1"
+    contract_version: Literal["1.0.0"] = "1.0.0"
+    agent_role: ResearchAgentRoleValue
+    as_of: datetime
+    status: Literal["AVAILABLE", "NO_WORK", "BLOCKED", "SOURCE_UNAVAILABLE"]
+    status_reason: str | None = None
+    items: list[ResearchAgentWorkItemRead]
+
+
+class ResearchAgentAcknowledgmentContractV1(Contract):
+    contract_type: Literal["ResearchAgentAcknowledgmentContractV1"] = (
+        "ResearchAgentAcknowledgmentContractV1"
+    )
+    contract_version: Literal["1.0.0"] = "1.0.0"
+    agent_role: ResearchAgentRoleValue
+    work_type: Literal["TRIGGER", "QUEUE_TASK", "DATA_DOMAIN", "PORTFOLIO_STATE"]
+    work_key: Annotated[str, Field(min_length=1, max_length=500)]
+    work_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    external_update_id: Annotated[str, Field(min_length=1, max_length=200)]
+    delivery_channel: Literal["API", "GOOGLE_SHEETS"] = "API"
+    agent_run_id: Annotated[str, Field(min_length=1, max_length=200)]
+    actor_id: Annotated[str, Field(min_length=1, max_length=160)]
+    status: Literal[
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "BLOCKED",
+        "SOURCE_UNAVAILABLE",
+        "STALE_SOURCE",
+        "UNRESOLVED_REVIEW",
+    ]
+    observed_at: datetime
+    reason: Annotated[str, Field(max_length=5000)] | None = None
+    blocker_code: Annotated[str, Field(max_length=80)] | None = None
+    source_reference: AnyHttpUrl | None = None
+    proposal_domain: ResearchAgentProposalDomain | None = None
+    proposal_candidate_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def validate_acknowledgment(self) -> Self:
+        if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
+            raise ValueError("observed_at must include a timezone offset")
+        observed_at = self.observed_at.astimezone(UTC)
+        if observed_at > datetime.now(UTC):
+            raise ValueError("Future agent acknowledgment timestamps are not supported")
+        self.observed_at = observed_at
+        if self.status in {
+            "BLOCKED",
+            "SOURCE_UNAVAILABLE",
+            "STALE_SOURCE",
+            "UNRESOLVED_REVIEW",
+        } and not (self.reason and self.reason.strip()):
+            raise ValueError(f"{self.status} requires an explicit reason")
+        if (self.proposal_domain is None) != (self.proposal_candidate_id is None):
+            raise ValueError("proposal_domain and proposal_candidate_id must be supplied together")
+        return self
+
+
+class ResearchAgentAcknowledgmentRead(Contract):
+    id: UUID
+    delivery_id: UUID
+    agent_role: ResearchAgentRoleValue
+    work_type: Literal["TRIGGER", "QUEUE_TASK", "DATA_DOMAIN", "PORTFOLIO_STATE"]
+    work_key: str
+    work_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    delivery_channel: Literal["API", "GOOGLE_SHEETS"]
+    external_update_id: str
+    agent_run_id: str
+    actor_id: str
+    status: Literal[
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "BLOCKED",
+        "SOURCE_UNAVAILABLE",
+        "STALE_SOURCE",
+        "UNRESOLVED_REVIEW",
+    ]
+    observed_at: datetime
+    recorded_at: datetime
+    reason: str | None
+    blocker_code: str | None
+    source_reference: str | None
+    proposal_domain: ResearchAgentProposalDomain | None
+    proposal_candidate_id: UUID | None
+    proposal_status: str | None = None
+
+
+class ResearchAgentAcknowledgmentResult(Contract):
+    result: Literal["RECORDED", "ALREADY_RECORDED"]
+    acknowledgment: ResearchAgentAcknowledgmentRead
+
+
+class ResearchAgentAcknowledgmentSyncRead(Contract):
+    status: Literal["COMPLETE", "PARTIAL", "BLOCKED", "FAILED"]
+    spreadsheet_title: str | None
+    tab: Literal["Application Agent Work Acknowledgment Inbox"]
+    checked_at: datetime
+    captured: int
+    replayed: int
+    invalid: int
+    blocked: int
+    issues: list[dict[str, object]]
+
+
+class ResearchAgentDeliveryFailure(Contract):
+    agent_role: ResearchAgentRoleValue
+    work_type: Literal["TRIGGER", "QUEUE_TASK", "DATA_DOMAIN", "PORTFOLIO_STATE"]
+    work_key: str
+    work_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    attempt_id: Annotated[str, Field(min_length=1, max_length=200)]
+    channel: Literal["API", "GOOGLE_SHEETS"]
+    reason: Annotated[str, Field(min_length=1, max_length=5000)]
+    observed_at: datetime
+
+
+class ResearchAgentWorkEventRead(Contract):
+    id: UUID
+    delivery_id: UUID | None
+    agent_role: ResearchAgentRoleValue
+    work_type: Literal["TRIGGER", "QUEUE_TASK", "DATA_DOMAIN", "PORTFOLIO_STATE"]
+    work_key: str
+    work_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    channel: Literal["API", "GOOGLE_SHEETS"]
+    event_type: ResearchAgentWorkEventValue
+    reason: str | None
+    blocker_code: str | None
+    external_update_id: str | None
+    proposal_domain: ResearchAgentProposalDomain | None
+    proposal_candidate_id: UUID | None
+    recorded_at: datetime
+
+
+class ResearchAgentDeliveryFailureResult(Contract):
+    result: Literal["RECORDED", "ALREADY_RECORDED"]
+    event: ResearchAgentWorkEventRead
+
+
+class ResearchAgentProposalStatusRead(Contract):
+    proposal_domain: ResearchAgentProposalDomain
+    proposal_candidate_id: UUID
+    status: str
+    issue: str | None
+    external_revision_id: str | None
+    base_revision_id: UUID | None
+    accepted_revision_id: UUID | None
+    reviewer: str | None
+    reviewer_note: str | None
+    accepted_at: datetime | None
+    rejected_at: datetime | None
+    last_observed_at: datetime
 
 
 class OwnerCashFlowProjectionRead(Contract):
@@ -2111,7 +3721,7 @@ class AdditionalModelContractCandidate(Contract):
 
 
 class AdditionalModelPortableContractV2(Contract):
-    contract_version: Literal["2.0.0"] = "2.0.0"
+    contract_version: Literal["2.0.0", "2.1.0"] = "2.1.0"
     exported_at: datetime
     model_id: UUID
     company_id: UUID
@@ -2123,9 +3733,18 @@ class AdditionalModelPortableContractV2(Contract):
     base_revision_id: UUID
     base_revision_number: Annotated[int, Field(gt=0)]
     candidate_revision: AdditionalModelContractCandidate
+    proposal: FinancialModelProposalProvenance | None = None
+    supporting_evidence: list[FinancialModelEvidenceReference] = Field(
+        default_factory=list, max_length=30
+    )
 
     @model_validator(mode="after")
     def contract_method_matches_input(self) -> Self:
+        if self.contract_version == "2.0.0" and (
+            self.proposal is not None or self.supporting_evidence
+        ):
+            raise ValueError("Model evidence requires portable contract version 2.1.0")
+        _validate_unique_model_evidence(self.supporting_evidence)
         if self.model_type == "OWNER_CASH_FLOW_10Y":
             if self.candidate_revision.owner_cash_flow is None:
                 raise ValueError("Owner cash-flow contract requires owner_cash_flow inputs")
@@ -2155,6 +3774,7 @@ class AdditionalModelContractPreviewRead(Contract):
     current_revision_number: int
     source_revision_id: str
     changes: list[AdditionalModelContractFieldChange]
+    projection_changes: list[AdditionalModelContractFieldChange]
     output_changes: list[AdditionalModelContractFieldChange]
     current_outputs: FinancialModelCalculationOutputsRead
     calculated_outputs: FinancialModelCalculationOutputsRead | None
@@ -2201,7 +3821,7 @@ class FinancialModelContractIdentity(Contract):
 class FinancialModelContractBaseRevision(Contract):
     revision_id: UUID
     revision_number: Annotated[int, Field(gt=0)]
-    methodology_version: Literal["ufcf-dcf-fade-v1"]
+    methodology_version: Literal["ufcf-dcf-fade-v1", "ufcf-dcf-explicit-tail-v1"]
 
 
 class FinancialModelContractCandidateRevision(Contract):
@@ -2239,12 +3859,16 @@ class FinancialModelContractCalculation(Contract):
 
 
 class FinancialModelContractV1(Contract):
-    contract_version: Literal["1.0.0"]
+    contract_version: Literal["1.0.0", "1.1.0", "1.2.0"]
     exported_at: datetime
     model: FinancialModelContractIdentity
     base_revision: FinancialModelContractBaseRevision
     candidate_revision: FinancialModelContractCandidateRevision
     base_calculation: FinancialModelContractCalculation
+    proposal: FinancialModelProposalProvenance | None = None
+    supporting_evidence: list[FinancialModelEvidenceReference] = Field(
+        default_factory=list, max_length=30
+    )
 
     @field_validator("exported_at")
     @classmethod
@@ -2255,6 +3879,11 @@ class FinancialModelContractV1(Contract):
 
     @model_validator(mode="after")
     def contract_revision_links_match(self) -> Self:
+        if self.contract_version != "1.2.0" and (
+            self.proposal is not None or self.supporting_evidence
+        ):
+            raise ValueError("Model evidence requires portable contract version 1.2.0")
+        _validate_unique_model_evidence(self.supporting_evidence)
         if self.base_calculation.revision_id != self.base_revision.revision_id:
             raise ValueError("Base calculation must match the exported base revision")
         if self.base_calculation.outputs.model_currency != self.model.model_currency:
@@ -2320,6 +3949,7 @@ class FinancialModelContractPreviewRead(Contract):
     already_imported_revision_id: UUID | None
     reason: str | None
     changes: list[FinancialModelContractFieldChange]
+    projection_changes: list[FinancialModelContractFieldChange]
     output_changes: list[FinancialModelContractFieldChange]
     current_outputs: FinancialModelContractOutputSummary
     calculated_outputs: FinancialModelContractOutputSummary | None
@@ -2329,3 +3959,583 @@ class FinancialModelContractImportRead(Contract):
     status: Literal["IMPORTED", "ALREADY_IMPORTED"]
     model: FinancialModelRead
     revision: FinancialModelRevisionRead
+
+
+class GoogleSheetsSyncStatusRead(Contract):
+    configured: bool
+    credentials_available: bool
+    spreadsheet_id: str | None
+    spreadsheet_url: str | None
+    sync_tab: str
+    polling_interval_seconds: int
+    last_run: "GoogleSheetsSyncRunRead | None"
+
+
+class GoogleSheetsSyncRunRead(Contract):
+    id: UUID
+    spreadsheet_id: str | None
+    spreadsheet_title: str | None
+    status: Literal["CONNECTED", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"]
+    started_at: datetime
+    completed_at: datetime | None
+    candidate_count: int
+    new_count: int
+    unchanged_count: int
+    issue_count: int
+    error_code: str | None
+    error_message: str | None
+
+
+class GoogleSheetsConnectionTestRead(Contract):
+    connected: bool
+    spreadsheet_id: str | None
+    spreadsheet_title: str | None
+    sync_tab_exists: bool
+    checked_at: datetime
+    message: str
+
+
+class GoogleSheetsSyncCandidateRead(Contract):
+    id: UUID
+    status: Literal["PENDING", "READY", "CONFLICT", "INVALID", "NO_CHANGES", "ACCEPTED", "REJECTED"]
+    spreadsheet_id: str
+    spreadsheet_title: str
+    sheet_id: int
+    sheet_title: str
+    source_row_number: int
+    source_url: str
+    contract_version: str | None
+    content_fingerprint: str
+    external_revision_id: str | None
+    base_revision_id: UUID | None
+    model_id: UUID | None
+    company_id: UUID | None
+    valuation_listing_id: UUID | None
+    company_name: str | None
+    model_name: str | None
+    source_model_key: str | None
+    model_type: str | None
+    model_currency: str | None
+    rationale: str | None
+    proposal: FinancialModelProposalProvenance | None = None
+    supporting_evidence: list[FinancialModelEvidenceRead] = Field(default_factory=list)
+    issue: str | None
+    preview_status: str | None
+    preview_data: dict[str, object] | None
+    previewed_at: datetime | None
+    accepted_revision_id: UUID | None
+    reviewer: str | None
+    decision_note: str | None
+    first_observed_at: datetime
+    last_observed_at: datetime
+    accepted_at: datetime | None
+    rejected_at: datetime | None
+
+
+class GoogleSheetsSyncCheckRead(Contract):
+    run: GoogleSheetsSyncRunRead
+    new_candidates: list[GoogleSheetsSyncCandidateRead]
+
+
+class GoogleSheetsPortfolioStatePublishRequest(Contract):
+    portfolio_id: UUID
+
+
+class GoogleSheetsPortfolioStatePublishRead(Contract):
+    status: Literal["PUBLISHED", "UNCHANGED"]
+    spreadsheet_id: str
+    spreadsheet_title: str
+    tab: str
+    portfolio_id: UUID
+    contract_version: str
+    content_fingerprint: str
+    published_at: datetime
+    valuation_as_of: datetime | None
+    valuation_status: str
+    row_count: int
+    read_back_verified: bool
+    message: str
+
+
+class GoogleSheetsThesisWatchPublishRequest(Contract):
+    limit: Annotated[int, Field(ge=1, le=100)] = 50
+    offset: Annotated[int, Field(ge=0, le=5000)] = 0
+
+
+class GoogleSheetsThesisWatchPublishRead(Contract):
+    status: Literal["PUBLISHED", "UNCHANGED"]
+    spreadsheet_id: str
+    spreadsheet_title: str
+    tab: Literal["Application Thesis Watch Feed"]
+    contract_version: Literal["1.0.0"]
+    content_fingerprint: str
+    published_at: datetime
+    row_count: int
+    added_count: int
+    trigger_ids: list[str]
+    read_back_verified: bool
+    message: str
+
+
+class GoogleSheetsAgentWorkPublishRequest(Contract):
+    """Bounded, manually requested publication of one agent role's work to Sheets."""
+
+    as_of: datetime | None = None
+    limit: int = Field(default=10, ge=1, le=10)
+    offset: int = Field(default=0, ge=0, le=5000)
+    portfolio_id: UUID | None = None
+
+
+class GoogleSheetsAgentWorkPublishRead(Contract):
+    status: Literal["PUBLISHED", "UNCHANGED", "NO_WORK", "BLOCKED"]
+    agent_role: ResearchAgentRoleValue
+    spreadsheet_id: str | None
+    spreadsheet_title: str | None
+    tab: Literal["Application Agent Work Feed"]
+    contract_version: Literal["1.0.0"]
+    content_fingerprint: str | None
+    published_at: datetime
+    row_count: int
+    added_count: int
+    work_item_count: int
+    read_back_verified: bool
+    status_reason: str | None
+    message: str
+
+
+RiskScope = Literal["COMPANY", "PORTFOLIO"]
+RiskCategory = Literal[
+    "BUSINESS",
+    "FINANCIAL",
+    "GEOGRAPHIC",
+    "CURRENCY",
+    "BUSINESS_MODEL",
+    "REGULATORY",
+    "GOVERNANCE",
+    "GEOPOLITICAL",
+    "PORTFOLIO_CONCENTRATION",
+    "PORTFOLIO_EXPOSURE",
+    "THESIS_CHANGE",
+    "OTHER",
+]
+RiskSeverity = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+RiskAssessmentConfidence = Literal["LOW", "MEDIUM", "HIGH", "UNASSESSED"]
+RiskFindingStatus = Literal["ACTIVE", "UNDER_REVIEW", "RESOLVED"]
+RiskChangeDirection = Literal["NEW", "WORSENING", "UNCHANGED", "IMPROVING", "RESOLVED"]
+
+
+class RiskAssessmentEvidenceInput(Contract):
+    source_name: Annotated[str, Field(min_length=1, max_length=200)]
+    source_document_id: UUID | None = None
+    reported_fundamental_observation_id: UUID | None = None
+    thesis_revision_id: UUID | None = None
+    thesis_claim_id: UUID | None = None
+    external_identifier: Annotated[str, Field(min_length=1, max_length=500)] | None = None
+    source_url: AnyHttpUrl | None = None
+    published_at: date | None = None
+    excerpt: Annotated[str, Field(max_length=8000)] | None = None
+    note: Annotated[str, Field(max_length=4000)] | None = None
+
+    @field_validator("source_url")
+    @classmethod
+    def evidence_url_requires_https(cls, value: AnyHttpUrl | None) -> AnyHttpUrl | None:
+        if value is not None and value.scheme != "https":
+            raise ValueError("Risk evidence URLs must use HTTPS")
+        return value
+
+    @model_validator(mode="after")
+    def evidence_has_source(self) -> Self:
+        if not any(
+            (
+                self.source_document_id,
+                self.reported_fundamental_observation_id,
+                self.thesis_revision_id,
+                self.thesis_claim_id,
+                self.external_identifier,
+                self.source_url,
+            )
+        ):
+            raise ValueError("Provide a canonical record or an external source reference")
+        return self
+
+
+class RiskAssessmentFindingInput(Contract):
+    finding_key: Annotated[
+        str, Field(min_length=1, max_length=80, pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    ]
+    scope: RiskScope
+    company_id: UUID | None = None
+    category: RiskCategory
+    title: Annotated[str, Field(min_length=1, max_length=240)]
+    description: Annotated[str, Field(min_length=1, max_length=8000)]
+    severity: RiskSeverity
+    confidence: RiskAssessmentConfidence
+    status: RiskFindingStatus = "ACTIVE"
+    change_direction: RiskChangeDirection = "UNCHANGED"
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)]
+    evidence: list[RiskAssessmentEvidenceInput] = Field(default_factory=list, max_length=50)
+
+    @model_validator(mode="after")
+    def company_scope_has_company(self) -> Self:
+        if self.scope == "COMPANY" and self.company_id is None:
+            raise ValueError("Company-specific risk findings require company_id")
+        if self.scope == "PORTFOLIO" and self.category not in {
+            "PORTFOLIO_CONCENTRATION",
+            "PORTFOLIO_EXPOSURE",
+            "GEOGRAPHIC",
+            "CURRENCY",
+            "GEOPOLITICAL",
+            "OTHER",
+        }:
+            raise ValueError("Portfolio findings must use a portfolio-level risk category")
+        return self
+
+
+class RiskAssessmentContractV1(Contract):
+    """Full, versioned qualitative assessment against a published portfolio state."""
+
+    contract_type: Literal["RiskAssessmentContractV1"]
+    contract_version: Literal["1.0.0"]
+    portfolio_id: UUID
+    stream_key: Annotated[str, Field(min_length=1, max_length=160)]
+    external_revision_id: Annotated[str, Field(min_length=1, max_length=200)]
+    supersedes_revision_id: UUID | None = None
+    author_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source_id: Annotated[str, Field(min_length=1, max_length=160)]
+    source_reference: Annotated[str, Field(min_length=1, max_length=1000)]
+    authored_at: datetime
+    published_at: datetime
+    portfolio_state_contract_version: Literal["1.0.0"]
+    portfolio_state_fingerprint: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
+    holdings_snapshot_id: UUID
+    target_revision_id: UUID | None = None
+    valuation_as_of: datetime
+    coverage_status: Literal["COMPLETE", "PARTIAL"]
+    coverage_note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    summary: Annotated[str, Field(min_length=1, max_length=8000)]
+    rationale: Annotated[str, Field(min_length=1, max_length=8000)]
+    findings: list[RiskAssessmentFindingInput] = Field(default_factory=list, max_length=200)
+
+    @field_validator("authored_at", "published_at", "valuation_as_of")
+    @classmethod
+    def timestamps_are_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Risk assessment timestamps must include a timezone offset")
+        return value.astimezone(UTC)
+
+    @model_validator(mode="after")
+    def full_snapshot_is_unambiguous(self) -> Self:
+        if self.published_at < self.authored_at:
+            raise ValueError("published_at cannot precede authored_at")
+        if self.authored_at < self.valuation_as_of:
+            raise ValueError("The assessment cannot predate its portfolio-state baseline")
+        if self.published_at > datetime.now(UTC):
+            raise ValueError("Future risk assessment publications are not supported")
+        keys = [finding.finding_key for finding in self.findings]
+        if len(keys) != len(set(keys)):
+            raise ValueError("A risk assessment cannot repeat a finding_key")
+        if self.coverage_status == "PARTIAL" and not self.coverage_note:
+            raise ValueError("Partial assessments require a coverage note")
+        if self.coverage_status == "COMPLETE" and not self.findings and not self.summary.strip():
+            raise ValueError("A complete assessment with no findings requires an explicit summary")
+        return self
+
+
+class RiskAssessmentEvidenceRead(Contract):
+    id: UUID
+    source_document_id: UUID | None
+    source_document_title: str | None
+    source_document_url: str | None
+    reported_fundamental_observation_id: UUID | None
+    thesis_revision_id: UUID | None
+    thesis_claim_id: UUID | None
+    source_name: str
+    external_identifier: str | None
+    source_url: str | None
+    published_at: date | None
+    excerpt: str | None
+    note: str | None
+
+
+class RiskAssessmentFindingRead(Contract):
+    id: UUID
+    finding_key: str
+    scope: RiskScope
+    company_id: UUID | None
+    company_name: str | None
+    category: RiskCategory
+    title: str
+    description: str
+    severity: RiskSeverity
+    confidence: RiskAssessmentConfidence
+    status: RiskFindingStatus
+    change_direction: RiskChangeDirection
+    rationale: str
+    evidence: list[RiskAssessmentEvidenceRead]
+
+
+class RiskAssessmentRevisionRead(Contract):
+    id: UUID
+    portfolio_id: UUID
+    stream_key: str
+    revision_number: int
+    contract_version: str
+    external_revision_id: str
+    supersedes_revision_id: UUID | None
+    author_id: str
+    source_id: str
+    source_reference: str
+    authored_at: datetime
+    published_at: datetime
+    recorded_at: datetime
+    reviewer: str
+    reviewer_note: str
+    accepted_at: datetime
+    baseline_status_at_accept: Literal[
+        "CURRENT", "STALE_PORTFOLIO_STATE", "STALE_HOLDINGS", "INCOMPLETE_VALUATION"
+    ]
+    baseline_stale_acknowledged: bool
+    portfolio_state_contract_version: str
+    portfolio_state_fingerprint: str
+    holdings_snapshot_id: UUID
+    target_revision_id: UUID | None
+    valuation_as_of: datetime
+    coverage_status: Literal["COMPLETE", "PARTIAL"]
+    coverage_note: str | None
+    summary: str
+    rationale: str
+    content_fingerprint: str
+    findings: list[RiskAssessmentFindingRead]
+
+
+class CompanyRiskAssessmentsRead(Contract):
+    company_id: UUID
+    current: list[RiskAssessmentRevisionRead]
+    history: list[RiskAssessmentRevisionRead]
+
+
+class PortfolioRiskAssessmentsRead(Contract):
+    portfolio_id: UUID
+    current: list[RiskAssessmentRevisionRead]
+    history: list[RiskAssessmentRevisionRead]
+
+
+class GoogleSheetsRiskSyncRunRead(Contract):
+    id: UUID
+    spreadsheet_id: str | None
+    spreadsheet_title: str | None
+    status: Literal["CONNECTED", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"]
+    started_at: datetime
+    completed_at: datetime | None
+    candidate_count: int
+    new_count: int
+    unchanged_count: int
+    issue_count: int
+    error_code: str | None
+    error_message: str | None
+
+
+class GoogleSheetsRiskSyncStatusRead(Contract):
+    configured: bool
+    credentials_available: bool
+    spreadsheet_id: str | None
+    spreadsheet_url: str | None
+    inbox_tab: str
+    last_run: GoogleSheetsRiskSyncRunRead | None
+
+
+class GoogleSheetsRiskCandidateRead(Contract):
+    id: UUID
+    portfolio_id: UUID | None
+    stream_key: str | None
+    external_revision_id: str | None
+    contract_version: str | None
+    content_fingerprint: str
+    source_url: str
+    sheet_title: str
+    source_row_number: int
+    status: Literal[
+        "PENDING", "READY", "STALE_BASELINE", "CONFLICT", "INVALID", "ACCEPTED", "REJECTED"
+    ]
+    issue: str | None
+    author_id: str | None
+    source_id: str | None
+    source_reference: str | None
+    authored_at: datetime | None
+    published_at: datetime | None
+    summary: str | None
+    findings_count: int
+    baseline_status: (
+        Literal["CURRENT", "STALE_PORTFOLIO_STATE", "STALE_HOLDINGS", "INCOMPLETE_VALUATION"] | None
+    )
+    preview_data: dict[str, object] | None
+    reviewer: str | None
+    reviewer_note: str | None
+    accepted_revision_id: UUID | None
+    first_observed_at: datetime
+    last_observed_at: datetime
+    accepted_at: datetime | None
+    rejected_at: datetime | None
+
+
+class GoogleSheetsRiskSyncCheckRead(Contract):
+    run: GoogleSheetsRiskSyncRunRead
+    new_candidates: list[GoogleSheetsRiskCandidateRead]
+
+
+class GoogleSheetsResearchSyncRunRead(Contract):
+    id: UUID
+    spreadsheet_id: str | None
+    spreadsheet_title: str | None
+    status: Literal["SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"]
+    started_at: datetime
+    completed_at: datetime | None
+    candidate_count: int
+    new_count: int
+    unchanged_count: int
+    issue_count: int
+    error_code: str | None
+    error_message: str | None
+
+
+class GoogleSheetsResearchSyncStatusRead(Contract):
+    configured: bool
+    credentials_available: bool
+    spreadsheet_id: str | None
+    spreadsheet_url: str | None
+    research_inbox_tab: str
+    thesis_inbox_tab: str
+    last_run: GoogleSheetsResearchSyncRunRead | None
+
+
+class GoogleSheetsResearchConnectionTestRead(Contract):
+    connected: bool
+    spreadsheet_id: str | None
+    spreadsheet_title: str | None
+    research_inbox_exists: bool
+    thesis_inbox_exists: bool
+    checked_at: datetime
+    message: str
+
+
+class GoogleSheetsResearchCandidateRead(Contract):
+    id: UUID
+    domain: Literal["RESEARCH", "THESIS"]
+    company_id: UUID | None
+    security_id: UUID | None
+    stream_key: str | None
+    external_revision_id: str | None
+    base_revision_id: UUID | None
+    contract_version: str | None
+    content_fingerprint: str
+    source_url: str
+    sheet_title: str
+    source_row_number: int
+    author_id: str | None
+    source_id: str | None
+    source_reference: str | None
+    observed_at: datetime | None
+    rationale: str | None
+    item_count: int
+    evidence_count: int
+    status: Literal["PENDING", "READY", "CONFLICT", "INVALID", "ACCEPTED", "REJECTED"]
+    issue: str | None
+    preview_data: dict[str, object] | None
+    reviewer: str | None
+    reviewer_note: str | None
+    accepted_research_revision_id: UUID | None
+    accepted_thesis_revision_id: UUID | None
+    first_observed_at: datetime
+    last_observed_at: datetime
+    accepted_at: datetime | None
+    rejected_at: datetime | None
+
+
+class GoogleSheetsResearchSyncCheckRead(Contract):
+    run: GoogleSheetsResearchSyncRunRead
+    new_candidates: list[GoogleSheetsResearchCandidateRead]
+
+
+class GoogleSheetsResearchSyncReviewRequest(Contract):
+    reviewer: Annotated[str, Field(min_length=1, max_length=160)]
+    reviewer_note: Annotated[str, Field(min_length=1, max_length=4000)]
+
+
+class GoogleSheetsResearchSyncRejectRequest(Contract):
+    reviewer: Annotated[str, Field(min_length=1, max_length=160)]
+    reviewer_note: Annotated[str, Field(min_length=1, max_length=4000)]
+
+
+class GoogleSheetsRiskSyncReviewRequest(Contract):
+    reviewer: Annotated[str, Field(min_length=1, max_length=160)]
+    reviewer_note: Annotated[str, Field(min_length=1, max_length=4000)]
+    acknowledge_stale_baseline: bool = False
+
+
+class GoogleSheetsRiskSyncRejectRequest(Contract):
+    reviewer: Annotated[str, Field(min_length=1, max_length=160)]
+    reviewer_note: Annotated[str, Field(min_length=1, max_length=4000)]
+
+
+FinancialStatementSource = Literal["REPORTED_ACTUAL", "CONSENSUS", "AGENT_FORECAST"]
+
+
+class FinancialStatementColumnRead(Contract):
+    period_end: date
+    label: str
+    fiscal_year: int | None
+    fiscal_period: str | None
+    is_forecast: bool
+
+
+class FinancialStatementCellRead(Contract):
+    period_end: date
+    value: FixedDecimal | None
+    status: Literal["AVAILABLE", "CONFLICT", "DATA_CHECK", "UNAVAILABLE"]
+    reason: str | None = None
+    selected_source_id: UUID | None = None
+    source_ids: list[UUID] = Field(default_factory=list)
+
+
+class FinancialStatementRowRead(Contract):
+    id: str
+    metric: str
+    label: str
+    statement: Literal["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW_STATEMENT"]
+    source_kind: FinancialStatementSource
+    source_name: str
+    scenario: str | None = None
+    currency: Currency | None
+    unit: str
+    availability_reason: str | None = None
+    cells: list[FinancialStatementCellRead]
+
+
+class FinancialStatementLimitationRead(Contract):
+    source_name: str
+    reason: str
+    reference_id: UUID | None = None
+
+
+class CompanyFinancialStatementsRead(Contract):
+    company_id: UUID
+    period_type: Literal["ANNUAL", "QUARTERLY"]
+    as_of: date | None
+    known_at: datetime | None
+    periods: list[FinancialStatementColumnRead]
+    rows: list[FinancialStatementRowRead]
+    reported_periods: list[ReportedFundamentalPeriodRead]
+    consensus: CompanyConsensusEstimatesRead
+    research: CompanyResearchRead
+    limitations: list[FinancialStatementLimitationRead]
+    latest_observed_at: datetime | None
+
+
+class GoogleSheetsSyncReviewRequest(Contract):
+    reviewer: Annotated[str, Field(min_length=1, max_length=160)]
+    decision_note: Annotated[str, Field(min_length=1, max_length=4000)] | None = None
+
+
+class GoogleSheetsSyncRejectRequest(Contract):
+    reviewer: Annotated[str, Field(min_length=1, max_length=160)]
+    decision_note: Annotated[str, Field(min_length=1, max_length=4000)]

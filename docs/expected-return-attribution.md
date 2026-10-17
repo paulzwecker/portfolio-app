@@ -25,8 +25,9 @@ Expected IRR change.
 
 ## Native attribution method
 
-For two points in the same native model series, with the same model type and
-methodology version, the API rebuilds both retained input states and recalculates
+For two points in the same native model series, with the same model type,
+versioned return methodology, model currency and methodology version, the API
+rebuilds both retained input states and recalculates
 16 combinations through that model's deterministic engine. Four factors switch
 from prior to current values:
 
@@ -65,8 +66,9 @@ reconciliation differences; it is never allocated to the largest driver.
   arithmetic endpoint change, but all of it remains residual as `OUTPUTS_ONLY`.
   The application does not reverse-engineer undocumented Expected Return Matrix
   behavior from cached values.
-- A legacy/native semantic boundary produces `RETURN_SEMANTICS_CHANGE` and no
-  numeric cross-method change.
+- A legacy/native source boundary, unclassified method, return-method change, or
+  currency change produces `RETURN_SEMANTICS_CHANGE` and no numeric cross-method
+  change.
 - A model-series change or methodology-version change can show the arithmetic
   endpoint difference, but keeps the full difference residual. Methods are not
   cross-recalculated.

@@ -1,0 +1,445 @@
+{
+  "report_version": "1.0.0",
+  "assessed_at": "2026-10-09T21:31:27.134069+00:00",
+  "source": {
+    "workbook": "reference/workbook/Portfolio_Watchlist.xlsx",
+    "sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+    "effective_date": null,
+    "effective_date_note": "Workbook has no trustworthy effective date; acceptance time is used."
+  },
+  "coverage": {
+    "portfolio_companies": 21,
+    "portfolio_native_before": 6,
+    "portfolio_native_before_evidence": "reconciliation/local-development-handover-2026-10-09.md",
+    "portfolio_native_after": 9,
+    "portfolio_coverage_before": 0.2857142857142857,
+    "portfolio_coverage_after": 0.42857142857142855,
+    "watchlist_companies": 71,
+    "watchlist_native_after": 1,
+    "portfolio_return_methodology_counts": {
+      "UFCF_ENTERPRISE_IRR": 7,
+      "UFCF_ENTERPRISE_HMODEL_IRR": 2
+    },
+    "native_models_by_portfolio_key": {
+      "P-GOOGL": {
+        "company": "Alphabet",
+        "model_id": "062694a6-2d4f-4170-8820-8872bcf42908",
+        "revision_id": "6bfae7e5-59d0-45ba-a193-79348e9f51ab",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-fade-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "legacy-native-input-v1",
+        "output_status": "COMPLETE",
+        "price_status": "FRESH",
+        "price_effective_at": "2026-10-01T02:00:00+02:00",
+        "expected_irr": "0.128845792435765963",
+        "expected_excess": "0.038600650248265963"
+      },
+      "P-AMZN": {
+        "company": "Amazon",
+        "model_id": "6f162719-b1c2-415c-8cf4-4640a1319072",
+        "revision_id": "b5f2940f-a5b3-47cd-a6e3-fa5008634724",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-explicit-tail-v1",
+        "return_methodology": "UFCF_ENTERPRISE_HMODEL_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "portfolio-ufcf-tail-2026-10-09-v1",
+        "output_status": "COMPLETE",
+        "price_status": "STALE",
+        "price_effective_at": "2026-10-02T02:00:00+02:00",
+        "expected_irr": "0.105668292940461679",
+        "expected_excess": "0.020472547018586679"
+      },
+      "P-ASML": {
+        "company": "ASML Holding",
+        "model_id": "40c89b0b-ca5f-4741-980c-3f5bb729efc7",
+        "revision_id": "3e5267fa-d7e8-4bc2-b19c-69eb46374f03",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-fade-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "legacy-ufcf-dcf-cohort-v1",
+        "output_status": "COMPLETE",
+        "price_status": "FRESH",
+        "price_effective_at": "2026-10-05T02:00:00+02:00",
+        "expected_irr": "0.082434630456977119",
+        "expected_excess": "-0.010499329183647881"
+      },
+      "P-CPRT": {
+        "company": "Copart",
+        "model_id": "80ce1288-47eb-46d9-b303-8c4f79973582",
+        "revision_id": "4920859e-0405-4261-88c6-eeeacd54650f",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-fade-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "portfolio-ufcf-dcf-2026-10-06-v1",
+        "output_status": "COMPLETE",
+        "price_status": "FRESH",
+        "price_effective_at": "2026-10-09T02:00:00+02:00",
+        "expected_irr": "0.143712843841061946",
+        "expected_excess": "0.058712843841061946"
+      },
+      "P-HIMS": {
+        "company": "Hims & Hers",
+        "model_id": "f52207a3-cc6d-493a-946c-a4c55fcd30cf",
+        "revision_id": "8790ccc3-a468-4a2d-81f7-98c5c6a054dc",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-explicit-tail-v1",
+        "return_methodology": "UFCF_ENTERPRISE_HMODEL_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "portfolio-ufcf-tail-2026-10-09-v1",
+        "output_status": "COMPLETE",
+        "price_status": "STALE",
+        "price_effective_at": "2026-10-02T02:00:00+02:00",
+        "expected_irr": "0.138673367719834452",
+        "expected_excess": "0.023556741388584452"
+      },
+      "P-ISRG": {
+        "company": "Intuitive Surgical",
+        "model_id": "5eb0ca86-e965-4e9a-91ac-287af09c338a",
+        "revision_id": "645b607a-4a07-48ee-8e72-e5662f19b9db",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-fade-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "legacy-ufcf-dcf-cohort-v1",
+        "output_status": "COMPLETE",
+        "price_status": "FRESH",
+        "price_effective_at": "2026-10-02T02:00:00+02:00",
+        "expected_irr": "0.070729013055480122",
+        "expected_excess": "-0.024503888663269878"
+      },
+      "P-MA": {
+        "company": "Mastercard",
+        "model_id": "c35c385e-c486-4581-af99-4b1c38f27fa9",
+        "revision_id": "e01d5779-e2d9-4b8a-9e80-ddd5c05f9abe",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-fade-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "legacy-ufcf-dcf-cohort-v1",
+        "output_status": "COMPLETE",
+        "price_status": "FRESH",
+        "price_effective_at": "2026-10-02T02:00:00+02:00",
+        "expected_irr": "0.095399008501049693",
+        "expected_excess": "0.009959740438549693"
+      },
+      "P-MSFT": {
+        "company": "Microsoft",
+        "model_id": "b114f8c6-5415-4905-9f86-921757b9a0b5",
+        "revision_id": "736525be-29f1-4bac-8063-bb63f5de08e8",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-explicit-tail-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "portfolio-ufcf-tail-2026-10-09-v1",
+        "output_status": "COMPLETE",
+        "price_status": "STALE",
+        "price_effective_at": "2026-10-02T02:00:00+02:00",
+        "expected_irr": "0.069881801925448372",
+        "expected_excess": "-0.015306988074551628"
+      },
+      "P-UBER": {
+        "company": "Uber Technologies",
+        "model_id": "75060e94-996c-4d0a-aa91-6fd6f27d2750",
+        "revision_id": "dfdf74b0-03d4-47f4-8795-ac6e0e69a087",
+        "revision_number": 1,
+        "model_methodology_version": "ufcf-dcf-fade-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "migration_status": "PARITY_PASS",
+        "mapping_version": "portfolio-ufcf-dcf-2026-10-06-v1",
+        "output_status": "COMPLETE",
+        "price_status": "FRESH",
+        "price_effective_at": "2026-10-09T02:00:00+02:00",
+        "expected_irr": "0.163097262526491281",
+        "expected_excess": "0.067287318776491281"
+      }
+    }
+  },
+  "batch": {
+    "applied": 3,
+    "already_imported_at_apply": 1,
+    "replay_imported": 0,
+    "replay_already_imported": 4,
+    "parity_pass_keys_in_source_report": [
+      "P-GOOGL",
+      "P-AMZN",
+      "P-HIMS",
+      "P-ISRG",
+      "P-MA",
+      "P-MSFT",
+      "P-CPRT",
+      "P-UBER",
+      "W-TOST"
+    ],
+    "newly_accepted": [
+      {
+        "model_key": "P-AMZN",
+        "company": "Amazon",
+        "listing_requirement": {
+          "ticker": "AMZN",
+          "venue": "NASDAQ",
+          "currency": "USD",
+          "security_type": "COMMON_STOCK"
+        },
+        "mapping_version": "portfolio-ufcf-tail-2026-10-09-v1",
+        "return_methodology": "UFCF_ENTERPRISE_HMODEL_IRR",
+        "source_effective_date": null,
+        "projection_reconciliation": {
+          "passed": 30,
+          "compared": 30
+        },
+        "output_reconciliation": {
+          "passed": 22,
+          "compared": 22
+        },
+        "accepted_model": {
+          "model_id": "6f162719-b1c2-415c-8cf4-4640a1319072",
+          "revision_id": "b5f2940f-a5b3-47cd-a6e3-fa5008634724",
+          "revision_number": 1,
+          "source_revision_id": "legacy:27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9:P-AMZN:portfolio-ufcf-tail-2026-10-09-v1",
+          "effective_at": "2026-10-09T21:22:03.985179+00:00",
+          "recorded_at": "2026-10-09T21:22:09.559297+00:00"
+        },
+        "current_application_recalculation": {
+          "status": "COMPLETE",
+          "price_status": "STALE",
+          "price": "251.520000000000000000",
+          "price_effective_at": "2026-10-02T00:00:00+00:00",
+          "weighted_upside": "0.285966337797044199",
+          "expected_cash_flow_irr": "0.105668292940461679",
+          "expected_excess": "0.020472547018586679",
+          "unavailable_reason": "The latest listing observation is stale."
+        }
+      },
+      {
+        "model_key": "P-HIMS",
+        "company": "Hims & Hers",
+        "listing_requirement": {
+          "ticker": "HIMS",
+          "venue": "NYSE",
+          "currency": "USD",
+          "security_type": "COMMON_STOCK"
+        },
+        "mapping_version": "portfolio-ufcf-tail-2026-10-09-v1",
+        "return_methodology": "UFCF_ENTERPRISE_HMODEL_IRR",
+        "source_effective_date": null,
+        "projection_reconciliation": {
+          "passed": 30,
+          "compared": 30
+        },
+        "output_reconciliation": {
+          "passed": 22,
+          "compared": 22
+        },
+        "accepted_model": {
+          "model_id": "f52207a3-cc6d-493a-946c-a4c55fcd30cf",
+          "revision_id": "8790ccc3-a468-4a2d-81f7-98c5c6a054dc",
+          "revision_number": 1,
+          "source_revision_id": "legacy:27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9:P-HIMS:portfolio-ufcf-tail-2026-10-09-v1",
+          "effective_at": "2026-10-09T21:22:03.985179+00:00",
+          "recorded_at": "2026-10-09T21:22:09.659859+00:00"
+        },
+        "current_application_recalculation": {
+          "status": "COMPLETE",
+          "price_status": "STALE",
+          "price": "29.000000000000000000",
+          "price_effective_at": "2026-10-02T00:00:00+00:00",
+          "weighted_upside": "0.407765553838506728",
+          "expected_cash_flow_irr": "0.138673367719834452",
+          "expected_excess": "0.023556741388584452",
+          "unavailable_reason": "The latest listing observation is stale."
+        }
+      },
+      {
+        "model_key": "P-MSFT",
+        "company": "Microsoft",
+        "listing_requirement": {
+          "ticker": "MSFT",
+          "venue": "NASDAQ",
+          "currency": "USD",
+          "security_type": "COMMON_STOCK"
+        },
+        "mapping_version": "portfolio-ufcf-tail-2026-10-09-v1",
+        "return_methodology": "UFCF_ENTERPRISE_IRR",
+        "source_effective_date": null,
+        "projection_reconciliation": {
+          "passed": 30,
+          "compared": 30
+        },
+        "output_reconciliation": {
+          "passed": 22,
+          "compared": 22
+        },
+        "accepted_model": {
+          "model_id": "b114f8c6-5415-4905-9f86-921757b9a0b5",
+          "revision_id": "736525be-29f1-4bac-8063-bb63f5de08e8",
+          "revision_number": 1,
+          "source_revision_id": "legacy:27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9:P-MSFT:portfolio-ufcf-tail-2026-10-09-v1",
+          "effective_at": "2026-10-09T21:22:03.985179+00:00",
+          "recorded_at": "2026-10-09T21:22:09.738262+00:00"
+        },
+        "current_application_recalculation": {
+          "status": "COMPLETE",
+          "price_status": "STALE",
+          "price": "517.530000000000000000",
+          "price_effective_at": "2026-10-02T00:00:00+00:00",
+          "weighted_upside": "-0.121025337672747846",
+          "expected_cash_flow_irr": "0.069881801925448372",
+          "expected_excess": "-0.015306988074551628",
+          "unavailable_reason": "The latest listing observation is stale."
+        }
+      }
+    ]
+  },
+  "blocking_population": [
+    {
+      "model_key": "P-GOOGL",
+      "status": "BLOCKED",
+      "blocking_categories": [],
+      "reason": null,
+      "identity_blocker": "The import key already exists with a different input digest."
+    },
+    {
+      "model_key": "P-ADYEN",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["RETURN_NOT_COMPARABLE", "DATA_CHECK"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-AMD",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["RETURN_NOT_COMPARABLE", "SHARE_BASIS_MISMATCH"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-ASML",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["DATA_CHECK"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-BKNG",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["RETURN_NOT_COMPARABLE"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-CELH",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["RETURN_NOT_COMPARABLE"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-ISRG",
+      "status": "BLOCKED",
+      "blocking_categories": [],
+      "reason": null,
+      "identity_blocker": "A model already exists for this listing and method but does not carry this immutable legacy source revision. It was left unchanged."
+    },
+    {
+      "model_key": "P-MA",
+      "status": "BLOCKED",
+      "blocking_categories": [],
+      "reason": null,
+      "identity_blocker": "A model already exists for this listing and method but does not carry this immutable legacy source revision. It was left unchanged."
+    },
+    {
+      "model_key": "P-MELI",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["RETURN_NOT_COMPARABLE", "DATA_CHECK"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-MSCI",
+      "status": "PARTIAL_MAPPING",
+      "blocking_categories": ["INVALID_SOURCE_ASSUMPTION"],
+      "reason": "1 validation error for FinancialModelRevisionCreate\nbase.base_capex_to_revenue\n  Input should be greater than or equal to 0 [type=greater_than_equal, input_value=Decimal('-6.24'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/greater_than_equal",
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-NVO",
+      "status": "DATA_CHECK",
+      "blocking_categories": ["RETURN_NOT_COMPARABLE"],
+      "reason": null,
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-CPRT",
+      "status": "BLOCKED",
+      "blocking_categories": [],
+      "reason": null,
+      "identity_blocker": "The import key already exists with a different input digest."
+    },
+    {
+      "model_key": "P-MORN",
+      "status": "PARTIAL_MAPPING",
+      "blocking_categories": ["MISSING_SOURCE_DATA"],
+      "reason": "Required cached source value is missing at P-MORN!AB212",
+      "identity_blocker": null
+    },
+    {
+      "model_key": "P-UBER",
+      "status": "BLOCKED",
+      "blocking_categories": [],
+      "reason": null,
+      "identity_blocker": "The import key already exists with a different input digest."
+    }
+  ],
+  "portfolio_rank": {
+    "preview_only": true,
+    "definition_version": 4,
+    "persisted_run_created": false,
+    "preview_status_counts": {
+      "NOT_ELIGIBLE": 198,
+      "DATA_CHECK": 16,
+      "INPUTS_UNAVAILABLE": 5
+    },
+    "new_model_examples": {
+      "Amazon": {
+        "status": "DATA_CHECK",
+        "reason": "Current market weight is not comparable: PRICE_COVERAGE_INCOMPLETE."
+      },
+      "Hims & Hers": {
+        "status": "INPUTS_UNAVAILABLE",
+        "reason": "No target weight was authored for this company; missing target is not treated as zero."
+      },
+      "Microsoft": {
+        "status": "DATA_CHECK",
+        "reason": "Current market weight is not comparable: PRICE_COVERAGE_INCOMPLETE."
+      }
+    }
+  },
+  "execution_pace": {
+    "preview_only": true,
+    "persisted_run_count": 0,
+    "new_model_examples": {
+      "Amazon": {
+        "status": "REVIEW",
+        "reason": "A complete current holding snapshot and current weight are required.",
+        "price_freshness": "STALE",
+        "model_output_quality": "COMPLETE"
+      },
+      "Hims & Hers": {
+        "status": "REVIEW",
+        "reason": "No accepted, explicit target weight is available.",
+        "price_freshness": "STALE",
+        "model_output_quality": "COMPLETE"
+      },
+      "Microsoft": {
+        "status": "REVIEW",
+        "reason": "A complete current holding snapshot and current weight are required.",
+        "price_freshness": "STALE",
+        "model_output_quality": "COMPLETE"
+      }
+    }
+  }
+}

@@ -34,6 +34,10 @@ from portfolio_api.domain.models import (
     now,
 )
 from portfolio_api.legacy_import import Workbook
+from portfolio_api.return_semantics import (
+    DEFINITION_ID_BY_CODE,
+    VERIFIED_LEGACY_METHOD_BY_MODEL_KEY,
+)
 from portfolio_api.settings import Settings
 
 NAMESPACE = UUID("3d31ab8a-c035-4632-b96e-33f121b2e104")
@@ -821,7 +825,15 @@ def apply_import(session: Session, plan: ImportPlan) -> dict[str, Any]:
             else:
                 reused += 1
             continue
-        session.add(ModelOutputSnapshot(**values))
+        snapshot_values = dict(values)
+        method_code = VERIFIED_LEGACY_METHOD_BY_MODEL_KEY.get(str(snapshot_values["model_key"]))
+        snapshot_values["return_methodology_id"] = (
+            DEFINITION_ID_BY_CODE[method_code] if method_code is not None else None
+        )
+        snapshot_values["return_methodology_status"] = (
+            "CLASSIFIED" if method_code is not None else "UNCLASSIFIED"
+        )
+        session.add(ModelOutputSnapshot(**snapshot_values))
         added += 1
     if source_conflicts:
         raise ValueError(

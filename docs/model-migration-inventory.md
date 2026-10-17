@@ -123,10 +123,10 @@ as current migration targets.
 
 ## Expected-return semantic boundary
 
-The canonical application definition is an IRR over probability-weighted explicit
-shareholder cash flows. It does not average scenario IRRs; dividends are explicit
-cash flows and terminal proceeds remain separate. Legacy output labels do not
-guarantee that definition:
+Native and imported Expected IRR values now carry versioned methodology metadata.
+The exact definitions, comparability matrix, and limits are maintained in
+[return-semantics.md](return-semantics.md). The source distinctions that informed
+this inventory remain:
 
 - The `P-GOOGL` reference solves a probability-weighted enterprise UFCF and
   terminal-value return against the implied enterprise cost. It is not a
@@ -144,22 +144,29 @@ replacing them with the canonical definition.
 
 ## Recommended migration order
 
-1. **Completed:** `P-GOOGL` and `W-TOST` were imported first; a reviewed Portfolio
-   UFCF DCF sub-batch then imported `P-ASML`, `P-ISRG` and `P-MA`. All accepted
-   workbook source dates remain unknown and revisions use application acceptance
-   time.
+The machine-readable inventory remains the 2026-10-05 population snapshot. Later
+readiness and acceptance state is recorded in
+`docs/native-model-input-migration.md` and its dated reconciliation receipts.
+
+1. **Completed:** `P-GOOGL` and `W-TOST` were imported first; reviewed Portfolio
+   batches imported `P-ASML`, `P-ISRG`, `P-MA`, `P-CPRT`, `P-UBER`,
+   `P-AMZN`, `P-HIMS`, and `P-MSFT`. All accepted workbook source dates remain
+   unknown and revisions use application acceptance time.
 2. Resolve identity, lifecycle and source data checks: the SOTP/component identities,
    `W-ARENIT`, `W-ENGCON-B` and `W-PLEJD`. These are prerequisites, not invented
    assumption imports.
-3. Continue the active DCF work from the [batch-2 screening report](reconciliation/native-model-input-import-batch-2-2026-10-05.json).
-   `P-ADYEN`, `P-AMD`, `P-AMZN`, `P-BKNG`, `P-CELH`, `P-HIMS`, `P-MELI`,
-   `P-MSCI` and `P-MSFT` have explicit parity or input-data failures under the
-   current engine; `W-GEV` lacks a required Base Y10 UFCF growth target. Hold `P-NVO`
-   for exact listing/currency confirmation. Do not import these until their
-   tab-specific blocker is resolved and parity passes.
-4. Map the six active Portfolio owner-cash variants independently:
-   `P-CPRT`, `P-MORN`, `P-UBER`, `W-DLO`, `W-RDDT` and `W-TSM`. These are not all
-   interchangeable with the Toast model.
+3. Continue the remaining active DCF work from the
+   [batch-2 screening report](reconciliation/native-model-input-import-batch-2-2026-10-05.json).
+   Resolve AMD's current-market vs fully diluted share basis, then investigate
+   `P-ADYEN`, `P-BKNG`, `P-CELH`, `P-MELI`, and `P-MSCI` source/output
+   differences. `W-GEV` lacks a required Base Y10 UFCF growth target. Keep
+   `P-NVO` tied to its exact Copenhagen B/DKK listing and require matching price
+   evidence. Do not import unresolved mappings.
+4. Continue the active Portfolio owner-cash cohort with `P-MORN` and the
+   applicable active Watchlist variants `W-DLO`, `W-RDDT`, and `W-TSM`.
+   `P-CPRT` and `P-UBER` now have accepted native DCF revisions; inspect their
+   source title/formula distinction in the current migration receipt before
+   treating those mappings as owner-cash methods.
 5. Prove the first active SOTP for `P-SPGI`; retain the two unresolved SOTP tabs
    until exact component identity is known.
 6. Review remaining active Watchlist operating-company owner-cash models in small

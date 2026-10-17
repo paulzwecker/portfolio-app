@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PendingOrError, useResearch } from "@/components/research-frame";
+import { PendingOrError } from "@/components/app/empty-state";
+import { useResearch } from "@/hooks/use-research";
 import {
   isFinancialModel,
   isFinancialModels,
@@ -22,9 +23,12 @@ import {
   type FinancialModelCreate,
   type FinancialModelRevision,
   type FinancialModelRevisionCreate,
-  type FinancialModelOutputs,
 } from "@/lib/domain-contracts";
-import { date, percent } from "@/lib/display";
+import { date, formatCurrency, formatNumber, percent } from "@/lib/display";
+import {
+  FinancialOutputComparison,
+  type ComparableFinancialOutputs,
+} from "@/components/features/modeling/financial-output-comparison";
 
 type DcfDraft = {
   base: { [Key in keyof DcfOperatingBase]: string };
@@ -181,35 +185,16 @@ function draftHasCalculationInputs(draft: DcfDraft): boolean {
   );
 }
 
-type OutputComparable = Pick<
-  FinancialModelOutputs,
-  | "bear_fv"
-  | "base_fv"
-  | "bull_fv"
-  | "weighted_fv"
-  | "weighted_upside"
-  | "expected_cash_flow_irr"
-  | "hurdle"
-  | "expected_excess"
->;
-
-const comparedOutputs: Array<{
-  field: keyof OutputComparable;
-  label: string;
-  ratio?: boolean;
-}> = [
-  { field: "bear_fv", label: "Bear fair value" },
-  { field: "base_fv", label: "Base fair value" },
-  { field: "bull_fv", label: "Bull fair value" },
-  { field: "weighted_fv", label: "Weighted fair value" },
-  { field: "weighted_upside", label: "Weighted upside", ratio: true },
-  {
-    field: "expected_cash_flow_irr",
-    label: "Expected cash-flow IRR",
-    ratio: true,
-  },
-  { field: "hurdle", label: "Hurdle", ratio: true },
-  { field: "expected_excess", label: "Expected excess", ratio: true },
+type OutputComparable = ComparableFinancialOutputs;
+const comparedOutputFields: Array<keyof OutputComparable> = [
+  "bear_fv",
+  "base_fv",
+  "bull_fv",
+  "weighted_fv",
+  "weighted_upside",
+  "expected_cash_flow_irr",
+  "hurdle",
+  "expected_excess",
 ];
 
 function OutputComparison({
@@ -222,40 +207,11 @@ function OutputComparison({
   currency: string;
 }) {
   return (
-    <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-      {comparedOutputs.map(({ field, label, ratio }) => {
-        const before = previous?.[field] ?? null;
-        const after = proposed[field];
-        const changed = previous !== null && before !== after;
-        return (
-          <div key={field} className="min-w-0 rounded-md bg-secondary/40 p-3">
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-1 break-words text-xs tabular-nums">
-              <span className="text-muted-foreground">
-                {previous === null
-                  ? "No accepted baseline"
-                  : ratio
-                    ? percent(before)
-                    : amount(before, currency)}
-              </span>
-              <span className="px-1.5 text-muted-foreground" aria-hidden="true">
-                →
-              </span>
-              <span className="font-semibold">
-                {ratio ? percent(after) : amount(after, currency)}
-              </span>
-            </dd>
-            {previous !== null && (
-              <p
-                className={`mt-1 text-[11px] ${changed ? "text-primary" : "text-muted-foreground"}`}
-              >
-                {changed ? "Changed" : "Unchanged"}
-              </p>
-            )}
-          </div>
-        );
-      })}
-    </dl>
+    <FinancialOutputComparison
+      previous={previous}
+      output={proposed}
+      currency={currency}
+    />
   );
 }
 
@@ -417,19 +373,11 @@ function RevisionComparison({
 }
 
 function amount(value: string | null, currency: string, digits = 2) {
-  if (value === null) return "Not supplied";
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: digits,
-  }).format(Number(value));
+  return formatCurrency(value, currency, digits, "Not supplied");
 }
 
 function number(value: string | null, digits = 2) {
-  if (value === null) return "Not supplied";
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: digits,
-  }).format(Number(value));
+  return formatNumber(value, digits, "Not supplied");
 }
 
 function DecimalField({
@@ -1098,9 +1046,12 @@ function ModelEditor({
 export function CanonicalDcfExplorer({
   companyId,
   listings,
+  embedded = false,
 }: {
   companyId: string;
   listings: ValuationListing[];
+  /** Omit the top-level section chrome when composed by CompanyValuationWorkspace. */
+  embedded?: boolean;
 }) {
   const state = useResearch(
     `companies/${encodeURIComponent(companyId)}/financial-models`,
@@ -1199,7 +1150,7 @@ export function CanonicalDcfExplorer({
         setEditor(null);
         setNotice(
           editor.model
-            ? `Revision ${number} accepted. ${comparedOutputs.filter(({ field }) => editor.model!.current_revision.outputs[field] !== (result as FinancialModelRevision).outputs[field]).length} normalized outputs changed; the prior revision remains in history.`
+            ? `Revision ${number} accepted. ${comparedOutputFields.filter((field) => editor.model!.current_revision.outputs[field] !== (result as FinancialModelRevision).outputs[field]).length} normalized outputs changed; the prior revision remains in history.`
             : `First model revision ${number} accepted with its calculated outputs and projections.`,
         );
         state.retry();
@@ -1232,25 +1183,27 @@ export function CanonicalDcfExplorer({
     <section
       id="canonical-models"
       aria-labelledby="canonical-models-title"
-      className="mb-8 scroll-mt-5 space-y-4"
+      className="space-y-4"
     >
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="canonical-models-title" className="text-xl font-semibold">
-            Canonical financial models
-          </h2>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
-            Native 10-year UFCF DCF state is versioned and recalculated by the
-            API. Imported workbook output snapshots remain separate reference
-            history below.
-          </p>
+      {!embedded && (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="canonical-models-title" className="text-xl font-semibold">
+              Canonical financial models
+            </h2>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
+              Native 10-year UFCF DCF state is versioned and recalculated by the
+              API. Imported workbook output snapshots remain separate reference
+              history below.
+            </p>
+          </div>
+          {state.data && !editor && (
+            <Button variant="outline" onClick={beginCreate}>
+              {models.length === 0 ? "Create first DCF model" : "Add DCF model"}
+            </Button>
+          )}
         </div>
-        {state.data && !editor && (
-          <Button variant="outline" onClick={beginCreate}>
-            {models.length === 0 ? "Create first DCF model" : "Add DCF model"}
-          </Button>
-        )}
-      </div>
+      )}
 
       {!state.data && (
         <PendingOrError error={state.error} retry={state.retry} />
@@ -1351,13 +1304,17 @@ export function CanonicalDcfExplorer({
                     output.price_status === "FRESH" ? "outline" : "secondary"
                   }
                 >
-                  Price {output.price_status.replaceAll("_", " ")}
+                  Price basis {output.price_status.replaceAll("_", " ")}
                 </Badge>
                 <span className="text-muted-foreground">
-                  Current quote:{" "}
+                  Price basis at calculation:{" "}
                   {output.current_price === null
                     ? "Not available"
                     : `${amount(output.current_price, output.model_currency)} · ${output.price_effective_at ? date(output.price_effective_at) : "date not supplied"}`}
+                </span>
+                <span className="text-muted-foreground">
+                  The current canonical quote remains in the company header;
+                  this is the price captured for the displayed model output.
                 </span>
                 <span className="text-muted-foreground">
                   Forward Fundamental CAGR:{" "}

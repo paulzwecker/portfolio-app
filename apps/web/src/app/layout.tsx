@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Layers2 } from "lucide-react";
+import { Layers2, Palette } from "lucide-react";
 import Link from "next/link";
 
 import "./globals.css";
-import { Navigation } from "@/components/navigation";
+import { ContextHeader } from "@/components/app/context-header";
+import { Navigation } from "@/components/app/navigation";
 
 export const metadata: Metadata = {
-  title: "Workspace · Portfolio",
+  title: "Portfolio Research · Portfolio",
   description:
     "An equity research and portfolio management workspace for long-term ownership.",
 };
@@ -20,8 +21,8 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
-        <div className="min-h-screen md:grid md:grid-cols-[224px_1fr]">
-          <aside className="flex flex-col border-b bg-sidebar px-5 py-5 md:min-h-screen md:border-r md:border-b-0 md:py-7">
+        <div className="min-h-screen md:grid md:grid-cols-[var(--app-sidebar-width)_1fr]">
+          <aside className="flex flex-col border-b bg-sidebar px-4 py-4 sm:px-5 md:min-h-screen md:border-r md:border-b-0 md:px-5 md:py-7">
             <Link
               href="/"
               aria-label="Portfolio home"
@@ -34,7 +35,18 @@ export default function RootLayout({
                 Portfolio<span className="text-primary">.</span>
               </span>
             </Link>
-            <Navigation />
+            <div className="mt-4 md:mt-9">
+              <Navigation />
+            </div>
+            {process.env.NODE_ENV === "development" && (
+              <Link
+                href="/design-system"
+                className="mt-2 flex w-fit items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <Palette aria-hidden="true" className="size-3.5" />
+                Design system reference
+              </Link>
+            )}
             <div className="mt-auto hidden pt-12 md:block">
               <div className="mb-3 h-px w-8 bg-border" />
               <p className="text-xs font-medium">Built for the long term.</p>
@@ -46,11 +58,9 @@ export default function RootLayout({
             </div>
           </aside>
           <div className="min-w-0">
-            <header className="flex h-16 items-center justify-between gap-4 border-b px-5 md:px-10">
-              <span className="text-xs text-muted-foreground">
-                Research workspace
-              </span>
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            <header className="flex min-h-16 items-center gap-4 border-b px-4 py-3 sm:px-6 md:px-10">
+              <ContextHeader />
+              <span className="hidden shrink-0 items-center gap-2 text-xs text-muted-foreground lg:flex">
                 <span className="size-1.5 rounded-full bg-muted-foreground/50" />
                 Local development
               </span>
@@ -58,7 +68,7 @@ export default function RootLayout({
             <main
               id="main-content"
               tabIndex={-1}
-              className="mx-auto max-w-7xl px-5 py-9 outline-none md:px-10 md:py-12"
+              className="app-main outline-none"
             >
               {children}
             </main>

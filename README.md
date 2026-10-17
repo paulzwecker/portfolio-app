@@ -411,6 +411,15 @@ npm run db:migrate
 npm run dev
 ```
 
+`npm run dev` starts the web app, API, bounded market-data refresh worker and recurring data and
+research operations worker. The latter waits for PostgreSQL and migrations, then runs the jobs
+documented in [docs/recurring-operations.md](docs/recurring-operations.md). Keep SEC and Google
+service-account configuration in the ignored local `.env`; FMP ingestion remains opt-in after
+rights are confirmed. The `/model-sync` page shows worker health and job blockers.
+
+Cloud hosting preparation, access controls, environment variables, migration and
+backup steps are documented in [docs/cloud-deployment.md](docs/cloud-deployment.md).
+
 Default endpoints:
 
 - Web: `http://127.0.0.1:3000`

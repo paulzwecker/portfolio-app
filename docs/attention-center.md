@@ -5,6 +5,10 @@ does not persist a second event ledger, mutate upstream records, create ranks or
 decisions, or run AI reasoning. Each entry carries the source domain and source
 record ID, effective/event time when known, recorded time, and source reference.
 Company links open the corresponding Company Explorer; source URLs open separately.
+Milestone 8A adds a separate append-only research-trigger capture for selected
+events from this feed and narrow canonical correction/evidence detectors. It
+does not change the feed's read-only behavior; see
+[`research-triggers.md`](research-triggers.md).
 
 ## Supported events
 
@@ -15,7 +19,10 @@ Company links open the corresponding Company Explorer; source URLs open separate
   remain model-revision entries without a misleading IRR comparison. A
   same-currency Weighted Fair Value change of at least ten percent is included
   in the revision explanation and values, without being treated as return.
-- Recent imported normalized model-output snapshots, clearly labeled as imports.
+- Recent imported normalized model-output snapshots with a known source effective
+  date, clearly labeled as imports. Undated bulk imports remain in Company history
+  but do not become current attention events just because their database receipt is
+  recent.
 - Same-provider Revenue/EPS estimate revisions for the same forward period,
   currency and unit, when a positive baseline changes by at least five percent.
   The selected consensus continuity source is used; providers are not blended.
@@ -29,6 +36,10 @@ Company links open the corresponding Company Explorer; source URLs open separate
   position moves at least three places within the same ranking-definition
   version.
 - Execution Pace state changes within the same methodology version.
+- New or worsening active `HIGH`/`CRITICAL` qualitative risk findings accepted
+  from the risk-assessment review flow. The event links to the exact accepted
+  revision and its holdings/target baseline; unchanged and lower-severity findings
+  remain in Company/Portfolio history without generating feed noise.
 - Current Portfolio/Watchlist market-quote gaps (no quote, stale beyond the
   documented five-day window, or non-passing quality) and absence of any
   complete native/current-contract model output.

@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
@@ -18,6 +18,8 @@ from portfolio_api.domain.models import (
     CashPosition,
     Company,
     CurrentLifecycle,
+    ExecutionPaceRun,
+    FinancialModelRevision,
     FxObservation,
     HoldingPosition,
     HoldingSnapshot,
@@ -135,19 +137,18 @@ def test_fresh_listing_prices_and_dated_fx_enable_current_weights_without_changi
                     reason="Explicit synthetic integration fixture rate",
                 )
             )
-        after = q.overview(db, portfolio_id)
+        as_of = observed_date + timedelta(days=5)
+        after = q.overview(db, portfolio_id, as_of)
         assert after.valuation_status == "VALUED"
         assert after.base_market_value is not None and after.base_market_value > 0
         assert all(row.current_weight is not None for row in after.companies)
         atlas = db.scalar(select(Company).where(Company.name.startswith("Atlas")))
         assert atlas is not None
-        company_context = q.detail(db, atlas.id).portfolio_context
         overview_context = next(row for row in after.companies if row.company.id == atlas.id)
-        assert company_context is not None
-        assert company_context.current_market_value == overview_context.current_market_value
-        assert company_context.current_weight == overview_context.current_weight
-        assert company_context.allocation_gap == overview_context.allocation_gap
-        assert company_context.allocation_status == "VALUED"
+        assert overview_context.current_market_value is not None
+        assert overview_context.current_weight is not None
+        assert overview_context.allocation_gap is not None
+        assert overview_context.allocation_status == "VALUED"
         assert all(row.valuation_status == "VALUED" for row in after.cash_valuations)
         assert {row.company.id: row.target_weight for row in after.companies} == targets_before
         assert all(
@@ -155,6 +156,337 @@ def test_fresh_listing_prices_and_dated_fx_enable_current_weights_without_changi
             for row in after.companies
             if row.target_weight is not None
         )
+
+
+def test_portfolio_current_mark_uses_newer_market_and_fx_without_rewriting_history(
+    postgres_engine: Engine,
+) -> None:
+    holding_time = datetime(2025, 2, 1, tzinfo=UTC)
+    old_mark = datetime(2025, 2, 4, 16, tzinfo=UTC)
+    new_mark = datetime(2025, 2, 8, 16, tzinfo=UTC)
+    old_fx = datetime(2025, 2, 4, 12, tzinfo=UTC)
+    new_fx = datetime(2025, 2, 9, 12, tzinfo=UTC)
+    historical_cutoff = datetime(2025, 2, 5, 23, tzinfo=UTC)
+    current_cutoff = datetime(2025, 2, 10, 23, tzinfo=UTC)
+
+    with Session(postgres_engine) as db, db.begin():
+        portfolio_id = uuid4()
+        company_id = uuid4()
+        security_id = uuid4()
+        listing_id = uuid4()
+        db.add(
+            Portfolio(
+                id=portfolio_id,
+                name="Valuation fixture",
+                base_currency="EUR",
+                created_at=holding_time,
+            )
+        )
+        db.flush()
+        db.add(
+            Company(
+                id=company_id,
+                name="Valuation fixture issuer",
+                reporting_currency="USD",
+                created_at=holding_time,
+            )
+        )
+        db.flush()
+        db.add(
+            Security(
+                id=security_id,
+                company_id=company_id,
+                name="Valuation fixture common stock",
+                security_type="COMMON_STOCK",
+                created_at=holding_time,
+            )
+        )
+        db.flush()
+        db.add(
+            Listing(
+                id=listing_id,
+                security_id=security_id,
+                venue="TEST",
+                ticker="VAL",
+                currency="USD",
+                created_at=holding_time,
+            )
+        )
+        db.flush()
+        snapshot = HoldingSnapshot(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            effective_at=holding_time,
+            recorded_at=holding_time,
+            actor="IMPORT",
+            reason="Fixed historical holdings fixture",
+            source="test:holdings",
+            completeness="COMPLETE",
+        )
+        db.add(snapshot)
+        db.flush()
+        db.info["new_snapshot_ids"] = {snapshot.id}
+        try:
+            db.add_all(
+                [
+                    HoldingPosition(
+                        snapshot_id=snapshot.id, listing_id=listing_id, quantity=Decimal("10")
+                    ),
+                    CashPosition(snapshot_id=snapshot.id, currency="EUR", balance=Decimal("1000")),
+                    CashPosition(snapshot_id=snapshot.id, currency="USD", balance=Decimal("100")),
+                ]
+            )
+            db.flush()
+        finally:
+            db.info.pop("new_snapshot_ids", None)
+        for market_date, price, recorded_at in [
+            (old_mark, Decimal("10"), old_mark),
+            (new_mark, Decimal("12"), new_mark),
+        ]:
+            db.add(
+                PriceObservation(
+                    listing_id=listing_id,
+                    price_kind="DAILY_CLOSE",
+                    market_date=market_date,
+                    observed_at=market_date,
+                    recorded_at=recorded_at,
+                    provider_close=price,
+                    split_adjusted_close=price,
+                    total_return_close=None,
+                    volume=None,
+                    currency="USD",
+                    provider="TEST_PROVIDER",
+                    provider_symbol="TEST:VAL",
+                    adjustment_basis="Fixed test fixture",
+                    data_quality="PASS",
+                    source_ref=f"test:price:{market_date.date()}",
+                )
+            )
+        for effective_at, rate in [(old_fx, Decimal("0.90")), (new_fx, Decimal("0.92"))]:
+            db.add(
+                FxObservation(
+                    base_currency="USD",
+                    quote_currency="EUR",
+                    rate=rate,
+                    effective_at=effective_at,
+                    observed_at=effective_at,
+                    recorded_at=effective_at,
+                    provider="TEST_PROVIDER",
+                    source=f"test:USD-EUR:{effective_at.date()}",
+                    source_ref=f"test:fx:{effective_at.date()}",
+                    actor="IMPORT",
+                    reason="Fixed test fixture FX observation",
+                )
+            )
+        db.flush()
+
+        historic = q.overview(db, portfolio_id, historical_cutoff)
+        assert historic.valuation_mode == "HISTORICAL_AS_OF"
+        assert historic.base_market_value == Decimal("1180.000")
+        assert historic.companies[0].positions[0].latest_price == Decimal("10.0000000000")
+        historic_cash = {row.currency: row for row in historic.cash_valuations}
+        assert historic_cash["USD"].fx_rate == Decimal("0.90")
+        assert historic.holdings_freshness == "FRESH"
+
+        row_counts_before = (
+            db.scalar(select(func.count()).select_from(HoldingSnapshot)),
+            db.scalar(select(func.count()).select_from(PriceObservation)),
+            db.scalar(select(func.count()).select_from(FxObservation)),
+            db.scalar(select(func.count()).select_from(TargetRevision)),
+            db.scalar(select(func.count()).select_from(FinancialModelRevision)),
+            db.scalar(select(func.count()).select_from(RankingRun)),
+            db.scalar(select(func.count()).select_from(ExecutionPaceRun)),
+        )
+        with patch("portfolio_api.domain.queries.now", return_value=current_cutoff):
+            current = q.overview(db, portfolio_id)
+            repeated = q.overview(db, portfolio_id)
+            stale_quote = q.overview(db, portfolio_id, datetime(2025, 2, 25, 23, tzinfo=UTC))
+        assert current.valuation_mode == "CURRENT_MARK_TO_MARKET"
+        assert current.valuation_status == "VALUED"
+        assert current.base_market_value == Decimal("1202.400")
+        assert current.holdings_age_days == 9
+        assert current.holdings_freshness == "STALE"
+        assert current.market_data_through == new_mark
+        assert current.fx_data_through == new_fx
+        assert current.companies[0].current_weight == Decimal("110.40") / Decimal("1202.400")
+        assert current.companies[0].positions[0].portfolio_weight == Decimal("110.40") / Decimal(
+            "1202.400"
+        )
+        assert current.companies[0].positions[0].valuation_sync_status == "NON_SYNCHRONOUS"
+        current_cash = {row.currency: row for row in current.cash_valuations}
+        assert current_cash["EUR"].base_market_value == Decimal("1000")
+        assert current_cash["USD"].base_market_value == Decimal("92.00")
+        assert current_cash["USD"].fx_effective_at == new_fx
+        assert current_cash["USD"].portfolio_weight == Decimal("92.00") / Decimal("1202.400")
+        assert repeated.base_market_value == current.base_market_value
+        assert repeated.companies[0].current_weight == current.companies[0].current_weight
+        assert stale_quote.holdings_freshness == "STALE"
+        assert stale_quote.valuation_status == "INCOMPLETE_PRICE_COVERAGE"
+        assert stale_quote.companies[0].positions[0].price_freshness == "STALE"
+        assert row_counts_before == (
+            db.scalar(select(func.count()).select_from(HoldingSnapshot)),
+            db.scalar(select(func.count()).select_from(PriceObservation)),
+            db.scalar(select(func.count()).select_from(FxObservation)),
+            db.scalar(select(func.count()).select_from(TargetRevision)),
+            db.scalar(select(func.count()).select_from(FinancialModelRevision)),
+            db.scalar(select(func.count()).select_from(RankingRun)),
+            db.scalar(select(func.count()).select_from(ExecutionPaceRun)),
+        )
+    with (
+        patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
+        TestClient(create_app(Settings(database_url=None))) as client,
+    ):
+        response = client.get(
+            f"/v1/portfolios/{portfolio_id}/overview",
+            params={"as_of": historical_cutoff.isoformat()},
+        )
+        assert response.status_code == 200
+        assert response.json()["valuation_mode"] == "HISTORICAL_AS_OF"
+        assert Decimal(response.json()["base_market_value"]) == Decimal("1180.000")
+        naive_response = client.get(
+            f"/v1/portfolios/{portfolio_id}/overview",
+            params={"as_of": historical_cutoff.replace(tzinfo=None).isoformat()},
+        )
+        assert naive_response.status_code == 422
+
+
+def test_quote_fx_timestamp_comparability_is_explicit() -> None:
+    quote_time = datetime(2025, 2, 8, 16, tzinfo=UTC)
+    same_instant_other_zone = datetime(2025, 2, 8, 17, tzinfo=timezone(timedelta(hours=1)))
+    one_hour_later = datetime(2025, 2, 8, 17, tzinfo=UTC)
+
+    assert q._valuation_sync_status("EUR", "EUR", None, quote_time) == "NOT_REQUIRED"
+    assert q._valuation_sync_status("USD", "EUR", None, quote_time) == "UNAVAILABLE"
+    assert q._valuation_sync_status("USD", "EUR", one_hour_later, None) == "TIMING_UNKNOWN"
+    assert (
+        q._valuation_sync_status("USD", "EUR", same_instant_other_zone, quote_time) == "SYNCHRONOUS"
+    )
+    assert q._valuation_sync_status("USD", "EUR", one_hour_later, quote_time) == "NON_SYNCHRONOUS"
+
+
+def test_portfolio_valuation_does_not_substitute_listing_or_fx(
+    postgres_engine: Engine,
+) -> None:
+    holding_time = datetime(2025, 3, 1, tzinfo=UTC)
+    cutoff = datetime(2025, 3, 4, 23, tzinfo=UTC)
+    with Session(postgres_engine) as db, db.begin():
+        portfolio_id = uuid4()
+        company_id = uuid4()
+        security_a, security_b = uuid4(), uuid4()
+        listing_a, listing_b = uuid4(), uuid4()
+        db.add(
+            Portfolio(
+                id=portfolio_id,
+                name="Exact listing fixture",
+                base_currency="EUR",
+                created_at=holding_time,
+            )
+        )
+        db.flush()
+        db.add(
+            Company(
+                id=company_id,
+                name="Exact listing issuer",
+                reporting_currency="USD",
+                created_at=holding_time,
+            )
+        )
+        db.flush()
+        db.add_all(
+            [
+                Security(
+                    id=security_a,
+                    company_id=company_id,
+                    name="Held security",
+                    security_type="COMMON_STOCK",
+                    created_at=holding_time,
+                ),
+                Security(
+                    id=security_b,
+                    company_id=company_id,
+                    name="Different security",
+                    security_type="COMMON_STOCK",
+                    created_at=holding_time,
+                ),
+            ]
+        )
+        db.flush()
+        db.add_all(
+            [
+                Listing(
+                    id=listing_a,
+                    security_id=security_a,
+                    venue="HELD",
+                    ticker="SAME",
+                    currency="USD",
+                    created_at=holding_time,
+                ),
+                Listing(
+                    id=listing_b,
+                    security_id=security_b,
+                    venue="OTHER",
+                    ticker="SAME",
+                    currency="USD",
+                    created_at=holding_time,
+                ),
+            ]
+        )
+        db.flush()
+        snapshot = HoldingSnapshot(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            effective_at=holding_time,
+            recorded_at=holding_time,
+            actor="IMPORT",
+            reason="Fixed exact-listing fixture",
+            source="test:exact-listing",
+            completeness="COMPLETE",
+        )
+        db.add(snapshot)
+        db.flush()
+        db.info["new_snapshot_ids"] = {snapshot.id}
+        try:
+            db.add_all(
+                [
+                    HoldingPosition(
+                        snapshot_id=snapshot.id, listing_id=listing_a, quantity=Decimal("2")
+                    ),
+                    CashPosition(snapshot_id=snapshot.id, currency="USD", balance=Decimal("10")),
+                ]
+            )
+            db.flush()
+        finally:
+            db.info.pop("new_snapshot_ids", None)
+        db.add(
+            PriceObservation(
+                listing_id=listing_b,
+                price_kind="DAILY_CLOSE",
+                market_date=datetime(2025, 3, 3, 16, tzinfo=UTC),
+                observed_at=datetime(2025, 3, 3, 16, tzinfo=UTC),
+                recorded_at=datetime(2025, 3, 3, 16, tzinfo=UTC),
+                provider_close=Decimal("25"),
+                split_adjusted_close=Decimal("25"),
+                total_return_close=None,
+                volume=None,
+                currency="USD",
+                provider="TEST_PROVIDER",
+                provider_symbol="OTHER:SAME",
+                adjustment_basis="Fixed test fixture",
+                data_quality="PASS",
+                source_ref="test:other-listing-price",
+            )
+        )
+        db.flush()
+        with patch("portfolio_api.domain.queries.now", return_value=cutoff):
+            result = q.overview(db, portfolio_id)
+        assert result.valuation_status == "INCOMPLETE_PRICE_COVERAGE"
+        assert result.base_market_value is None
+        held = result.companies[0].positions[0]
+        assert held.listing_id == listing_a
+        assert held.latest_price is None
+        assert held.valuation_status == "PRICE_UNAVAILABLE"
+        assert result.cash_valuations[0].valuation_status == "FX_UNAVAILABLE"
+        assert {gap.identity for gap in result.valuation_gaps} == {"HELD:SAME", "cash:USD"}
 
 
 def test_listing_price_history_respects_effective_and_known_at_cutoffs(
@@ -219,6 +551,144 @@ def test_listing_price_history_respects_effective_and_known_at_cutoffs(
         assert as_first_known.latest.split_adjusted_close == Decimal("100")
         assert as_currently_known.latest is not None
         assert as_currently_known.latest.split_adjusted_close == Decimal("102")
+
+
+def test_price_history_analytics_use_canonical_closes_without_lookahead(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as db, db.begin():
+        seed(db)
+        listing = db.scalar(select(Listing).order_by(Listing.venue, Listing.ticker).limit(1))
+        assert listing is not None and listing.currency is not None
+        first_session = datetime(2024, 1, 1, tzinfo=UTC)
+        observations: list[PriceObservation] = []
+        for index in range(252):
+            session_date = first_session + timedelta(days=index)
+            observations.append(
+                PriceObservation(
+                    listing_id=listing.id,
+                    price_kind="DAILY_CLOSE",
+                    market_date=session_date,
+                    recorded_at=session_date + timedelta(hours=8),
+                    provider_close=Decimal(index + 1),
+                    split_adjusted_close=Decimal(index + 1),
+                    total_return_close=None,
+                    volume=None,
+                    currency=listing.currency,
+                    provider="YAHOO_FINANCE",
+                    provider_symbol=listing.ticker,
+                    adjustment_basis="Split-adjusted price; dividend excluded",
+                    data_quality="PASS",
+                    source_ref=f"test-price-series:{index}",
+                )
+            )
+        db.add_all(observations)
+        db.flush()
+        latest = observations[-1]
+        correction_recorded_at = latest.recorded_at + timedelta(days=2)
+        db.add(
+            PriceObservation(
+                listing_id=listing.id,
+                price_kind="DAILY_CLOSE",
+                market_date=latest.market_date,
+                recorded_at=correction_recorded_at,
+                provider_close=Decimal("504"),
+                split_adjusted_close=Decimal("504"),
+                total_return_close=None,
+                volume=None,
+                currency=listing.currency,
+                provider="YAHOO_FINANCE",
+                provider_symbol=listing.ticker,
+                adjustment_basis="Corrected split-adjusted price; dividend excluded",
+                data_quality="PASS",
+                source_ref="test-price-series:correction",
+                supersedes_observation_id=latest.id,
+            )
+        )
+        known_before = q.listing_market_data(
+            db,
+            listing,
+            history_limit=90,
+            market_as_of=latest.market_date.date(),
+            known_at=latest.recorded_at + timedelta(days=1),
+        )
+        known_after = q.listing_market_data(
+            db,
+            listing,
+            history_limit=90,
+            market_as_of=latest.market_date.date(),
+            known_at=correction_recorded_at + timedelta(days=1),
+        )
+        short_window = q.listing_market_data(
+            db,
+            listing,
+            history_limit=90,
+            market_as_of=(latest.market_date - timedelta(days=1)).date(),
+            known_at=latest.recorded_at + timedelta(days=1),
+        )
+        stale_quote = q.listing_market_data(
+            db,
+            listing,
+            history_limit=90,
+            market_as_of=(latest.market_date + timedelta(days=8)).date(),
+            known_at=correction_recorded_at + timedelta(days=10),
+        )
+
+        assert known_before.price_regime is None
+        assert known_before.analytics.status == "AVAILABLE"
+        assert known_before.analytics.observation_count == 252
+        assert known_before.analytics.dma_50 == Decimal("227.5")
+        assert known_before.analytics.dma_200 == Decimal("152.5")
+        assert known_before.analytics.daily_return == Decimal(str(252 / 251 - 1))
+        assert known_before.analytics.drawdown_52w == Decimal(0)
+        assert known_before.analytics.price_return_3m == Decimal(str(252 / 189 - 1))
+        assert len(known_before.history) == 90
+        assert known_before.history[0].market_date == latest.market_date
+        assert known_before.latest is not None
+        assert known_before.latest.split_adjusted_close == Decimal("252")
+        assert known_after.latest is not None
+        assert known_after.latest.split_adjusted_close == Decimal("504")
+        assert known_after.analytics.daily_return == Decimal(str(504 / 251 - 1))
+        assert short_window.analytics.status == "PARTIAL"
+        assert short_window.analytics.observation_count == 251
+        assert short_window.analytics.dma_200 == Decimal("151.5")
+        assert short_window.analytics.high_52w is None
+        assert short_window.analytics.drawdown_52w is None
+        assert stale_quote.freshness == "STALE"
+        assert stale_quote.availability == "STALE"
+        assert stale_quote.analytics.status == "AVAILABLE"
+        assert stale_quote.analytics.observation_count == 252
+        assert len(stale_quote.history) == 90
+
+        quote_observed_at = latest.recorded_at + timedelta(hours=1)
+        local_session_quote = PriceObservation(
+            listing_id=listing.id,
+            price_kind="CURRENT_QUOTE",
+            market_date=latest.market_date + timedelta(days=1),
+            observed_at=quote_observed_at,
+            recorded_at=quote_observed_at + timedelta(minutes=1),
+            provider_close=Decimal("252"),
+            split_adjusted_close=Decimal("252"),
+            total_return_close=None,
+            volume=None,
+            currency=listing.currency,
+            provider="YAHOO_FINANCE",
+            provider_symbol=listing.ticker,
+            adjustment_basis="Current quote observed before next UTC day label",
+            data_quality="PASS",
+            source_ref="test-market-date:exchange-local-session",
+        )
+        db.add(local_session_quote)
+        db.flush()
+        local_session = q.listing_market_data(
+            db,
+            listing,
+            history_limit=0,
+            known_at=local_session_quote.recorded_at + timedelta(minutes=1),
+        )
+        assert local_session.latest is not None
+        assert local_session.age_days == 0
+        assert local_session.freshness == "FRESH"
 
 
 def test_fx_history_respects_effective_and_known_at_cutoffs(postgres_engine: Engine) -> None:
@@ -595,7 +1065,7 @@ def test_ranking_definitions_preserve_distinct_workbook_rules_and_inputs(
     with Session(postgres_engine) as db, db.begin():
         seed(db)
         definitions = q.ranking_definitions(db)
-        assert len(definitions) == 7
+        assert len(definitions) == 11
         by_type = {
             ranking_type: next(
                 item
@@ -604,16 +1074,16 @@ def test_ranking_definitions_preserve_distinct_workbook_rules_and_inputs(
             )
             for ranking_type in RankingType
         }
-        assert by_type[RankingType.PORTFOLIO].version == 2
+        assert by_type[RankingType.PORTFOLIO].version == 4
         assert by_type[RankingType.RESEARCH].version == 2
-        assert by_type[RankingType.WATCHLIST].version == 3
+        assert by_type[RankingType.WATCHLIST].version == 5
         assert all(item.implementation_status == "READY" for item in by_type.values())
         assert all(
             item.implementation_status == "NOT_MIGRATED"
             for item in definitions
             if item.status == "RETIRED" and item.version == 1
         )
-        assert "100-point score" in by_type[RankingType.PORTFOLIO].methodology
+        assert "100-point IRR-first allocation score" in by_type[RankingType.PORTFOLIO].methodology
         assert "Expected IRR" in by_type[RankingType.WATCHLIST].methodology
         assert "Research Sort Key" in by_type[RankingType.RESEARCH].methodology
         assert by_type[RankingType.WATCHLIST].id != by_type[RankingType.RESEARCH].id
@@ -781,14 +1251,35 @@ def test_ranking_api_exposes_metadata_runs_current_and_complete_history(
         TestClient(create_app(Settings(database_url=None))) as client,
     ):
         definitions = client.get("/v1/ranking-definitions")
-        assert definitions.status_code == 200 and len(definitions.json()) == 7
+        assert definitions.status_code == 200 and len(definitions.json()) == 11
         active_watchlist = next(
             item
             for item in definitions.json()
             if item["ranking_type"] == "WATCHLIST" and item["status"] == "ACTIVE"
         )
-        assert active_watchlist["version"] == 3
+        assert active_watchlist["version"] == 5
         assert active_watchlist["implementation_status"] == "READY"
+        return_methods = client.get("/v1/return-methodologies")
+        assert return_methods.status_code == 200
+        method_body = return_methods.json()
+        assert len(method_body["definitions"]) == 4
+        assert method_body["currency_policy"].find("FX_EXCLUDED") >= 0
+        method_rules = {
+            (item["left_methodology"], item["right_methodology"]): item["status"]
+            for item in method_body["rules"]
+        }
+        assert method_rules[("UFCF_ENTERPRISE_IRR", "OWNER_CASH_FLOW_EQUITY_IRR")] == (
+            "NOT_COMPARABLE_PERSPECTIVE"
+        )
+        assert method_rules[("UFCF_ENTERPRISE_IRR", "UFCF_ENTERPRISE_HMODEL_IRR")] == (
+            "NOT_COMPARABLE_METHOD"
+        )
+        assert method_rules[("UFCF_ENTERPRISE_HMODEL_IRR", "UFCF_ENTERPRISE_HMODEL_IRR")] == (
+            "DIRECT"
+        )
+        assert method_rules[("OWNER_CASH_FLOW_EQUITY_IRR", "RESIDUAL_INCOME_EQUITY_IRR")] == (
+            "CONDITIONAL_EQUITY"
+        )
         active_research = next(
             item
             for item in client.get("/v1/ranking-definitions?ranking_type=RESEARCH").json()
@@ -847,6 +1338,109 @@ def test_latest_snapshot_is_effective_time_not_import_time(postgres_engine: Engi
         ops.record_holdings(db, identifier, old)
         current = q.overview(db, identifier)
         assert current.snapshot is not None and current.snapshot.completeness == "COMPLETE"
+
+
+def test_confirmed_holdings_append_new_snapshot_and_preserve_prior_state(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as db, db.begin():
+        portfolio_id = seed(db)
+        before = q.overview(db, portfolio_id)
+        assert before.snapshot is not None
+        assert before.snapshot.completeness == "COMPLETE"
+        previous_snapshot_id = before.snapshot.id
+        previous_record = db.get(HoldingSnapshot, previous_snapshot_id)
+        assert previous_record is not None
+        previous_snapshot = q.snapshot_read(db, previous_record)
+        previous_targets = before.target_revision
+        assert previous_targets is not None
+
+        positions = [s.PositionInput.model_validate(row) for row in previous_snapshot.positions]
+        assert positions[0].quantity is not None
+        original_quantity = positions[0].quantity
+        changed_listing_id = positions[0].listing_id
+        positions[0] = positions[0].model_copy(
+            update={"quantity": original_quantity + Decimal("1")}
+        )
+        cash_positions = [
+            s.CashInput.model_validate(row) for row in previous_snapshot.cash_positions
+        ]
+        usd_cash = next(row for row in cash_positions if row.currency == "USD")
+        assert usd_cash.balance is not None
+        original_usd_cash = usd_cash.balance
+        usd_index = cash_positions.index(usd_cash)
+        cash_positions[usd_index] = usd_cash.model_copy(
+            update={"balance": original_usd_cash + Decimal("25")}
+        )
+        confirmed_at = previous_snapshot.effective_at + timedelta(microseconds=1)
+        assert confirmed_at <= datetime.now(UTC)
+        payload = s.SnapshotCreate.model_validate(
+            {
+                "actor": "LOCAL_USER",
+                "reason": "Investor confirmed positions and updated one quantity and USD cash.",
+                "source": "web-holdings-confirmation",
+                "effective_at": confirmed_at,
+                "completeness": "COMPLETE",
+                "positions": [row.model_dump() for row in positions],
+                "cash_positions": [row.model_dump() for row in cash_positions],
+            }
+        )
+
+        confirmed = ops.record_holdings(db, portfolio_id, payload)
+        current = q.overview(db, portfolio_id)
+
+        assert confirmed.id != previous_snapshot_id
+        assert current.snapshot is not None and current.snapshot.id == confirmed.id
+        assert current.holdings_freshness == "FRESH"
+        assert next(
+            position.quantity
+            for position in current.snapshot.positions
+            if position.listing_id == changed_listing_id
+        ) == original_quantity + Decimal("1")
+        assert next(
+            cash.balance for cash in current.snapshot.cash_positions if cash.currency == "USD"
+        ) == original_usd_cash + Decimal("25")
+        preserved_record = db.get(HoldingSnapshot, previous_snapshot_id)
+        assert preserved_record is not None
+        preserved_previous = q.snapshot_read(db, preserved_record)
+        assert preserved_previous == previous_snapshot
+        assert current.target_revision is not None
+        assert current.target_revision.id == previous_targets.id
+        assert db.scalar(select(func.count()).select_from(HoldingSnapshot)) == 2
+
+
+def test_confirmed_unchanged_holdings_create_a_distinct_immutable_snapshot(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as db, db.begin():
+        portfolio_id = seed(db)
+        before = q.overview(db, portfolio_id)
+        assert before.snapshot is not None
+        previous_id = before.snapshot.id
+        previous_record = db.get(HoldingSnapshot, previous_id)
+        assert previous_record is not None
+        previous = q.snapshot_read(db, previous_record)
+        confirmation = s.SnapshotCreate.model_validate(
+            {
+                "actor": "LOCAL_USER",
+                "reason": "Investor reconfirmed unchanged positions and cash.",
+                "source": "web-holdings-confirmation",
+                "effective_at": datetime.now(UTC) - timedelta(seconds=1),
+                "completeness": "COMPLETE",
+                "positions": [row.model_dump() for row in previous.positions],
+                "cash_positions": [row.model_dump() for row in previous.cash_positions],
+            }
+        )
+
+        confirmed = ops.record_holdings(db, portfolio_id, confirmation)
+
+        assert confirmed.id != previous_id
+        current = q.snapshot_read(db, confirmed)
+        assert current.positions == previous.positions
+        assert current.cash_positions == previous.cash_positions
+        preserved_record = db.get(HoldingSnapshot, previous_id)
+        assert preserved_record is not None
+        assert q.snapshot_read(db, preserved_record) == previous
 
 
 def test_portfolio_writes_never_change_lifecycle(postgres_engine: Engine) -> None:

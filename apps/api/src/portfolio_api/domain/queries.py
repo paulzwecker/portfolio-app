@@ -3,7 +3,7 @@
 from collections import defaultdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import and_, case, func, or_, select
@@ -25,13 +25,16 @@ from portfolio_api.domain.models import (
     DcfModelAssumptions,
     DcfProjection,
     DcfScenarioAssumptions,
+    DcfTailGrowthAssumption,
     DcfYearAssumption,
     ExecutionPaceDecision,
     ExecutionPaceRun,
     ExecutionPaceRunStatus,
+    ExternalIngestionRun,
     FinancialModel,
     FinancialModelOutput,
     FinancialModelRevision,
+    FinancialModelRevisionEvidence,
     FinancialModelType,
     FundamentalMetric,
     FundamentalStatement,
@@ -72,7 +75,12 @@ from portfolio_api.domain.models import (
     now,
 )
 from portfolio_api.estimate_momentum import ConsensusObservationPoint, calculate_estimate_momentum
-from portfolio_api.reported_fundamentals import resolve_fundamental_period
+from portfolio_api.market_data import calculate_price_history_metrics
+from portfolio_api.model_revision_evidence import (
+    resolve_model_evidence_reference,
+    stored_evidence_reference,
+)
+from portfolio_api.reported_fundamentals import fiscal_period_identity, resolve_fundamental_period
 
 FRESH_DAYS = 5
 
@@ -165,7 +173,10 @@ def target_read(session: Session, revision: TargetRevision) -> s.TargetRead:
 def overview(
     session: Session, portfolio_id: UUID, as_of: datetime | None = None
 ) -> s.PortfolioOverview:
-    cutoff = (as_of or now()).astimezone(UTC)
+    requested_cutoff = as_of or now()
+    if requested_cutoff.tzinfo is None or requested_cutoff.utcoffset() is None:
+        raise ValueError("Portfolio valuation cutoff must be timezone-aware")
+    cutoff = requested_cutoff.astimezone(UTC)
     item = services.portfolio(session, portfolio_id)
     snapshot = session.scalar(
         select(HoldingSnapshot)
@@ -196,6 +207,8 @@ def overview(
     standalone_positions: list[s.HoldingContext] = []
     valuation_gaps: list[s.ValuationGap] = []
     snapshot_cash: list[CashPosition] = []
+    market_dates: list[datetime] = []
+    fx_dates: list[datetime] = []
     if snapshot:
         snapshot_cash = list(
             session.scalars(select(CashPosition).where(CashPosition.snapshot_id == snapshot.id))
@@ -216,58 +229,48 @@ def overview(
                 known_at=cutoff,
             )
             observation = market.latest
-            price_matches_holdings = (
-                snapshot is not None
-                and observation is not None
-                and abs((snapshot.effective_at.date() - observation.market_date.date()).days)
-                <= FRESH_DAYS
-            )
+            if observation is not None:
+                market_dates.append(observation.market_date)
             value = (
                 position.quantity * observation.split_adjusted_close
                 if position.quantity is not None
                 and observation is not None
                 and observation.split_adjusted_close is not None
                 and market.freshness == "FRESH"
-                and price_matches_holdings
                 else None
             )
             valuation_status: str
+            fx_rate: Decimal | None = None
+            fx_effective_at: datetime | None = None
             if position.quantity is None:
                 valuation_status = "QUANTITY_UNAVAILABLE"
-            elif (
-                observation is None
-                or market.freshness in {"NO_DATA", "STALE", "QUALITY_CHECK"}
-                or not price_matches_holdings
-            ):
+            elif observation is None or market.freshness in {"NO_DATA", "STALE", "QUALITY_CHECK"}:
                 valuation_status = "PRICE_UNAVAILABLE"
             elif listing.currency == item.base_currency:
                 valuation_status = "VALUED"
-            elif (
-                _fx_rate(
+            else:
+                fx_rate, fx_effective_at = _fx_rate_details(
                     session,
                     listing.currency,
                     item.base_currency,
-                    observation.observed_at or observation.market_date,
+                    cutoff,
                     known_at=cutoff,
                 )
-                is None
-            ):
-                valuation_status = "FX_UNAVAILABLE"
-            else:
-                valuation_status = "VALUED"
+                valuation_status = "VALUED" if fx_rate is not None else "FX_UNAVAILABLE"
+                if fx_effective_at is not None:
+                    fx_dates.append(fx_effective_at)
             base_value = None
             if value is not None and observation is not None and valuation_status == "VALUED":
-                rate = _fx_rate(
-                    session,
-                    listing.currency,
-                    item.base_currency,
-                    observation.observed_at or observation.market_date,
-                    known_at=cutoff,
-                )
                 if listing.currency == item.base_currency:
                     base_value = value
-                elif rate is not None:
-                    base_value = value * rate
+                elif fx_rate is not None:
+                    base_value = value * fx_rate
+            sync_status = _valuation_sync_status(
+                listing.currency,
+                item.base_currency,
+                fx_effective_at,
+                observation.observed_at if observation else None,
+            )
             context = s.HoldingContext(
                 listing_id=listing.id,
                 security_id=security.id,
@@ -278,7 +281,11 @@ def overview(
                 quantity=position.quantity,
                 latest_price=(observation.split_adjusted_close if observation else None),
                 price_date=(observation.market_date if observation else None),
+                price_observed_at=(observation.observed_at if observation else None),
                 price_currency=(observation.currency if observation else None),
+                fx_rate=fx_rate,
+                fx_effective_at=fx_effective_at,
+                valuation_sync_status=sync_status,
                 price_freshness=market.freshness,
                 native_market_value=value,
                 base_market_value=base_value,
@@ -297,22 +304,23 @@ def overview(
     cash_valuations: list[s.CashValuation] = []
     cash_values: list[Decimal] = []
     for cash in snapshot_cash:
-        rate = (
-            _fx_rate(
+        cash_fx_rate: Decimal | None = None
+        cash_fx_effective_at: datetime | None = None
+        if cash.balance is not None and cash.currency != item.base_currency:
+            cash_fx_rate, cash_fx_effective_at = _fx_rate_details(
                 session,
                 cash.currency,
                 item.base_currency,
-                snapshot.effective_at,
+                cutoff,
                 known_at=cutoff,
             )
-            if cash.balance is not None and snapshot is not None
-            else None
-        )
+            if cash_fx_effective_at is not None:
+                fx_dates.append(cash_fx_effective_at)
         base_value = (
             cash.balance
             if cash.balance is not None and cash.currency == item.base_currency
-            else cash.balance * rate
-            if cash.balance is not None and rate is not None
+            else cash.balance * cash_fx_rate
+            if cash.balance is not None and cash_fx_rate is not None
             else None
         )
         status = (
@@ -327,6 +335,8 @@ def overview(
                 currency=cash.currency,
                 balance=cash.balance,
                 base_market_value=base_value,
+                fx_rate=cash_fx_rate,
+                fx_effective_at=cash_fx_effective_at,
                 valuation_status=status,
             )
         )
@@ -366,7 +376,9 @@ def overview(
     incomplete = (
         not snapshot
         or snapshot.completeness != "COMPLETE"
-        or (cutoff.date() - snapshot.effective_at.date()).days > FRESH_DAYS
+        or any(
+            gap.reason in {"QUANTITY_UNAVAILABLE", "BALANCE_UNAVAILABLE"} for gap in valuation_gaps
+        )
     )
     total: Decimal | None = None
     if snapshot and snapshot.completeness == "COMPLETE" and not valuation_gaps:
@@ -378,6 +390,19 @@ def overview(
             ),
             Decimal(0),
         ) + sum(cash_values, Decimal(0))
+    if total is not None and total > 0:
+        for holding_context in all_positions:
+            holding_context.portfolio_weight = (
+                holding_context.base_market_value / total
+                if holding_context.base_market_value is not None
+                else None
+            )
+        for cash_valuation in cash_valuations:
+            cash_valuation.portfolio_weight = (
+                cash_valuation.base_market_value / total
+                if cash_valuation.base_market_value is not None
+                else None
+            )
     if not snapshot:
         valuation_status = "NO_HOLDING_SNAPSHOT"
     elif incomplete:
@@ -434,6 +459,20 @@ def overview(
         standalone_positions=standalone_positions,
         companies=company_contexts,
         valuation_status=valuation_status,
+        valuation_mode=("CURRENT_MARK_TO_MARKET" if as_of is None else "HISTORICAL_AS_OF"),
+        valuation_as_of=cutoff,
+        market_data_through=max(market_dates, default=None),
+        fx_data_through=max(fx_dates, default=None),
+        holdings_age_days=(
+            max((cutoff.date() - snapshot.effective_at.date()).days, 0) if snapshot else None
+        ),
+        holdings_freshness=(
+            "NO_DATA"
+            if snapshot is None
+            else "STALE"
+            if (cutoff.date() - snapshot.effective_at.date()).days > FRESH_DAYS
+            else "FRESH"
+        ),
         base_market_value=total,
         valuation_currency=item.base_currency,
         cash_valuations=cash_valuations,
@@ -448,22 +487,39 @@ def _fx_rate(
     as_of: object,
     known_at: datetime | None = None,
 ) -> Decimal | None:
+    rate, _effective_at = _fx_rate_details(session, source, target, as_of, known_at)
+    return rate
+
+
+def _fx_rate_details(
+    session: Session,
+    source: str | None,
+    target: str,
+    as_of: object,
+    known_at: datetime | None = None,
+) -> tuple[Decimal | None, datetime | None]:
     if not source:
-        return None
+        return None, None
     if source == target:
-        return Decimal(1)
+        return Decimal(1), None
     if not isinstance(as_of, datetime):
-        return None
+        return None, None
     cutoff = known_at or now()
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        return None, None
+    as_of = as_of.astimezone(UTC)
+    cutoff = cutoff.astimezone(UTC)
     age_as_of = (cutoff.date() - as_of.date()).days
     if age_as_of > 5:
-        return None
+        return None, None
+    effective_cutoff = min(as_of, cutoff)
     rows = session.scalars(
         select(FxObservation)
         .where(
-            FxObservation.effective_at <= min(as_of, cutoff),
-            FxObservation.effective_at >= as_of - timedelta(days=FRESH_DAYS),
+            FxObservation.effective_at <= effective_cutoff,
+            FxObservation.effective_at >= effective_cutoff - timedelta(days=FRESH_DAYS),
             FxObservation.recorded_at <= cutoff,
+            or_(FxObservation.observed_at.is_(None), FxObservation.observed_at <= cutoff),
             FxObservation.data_quality == "PASS",
             or_(
                 and_(
@@ -480,15 +536,35 @@ def _fx_rate(
         .limit(1)
     ).all()
     for fx in rows:
-        if (as_of.date() - fx.effective_at.date()).days < 0 or (
-            as_of.date() - fx.effective_at.date()
+        fx_effective_date = fx.effective_at.astimezone(UTC).date()
+        if (as_of.date() - fx_effective_date).days < 0 or (
+            as_of.date() - fx_effective_date
         ).days > 5:
             continue
         if fx.base_currency == source and fx.quote_currency == target:
-            return fx.rate
+            return fx.rate, fx.effective_at
         if fx.base_currency == target and fx.quote_currency == source:
-            return Decimal(1) / fx.rate
-    return None
+            return Decimal(1) / fx.rate, fx.effective_at
+    return None, None
+
+
+def _valuation_sync_status(
+    source_currency: str | None,
+    target_currency: str,
+    fx_effective_at: datetime | None,
+    price_observed_at: datetime | None,
+) -> str:
+    if source_currency == target_currency:
+        return "NOT_REQUIRED"
+    if fx_effective_at is None:
+        return "UNAVAILABLE"
+    if price_observed_at is None:
+        return "TIMING_UNKNOWN"
+    return (
+        "SYNCHRONOUS"
+        if fx_effective_at.astimezone(UTC) == price_observed_at.astimezone(UTC)
+        else "NON_SYNCHRONOUS"
+    )
 
 
 def _market_cutoffs(
@@ -515,6 +591,69 @@ def _price_ordering() -> tuple[ColumnElement[Any], ...]:
     )
 
 
+def _metric_decimal(value: object) -> Decimal | None:
+    return Decimal(str(value)) if isinstance(value, (float, int)) else None
+
+
+def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
+    """Expose the latest persisted Yahoo market/FX refresh state."""
+
+    runs = list(
+        session.scalars(
+            select(ExternalIngestionRun)
+            .where(
+                ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
+                ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
+            )
+            .order_by(ExternalIngestionRun.created_at.desc())
+            .limit(40)
+        )
+    )
+    latest: dict[str, ExternalIngestionRun] = {}
+    for run in runs:
+        latest.setdefault(run.domain, run)
+    market_run = latest.get("MARKET_DATA")
+    fx_run = latest.get("FX")
+    selected = [run for run in (market_run, fx_run) if run is not None]
+    last_attempt = max(
+        (run.last_attempt_started_at or run.started_at for run in selected), default=None
+    )
+    last_success = max(
+        (run.last_successful_at for run in selected if run.last_successful_at is not None),
+        default=None,
+    )
+    if any(run.status == "RUNNING" for run in selected):
+        state = "REFRESHING"
+    elif not selected:
+        state = "UNAVAILABLE"
+    elif last_success is None:
+        has_market_facts = session.scalar(select(PriceObservation.id).limit(1)) is not None
+        state = "STALE" if has_market_facts else "UNAVAILABLE"
+    elif (now() - last_success).total_seconds() > 72 * 60 * 60:
+        state = "STALE"
+    elif any(run.status in {"PARTIAL", "FAILED", "BLOCKED"} for run in selected):
+        state = "PARTIAL"
+    else:
+        state = "AVAILABLE"
+    failed = next(
+        (
+            run
+            for run in selected
+            if run.failure_message or run.status in {"PARTIAL", "FAILED", "BLOCKED"}
+        ),
+        None,
+    )
+    message = failed.failure_message if failed else None
+    return s.MarketRefreshStatusRead(
+        state=state,
+        last_attempt_at=last_attempt,
+        last_successful_update=last_success,
+        market_run_id=market_run.id if market_run else None,
+        fx_run_id=fx_run.id if fx_run else None,
+        message=message,
+    )
+
+
 def listing_market_data(
     session: Session,
     listing: Listing,
@@ -538,32 +677,80 @@ def listing_market_data(
         .order_by(PriceObservation.market_date.desc(), *_price_ordering())
         .limit(1)
     )
-    history: list[PriceObservation] = []
-    if history_limit > 0:
-        ranked = (
-            select(
-                PriceObservation.id.label("observation_id"),
-                func.row_number()
-                .over(
-                    partition_by=PriceObservation.market_date,
-                    order_by=_price_ordering(),
-                )
-                .label("day_rank"),
+    ranked = (
+        select(
+            PriceObservation.id.label("observation_id"),
+            func.row_number()
+            .over(
+                partition_by=PriceObservation.market_date,
+                order_by=_price_ordering(),
             )
-            .where(*price_filters, PriceObservation.price_kind == "DAILY_CLOSE")
-            .subquery()
+            .label("day_rank"),
         )
-        history = list(
-            session.scalars(
-                select(PriceObservation)
-                .join(ranked, PriceObservation.id == ranked.c.observation_id)
-                .where(ranked.c.day_rank == 1)
-                .order_by(PriceObservation.market_date.desc())
-                .limit(history_limit)
-            )
+        .where(
+            *price_filters,
+            PriceObservation.price_kind == "DAILY_CLOSE",
+            PriceObservation.data_quality.in_(("PASS", "PASS_VERIFIED_FALLBACK")),
+            PriceObservation.split_adjusted_close.is_not(None),
         )
+        .subquery()
+    )
+    # Keep enough observations for the longest supported window even when a
+    # client requests only a short chart. Rows are resolved by exact listing and
+    # the same effective/recorded cutoffs as all other market queries.
+    analytics_limit = max(252, max(0, history_limit))
+    analytics_rows = list(
+        session.scalars(
+            select(PriceObservation)
+            .join(ranked, PriceObservation.id == ranked.c.observation_id)
+            .where(ranked.c.day_rank == 1)
+            .order_by(PriceObservation.market_date.desc())
+            .limit(analytics_limit)
+        )
+    )
+    ordered_analytics = list(reversed(analytics_rows))
+    closes = [row.split_adjusted_close for row in ordered_analytics]
+    values = calculate_price_history_metrics([value for value in closes if value is not None])
+    observation_count = len(closes)
+    analytics_status = "UNAVAILABLE"
+    if observation_count >= 252:
+        analytics_status = "AVAILABLE"
+    elif observation_count >= 2:
+        analytics_status = "PARTIAL"
+    analytics = s.PriceHistoryAnalyticsRead(
+        status=analytics_status,
+        methodology_version="split-adjusted-price-history-v1",
+        observation_count=observation_count,
+        as_of=ordered_analytics[-1].market_date if ordered_analytics else None,
+        daily_return=_metric_decimal(values["daily_return"]),
+        dma_20=_metric_decimal(values["dma_20"]),
+        dma_50=_metric_decimal(values["dma_50"]),
+        dma_200=_metric_decimal(values["dma_200"]),
+        high_52w=_metric_decimal(values["high_52w"]),
+        drawdown_52w=_metric_decimal(values["drawdown_52w"]),
+        price_return_1m=_metric_decimal(values["price_return_1m"]),
+        price_return_3m=_metric_decimal(values["price_return_3m"]),
+        price_return_6m=_metric_decimal(values["price_return_6m"]),
+        realized_vol_20d=_metric_decimal(values["realized_vol_20d"]),
+        trend_state=cast(str | None, values["trend_state"]),
+        correction_state=cast(str | None, values["correction_state"]),
+    )
+    history = analytics_rows[:history_limit] if history_limit > 0 else []
     comparison_date = market_as_of or knowledge_cutoff.date()
     age = (comparison_date - latest_model.market_date.date()).days if latest_model else None
+    if (
+        age is not None
+        and age < 0
+        and latest_model is not None
+        and latest_model.price_kind == "CURRENT_QUOTE"
+        and latest_model.observed_at is not None
+        and latest_model.observed_at <= knowledge_cutoff
+    ):
+        # Market dates are exchange-local session labels encoded at UTC midnight.
+        # A live quote from an east-of-UTC exchange can therefore carry tomorrow's
+        # session date while already observed before this UTC knowledge cutoff.
+        # For that quote only, use its actual observation date for freshness age.
+        age = (comparison_date - latest_model.observed_at.astimezone(UTC).date()).days
     if latest_model is None:
         freshness = "NO_DATA"
     elif (
@@ -575,6 +762,30 @@ def listing_market_data(
         freshness = "STALE"
     else:
         freshness = "FRESH"
+    refreshing = (
+        market_as_of is None
+        and known_at is None
+        and session.scalar(
+            select(ExternalIngestionRun.id)
+            .where(
+                ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
+                ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
+                ExternalIngestionRun.status == "RUNNING",
+            )
+            .limit(1)
+        )
+        is not None
+    )
+    if refreshing:
+        availability = "REFRESHING"
+    elif freshness == "NO_DATA":
+        availability = "UNAVAILABLE"
+    elif freshness == "STALE":
+        availability = "STALE"
+    elif freshness == "QUALITY_CHECK" or analytics.status != "AVAILABLE":
+        availability = "PARTIAL"
+    else:
+        availability = "AVAILABLE"
     regime_statement = (
         select(PriceRegimeSnapshot)
         .join(MarketDataBatch, PriceRegimeSnapshot.batch_id == MarketDataBatch.id)
@@ -592,8 +803,11 @@ def listing_market_data(
         listing=s.ListingRead.model_validate(listing),
         latest=s.PriceObservationRead.model_validate(latest_model) if latest_model else None,
         freshness=freshness,
+        availability=availability,
         age_days=age,
         price_regime=s.PriceRegimeRead.model_validate(regime) if regime else None,
+        analytics=analytics,
+        last_market_update=latest_model.recorded_at if latest_model else None,
         history=[s.PriceObservationRead.model_validate(observation) for observation in history],
     )
 
@@ -651,8 +865,6 @@ def company_reported_fundamentals(
     statement = select(ReportedFundamentalObservation).where(
         ReportedFundamentalObservation.company_id == company_id
     )
-    if period_type is not None:
-        statement = statement.where(ReportedFundamentalObservation.period_type == period_type)
     if as_of is not None:
         cutoff = effective_cutoff or datetime.combine(as_of, time.max, UTC)
         statement = statement.where(
@@ -684,8 +896,6 @@ def company_reported_fundamentals(
             item.period_type,
             item.period_start,
             item.period_end,
-            item.fiscal_year,
-            item.fiscal_period,
             item.currency,
             item.unit,
         )
@@ -693,7 +903,10 @@ def company_reported_fundamentals(
 
     period_reads: list[s.ReportedFundamentalPeriodRead] = []
     for key, history in groups.items():
+        if period_type is not None and key[2] != period_type:
+            continue
         resolution = resolve_fundamental_period(history)
+        fiscal_year, fiscal_period = fiscal_period_identity(history, observations)
         history.sort(
             key=lambda item: (
                 item.filed_at or datetime.min.replace(tzinfo=UTC),
@@ -709,10 +922,10 @@ def company_reported_fundamentals(
                 period_type=key[2],
                 period_start=key[3],
                 period_end=key[4],
-                fiscal_year=key[5],
-                fiscal_period=key[6],
-                currency=key[7],
-                unit=key[8],
+                fiscal_year=fiscal_year,
+                fiscal_period=fiscal_period,
+                currency=key[5],
+                unit=key[6],
                 value=resolution.selected.value if resolution.selected is not None else None,
                 selection_status=resolution.status,
                 selected_observation=(
@@ -1493,6 +1706,13 @@ def company_expected_return_history(
                 "output_quality": "COMPLETE" if output.status == "COMPLETE" else "PARTIAL",
                 "contract_status": None,
                 "return_semantics": "NATIVE_METHOD_OUTPUT",
+                "return_methodology": output.return_methodology,
+                "return_methodology_status": "CLASSIFIED",
+                "share_price_basis_status": (
+                    "CAPTURED"
+                    if output.price_observation_id is not None and output.current_price is not None
+                    else "UNAVAILABLE"
+                ),
                 "actor": revision.actor,
                 "source_actor": None,
                 "revision_source": None,
@@ -1559,6 +1779,9 @@ def company_expected_return_history(
                 "output_quality": snapshot.output_quality,
                 "contract_status": snapshot.contract_status,
                 "return_semantics": "LEGACY_NORMALIZED_FIELD",
+                "return_methodology": snapshot.return_methodology,
+                "return_methodology_status": snapshot.return_methodology_status,
+                "share_price_basis_status": "NOT_RETAINED",
                 "actor": snapshot.actor,
                 "source_actor": snapshot.source_actor,
                 "revision_source": snapshot.revision_source,
@@ -1849,6 +2072,13 @@ def company_expected_return_history(
             output_quality=item["output_quality"],
             contract_status=item["contract_status"],
             return_semantics=item["return_semantics"],
+            return_methodology=(
+                s.ReturnMethodologyRead.model_validate(item["return_methodology"])
+                if item["return_methodology"] is not None
+                else None
+            ),
+            return_methodology_status=item["return_methodology_status"],
+            share_price_basis_status=item["share_price_basis_status"],
             actor=item["actor"],
             source_actor=item["source_actor"],
             revision_source=item["revision_source"],
@@ -1884,12 +2114,21 @@ def company_expected_return_history(
         status = "PARTIAL"
     else:
         status = "AVAILABLE"
+    from portfolio_api.current_model_calculation import current_native_model_calculations
+
+    current_calculations = current_native_model_calculations(
+        session,
+        company_id,
+        as_of=as_of_date,
+        known_at=knowledge_cutoff,
+    )
     return s.CompanyExpectedReturnHistoryRead(
         company_id=company_id,
         as_of=as_of_date,
         known_at=knowledge_cutoff,
         status=status,
         history=history,
+        current_calculations=current_calculations,
     )
 
 
@@ -2051,6 +2290,24 @@ def _financial_model_revision_summary(
     )
     if output is None:
         raise services.DomainError("Accepted model revision has no calculation output", 409)
+    model = session.get(FinancialModel, revision.model_id)
+    listing = session.get(Listing, model.valuation_listing_id) if model else None
+    security = session.get(Security, listing.security_id) if listing else None
+    supporting_evidence: list[s.FinancialModelEvidenceRead] = []
+    for evidence_row in session.scalars(
+        select(FinancialModelRevisionEvidence)
+        .where(FinancialModelRevisionEvidence.revision_id == revision.id)
+        .order_by(FinancialModelRevisionEvidence.id)
+    ):
+        if model is None or security is None:
+            raise services.DomainError("Model revision evidence identity is unavailable", 409)
+        _, evidence_read = resolve_model_evidence_reference(
+            session,
+            company_id=model.company_id,
+            security_id=security.id,
+            reference=stored_evidence_reference(evidence_row),
+        )
+        supporting_evidence.append(evidence_read)
     return s.FinancialModelRevisionSummary(
         id=revision.id,
         model_id=revision.model_id,
@@ -2058,6 +2315,10 @@ def _financial_model_revision_summary(
         base_revision_id=revision.base_revision_id,
         methodology_version=revision.methodology_version,
         source_revision_id=revision.source_revision_id,
+        proposal_author_id=revision.proposal_author_id,
+        proposal_authored_at=revision.proposal_authored_at,
+        proposal_source_reference=revision.proposal_source_reference,
+        supporting_evidence=supporting_evidence,
         actor=revision.actor,
         source=revision.source,
         rationale=revision.rationale,
@@ -2090,6 +2351,11 @@ def _financial_model_revision_read(
             .where(DcfYearAssumption.scenario_id == scenario.id)
             .order_by(DcfYearAssumption.forecast_year)
         ).all()
+        tail_growth_inputs = session.scalars(
+            select(DcfTailGrowthAssumption)
+            .where(DcfTailGrowthAssumption.scenario_id == scenario.id)
+            .order_by(DcfTailGrowthAssumption.forecast_year)
+        ).all()
         projection_rows = session.scalars(
             select(DcfProjection)
             .where(DcfProjection.scenario_id == scenario.id)
@@ -2105,6 +2371,14 @@ def _financial_model_revision_read(
                 year10_ufcf_growth=scenario.year10_ufcf_growth,
                 rationale=scenario.rationale,
                 years=[s.DcfYearAssumptionRead.model_validate(year) for year in year_inputs],
+                tail_ufcf_growth=(
+                    [
+                        s.DcfTailGrowthAssumptionRead.model_validate(year)
+                        for year in tail_growth_inputs
+                    ]
+                    if tail_growth_inputs
+                    else None
+                ),
             )
         )
         projection_reads.extend(

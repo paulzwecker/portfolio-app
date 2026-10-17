@@ -1,8 +1,85 @@
 import type { components } from "@portfolio/contracts";
 
+export type CompanyFinancialStatements =
+  components["schemas"]["CompanyFinancialStatementsRead"];
+export type FinancialStatementRow =
+  components["schemas"]["FinancialStatementRowRead"];
+export type FinancialStatementCell =
+  components["schemas"]["FinancialStatementCellRead"];
+export type FinancialStatementColumn =
+  components["schemas"]["FinancialStatementColumnRead"];
+
+export function isCompanyFinancialStatements(
+  value: unknown,
+): value is CompanyFinancialStatements {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    ["ANNUAL", "QUARTERLY"].includes(value.period_type as string) &&
+    (value.as_of === null || dateOnly(value.as_of)) &&
+    (value.known_at === null || timestamp(value.known_at)) &&
+    (value.latest_observed_at === null ||
+      timestamp(value.latest_observed_at)) &&
+    array(
+      value.periods,
+      (p) =>
+        isRecord(p) &&
+        dateOnly(p.period_end) &&
+        string(p.label) &&
+        (p.fiscal_year === null || Number.isInteger(p.fiscal_year)) &&
+        nullableString(p.fiscal_period) &&
+        typeof p.is_forecast === "boolean",
+    ) &&
+    array(
+      value.rows,
+      (r) =>
+        isRecord(r) &&
+        string(r.id) &&
+        string(r.metric) &&
+        string(r.label) &&
+        ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW_STATEMENT"].includes(
+          r.statement as string,
+        ) &&
+        ["REPORTED_ACTUAL", "CONSENSUS", "AGENT_FORECAST"].includes(
+          r.source_kind as string,
+        ) &&
+        string(r.source_name) &&
+        nullableString(r.scenario) &&
+        nullableString(r.currency) &&
+        string(r.unit) &&
+        nullableString(r.availability_reason) &&
+        array(
+          r.cells,
+          (c) =>
+            isRecord(c) &&
+            dateOnly(c.period_end) &&
+            nullableSignedDecimal(c.value) &&
+            ["AVAILABLE", "CONFLICT", "DATA_CHECK", "UNAVAILABLE"].includes(
+              c.status as string,
+            ) &&
+            nullableString(c.reason) &&
+            nullableUuid(c.selected_source_id) &&
+            array(c.source_ids, uuid),
+        ),
+    ) &&
+    array(value.reported_periods, isReportedFundamentalPeriod) &&
+    isCompanyConsensusEstimates(value.consensus) &&
+    isCompanyResearch(value.research) &&
+    array(
+      value.limitations,
+      (l) =>
+        isRecord(l) &&
+        string(l.source_name) &&
+        string(l.reason) &&
+        nullableUuid(l.reference_id),
+    )
+  );
+}
+
 export type Company = components["schemas"]["CompanyRead"];
 export type Portfolio = components["schemas"]["PortfolioRead"];
 export type Overview = components["schemas"]["PortfolioOverview"];
+export type HoldingSnapshot = components["schemas"]["SnapshotRead"];
 export type CompanyDetail = components["schemas"]["CompanyDetail"];
 export type CompanyPortfolioContext =
   components["schemas"]["CompanyPortfolioContext"];
@@ -19,6 +96,11 @@ export type RankingType = components["schemas"]["RankingType"];
 export type RankingStatus = components["schemas"]["RankingEntryStatus"];
 export type RankingCurrent = components["schemas"]["RankingCurrentRead"];
 export type RankingDefinition = components["schemas"]["RankingDefinitionRead"];
+export type ReturnMethodology = components["schemas"]["ReturnMethodologyRead"];
+export type ReturnMethodologies =
+  components["schemas"]["ReturnMethodologiesRead"];
+export type ReturnComparabilityRule =
+  components["schemas"]["ReturnComparabilityRuleRead"];
 export type RankingEntryRead = components["schemas"]["RankingEntryRead"];
 export type WatchlistRankInputSnapshot =
   components["schemas"]["WatchlistRankInputSnapshot"];
@@ -26,6 +108,45 @@ export type PortfolioRankInputSnapshot =
   components["schemas"]["PortfolioRankInputSnapshot"];
 export type ResearchRankInputSnapshot =
   components["schemas"]["ResearchRankInputSnapshot"];
+export type CandidateResearchStage =
+  components["schemas"]["CandidateResearchStage"];
+export type CandidateGateOutcome =
+  components["schemas"]["CandidateGateOutcome"];
+export type CandidateGateEvidenceInput =
+  components["schemas"]["CandidatePipelineEvidenceInput"];
+export type CandidatePipelineEvidenceOption =
+  components["schemas"]["CandidatePipelineEvidenceOption"];
+export type CandidatePipelineGate =
+  components["schemas"]["CandidatePipelineGateRead"];
+export type CandidatePipelineRevision =
+  components["schemas"]["CandidatePipelineRevisionRead"];
+export type CandidatePipelineRevisionSummary =
+  components["schemas"]["CandidatePipelineRevisionSummaryRead"];
+export type CandidatePipelineQueueEntry =
+  components["schemas"]["CandidatePipelineQueueEntry"];
+export type CompanyCandidatePipeline =
+  components["schemas"]["CompanyCandidatePipelineRead"];
+export type CandidatePipelineRevisionCreate =
+  components["schemas"]["CandidatePipelineRevisionCreate"];
+export type CandidatePipelinePublicationResult =
+  components["schemas"]["CandidatePipelinePublicationResult"];
+export type ResearchQueue = components["schemas"]["ResearchQueueRead"];
+export type ResearchQueueTask = components["schemas"]["ResearchQueueTask"];
+export type ResearchQueueCompletion =
+  components["schemas"]["ResearchQueueCompletionRead"];
+export type ResearchQueueCompletionCreate =
+  components["schemas"]["ResearchQueueCompletionCreate"];
+export type ResearchQueueCompletionResult =
+  components["schemas"]["ResearchQueueCompletionResult"];
+export type ResearchTriggerRead = components["schemas"]["ResearchTriggerRead"];
+export type ResearchTriggerReadResult =
+  components["schemas"]["ResearchTriggerReadResult"];
+export type ResearchTriggerRefreshResult =
+  components["schemas"]["ResearchTriggerRefreshResult"];
+export type ResearchTriggerContext =
+  components["schemas"]["ResearchTriggerContextRead"];
+export type ResearchTriggerReferenceRead =
+  components["schemas"]["ResearchTriggerReferenceRead"];
 export type RankingHistoryEntry = components["schemas"]["RankingHistoryEntry"];
 export type RankingRun = components["schemas"]["RankingRunRead"];
 export type CompanyRankings = components["schemas"]["CompanyRankingsRead"];
@@ -49,8 +170,71 @@ export type UniverseExecutionPaceSummary =
   components["schemas"]["UniverseExecutionPaceSummary"];
 export type AttentionFeed = components["schemas"]["AttentionFeedRead"];
 export type AttentionEvent = components["schemas"]["AttentionEventRead"];
+export type GoogleSheetsSyncStatus =
+  components["schemas"]["GoogleSheetsSyncStatusRead"];
+export type GoogleSheetsConnectionTest =
+  components["schemas"]["GoogleSheetsConnectionTestRead"];
+export type GoogleSheetsSyncRun =
+  components["schemas"]["GoogleSheetsSyncRunRead"];
+export type GoogleSheetsSyncCandidate =
+  components["schemas"]["GoogleSheetsSyncCandidateRead"];
+export type FinancialModelEvidenceReference =
+  components["schemas"]["FinancialModelEvidenceReference"];
+export type FinancialModelEvidenceRead =
+  components["schemas"]["FinancialModelEvidenceRead"];
+export type GoogleSheetsSyncCheck =
+  components["schemas"]["GoogleSheetsSyncCheckRead"];
+export type GoogleSheetsPortfolioStatePublish =
+  components["schemas"]["GoogleSheetsPortfolioStatePublishRead"];
+export type GoogleSheetsThesisWatchPublish =
+  components["schemas"]["GoogleSheetsThesisWatchPublishRead"];
+export type GoogleSheetsAgentWorkPublish =
+  components["schemas"]["GoogleSheetsAgentWorkPublishRead"];
+export type GoogleSheetsRiskSyncStatus =
+  components["schemas"]["GoogleSheetsRiskSyncStatusRead"];
+export type GoogleSheetsRiskSyncRun =
+  components["schemas"]["GoogleSheetsRiskSyncRunRead"];
+export type GoogleSheetsRiskCandidate =
+  components["schemas"]["GoogleSheetsRiskCandidateRead"];
+export type GoogleSheetsRiskSyncCheck =
+  components["schemas"]["GoogleSheetsRiskSyncCheckRead"];
+export type GoogleSheetsResearchSyncStatus =
+  components["schemas"]["GoogleSheetsResearchSyncStatusRead"];
+export type GoogleSheetsResearchSyncRun =
+  components["schemas"]["GoogleSheetsResearchSyncRunRead"];
+export type GoogleSheetsResearchCandidate =
+  components["schemas"]["GoogleSheetsResearchCandidateRead"];
+export type GoogleSheetsResearchSyncCheck =
+  components["schemas"]["GoogleSheetsResearchSyncCheckRead"];
+export type GoogleSheetsResearchConnectionTest =
+  components["schemas"]["GoogleSheetsResearchConnectionTestRead"];
+export type RiskAssessmentEvidence =
+  components["schemas"]["RiskAssessmentEvidenceRead"];
+export type RiskAssessmentFinding =
+  components["schemas"]["RiskAssessmentFindingRead"];
+export type RiskAssessmentRevision =
+  components["schemas"]["RiskAssessmentRevisionRead"];
+export type CompanyRiskAssessments =
+  components["schemas"]["CompanyRiskAssessmentsRead"];
+export type PortfolioRiskAssessments =
+  components["schemas"]["PortfolioRiskAssessmentsRead"];
 export type ListingMarketData = components["schemas"]["ListingMarketData"];
 export type PriceRegime = components["schemas"]["PriceRegimeRead"];
+export type PriceHistoryAnalytics =
+  components["schemas"]["PriceHistoryAnalyticsRead"];
+export type MarketRefreshStatus =
+  components["schemas"]["MarketRefreshStatusRead"];
+export type RecurringOperationJob =
+  components["schemas"]["RecurringOperationJobRead"];
+export type RecurringOperationsStatus =
+  components["schemas"]["RecurringOperationsStatusRead"];
+export type OperationalJobRequestCreate =
+  components["schemas"]["OperationalJobRequestCreate"];
+export type OperationalJobName = OperationalJobRequestCreate["job_name"];
+export type OperationalJobRequest =
+  components["schemas"]["OperationalJobRequestRead"];
+export type ResearchAgentWorkEvent =
+  components["schemas"]["ResearchAgentWorkEventRead"];
 export type UniverseMarketSummary =
   components["schemas"]["UniverseMarketSummary"];
 export type FxObservation = components["schemas"]["FxObservationRead"];
@@ -88,6 +272,29 @@ export type TemporalModelForecast =
   components["schemas"]["TemporalModelForecastRead"];
 export type CompanyTemporalAlignment =
   components["schemas"]["CompanyTemporalAlignmentRead"];
+export type ForecastAccuracyMetric =
+  components["schemas"]["ForecastAccuracyMetric"];
+export type ForecastAccuracySource =
+  components["schemas"]["ForecastAccuracySourceType"];
+export type ForecastAccuracyObservation =
+  components["schemas"]["ForecastAccuracyObservationRead"];
+export type ForecastAccuracySummary =
+  components["schemas"]["ForecastAccuracySummaryRead"];
+export type CompanyForecastAccuracy =
+  components["schemas"]["CompanyForecastAccuracyRead"];
+export type ScenarioForecastPoint =
+  components["schemas"]["ScenarioForecastPointRead"];
+export type ScenarioEvaluation =
+  components["schemas"]["ScenarioEvaluationRead"];
+export type ValuationScenarioContext =
+  components["schemas"]["ValuationScenarioContextRead"];
+export type DecisionOutcome = components["schemas"]["DecisionOutcomeRead"];
+export type DecisionSignalEvaluation =
+  components["schemas"]["DecisionSignalEvaluationRead"];
+export type DecisionEvaluationSummary =
+  components["schemas"]["DecisionEvaluationSummaryRead"];
+export type CompanyDecisionEvaluation =
+  components["schemas"]["CompanyDecisionEvaluationRead"];
 export type ExpectedReturnEstimate =
   components["schemas"]["ExpectedReturnEstimateRead"];
 export type ExpectedReturnEstimateContext =
@@ -96,6 +303,8 @@ export type ExpectedReturnMarketPrice =
   components["schemas"]["ExpectedReturnMarketPriceRead"];
 export type ExpectedReturnHistoryPoint =
   components["schemas"]["ExpectedReturnHistoryPointRead"];
+export type CurrentNativeModelCalculation =
+  components["schemas"]["CurrentNativeModelCalculationRead"];
 export type CompanyExpectedReturnHistory =
   components["schemas"]["CompanyExpectedReturnHistoryRead"];
 export type ExpectedReturnAttributionDriver =
@@ -109,6 +318,29 @@ export type CompanyExpectedReturnAttribution =
 export type SourceDocument = components["schemas"]["SourceDocumentRead"];
 export type CompanySourceDocuments =
   components["schemas"]["CompanySourceDocumentsRead"];
+export type ResearchForecast = components["schemas"]["ResearchForecastRead"];
+export type ResearchAssessment =
+  components["schemas"]["ResearchAssessmentRead"];
+export type ResearchEvidence = components["schemas"]["ResearchEvidenceRead"];
+export type ResearchRevision = components["schemas"]["ResearchRevisionRead"];
+export type ResearchStream = components["schemas"]["ResearchStreamRead"];
+export type CompanyResearch = components["schemas"]["CompanyResearchRead"];
+export type ResearchPublicationResult =
+  components["schemas"]["ResearchPublicationResult"];
+export type InvestmentThesisFact =
+  components["schemas"]["InvestmentThesisFactRead"];
+export type InvestmentThesisEvidence =
+  components["schemas"]["InvestmentThesisEvidenceRead"];
+export type InvestmentThesisClaim =
+  components["schemas"]["InvestmentThesisClaimRead"];
+export type InvestmentThesisRevision =
+  components["schemas"]["InvestmentThesisRevisionRead"];
+export type InvestmentThesisStream =
+  components["schemas"]["InvestmentThesisStreamRead"];
+export type CompanyInvestmentThesis =
+  components["schemas"]["CompanyInvestmentThesisRead"];
+export type InvestmentThesisPublicationResult =
+  components["schemas"]["InvestmentThesisPublicationResult"];
 export type ReportedFundamentalDefinition =
   components["schemas"]["ReportedFundamentalDefinitionRead"];
 export type ModelOutputSnapshot =
@@ -233,6 +465,52 @@ const array = (v: unknown, check: (item: unknown) => boolean) =>
   Array.isArray(v) && v.every(check);
 const lifecycle = (v: unknown) => lifecycleStates.includes(v as Lifecycle);
 
+export function isReturnMethodology(v: unknown): v is ReturnMethodology {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    string(v.code) &&
+    Number.isInteger(v.version) &&
+    Number(v.version) > 0 &&
+    string(v.title) &&
+    string(v.cash_flow_basis) &&
+    ["ENTERPRISE", "EQUITY"].includes(v.perspective as string) &&
+    string(v.entry_value_basis) &&
+    string(v.share_price_basis) &&
+    string(v.comparability_group) &&
+    ["SAME_METHOD_ONLY", "CONDITIONAL_EQUITY_CROSS_METHOD"].includes(
+      v.cross_method_policy as string,
+    ) &&
+    string(v.limitation) &&
+    timestamp(v.effective_from) &&
+    timestamp(v.recorded_at)
+  );
+}
+
+export function isReturnMethodologies(v: unknown): v is ReturnMethodologies {
+  return (
+    isRecord(v) &&
+    array(v.definitions, isReturnMethodology) &&
+    array(
+      v.rules,
+      (rule) =>
+        isRecord(rule) &&
+        string(rule.left_methodology) &&
+        string(rule.right_methodology) &&
+        [
+          "DIRECT",
+          "CONDITIONAL_EQUITY",
+          "NOT_COMPARABLE_PERSPECTIVE",
+          "NOT_COMPARABLE_METHOD",
+          "NOT_COMPARABLE_VERSION",
+          "UNKNOWN_METHOD",
+        ].includes(rule.status as string) &&
+        string(rule.rationale),
+    ) &&
+    string(v.currency_policy)
+  );
+}
+
 export function isCompany(v: unknown): v is Company {
   return (
     isRecord(v) &&
@@ -291,6 +569,14 @@ export function isModelOutputSnapshot(v: unknown): v is ModelOutputSnapshot {
       (string(v.model_currency) && /^[A-Z]{3}$/.test(v.model_currency))) &&
     ["DOCUMENTED", "UNKNOWN"].includes(v.currency_status as string) &&
     nullableString(v.currency_source_ref) &&
+    (v.return_methodology === null ||
+      isReturnMethodology(v.return_methodology)) &&
+    ["CLASSIFIED", "UNCLASSIFIED"].includes(
+      v.return_methodology_status as string,
+    ) &&
+    ["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"].includes(
+      v.share_price_basis_status as string,
+    ) &&
     nullableString(v.model_status) &&
     (v.effective_at === null || timestamp(v.effective_at)) &&
     timestamp(v.recorded_at) &&
@@ -508,6 +794,228 @@ function isPriceRegime(v: unknown): v is PriceRegime {
     string(v.source_ref)
   );
 }
+function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
+  return (
+    isRecord(v) &&
+    ["AVAILABLE", "PARTIAL", "UNAVAILABLE"].includes(v.status as string) &&
+    string(v.methodology_version) &&
+    Number.isInteger(v.observation_count) &&
+    (v.as_of === null || timestamp(v.as_of)) &&
+    [
+      "daily_return",
+      "dma_20",
+      "dma_50",
+      "dma_200",
+      "high_52w",
+      "drawdown_52w",
+      "price_return_1m",
+      "price_return_3m",
+      "price_return_6m",
+      "realized_vol_20d",
+    ].every((key) => nullableSignedDecimal(v[key])) &&
+    nullableString(v.trend_state) &&
+    nullableString(v.correction_state)
+  );
+}
+export function isMarketRefreshStatus(v: unknown): v is MarketRefreshStatus {
+  return (
+    isRecord(v) &&
+    ["AVAILABLE", "STALE", "REFRESHING", "PARTIAL", "UNAVAILABLE"].includes(
+      v.state as string,
+    ) &&
+    (v.last_attempt_at === null || timestamp(v.last_attempt_at)) &&
+    (v.last_successful_update === null ||
+      timestamp(v.last_successful_update)) &&
+    (v.market_run_id === null || uuid(v.market_run_id)) &&
+    (v.fx_run_id === null || uuid(v.fx_run_id)) &&
+    nullableString(v.message)
+  );
+}
+
+export function isRecurringOperationsStatus(
+  value: unknown,
+): value is RecurringOperationsStatus {
+  return (
+    isRecord(value) &&
+    typeof value.enabled === "boolean" &&
+    [
+      "STARTING",
+      "RUNNING",
+      "FAILED",
+      "STALE",
+      "STOPPED",
+      "NOT_STARTED",
+      "DISABLED",
+    ].includes(value.worker_state as string) &&
+    (value.worker_started_at === null || timestamp(value.worker_started_at)) &&
+    (value.worker_last_seen_at === null ||
+      timestamp(value.worker_last_seen_at)) &&
+    typeof value.sec_user_agent_configured === "boolean" &&
+    typeof value.google_sheets_configured === "boolean" &&
+    typeof value.google_sheets_credentials_available === "boolean" &&
+    Number.isInteger(value.google_sheets_poll_seconds) &&
+    typeof value.fmp_consensus_ingestion_enabled === "boolean" &&
+    array(value.jobs, isRecurringOperationJob) &&
+    isMarketRefreshStatus(value.market_data)
+  );
+}
+
+function isOperationalJobAttempt(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    Number.isInteger(value.attempt_number) &&
+    string(value.step_name) &&
+    [
+      "RUNNING",
+      "SUCCEEDED",
+      "PARTIAL",
+      "BLOCKED",
+      "FAILED",
+      "SKIPPED",
+      "DEFERRED",
+    ].includes(value.status as string) &&
+    Array.isArray(value.affected_domains) &&
+    value.affected_domains.every(string) &&
+    timestamp(value.started_at) &&
+    (value.finished_at === null || timestamp(value.finished_at)) &&
+    isRecord(value.result) &&
+    nullableString(value.error_code) &&
+    nullableString(value.error_message)
+  );
+}
+
+export function isOperationalJobRequest(
+  value: unknown,
+): value is OperationalJobRequest {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    [
+      "MARKET_DATA",
+      "FX",
+      "MARKET_AND_FX",
+      "SEC_FUNDAMENTALS",
+      "SEC_FILINGS",
+      "SHEETS_DISCOVERY",
+      "RESEARCH_REFRESH",
+      "AGENT_WORK_FEED",
+      "COMPANY_REFRESH",
+      "REFRESH_ALL",
+    ].includes(value.job_name as string) &&
+    ["ACTIVE_UNIVERSE", "COMPANY"].includes(value.scope_kind as string) &&
+    nullableUuid(value.company_id) &&
+    nullableString(value.company_name) &&
+    (value.lifecycle === null || lifecycle(value.lifecycle)) &&
+    value.requested_by === "LOCAL_USER" &&
+    ["QUEUED", "RUNNING", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"].includes(
+      value.status as string,
+    ) &&
+    timestamp(value.requested_at) &&
+    (value.started_at === null || timestamp(value.started_at)) &&
+    (value.finished_at === null || timestamp(value.finished_at)) &&
+    (value.next_attempt_at === null || timestamp(value.next_attempt_at)) &&
+    Number.isInteger(value.attempt_count) &&
+    nullableUuid(value.retry_of_id) &&
+    Array.isArray(value.affected_domains) &&
+    value.affected_domains.every(string) &&
+    isRecord(value.scope_detail) &&
+    isRecord(value.result) &&
+    nullableString(value.error_code) &&
+    nullableString(value.error_message) &&
+    typeof value.retry_available === "boolean" &&
+    typeof value.deduplicated === "boolean" &&
+    timestamp(value.cooldown_until) &&
+    array(value.attempts, isOperationalJobAttempt)
+  );
+}
+
+export function isOperationalJobRequestList(
+  value: unknown,
+): value is OperationalJobRequest[] {
+  return array(value, isOperationalJobRequest);
+}
+
+export function isResearchAgentWorkEvent(
+  value: unknown,
+): value is ResearchAgentWorkEvent {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    nullableUuid(value.delivery_id) &&
+    [
+      "DATA_UNIVERSE_STEWARD",
+      "PORTFOLIO_THESIS_SENTINEL",
+      "MODEL_ALLOCATION_STEWARD",
+    ].includes(value.agent_role as string) &&
+    ["TRIGGER", "QUEUE_TASK", "DATA_DOMAIN", "PORTFOLIO_STATE"].includes(
+      value.work_type as string,
+    ) &&
+    string(value.work_key) &&
+    /^[0-9a-f]{64}$/i.test(String(value.work_fingerprint)) &&
+    ["API", "GOOGLE_SHEETS"].includes(value.channel as string) &&
+    [
+      "DELIVERY_SUCCEEDED",
+      "DELIVERY_FAILED",
+      "ACKNOWLEDGED",
+      "IN_PROGRESS",
+      "COMPLETED",
+      "BLOCKED",
+      "SOURCE_UNAVAILABLE",
+      "STALE_SOURCE",
+      "UNRESOLVED_REVIEW",
+    ].includes(value.event_type as string) &&
+    nullableString(value.reason) &&
+    nullableString(value.blocker_code) &&
+    nullableString(value.external_update_id) &&
+    (value.proposal_domain === null ||
+      ["MODEL", "RESEARCH", "THESIS", "RISK"].includes(
+        value.proposal_domain as string,
+      )) &&
+    nullableUuid(value.proposal_candidate_id) &&
+    timestamp(value.recorded_at)
+  );
+}
+
+export function isResearchAgentWorkEvents(
+  value: unknown,
+): value is ResearchAgentWorkEvent[] {
+  return array(value, isResearchAgentWorkEvent);
+}
+
+function isRecurringOperationJob(
+  value: unknown,
+): value is RecurringOperationJob {
+  return (
+    isRecord(value) &&
+    [
+      "SEC_FUNDAMENTALS",
+      "SEC_FILINGS",
+      "FMP_CONSENSUS",
+      "SHEETS_DISCOVERY",
+      "RESEARCH_TRIGGER_SCAN",
+      "AGENT_WORK_FEED",
+      "DECISION_RECOMPUTE",
+    ].includes(value.job_name as string) &&
+    [
+      "NOT_RUN",
+      "RUNNING",
+      "SUCCEEDED",
+      "PARTIAL",
+      "BLOCKED",
+      "FAILED",
+      "SKIPPED",
+    ].includes(value.status as string) &&
+    Number.isInteger(value.cadence_seconds) &&
+    (value.last_attempt_at === null || timestamp(value.last_attempt_at)) &&
+    (value.last_successful_at === null ||
+      timestamp(value.last_successful_at)) &&
+    (value.next_attempt_at === null || timestamp(value.next_attempt_at)) &&
+    nullableString(value.failure_code) &&
+    nullableString(value.failure_message) &&
+    isRecord(value.result)
+  );
+}
 function validListingMarketData(v: unknown): v is ListingMarketData {
   if (!isRecord(v)) return false;
   if (!(
@@ -521,8 +1029,13 @@ function validListingMarketData(v: unknown): v is ListingMarketData {
     ["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"].includes(
       v.freshness as string,
     ) &&
+    ["AVAILABLE", "STALE", "REFRESHING", "PARTIAL", "UNAVAILABLE"].includes(
+      v.availability as string,
+    ) &&
     (v.age_days === null || Number.isInteger(v.age_days)) &&
     (v.price_regime === null || isPriceRegime(v.price_regime)) &&
+    isPriceHistoryAnalytics(v.analytics) &&
+    (v.last_market_update === null || timestamp(v.last_market_update)) &&
     array(v.history, isPriceObservation)
   ))
     return false;
@@ -733,6 +1246,17 @@ function isWatchlistRankReturnSource(v: unknown): boolean {
     nullableString(v.model_key) &&
     nullableString(v.model_type) &&
     nullableString(v.methodology_version) &&
+    (v.return_methodology === undefined ||
+      v.return_methodology === null ||
+      isReturnMethodology(v.return_methodology)) &&
+    (v.return_methodology_status === undefined ||
+      ["CLASSIFIED", "UNCLASSIFIED"].includes(
+        v.return_methodology_status as string,
+      )) &&
+    (v.share_price_basis_status === undefined ||
+      ["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"].includes(
+        v.share_price_basis_status as string,
+      )) &&
     nullableString(v.contract_version) &&
     nullableString(v.source_revision_id) &&
     nullableString(v.source) &&
@@ -777,11 +1301,15 @@ export function isWatchlistRankInputSnapshot(
 ): v is WatchlistRankInputSnapshot {
   return (
     isRecord(v) &&
-    v.context_version === "watchlist-rank-inputs-v1" &&
+    ["watchlist-rank-inputs-v1", "watchlist-rank-inputs-v2"].includes(
+      v.context_version as string,
+    ) &&
     nullableSignedDecimal(v.expected_irr) &&
     ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"].includes(
       v.return_semantics as string,
     ) &&
+    (v.return_comparability_cohort === undefined ||
+      nullableString(v.return_comparability_cohort)) &&
     isWatchlistRankReturnSource(v.return_source) &&
     isWatchlistRankScore(v.durability_10y) &&
     isWatchlistRankScore(v.compounder_quality) &&
@@ -819,6 +1347,17 @@ function isPortfolioRankModelSource(v: unknown): boolean {
     string(v.model_key) &&
     nullableString(v.model_type) &&
     nullableString(v.methodology_version) &&
+    (v.return_methodology === undefined ||
+      v.return_methodology === null ||
+      isReturnMethodology(v.return_methodology)) &&
+    (v.return_methodology_status === undefined ||
+      ["CLASSIFIED", "UNCLASSIFIED"].includes(
+        v.return_methodology_status as string,
+      )) &&
+    (v.share_price_basis_status === undefined ||
+      ["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"].includes(
+        v.share_price_basis_status as string,
+      )) &&
     nullableString(v.source) &&
     (v.effective_at === null || timestamp(v.effective_at)) &&
     timestamp(v.recorded_at) &&
@@ -870,7 +1409,11 @@ export function isPortfolioRankInputSnapshot(
 ): v is PortfolioRankInputSnapshot {
   return (
     isRecord(v) &&
-    v.context_version === "portfolio-rank-inputs-v1" &&
+    [
+      "portfolio-rank-inputs-v1",
+      "portfolio-rank-inputs-v2",
+      "portfolio-rank-inputs-v3",
+    ].includes(v.context_version as string) &&
     v.score_formula === "LEGACY_IRR_FIRST_ALLOCATION_V1" &&
     nullableSignedDecimal(v.portfolio_score) &&
     nullableSignedDecimal(v.current_weight) &&
@@ -891,6 +1434,8 @@ export function isPortfolioRankInputSnapshot(
     nullableUuid(v.target_revision_id) &&
     (v.target_effective_at === null || timestamp(v.target_effective_at)) &&
     nullableSignedDecimal(v.expected_irr) &&
+    (v.return_comparability_cohort === undefined ||
+      nullableString(v.return_comparability_cohort)) &&
     nullableSignedDecimal(v.expected_excess) &&
     nullableSignedDecimal(v.hurdle) &&
     nullableSignedDecimal(v.bear_fair_value) &&
@@ -931,6 +1476,405 @@ export function isResearchRankInputSnapshot(
     string(v.context_note)
   );
 }
+
+const candidateStages = [
+  "DISCOVERY",
+  "INITIAL_SCREEN",
+  "QUALITY_DURABILITY",
+  "FUNDAMENTAL_COMPOUNDING",
+  "DEEP_DIVE",
+  "RESOLUTION",
+] as const;
+const candidateOutcomes = [
+  "NOT_ASSESSED",
+  "INCOMPLETE",
+  "PASS",
+  "FAIL",
+  "DATA_CHECK",
+] as const;
+
+function isCandidatePipelineEvidence(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    [
+      "RESEARCH_REVISION",
+      "THESIS_REVISION",
+      "THESIS_CLAIM",
+      "SCORE_ASSESSMENT",
+      "FINANCIAL_MODEL_OUTPUT",
+      "LEGACY_MODEL_OUTPUT",
+      "SOURCE_DOCUMENT",
+      "SOURCE_URL",
+    ].includes(v.evidence_type as string) &&
+    nullableUuid(v.reference_id) &&
+    nullableString(v.source_url) &&
+    ["SUPPORTS", "CONTRADICTS", "CONTEXT"].includes(v.relationship as string) &&
+    nullableString(v.note)
+  );
+}
+
+function isCandidatePipelineEvidenceOption(
+  v: unknown,
+): v is CandidatePipelineEvidenceOption {
+  return (
+    isRecord(v) &&
+    [
+      "RESEARCH_REVISION",
+      "THESIS_REVISION",
+      "THESIS_CLAIM",
+      "SCORE_ASSESSMENT",
+      "FINANCIAL_MODEL_OUTPUT",
+      "LEGACY_MODEL_OUTPUT",
+      "SOURCE_DOCUMENT",
+      "SOURCE_URL",
+    ].includes(v.evidence_type as string) &&
+    uuid(v.reference_id) &&
+    string(v.label) &&
+    typeof v.current === "boolean" &&
+    string(v.availability_status) &&
+    nullableSignedDecimal(v.forward_fundamental_cagr)
+  );
+}
+
+function isCandidatePipelineGate(v: unknown): v is CandidatePipelineGate {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    candidateStages
+      .slice(0, -1)
+      .includes(v.gate as (typeof candidateStages)[number]) &&
+    candidateOutcomes.includes(
+      v.outcome as (typeof candidateOutcomes)[number],
+    ) &&
+    nullableString(v.rationale) &&
+    typeof v.normalized_per_share_basis_confirmed === "boolean" &&
+    array(v.evidence, isCandidatePipelineEvidence)
+  );
+}
+
+function isCandidatePipelineRevision(
+  v: unknown,
+): v is CandidatePipelineRevision {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    uuid(v.company_id) &&
+    Number.isInteger(v.revision_number) &&
+    Number(v.revision_number) > 0 &&
+    nullableUuid(v.base_revision_id) &&
+    uuid(v.submission_id) &&
+    candidateStages.includes(v.stage as (typeof candidateStages)[number]) &&
+    (v.disposition === null ||
+      ["WATCHLIST", "INCUBATE", "DROP"].includes(v.disposition as string)) &&
+    nullableString(v.next_action) &&
+    array(v.unresolved_questions, string) &&
+    ["LOCAL_USER", "SYSTEM", "IMPORT"].includes(v.actor as string) &&
+    string(v.author_id) &&
+    nullableString(v.source) &&
+    string(v.rationale) &&
+    timestamp(v.effective_at) &&
+    timestamp(v.recorded_at) &&
+    string(v.content_fingerprint) &&
+    array(v.gates, isCandidatePipelineGate)
+  );
+}
+
+function isCandidatePipelineRevisionSummary(
+  v: unknown,
+): v is CandidatePipelineRevisionSummary {
+  return (
+    isRecord(v) &&
+    uuid(v.id) &&
+    uuid(v.company_id) &&
+    Number.isInteger(v.revision_number) &&
+    Number(v.revision_number) > 0 &&
+    nullableUuid(v.base_revision_id) &&
+    candidateStages.includes(v.stage as (typeof candidateStages)[number]) &&
+    (v.disposition === null ||
+      ["WATCHLIST", "INCUBATE", "DROP"].includes(v.disposition as string)) &&
+    nullableString(v.next_action) &&
+    array(v.unresolved_questions, string) &&
+    string(v.author_id) &&
+    string(v.rationale) &&
+    timestamp(v.effective_at) &&
+    timestamp(v.recorded_at) &&
+    candidateOutcomes.includes(
+      v.current_gate_outcome as (typeof candidateOutcomes)[number],
+    )
+  );
+}
+
+function isCandidatePipelineQueueEntry(
+  v: unknown,
+): v is CandidatePipelineQueueEntry {
+  return (
+    isRecord(v) &&
+    isCompany(v.company) &&
+    ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE"].includes(
+      v.status as string,
+    ) &&
+    (v.stage === null ||
+      candidateStages.includes(v.stage as (typeof candidateStages)[number])) &&
+    (v.disposition === null ||
+      ["WATCHLIST", "INCUBATE", "DROP"].includes(v.disposition as string)) &&
+    (v.candidate_tier === null ||
+      ["HIGH", "LOW"].includes(v.candidate_tier as string)) &&
+    nullableSignedDecimal(v.priority_seed) &&
+    (v.priority_recorded_at === null || timestamp(v.priority_recorded_at)) &&
+    (v.research_rank_position === null ||
+      (Number.isInteger(v.research_rank_position) &&
+        Number(v.research_rank_position) > 0)) &&
+    (v.research_rank_status === null ||
+      [
+        "RANKED",
+        "INPUTS_UNAVAILABLE",
+        "NOT_ELIGIBLE",
+        "EXCLUDED",
+        "NOT_MIGRATED",
+        "DATA_CHECK",
+      ].includes(v.research_rank_status as string)) &&
+    nullableString(v.research_rank_reason) &&
+    (v.current_revision === null ||
+      isCandidatePipelineRevisionSummary(v.current_revision))
+  );
+}
+
+export function isCandidatePipelineQueue(
+  v: unknown,
+): v is CandidatePipelineQueueEntry[] {
+  return array(v, isCandidatePipelineQueueEntry);
+}
+
+export function isCompanyCandidatePipeline(
+  v: unknown,
+): v is CompanyCandidatePipeline {
+  return (
+    isRecord(v) &&
+    isCompany(v.company) &&
+    (v.lifecycle === null || lifecycle(v.lifecycle)) &&
+    isCandidatePipelineQueueEntry(v.queue_entry) &&
+    array(v.history, isCandidatePipelineRevision) &&
+    array(v.evidence_options, isCandidatePipelineEvidenceOption)
+  );
+}
+
+export function isCandidatePipelinePublicationResult(
+  v: unknown,
+): v is CandidatePipelinePublicationResult {
+  return (
+    isRecord(v) &&
+    ["RECORDED", "ALREADY_RECORDED"].includes(v.result as string) &&
+    isCandidatePipelineRevision(v.revision)
+  );
+}
+
+const researchQueueTaskTypes = [
+  "CANDIDATE_STAGE",
+  "THESIS_REVIEW",
+  "THESIS_QUESTION",
+  "MATERIAL_EVIDENCE",
+  "RESEARCH_TRIGGER",
+  "MODEL_REUNDERWRITE",
+  "MODEL_INTEGRITY",
+  "WATCHLIST_READINESS",
+  "STRUCTURAL_RISK",
+] as const;
+
+const researchTriggerTypes = [
+  "NEW_FILING",
+  "MODEL_REVISION",
+  "EXPECTED_IRR_CHANGE",
+  "CONSENSUS_REVISION",
+  "REPORTED_FACT_CORRECTION",
+  "THESIS_EVIDENCE_LINKED",
+  "RISK_ASSESSMENT",
+] as const;
+const thesisWatchClassifications = [
+  "NOISE",
+  "INCREMENTAL",
+  "MAJOR-STRUCTURAL",
+] as const;
+
+function isResearchQueueSource(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    string(v.source_type) &&
+    string(v.source_record_id) &&
+    string(v.title) &&
+    nullableString(v.source_url) &&
+    (v.effective_at === null || timestamp(v.effective_at)) &&
+    (v.published_at === null || dateOnly(v.published_at)) &&
+    (v.recorded_at === null || timestamp(v.recorded_at))
+  );
+}
+
+export function isResearchQueueTask(v: unknown): v is ResearchQueueTask {
+  return (
+    isRecord(v) &&
+    string(v.task_id) &&
+    /^[0-9a-f]{64}$/.test(v.task_id) &&
+    string(v.condition_fingerprint) &&
+    /^[0-9a-f]{64}$/.test(v.condition_fingerprint) &&
+    isCompany(v.company) &&
+    researchQueueTaskTypes.includes(
+      v.task_type as (typeof researchQueueTaskTypes)[number],
+    ) &&
+    string(v.title) &&
+    string(v.reason) &&
+    Number.isInteger(v.lifecycle_priority) &&
+    (v.research_rank_position === null ||
+      (Number.isInteger(v.research_rank_position) &&
+        Number(v.research_rank_position) > 0)) &&
+    string(v.trigger_rule) &&
+    typeof v.judgment_required === "boolean" &&
+    ["LOCAL_ANALYST", "RESEARCH_AGENT", "DATA_REVIEW"].includes(
+      v.owner_workflow as string,
+    ) &&
+    (v.source_effective_at === null || timestamp(v.source_effective_at)) &&
+    (v.source_published_at === null || dateOnly(v.source_published_at)) &&
+    (v.source_recorded_at === null || timestamp(v.source_recorded_at)) &&
+    (v.due_at === null || timestamp(v.due_at)) &&
+    array(v.sources, isResearchQueueSource) &&
+    ["OPEN", "COMPLETE"].includes(v.status as string) &&
+    nullableString(v.completed_by) &&
+    (v.completed_at === null || timestamp(v.completed_at)) &&
+    nullableString(v.completion_note) &&
+    (v.trigger_classification === undefined ||
+      v.trigger_classification === null ||
+      thesisWatchClassifications.includes(
+        v.trigger_classification as (typeof thesisWatchClassifications)[number],
+      ))
+  );
+}
+
+export function isResearchQueue(v: unknown): v is ResearchQueue {
+  return (
+    isRecord(v) &&
+    timestamp(v.as_of) &&
+    isRecord(v.counts) &&
+    Number.isInteger(v.counts.open) &&
+    Number.isInteger(v.counts.complete) &&
+    Number.isInteger(v.counts.portfolio) &&
+    Number.isInteger(v.counts.watchlist) &&
+    Number.isInteger(v.counts.candidate) &&
+    array(v.tasks, isResearchQueueTask)
+  );
+}
+
+export function isResearchQueueHistory(
+  v: unknown,
+): v is ResearchQueueCompletion[] {
+  return array(
+    v,
+    (item) =>
+      isRecord(item) &&
+      uuid(item.id) &&
+      isResearchQueueTask(item.task) &&
+      item.task.status === "COMPLETE" &&
+      string(item.completed_by) &&
+      nullableString(item.completion_note) &&
+      (item.trigger_classification === undefined ||
+        item.trigger_classification === null ||
+        thesisWatchClassifications.includes(
+          item.trigger_classification as (typeof thesisWatchClassifications)[number],
+        )) &&
+      timestamp(item.completed_at),
+  );
+}
+
+export function isResearchQueueCompletionResult(
+  v: unknown,
+): v is ResearchQueueCompletionResult {
+  return (
+    isRecord(v) &&
+    ["COMPLETED", "ALREADY_COMPLETED"].includes(v.result as string) &&
+    isResearchQueueTask(v.task) &&
+    v.task.status === "COMPLETE"
+  );
+}
+
+function isResearchTriggerRead(v: unknown): v is ResearchTriggerRead {
+  return (
+    isRecord(v) &&
+    string(v.id) &&
+    isCompany(v.company) &&
+    string(v.event_key) &&
+    Number.isInteger(v.version) &&
+    string(v.fingerprint) &&
+    /^[0-9a-f]{64}$/.test(v.fingerprint) &&
+    researchTriggerTypes.includes(
+      v.trigger_type as (typeof researchTriggerTypes)[number],
+    ) &&
+    string(v.title) &&
+    string(v.reason) &&
+    string(v.source_domain) &&
+    string(v.source_record_id) &&
+    nullableString(v.source_reference) &&
+    (v.effective_at === null || timestamp(v.effective_at)) &&
+    (v.source_observed_at === null || timestamp(v.source_observed_at)) &&
+    timestamp(v.source_recorded_at) &&
+    timestamp(v.detected_at) &&
+    isRecord(v.source_snapshot) &&
+    (v.queue_task_id === null ||
+      (string(v.queue_task_id) && /^[0-9a-f]{64}$/.test(v.queue_task_id))) &&
+    (v.queue_condition_fingerprint === null ||
+      (string(v.queue_condition_fingerprint) &&
+        /^[0-9a-f]{64}$/.test(v.queue_condition_fingerprint))) &&
+    ["OPEN", "REVIEWED", "SUPERSEDED", "STALE"].includes(
+      v.processing_state as string,
+    )
+  );
+}
+
+function isResearchTriggerReferenceRead(
+  value: unknown,
+): value is ResearchTriggerReferenceRead {
+  return (
+    isRecord(value) &&
+    uuid(value.trigger_id) &&
+    string(value.event_key) &&
+    researchTriggerTypes.includes(
+      value.trigger_type as (typeof researchTriggerTypes)[number],
+    ) &&
+    string(value.title) &&
+    thesisWatchClassifications.includes(
+      value.classification as (typeof thesisWatchClassifications)[number],
+    ) &&
+    string(value.classification_rationale) &&
+    nullableString(value.source_reference) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    (value.source_observed_at === null ||
+      timestamp(value.source_observed_at)) &&
+    timestamp(value.source_recorded_at) &&
+    timestamp(value.detected_at)
+  );
+}
+
+export function isResearchTriggerReadResult(
+  v: unknown,
+): v is ResearchTriggerReadResult {
+  return (
+    isRecord(v) &&
+    timestamp(v.as_of) &&
+    array(v.triggers, isResearchTriggerRead)
+  );
+}
+
+export function isResearchTriggerRefreshResult(
+  v: unknown,
+): v is ResearchTriggerRefreshResult {
+  return (
+    isRecord(v) &&
+    timestamp(v.as_of) &&
+    Number.isInteger(v.lookback_days) &&
+    Number.isInteger(v.examined) &&
+    Number.isInteger(v.created) &&
+    Number.isInteger(v.replayed) &&
+    array(v.triggers, isResearchTriggerRead)
+  );
+}
+
 function isRankingEntry(v: unknown): v is RankingEntryRead {
   return (
     isRecord(v) &&
@@ -1050,7 +1994,12 @@ const executionDecisionStatuses = [
 function isExecutionPaceInputSnapshot(
   v: unknown,
 ): v is ExecutionPaceInputSnapshot {
-  if (!isRecord(v) || v.context_version !== "execution-pace-inputs-v1")
+  if (
+    !isRecord(v) ||
+    !["execution-pace-inputs-v1", "execution-pace-inputs-v2"].includes(
+      v.context_version as string,
+    )
+  )
     return false;
   const nullableDecimals = [
     "current_weight",
@@ -1060,6 +2009,7 @@ function isExecutionPaceInputSnapshot(
     "hurdle",
     "price",
     "model_reference_price",
+    "accepted_reference_price",
     "weighted_fair_value",
     "weighted_upside",
     "valuation_range_ratio",
@@ -1073,6 +2023,7 @@ function isExecutionPaceInputSnapshot(
     "valuation_listing_id",
     "price_observation_id",
     "model_price_observation_id",
+    "accepted_reference_price_observation_id",
   ];
   const nullableTimes = [
     "target_effective_at",
@@ -1082,6 +2033,7 @@ function isExecutionPaceInputSnapshot(
     "price_market_date",
     "price_recorded_at",
     "model_price_effective_at",
+    "accepted_reference_price_effective_at",
     "price_regime_as_of",
   ];
   return (
@@ -1291,7 +2243,7 @@ export function isEvent(v: unknown): v is LifecycleEvent {
     Number.isInteger(v.sequence)
   );
 }
-function isSnapshot(v: unknown) {
+function isSnapshot(v: unknown): v is HoldingSnapshot | null {
   return (
     v === null ||
     (isRecord(v) &&
@@ -1310,6 +2262,9 @@ function isSnapshot(v: unknown) {
         (p) => isRecord(p) && string(p.currency) && nullableDecimal(p.balance),
       ))
   );
+}
+export function isSnapshotRead(v: unknown): v is HoldingSnapshot {
+  return isRecord(v) && isSnapshot(v);
 }
 function isTarget(v: unknown) {
   return (
@@ -1339,8 +2294,24 @@ function isPosition(p: unknown) {
     string(p.security_name) &&
     nullableDecimal(p.quantity) &&
     nullableDecimal(p.latest_price) &&
+    (p.price_observed_at === undefined ||
+      p.price_observed_at === null ||
+      timestamp(p.price_observed_at)) &&
+    (p.portfolio_weight === undefined || nullableDecimal(p.portfolio_weight)) &&
     (p.price_date === null || timestamp(p.price_date)) &&
     (p.price_currency === null || string(p.price_currency)) &&
+    (p.fx_rate === undefined || nullableDecimal(p.fx_rate)) &&
+    (p.fx_effective_at === undefined ||
+      p.fx_effective_at === null ||
+      timestamp(p.fx_effective_at)) &&
+    (p.valuation_sync_status === undefined ||
+      [
+        "NOT_REQUIRED",
+        "SYNCHRONOUS",
+        "NON_SYNCHRONOUS",
+        "TIMING_UNKNOWN",
+        "UNAVAILABLE",
+      ].includes(p.valuation_sync_status as string)) &&
     ["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"].includes(
       p.price_freshness as string,
     ) &&
@@ -1378,6 +2349,26 @@ export function isOverview(v: unknown): v is Overview {
     isPortfolio(v.portfolio) &&
     isSnapshot(v.snapshot) &&
     isTarget(v.target_revision) &&
+    (v.valuation_mode === undefined ||
+      ["CURRENT_MARK_TO_MARKET", "HISTORICAL_AS_OF"].includes(
+        v.valuation_mode as string,
+      )) &&
+    (v.valuation_as_of === undefined ||
+      v.valuation_as_of === null ||
+      timestamp(v.valuation_as_of)) &&
+    (v.market_data_through === undefined ||
+      v.market_data_through === null ||
+      timestamp(v.market_data_through)) &&
+    (v.fx_data_through === undefined ||
+      v.fx_data_through === null ||
+      timestamp(v.fx_data_through)) &&
+    (v.holdings_age_days === undefined ||
+      v.holdings_age_days === null ||
+      (typeof v.holdings_age_days === "number" &&
+        Number.isInteger(v.holdings_age_days) &&
+        v.holdings_age_days >= 0)) &&
+    (v.holdings_freshness === undefined ||
+      ["FRESH", "STALE", "NO_DATA"].includes(v.holdings_freshness as string)) &&
     [
       "VALUED",
       "NO_HOLDING_SNAPSHOT",
@@ -1396,6 +2387,12 @@ export function isOverview(v: unknown): v is Overview {
         string(cash.currency) &&
         nullableDecimal(cash.balance) &&
         nullableDecimal(cash.base_market_value) &&
+        (cash.portfolio_weight === undefined ||
+          nullableDecimal(cash.portfolio_weight)) &&
+        (cash.fx_rate === undefined || nullableDecimal(cash.fx_rate)) &&
+        (cash.fx_effective_at === undefined ||
+          cash.fx_effective_at === null ||
+          timestamp(cash.fx_effective_at)) &&
         ["VALUED", "FX_UNAVAILABLE", "BALANCE_UNAVAILABLE"].includes(
           cash.valuation_status as string,
         ),
@@ -1462,7 +2459,9 @@ export function isFinancialModelOutputs(
   v: unknown,
 ): v is FinancialModelOutputs {
   if (!isRecord(v) || !uuid(v.id) || !uuid(v.revision_id)) return false;
-  return isFinancialModelOutputShape(v);
+  return (
+    isReturnMethodology(v.return_methodology) && isFinancialModelOutputShape(v)
+  );
 }
 
 function isFinancialModelOutputShape(v: Record<string, unknown>): boolean {
@@ -1535,6 +2534,7 @@ export function isFinancialModelCalculationPreview(
     !/^[A-Z]{3}$/.test(v.model_currency) ||
     !isRecord(v.outputs) ||
     v.outputs.model_currency !== v.model_currency ||
+    !isReturnMethodology(v.outputs.return_methodology) ||
     !isFinancialModelOutputShape(v.outputs) ||
     !Array.isArray(v.projections) ||
     !v.projections.every(isDcfProjectionCalculationPreview) ||
@@ -1580,6 +2580,22 @@ function isDcfYearInput(v: unknown): v is DcfYearAssumptionInput {
   );
 }
 
+function isDcfTailGrowthInput(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    Number.isInteger(v.forecast_year) &&
+    Number(v.forecast_year) >= 6 &&
+    Number(v.forecast_year) <= 10 &&
+    signedDecimal(v.ufcf_growth)
+  );
+}
+
+function isDcfTailGrowthRead(v: unknown): boolean {
+  if (!isRecord(v)) return false;
+  const { id, scenario_id, ...input } = v;
+  return uuid(id) && uuid(scenario_id) && isDcfTailGrowthInput(input);
+}
+
 function isDcfScenario(v: unknown): boolean {
   return (
     isRecord(v) &&
@@ -1597,7 +2613,16 @@ function isDcfScenario(v: unknown): boolean {
       const { id, scenario_id, ...input } = year;
       return uuid(id) && uuid(scenario_id) && isDcfYearInput(input);
     }) &&
-    (v.years as unknown[]).length === 5
+    (v.years as unknown[]).length === 5 &&
+    (v.tail_ufcf_growth === undefined ||
+      v.tail_ufcf_growth === null ||
+      (Array.isArray(v.tail_ufcf_growth) &&
+        v.tail_ufcf_growth.length === 5 &&
+        v.tail_ufcf_growth.every(isDcfTailGrowthRead) &&
+        v.tail_ufcf_growth.every(
+          (year, index) =>
+            isRecord(year) && Number(year.forecast_year) === index + 6,
+        )))
   );
 }
 
@@ -1677,8 +2702,61 @@ function isFinancialModelRevisionSummary(
     string(v.rationale) &&
     timestamp(v.effective_at) &&
     timestamp(v.recorded_at) &&
+    (v.proposal_author_id === undefined ||
+      nullableString(v.proposal_author_id)) &&
+    (v.proposal_authored_at === undefined ||
+      v.proposal_authored_at === null ||
+      timestamp(v.proposal_authored_at)) &&
+    (v.proposal_source_reference === undefined ||
+      nullableString(v.proposal_source_reference)) &&
+    (v.supporting_evidence === undefined ||
+      array(v.supporting_evidence, isFinancialModelEvidenceRead)) &&
     isFinancialModelOutputs(v.outputs) &&
     v.outputs.revision_id === v.id
+  );
+}
+
+function isFinancialModelEvidenceReference(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    [
+      "RESEARCH_REVISION",
+      "RESEARCH_FORECAST",
+      "THESIS_REVISION",
+      "THESIS_CLAIM",
+    ].includes(v.evidence_type as string) &&
+    uuid(v.reference_id) &&
+    ["SUPPORTS", "CONTRADICTS", "CONTEXT"].includes(v.relationship as string) &&
+    (v.note === undefined || nullableString(v.note))
+  );
+}
+
+function isFinancialModelEvidenceRead(
+  v: unknown,
+): v is FinancialModelEvidenceRead {
+  return (
+    isRecord(v) &&
+    isFinancialModelEvidenceReference(v) &&
+    nullableString(v.summary) &&
+    string(v.evidence_status) &&
+    nullableString(v.author_id) &&
+    nullableString(v.source_reference) &&
+    (v.observed_at === null || timestamp(v.observed_at)) &&
+    timestamp(v.recorded_at) &&
+    ["VERIFIED", "UNRESOLVED"].includes(v.resolution_status as string) &&
+    nullableString(v.resolution_issue) &&
+    (v.trigger_references === undefined ||
+      array(v.trigger_references, isResearchTriggerReferenceRead))
+  );
+}
+
+function isFinancialModelProposalProvenance(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    string(v.author_id) &&
+    timestamp(v.authored_at) &&
+    string(v.source_reference) &&
+    v.source_reference.startsWith("https://")
   );
 }
 
@@ -1805,7 +2883,16 @@ function isDcfScenarioInput(v: unknown): boolean {
     !string(v.rationale) ||
     !Array.isArray(v.years) ||
     v.years.length !== 5 ||
-    !v.years.every(isDcfYearInput)
+    !v.years.every(isDcfYearInput) ||
+    (v.tail_ufcf_growth !== undefined &&
+      v.tail_ufcf_growth !== null &&
+      (!Array.isArray(v.tail_ufcf_growth) ||
+        v.tail_ufcf_growth.length !== 5 ||
+        !v.tail_ufcf_growth.every(isDcfTailGrowthInput) ||
+        !v.tail_ufcf_growth.every(
+          (year, index) =>
+            isRecord(year) && Number(year.forecast_year) === index + 6,
+        )))
   )
     return false;
   return (v.years as Array<Record<string, unknown>>).every(
@@ -1833,7 +2920,7 @@ export function isFinancialModelContract(
   const listing = model.valuation_listing;
   if (!isListingIdentity(listing)) return false;
   if (
-    v.contract_version !== "1.0.0" ||
+    !["1.0.0", "1.1.0", "1.2.0"].includes(v.contract_version as string) ||
     !timestamp(v.exported_at) ||
     !uuid(model.model_id) ||
     !uuid(model.company_id) ||
@@ -1848,7 +2935,9 @@ export function isFinancialModelContract(
     !uuid(v.base_revision.revision_id) ||
     !Number.isInteger(v.base_revision.revision_number) ||
     Number(v.base_revision.revision_number) < 1 ||
-    v.base_revision.methodology_version !== "ufcf-dcf-fade-v1" ||
+    !["ufcf-dcf-fade-v1", "ufcf-dcf-explicit-tail-v1"].includes(
+      v.base_revision.methodology_version as string,
+    ) ||
     !isRecord(v.candidate_revision) ||
     v.candidate_revision.actor !== "IMPORT" ||
     !string(v.candidate_revision.source_revision_id) ||
@@ -1867,6 +2956,15 @@ export function isFinancialModelContract(
     !Array.isArray(v.base_calculation.projections) ||
     v.base_calculation.projections.length !== 30 ||
     !v.base_calculation.projections.every(isDcfProjection)
+  )
+    return false;
+  if (
+    (v.proposal !== undefined &&
+      v.proposal !== null &&
+      !isFinancialModelProposalProvenance(v.proposal)) ||
+    (v.supporting_evidence !== undefined &&
+      (!Array.isArray(v.supporting_evidence) ||
+        !v.supporting_evidence.every(isFinancialModelEvidenceReference)))
   )
     return false;
   const scenarios = v.candidate_revision.scenarios as Array<
@@ -2168,7 +3266,7 @@ function isAdditionalModelPortableContract(
   if (!isRecord(v) || !isRecord(v.candidate_revision)) return false;
   const candidate = v.candidate_revision;
   if (
-    v.contract_version !== "2.0.0" ||
+    !["2.0.0", "2.1.0"].includes(v.contract_version as string) ||
     !timestamp(v.exported_at) ||
     !uuid(v.model_id) ||
     !uuid(v.company_id) ||
@@ -2183,6 +3281,15 @@ function isAdditionalModelPortableContract(
     !nullableString(candidate.source) ||
     !nullableString(candidate.rationale) ||
     !timestamp(candidate.effective_at)
+  )
+    return false;
+  if (
+    (v.proposal !== undefined &&
+      v.proposal !== null &&
+      !isFinancialModelProposalProvenance(v.proposal)) ||
+    (v.supporting_evidence !== undefined &&
+      (!Array.isArray(v.supporting_evidence) ||
+        !v.supporting_evidence.every(isFinancialModelEvidenceReference)))
   )
     return false;
   return v.model_type === "OWNER_CASH_FLOW_10Y"
@@ -2252,6 +3359,7 @@ function isArchetypeCalculationPreview(v: unknown): boolean {
     string(v.model_currency) &&
     /^[A-Z]{3}$/.test(v.model_currency) &&
     isRecord(v.outputs) &&
+    isReturnMethodology(v.outputs.return_methodology) &&
     isFinancialModelOutputShape(v.outputs) &&
     v.projections.every(isRecord) &&
     v.projections.length === 30
@@ -2493,6 +3601,378 @@ export function isCompanySourceDocuments(
     (v.as_of === null || (string(v.as_of) && dateOnly(v.as_of))) &&
     (v.known_at === null || timestamp(v.known_at)) &&
     array(v.documents, isSourceDocument)
+  );
+}
+
+const researchMetrics = [
+  "REVENUE",
+  "EPS",
+  "EBIT",
+  "EBITDA",
+  "FREE_CASH_FLOW",
+  "DILUTED_SHARES",
+] as const;
+const researchScenarios = ["POINT", "BEAR", "BASE", "BULL"] as const;
+const researchConfidence = ["HIGH", "MEDIUM", "LOW", "UNASSESSED"] as const;
+
+function isResearchForecast(value: unknown): value is ResearchForecast {
+  if (!isRecord(value)) return false;
+  const valueStatusIsValid =
+    (value.availability_status === "AVAILABLE" &&
+      signedDecimal(value.value) &&
+      value.availability_reason === null) ||
+    (value.availability_status === "UNAVAILABLE" &&
+      value.value === null &&
+      string(value.availability_reason) &&
+      value.availability_reason.length > 0) ||
+    (value.availability_status === "DATA_CHECK" &&
+      nullableSignedDecimal(value.value) &&
+      string(value.availability_reason) &&
+      value.availability_reason.length > 0);
+  return (
+    uuid(value.id) &&
+    researchMetrics.includes(
+      value.metric as (typeof researchMetrics)[number],
+    ) &&
+    ["ANNUAL", "QUARTERLY"].includes(value.period_type as string) &&
+    Number.isInteger(value.fiscal_year) &&
+    ((value.period_type === "ANNUAL" && value.fiscal_period === "FY") ||
+      (value.period_type === "QUARTERLY" &&
+        ["Q1", "Q2", "Q3", "Q4"].includes(value.fiscal_period as string))) &&
+    (value.period_end === null || dateOnly(value.period_end)) &&
+    researchScenarios.includes(
+      value.scenario as (typeof researchScenarios)[number],
+    ) &&
+    nullableSignedDecimal(value.value) &&
+    (value.currency === null ||
+      (string(value.currency) && /^[A-Z]{3}$/.test(value.currency))) &&
+    string(value.unit) &&
+    ["AVAILABLE", "UNAVAILABLE", "DATA_CHECK"].includes(
+      value.availability_status as string,
+    ) &&
+    nullableString(value.availability_reason) &&
+    valueStatusIsValid &&
+    ((value.metric === "DILUTED_SHARES" &&
+      value.currency === null &&
+      value.unit === "shares") ||
+      (value.metric === "EPS" &&
+        string(value.currency) &&
+        value.unit === "currency/share") ||
+      (researchMetrics.includes(
+        value.metric as (typeof researchMetrics)[number],
+      ) &&
+        value.metric !== "DILUTED_SHARES" &&
+        value.metric !== "EPS" &&
+        string(value.currency) &&
+        value.unit === "currency")) &&
+    researchConfidence.includes(
+      value.confidence as (typeof researchConfidence)[number],
+    ) &&
+    nullableString(value.rationale) &&
+    nullableString(value.uncertainty)
+  );
+}
+
+function isResearchAssessment(value: unknown): value is ResearchAssessment {
+  if (!isRecord(value)) return false;
+  const statusIsValid =
+    (value.status === "AVAILABLE" &&
+      string(value.narrative) &&
+      value.narrative.length > 0 &&
+      value.status_reason === null) ||
+    (value.status === "UNAVAILABLE" &&
+      value.narrative === null &&
+      string(value.status_reason) &&
+      value.status_reason.length > 0) ||
+    (value.status === "DATA_CHECK" &&
+      nullableString(value.narrative) &&
+      string(value.status_reason) &&
+      value.status_reason.length > 0);
+  return (
+    uuid(value.id) &&
+    ["BUSINESS_OUTLOOK", "COMPETITIVE_POSITION", "KEY_RISKS"].includes(
+      value.assessment_type as string,
+    ) &&
+    ["AVAILABLE", "UNAVAILABLE", "DATA_CHECK"].includes(
+      value.status as string,
+    ) &&
+    nullableString(value.status_reason) &&
+    nullableString(value.narrative) &&
+    statusIsValid &&
+    researchConfidence.includes(
+      value.confidence as (typeof researchConfidence)[number],
+    ) &&
+    nullableString(value.uncertainty)
+  );
+}
+
+function isResearchEvidence(value: unknown): value is ResearchEvidence {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    nullableUuid(value.source_document_id) &&
+    nullableString(value.source_document_title) &&
+    string(value.source_name) &&
+    nullableString(value.external_identifier) &&
+    (value.source_url === null ||
+      (string(value.source_url) && value.source_url.startsWith("https://"))) &&
+    (value.published_at === null || dateOnly(value.published_at)) &&
+    nullableString(value.excerpt) &&
+    nullableString(value.note)
+  );
+}
+
+function isResearchRevision(value: unknown): value is ResearchRevision {
+  if (!isRecord(value)) return false;
+  const hasContent =
+    (Array.isArray(value.forecasts) && value.forecasts.length > 0) ||
+    (Array.isArray(value.assessments) && value.assessments.length > 0);
+  return (
+    uuid(value.id) &&
+    uuid(value.company_id) &&
+    nullableUuid(value.security_id) &&
+    string(value.stream_key) &&
+    Number.isInteger(value.revision_number) &&
+    Number(value.revision_number) > 0 &&
+    ["1.0.0", "1.1.0"].includes(value.contract_version as string) &&
+    string(value.external_revision_id) &&
+    nullableUuid(value.supersedes_revision_id) &&
+    string(value.author_id) &&
+    string(value.source_id) &&
+    string(value.source_reference) &&
+    timestamp(value.observed_at) &&
+    timestamp(value.recorded_at) &&
+    ["PUBLISHED", "WITHDRAWN"].includes(value.status as string) &&
+    string(value.rationale) &&
+    nullableString(value.uncertainty) &&
+    string(value.content_fingerprint) &&
+    /^[0-9a-f]{64}$/i.test(value.content_fingerprint) &&
+    array(value.forecasts, isResearchForecast) &&
+    array(value.assessments, isResearchAssessment) &&
+    array(value.evidence, isResearchEvidence) &&
+    (value.trigger_references === undefined ||
+      array(value.trigger_references, isResearchTriggerReferenceRead)) &&
+    ((value.status === "PUBLISHED" && hasContent) ||
+      (value.status === "WITHDRAWN" && !hasContent))
+  );
+}
+
+export function isCompanyResearch(value: unknown): value is CompanyResearch {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    (value.as_of === null || dateOnly(value.as_of)) &&
+    (value.known_at === null || timestamp(value.known_at)) &&
+    array(value.streams, (stream) => {
+      if (
+        !isRecord(stream) ||
+        !string(stream.stream_key) ||
+        !isResearchRevision(stream.current_revision) ||
+        !Array.isArray(stream.history)
+      )
+        return false;
+      const currentRevision = stream.current_revision;
+      return (
+        stream.history.every(isResearchRevision) &&
+        stream.history.some(
+          (revision: ResearchRevision) => revision.id === currentRevision.id,
+        )
+      );
+    })
+  );
+}
+
+export function isResearchPublicationResult(
+  value: unknown,
+): value is ResearchPublicationResult {
+  return (
+    isRecord(value) &&
+    ["PUBLISHED", "ALREADY_PUBLISHED"].includes(value.result as string) &&
+    isResearchRevision(value.revision)
+  );
+}
+
+const thesisClaimTypes = [
+  "COMPETITIVE_ADVANTAGE",
+  "DURABILITY",
+  "GROWTH_DRIVER",
+  "PRINCIPAL_RISK",
+  "THESIS_BREAKER",
+  "CATALYST",
+  "IMPORTANT_DEVELOPMENT",
+  "UNRESOLVED_QUESTION",
+] as const;
+const thesisClaimStatuses = [
+  "ACTIVE",
+  "UNDER_REVIEW",
+  "RESOLVED",
+  "INVALIDATED",
+];
+const thesisEvidenceRelationships = ["SUPPORTS", "CONTRADICTS", "CONTEXT"];
+
+function isInvestmentThesisFact(value: unknown): value is InvestmentThesisFact {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    string(value.metric) &&
+    [
+      "REVENUE",
+      "GROSS_PROFIT",
+      "OPERATING_INCOME",
+      "NET_INCOME",
+      "CASH_AND_CASH_EQUIVALENTS",
+      "CURRENT_DEBT",
+      "NONCURRENT_DEBT",
+      "OPERATING_CASH_FLOW",
+      "CAPITAL_EXPENDITURES",
+      "DILUTED_WEIGHTED_AVERAGE_SHARES",
+    ].includes(value.metric as string) &&
+    ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW_STATEMENT"].includes(
+      value.statement as string,
+    ) &&
+    ["ANNUAL", "QUARTERLY", "INSTANT"].includes(value.period_type as string) &&
+    (value.period_start === null || timestamp(value.period_start)) &&
+    timestamp(value.period_end) &&
+    (value.fiscal_year === null || Number.isInteger(value.fiscal_year)) &&
+    nullableString(value.fiscal_period) &&
+    (value.filed_at === null || timestamp(value.filed_at)) &&
+    timestamp(value.observed_at) &&
+    timestamp(value.recorded_at) &&
+    signedDecimal(value.value) &&
+    (value.currency === null ||
+      (string(value.currency) && /^[A-Z]{3}$/.test(value.currency))) &&
+    string(value.unit) &&
+    string(value.provider_id) &&
+    ["PASS", "DATA_CHECK", "INVALID"].includes(value.data_quality as string) &&
+    string(value.source_url) &&
+    value.source_url.startsWith("https://")
+  );
+}
+
+function isInvestmentThesisEvidence(
+  value: unknown,
+): value is InvestmentThesisEvidence {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    thesisEvidenceRelationships.includes(value.relationship as string) &&
+    nullableUuid(value.source_document_id) &&
+    nullableString(value.source_document_title) &&
+    (value.source_document_type === null ||
+      sourceDocumentTypes.includes(
+        value.source_document_type as (typeof sourceDocumentTypes)[number],
+      )) &&
+    (value.source_document_url === null ||
+      (string(value.source_document_url) &&
+        value.source_document_url.startsWith("https://"))) &&
+    nullableUuid(value.reported_fundamental_observation_id) &&
+    (value.reported_fundamental === null ||
+      isInvestmentThesisFact(value.reported_fundamental)) &&
+    string(value.source_name) &&
+    nullableString(value.external_identifier) &&
+    (value.source_url === null ||
+      (string(value.source_url) && value.source_url.startsWith("https://"))) &&
+    (value.published_at === null || dateOnly(value.published_at)) &&
+    nullableString(value.excerpt) &&
+    nullableString(value.note)
+  );
+}
+
+function isInvestmentThesisClaim(
+  value: unknown,
+): value is InvestmentThesisClaim {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    string(value.claim_key) &&
+    thesisClaimTypes.includes(
+      value.claim_type as (typeof thesisClaimTypes)[number],
+    ) &&
+    thesisClaimStatuses.includes(value.status as string) &&
+    string(value.statement) &&
+    researchConfidence.includes(
+      value.confidence as (typeof researchConfidence)[number],
+    ) &&
+    nullableString(value.uncertainty) &&
+    array(value.evidence, isInvestmentThesisEvidence)
+  );
+}
+
+function isInvestmentThesisRevision(
+  value: unknown,
+): value is InvestmentThesisRevision {
+  if (!isRecord(value)) return false;
+  const hasClaims = Array.isArray(value.claims) && value.claims.length > 0;
+  const statementIsValid =
+    (value.status === "PUBLISHED" && string(value.thesis_statement)) ||
+    (value.status === "WITHDRAWN" &&
+      value.thesis_statement === null &&
+      !hasClaims);
+  return (
+    uuid(value.id) &&
+    uuid(value.company_id) &&
+    nullableUuid(value.security_id) &&
+    string(value.stream_key) &&
+    Number.isInteger(value.revision_number) &&
+    Number(value.revision_number) > 0 &&
+    ["1.0.0", "1.1.0"].includes(value.contract_version as string) &&
+    string(value.external_revision_id) &&
+    nullableUuid(value.supersedes_revision_id) &&
+    string(value.author_id) &&
+    string(value.source_id) &&
+    string(value.source_reference) &&
+    timestamp(value.observed_at) &&
+    timestamp(value.recorded_at) &&
+    ["PUBLISHED", "WITHDRAWN"].includes(value.status as string) &&
+    statementIsValid &&
+    researchConfidence.includes(
+      value.confidence as (typeof researchConfidence)[number],
+    ) &&
+    string(value.rationale) &&
+    nullableString(value.uncertainty) &&
+    string(value.content_fingerprint) &&
+    /^[0-9a-f]{64}$/i.test(value.content_fingerprint) &&
+    array(value.claims, isInvestmentThesisClaim) &&
+    (value.trigger_references === undefined ||
+      array(value.trigger_references, isResearchTriggerReferenceRead))
+  );
+}
+
+export function isCompanyInvestmentThesis(
+  value: unknown,
+): value is CompanyInvestmentThesis {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    (value.as_of === null || dateOnly(value.as_of)) &&
+    (value.known_at === null || timestamp(value.known_at)) &&
+    array(value.streams, (stream) => {
+      if (
+        !isRecord(stream) ||
+        !string(stream.stream_key) ||
+        !isInvestmentThesisRevision(stream.current_revision) ||
+        !Array.isArray(stream.history)
+      )
+        return false;
+      const currentRevision = stream.current_revision;
+      return (
+        stream.history.every(isInvestmentThesisRevision) &&
+        stream.history.some(
+          (revision: InvestmentThesisRevision) =>
+            revision.id === currentRevision.id,
+        )
+      );
+    })
+  );
+}
+
+export function isInvestmentThesisPublicationResult(
+  value: unknown,
+): value is InvestmentThesisPublicationResult {
+  return (
+    isRecord(value) &&
+    ["PUBLISHED", "ALREADY_PUBLISHED"].includes(value.result as string) &&
+    isInvestmentThesisRevision(value.revision)
   );
 }
 
@@ -2773,6 +4253,7 @@ function isTemporalAlignedValue(value: unknown): value is TemporalAlignedValue {
     (value.period_end === null || dateOnly(value.period_end)) &&
     (value.effective_at === null || timestamp(value.effective_at)) &&
     (value.observed_at === null || timestamp(value.observed_at)) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
     (value.recorded_at === null || timestamp(value.recorded_at)) &&
     nullableString(value.data_quality) &&
     nullableString(value.quality_reason) &&
@@ -2920,6 +4401,14 @@ function isExpectedReturnHistoryPoint(
     ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"].includes(
       value.return_semantics as string,
     ) &&
+    (value.return_methodology === null ||
+      isReturnMethodology(value.return_methodology)) &&
+    ["CLASSIFIED", "UNCLASSIFIED"].includes(
+      value.return_methodology_status as string,
+    ) &&
+    ["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"].includes(
+      value.share_price_basis_status as string,
+    ) &&
     nullableSignedDecimal(value.bear_fv) &&
     nullableSignedDecimal(value.base_fv) &&
     nullableSignedDecimal(value.bull_fv) &&
@@ -2945,6 +4434,69 @@ function isExpectedReturnHistoryPoint(
   );
 }
 
+function isCurrentNativeModelCalculation(
+  value: unknown,
+): value is CurrentNativeModelCalculation {
+  if (!isRecord(value)) return false;
+  const outputs = value.outputs;
+  return (
+    uuid(value.model_id) &&
+    string(value.model_name) &&
+    [
+      "UFCF_DCF_10Y_FADE",
+      "OWNER_CASH_FLOW_10Y",
+      "RESIDUAL_INCOME_10Y_FADE",
+    ].includes(value.model_type as string) &&
+    uuid(value.revision_id) &&
+    Number.isInteger(value.revision_number) &&
+    Number(value.revision_number) > 0 &&
+    string(value.methodology_version) &&
+    timestamp(value.effective_at) &&
+    timestamp(value.recorded_at) &&
+    timestamp(value.calculated_as_of) &&
+    timestamp(value.known_at) &&
+    uuid(value.accepted_output_id) &&
+    nullableSignedDecimal(value.accepted_reference_price) &&
+    nullableUuid(value.accepted_reference_price_observation_id) &&
+    (value.accepted_reference_price_effective_at === null ||
+      timestamp(value.accepted_reference_price_effective_at)) &&
+    isExpectedReturnMarketPrice(value.market_price) &&
+    isRecord(outputs) &&
+    isReturnMethodology(outputs.return_methodology) &&
+    ["COMPLETE", "PARTIAL"].includes(outputs.status as string) &&
+    string(outputs.model_currency) &&
+    /^[A-Z]{3}$/.test(outputs.model_currency) &&
+    nullableUuid(outputs.price_observation_id) &&
+    nullableSignedDecimal(outputs.current_price) &&
+    (outputs.price_effective_at === null ||
+      timestamp(outputs.price_effective_at)) &&
+    [
+      "FRESH",
+      "STALE",
+      "QUALITY_CHECK",
+      "NO_DATA",
+      "CURRENCY_MISMATCH",
+      "CURRENCY_UNKNOWN",
+    ].includes(outputs.price_status as string) &&
+    nullableString(outputs.price_unavailable_reason) &&
+    nullableString(outputs.irr_unavailable_reason) &&
+    [
+      "bear_fv",
+      "base_fv",
+      "bull_fv",
+      "bear_probability",
+      "base_probability",
+      "bull_probability",
+      "weighted_fv",
+      "weighted_upside",
+      "expected_cash_flow_irr",
+      "hurdle",
+      "expected_excess",
+      "forward_fundamental_cagr",
+    ].every((key) => nullableSignedDecimal(outputs[key]))
+  );
+}
+
 export function isCompanyExpectedReturnHistory(
   value: unknown,
 ): value is CompanyExpectedReturnHistory {
@@ -2954,7 +4506,9 @@ export function isCompanyExpectedReturnHistory(
     dateOnly(value.as_of) &&
     timestamp(value.known_at) &&
     ["AVAILABLE", "PARTIAL", "NO_HISTORY"].includes(value.status as string) &&
-    array(value.history, isExpectedReturnHistoryPoint)
+    array(value.history, isExpectedReturnHistoryPoint) &&
+    (value.current_calculations === undefined ||
+      array(value.current_calculations, isCurrentNativeModelCalculation))
   );
 }
 
@@ -2986,6 +4540,20 @@ function isExpectedReturnAttributionState(
     nullableString(value.methodology_version) &&
     ["NATIVE_METHOD_OUTPUT", "LEGACY_NORMALIZED_FIELD"].includes(
       value.return_semantics as string,
+    ) &&
+    (value.return_methodology === null ||
+      isReturnMethodology(value.return_methodology)) &&
+    ["CLASSIFIED", "UNCLASSIFIED"].includes(
+      value.return_methodology_status as string,
+    ) &&
+    nullableUuid(value.valuation_listing_id) &&
+    nullableString(value.valuation_ticker) &&
+    nullableString(value.valuation_venue) &&
+    (value.valuation_listing_currency === null ||
+      (string(value.valuation_listing_currency) &&
+        /^[A-Z]{3}$/.test(value.valuation_listing_currency))) &&
+    ["CAPTURED", "NOT_RETAINED", "UNAVAILABLE"].includes(
+      value.share_price_basis_status as string,
     ) &&
     (value.model_currency === null ||
       (string(value.model_currency) &&
@@ -3019,6 +4587,7 @@ export function isCompanyExpectedReturnAttribution(
       "OUTPUTS_ONLY",
       "MISSING_RETURN",
       "RETURN_SEMANTICS_CHANGE",
+      "RETURN_BASIS_UNAVAILABLE",
       "MODEL_SERIES_CHANGE",
       "METHODOLOGY_CHANGE",
       "INPUTS_UNAVAILABLE",
@@ -3051,9 +4620,12 @@ export function isCompanyExpectedReturnAttribution(
     string(value.estimate_context_note);
   if (!valid || !isRecord(value)) return false;
   if (
-    ["MISSING_RETURN", "RETURN_SEMANTICS_CHANGE", "UNDATED"].includes(
-      value.status as string,
-    )
+    [
+      "MISSING_RETURN",
+      "RETURN_SEMANTICS_CHANGE",
+      "RETURN_BASIS_UNAVAILABLE",
+      "UNDATED",
+    ].includes(value.status as string)
   )
     return (
       value.expected_irr_change === null &&
@@ -3209,6 +4781,323 @@ export function isCompanyTemporalAlignment(
   );
 }
 
+function isForecastAccuracyActual(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    string(value.status) &&
+    nullableString(value.metric) &&
+    nullableString(value.period_type) &&
+    (value.fiscal_year === null || Number.isInteger(value.fiscal_year)) &&
+    nullableString(value.fiscal_period) &&
+    (value.period_end === null || dateOnly(value.period_end)) &&
+    nullableSignedDecimal(value.value) &&
+    nullableString(value.currency) &&
+    nullableString(value.unit) &&
+    nullableString(value.provider_id) &&
+    nullableString(value.source_reference) &&
+    nullableUuid(value.source_observation_id) &&
+    (value.published_at === null || timestamp(value.published_at)) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    nullableString(value.revision_context) &&
+    nullableUuid(value.supersedes_observation_id) &&
+    nullableString(value.data_quality) &&
+    nullableString(value.reason)
+  );
+}
+
+function isForecastAccuracyError(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    string(value.status) &&
+    nullableSignedDecimal(value.signed_error) &&
+    nullableSignedDecimal(value.absolute_error) &&
+    nullableSignedDecimal(value.signed_percentage_error) &&
+    nullableSignedDecimal(value.absolute_percentage_error) &&
+    nullableString(value.reason)
+  );
+}
+
+function isForecastAccuracyObservation(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    ["AGENT_RESEARCH", "FINANCIAL_MODEL", "ANALYST_CONSENSUS"].includes(
+      value.source_type as string,
+    ) &&
+    string(value.source_name) &&
+    nullableString(value.source_reference) &&
+    nullableString(value.author_id) &&
+    nullableString(value.stream_key) &&
+    nullableString(value.methodology) &&
+    nullableString(value.methodology_version) &&
+    (value.model_type === null ||
+      [
+        "UFCF_DCF_10Y_FADE",
+        "OWNER_CASH_FLOW_10Y",
+        "RESIDUAL_INCOME_10Y_FADE",
+      ].includes(value.model_type as string)) &&
+    nullableString(value.scenario) &&
+    nullableSignedDecimal(value.scenario_probability) &&
+    nullableUuid(value.forecast_id) &&
+    nullableUuid(value.revision_id) &&
+    (value.revision_number === null ||
+      Number.isInteger(value.revision_number)) &&
+    nullableUuid(value.supersedes_revision_id) &&
+    nullableUuid(value.supersedes_observation_id) &&
+    ["REVENUE", "EPS", "EBIT", "EBITDA", "FREE_CASH_FLOW"].includes(
+      value.metric as string,
+    ) &&
+    (value.period_type === null ||
+      ["ANNUAL", "QUARTERLY"].includes(value.period_type as string)) &&
+    (value.fiscal_year === null || Number.isInteger(value.fiscal_year)) &&
+    nullableString(value.fiscal_period) &&
+    nullableString(value.forecast_period_label) &&
+    (value.period_end === null || dateOnly(value.period_end)) &&
+    (value.forecast_year === null || Number.isInteger(value.forecast_year)) &&
+    nullableString(value.forecast_basis) &&
+    nullableSignedDecimal(value.value) &&
+    nullableString(value.currency) &&
+    nullableString(value.unit) &&
+    nullableString(value.confidence) &&
+    (value.analyst_count === null || Number.isInteger(value.analyst_count)) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    (value.recorded_at === null || timestamp(value.recorded_at)) &&
+    (value.forecast_known_at === null || timestamp(value.forecast_known_at)) &&
+    (value.horizon_days === null || Number.isInteger(value.horizon_days)) &&
+    nullableString(value.horizon_bucket) &&
+    string(value.status) &&
+    nullableString(value.status_reason) &&
+    isForecastAccuracyActual(value.actual) &&
+    isForecastAccuracyError(value.error)
+  );
+}
+
+function isForecastAccuracySummary(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    ["AGENT_RESEARCH", "FINANCIAL_MODEL", "ANALYST_CONSENSUS"].includes(
+      value.source_type as string,
+    ) &&
+    string(value.source_name) &&
+    nullableString(value.methodology) &&
+    nullableString(value.methodology_version) &&
+    ["REVENUE", "EPS", "EBIT", "EBITDA", "FREE_CASH_FLOW"].includes(
+      value.metric as string,
+    ) &&
+    ["ANNUAL", "QUARTERLY"].includes(value.period_type as string) &&
+    string(value.horizon_bucket) &&
+    Number.isInteger(value.sample_count) &&
+    Number.isInteger(value.minimum_sample_count) &&
+    string(value.status) &&
+    nullableSignedDecimal(value.mean_absolute_percentage_error) &&
+    nullableSignedDecimal(value.mean_signed_percentage_error) &&
+    nullableString(value.reason)
+  );
+}
+
+export function isCompanyForecastAccuracy(
+  value: unknown,
+): value is CompanyForecastAccuracy {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    timestamp(value.outcome_known_at) &&
+    (value.selected_metric === null ||
+      ["REVENUE", "EPS", "EBIT", "EBITDA", "FREE_CASH_FLOW"].includes(
+        value.selected_metric as string,
+      )) &&
+    (value.selected_source === null ||
+      ["AGENT_RESEARCH", "FINANCIAL_MODEL", "ANALYST_CONSENSUS"].includes(
+        value.selected_source as string,
+      )) &&
+    (value.selected_period_type === null ||
+      ["ANNUAL", "QUARTERLY"].includes(value.selected_period_type as string)) &&
+    (value.selected_fiscal_year === null ||
+      Number.isInteger(value.selected_fiscal_year)) &&
+    nullableString(value.selected_fiscal_period) &&
+    Number.isInteger(value.total_count) &&
+    Number.isInteger(value.returned_count) &&
+    typeof value.truncated === "boolean" &&
+    array(value.observations, isForecastAccuracyObservation) &&
+    array(value.summaries, isForecastAccuracySummary)
+  );
+}
+
+function isScenarioForecastPoint(
+  value: unknown,
+): value is ScenarioForecastPoint {
+  return (
+    isRecord(value) &&
+    ["BEAR", "BASE", "BULL"].includes(value.scenario as string) &&
+    nullableSignedDecimal(value.probability) &&
+    nullableSignedDecimal(value.value)
+  );
+}
+
+function isScenarioEvaluation(value: unknown): value is ScenarioEvaluation {
+  return (
+    isRecord(value) &&
+    string(value.model_name) &&
+    [
+      "UFCF_DCF_10Y_FADE",
+      "OWNER_CASH_FLOW_10Y",
+      "RESIDUAL_INCOME_10Y_FADE",
+    ].includes(value.model_type as string) &&
+    nullableString(value.methodology_version) &&
+    uuid(value.revision_id) &&
+    Number.isInteger(value.revision_number) &&
+    timestamp(value.forecast_known_at) &&
+    ["REVENUE", "EPS", "EBIT", "EBITDA", "FREE_CASH_FLOW"].includes(
+      value.metric as string,
+    ) &&
+    Number.isInteger(value.forecast_year) &&
+    (value.fiscal_year === null || Number.isInteger(value.fiscal_year)) &&
+    nullableString(value.fiscal_period) &&
+    (value.period_end === null || dateOnly(value.period_end)) &&
+    nullableString(value.currency) &&
+    nullableString(value.unit) &&
+    array(value.scenarios, isScenarioForecastPoint) &&
+    string(value.actual_status) &&
+    nullableSignedDecimal(value.actual_value) &&
+    (value.actual_published_at === null ||
+      timestamp(value.actual_published_at)) &&
+    (value.actual_observed_at === null ||
+      timestamp(value.actual_observed_at)) &&
+    (value.actual_recorded_at === null ||
+      timestamp(value.actual_recorded_at)) &&
+    string(value.score_status) &&
+    nullableSignedDecimal(value.continuous_ranked_probability_score) &&
+    string(value.probability_calibration_status) &&
+    nullableString(value.reason)
+  );
+}
+
+function isValuationScenarioContext(
+  value: unknown,
+): value is ValuationScenarioContext {
+  return (
+    isRecord(value) &&
+    uuid(value.snapshot_id) &&
+    string(value.model_key) &&
+    string(value.snapshot_kind) &&
+    string(value.snapshot_status) &&
+    nullableString(value.methodology) &&
+    (value.methodology_version === null ||
+      Number.isInteger(value.methodology_version)) &&
+    nullableString(value.currency) &&
+    nullableSignedDecimal(value.bear_fair_value) &&
+    nullableSignedDecimal(value.bear_probability) &&
+    nullableSignedDecimal(value.base_fair_value) &&
+    nullableSignedDecimal(value.base_probability) &&
+    nullableSignedDecimal(value.bull_fair_value) &&
+    nullableSignedDecimal(value.bull_probability) &&
+    (value.effective_at === null || timestamp(value.effective_at)) &&
+    timestamp(value.recorded_at) &&
+    string(value.source) &&
+    string(value.evaluation_status) &&
+    string(value.reason)
+  );
+}
+
+function isDecisionOutcome(value: unknown): value is DecisionOutcome {
+  return (
+    isRecord(value) &&
+    Number.isInteger(value.horizon_days) &&
+    string(value.status) &&
+    dateOnly(value.target_date) &&
+    (value.start_market_date === null || timestamp(value.start_market_date)) &&
+    (value.end_market_date === null || timestamp(value.end_market_date)) &&
+    nullableSignedDecimal(value.total_return) &&
+    nullableSignedDecimal(value.annualized_return) &&
+    string(value.basis) &&
+    nullableUuid(value.start_observation_id) &&
+    nullableUuid(value.end_observation_id) &&
+    nullableString(value.start_provider) &&
+    nullableString(value.end_provider) &&
+    nullableString(value.currency) &&
+    nullableString(value.reason)
+  );
+}
+
+function isDecisionSignalEvaluation(
+  value: unknown,
+): value is DecisionSignalEvaluation {
+  return (
+    isRecord(value) &&
+    string(value.signal_type) &&
+    uuid(value.signal_id) &&
+    uuid(value.run_id) &&
+    timestamp(value.run_as_of) &&
+    timestamp(value.recorded_at) &&
+    string(value.source_methodology) &&
+    string(value.status) &&
+    nullableString(value.value) &&
+    (value.position === null || Number.isInteger(value.position)) &&
+    nullableSignedDecimal(value.expected_irr) &&
+    nullableString(value.return_methodology) &&
+    (value.return_methodology_version === null ||
+      Number.isInteger(value.return_methodology_version)) &&
+    nullableString(value.return_perspective) &&
+    nullableUuid(value.valuation_listing_id) &&
+    nullableString(value.valuation_ticker) &&
+    nullableString(value.valuation_venue) &&
+    nullableString(value.listing_currency) &&
+    nullableString(value.model_currency) &&
+    nullableString(value.estimate_momentum_direction) &&
+    nullableString(value.estimate_momentum_availability) &&
+    nullableString(value.estimate_momentum_freshness) &&
+    nullableString(value.estimate_momentum_quality) &&
+    nullableUuid(value.price_observation_id) &&
+    array(value.outcomes, isDecisionOutcome) &&
+    string(value.reason)
+  );
+}
+
+function isDecisionEvaluationSummary(
+  value: unknown,
+): value is DecisionEvaluationSummary {
+  return (
+    isRecord(value) &&
+    string(value.signal_type) &&
+    uuid(value.run_id) &&
+    timestamp(value.run_as_of) &&
+    string(value.source_methodology) &&
+    Number.isInteger(value.horizon_days) &&
+    string(value.grouping) &&
+    string(value.group_value) &&
+    nullableString(value.listing_currency) &&
+    Number.isInteger(value.sample_count) &&
+    Number.isInteger(value.minimum_sample_count) &&
+    string(value.status) &&
+    nullableSignedDecimal(value.spearman_correlation) &&
+    nullableSignedDecimal(value.mean_annualized_return) &&
+    nullableSignedDecimal(value.median_annualized_return) &&
+    string(value.interpretation)
+  );
+}
+
+export function isCompanyDecisionEvaluation(
+  value: unknown,
+): value is CompanyDecisionEvaluation {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    timestamp(value.outcome_known_at) &&
+    Array.isArray(value.horizon_days) &&
+    value.horizon_days.every(Number.isInteger) &&
+    Number.isInteger(value.minimum_cross_section_sample) &&
+    array(value.scenario_evaluations, isScenarioEvaluation) &&
+    array(value.valuation_scenarios, isValuationScenarioContext) &&
+    array(value.signals, isDecisionSignalEvaluation) &&
+    array(value.summaries, isDecisionEvaluationSummary) &&
+    string(value.portfolio_implementation_status) &&
+    string(value.portfolio_implementation_reason) &&
+    Array.isArray(value.limitations) &&
+    value.limitations.every(string)
+  );
+}
+
 export function isAttentionFeed(value: unknown): value is AttentionFeed {
   return (
     isRecord(value) &&
@@ -3216,6 +5105,516 @@ export function isAttentionFeed(value: unknown): value is AttentionFeed {
     Number.isInteger(value.lookback_days) &&
     Number.isInteger(value.total) &&
     array(value.events, isAttentionEvent)
+  );
+}
+
+export function isGoogleSheetsSyncStatus(
+  value: unknown,
+): value is GoogleSheetsSyncStatus {
+  return (
+    isRecord(value) &&
+    typeof value.configured === "boolean" &&
+    typeof value.credentials_available === "boolean" &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_url) &&
+    string(value.sync_tab) &&
+    Number.isInteger(value.polling_interval_seconds) &&
+    (value.last_run === null || isGoogleSheetsSyncRun(value.last_run))
+  );
+}
+
+export function isGoogleSheetsConnectionTest(
+  value: unknown,
+): value is GoogleSheetsConnectionTest {
+  return (
+    isRecord(value) &&
+    typeof value.connected === "boolean" &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_title) &&
+    typeof value.sync_tab_exists === "boolean" &&
+    timestamp(value.checked_at) &&
+    string(value.message)
+  );
+}
+
+export function isGoogleSheetsSyncRun(
+  value: unknown,
+): value is GoogleSheetsSyncRun {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    ["CONNECTED", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"].includes(
+      value.status as string,
+    ) &&
+    timestamp(value.started_at) &&
+    (value.completed_at === null || timestamp(value.completed_at)) &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_title) &&
+    Number.isInteger(value.candidate_count) &&
+    Number.isInteger(value.new_count) &&
+    Number.isInteger(value.unchanged_count) &&
+    Number.isInteger(value.issue_count) &&
+    nullableString(value.error_code) &&
+    nullableString(value.error_message)
+  );
+}
+
+export function isGoogleSheetsSyncCandidate(
+  value: unknown,
+): value is GoogleSheetsSyncCandidate {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    string(value.spreadsheet_id) &&
+    string(value.spreadsheet_title) &&
+    Number.isInteger(value.sheet_id) &&
+    string(value.sheet_title) &&
+    Number.isInteger(value.source_row_number) &&
+    string(value.source_url) &&
+    nullableString(value.external_revision_id) &&
+    nullableString(value.contract_version) &&
+    string(value.content_fingerprint) &&
+    nullableUuid(value.model_id) &&
+    nullableString(value.model_name) &&
+    nullableString(value.model_type) &&
+    nullableString(value.source_model_key) &&
+    nullableUuid(value.company_id) &&
+    nullableString(value.company_name) &&
+    nullableUuid(value.valuation_listing_id) &&
+    (value.model_currency === null ||
+      (string(value.model_currency) &&
+        /^[A-Z]{3}$/.test(value.model_currency))) &&
+    nullableString(value.rationale) &&
+    (value.proposal === undefined ||
+      value.proposal === null ||
+      isFinancialModelProposalProvenance(value.proposal)) &&
+    (value.supporting_evidence === undefined ||
+      array(value.supporting_evidence, isFinancialModelEvidenceRead)) &&
+    [
+      "PENDING",
+      "READY",
+      "CONFLICT",
+      "INVALID",
+      "NO_CHANGES",
+      "ACCEPTED",
+      "REJECTED",
+    ].includes(value.status as string) &&
+    nullableString(value.issue) &&
+    nullableString(value.preview_status) &&
+    (value.preview_data === null || isRecord(value.preview_data)) &&
+    (value.previewed_at === null || timestamp(value.previewed_at)) &&
+    timestamp(value.first_observed_at) &&
+    timestamp(value.last_observed_at) &&
+    nullableString(value.reviewer) &&
+    nullableString(value.decision_note) &&
+    nullableUuid(value.accepted_revision_id) &&
+    (value.accepted_at === null || timestamp(value.accepted_at)) &&
+    (value.rejected_at === null || timestamp(value.rejected_at))
+  );
+}
+
+export function isGoogleSheetsSyncCheck(
+  value: unknown,
+): value is GoogleSheetsSyncCheck {
+  return (
+    isRecord(value) &&
+    isGoogleSheetsSyncRun(value.run) &&
+    array(value.new_candidates, isGoogleSheetsSyncCandidate)
+  );
+}
+
+export function isGoogleSheetsPortfolioStatePublish(
+  value: unknown,
+): value is GoogleSheetsPortfolioStatePublish {
+  return (
+    isRecord(value) &&
+    ["PUBLISHED", "UNCHANGED"].includes(value.status as string) &&
+    string(value.spreadsheet_id) &&
+    string(value.spreadsheet_title) &&
+    value.tab === "Application Portfolio State" &&
+    uuid(value.portfolio_id) &&
+    value.contract_version === "1.0.0" &&
+    string(value.content_fingerprint) &&
+    timestamp(value.published_at) &&
+    (value.valuation_as_of === null || timestamp(value.valuation_as_of)) &&
+    string(value.valuation_status) &&
+    Number.isInteger(value.row_count) &&
+    typeof value.read_back_verified === "boolean" &&
+    string(value.message)
+  );
+}
+
+export function isGoogleSheetsThesisWatchPublish(
+  value: unknown,
+): value is GoogleSheetsThesisWatchPublish {
+  return (
+    isRecord(value) &&
+    ["PUBLISHED", "UNCHANGED"].includes(value.status as string) &&
+    string(value.spreadsheet_id) &&
+    string(value.spreadsheet_title) &&
+    value.tab === "Application Thesis Watch Feed" &&
+    value.contract_version === "1.0.0" &&
+    string(value.content_fingerprint) &&
+    timestamp(value.published_at) &&
+    Number.isInteger(value.row_count) &&
+    Number.isInteger(value.added_count) &&
+    array(value.trigger_ids, string) &&
+    typeof value.read_back_verified === "boolean" &&
+    string(value.message)
+  );
+}
+
+export function isGoogleSheetsAgentWorkPublish(
+  value: unknown,
+): value is GoogleSheetsAgentWorkPublish {
+  return (
+    isRecord(value) &&
+    ["PUBLISHED", "UNCHANGED", "NO_WORK", "BLOCKED"].includes(
+      value.status as string,
+    ) &&
+    [
+      "DATA_UNIVERSE_STEWARD",
+      "PORTFOLIO_THESIS_SENTINEL",
+      "MODEL_ALLOCATION_STEWARD",
+    ].includes(value.agent_role as string) &&
+    (value.spreadsheet_id === null || string(value.spreadsheet_id)) &&
+    (value.spreadsheet_title === null || string(value.spreadsheet_title)) &&
+    value.tab === "Application Agent Work Feed" &&
+    value.contract_version === "1.0.0" &&
+    (value.content_fingerprint === null || string(value.content_fingerprint)) &&
+    timestamp(value.published_at) &&
+    Number.isInteger(value.row_count) &&
+    Number.isInteger(value.added_count) &&
+    Number.isInteger(value.work_item_count) &&
+    typeof value.read_back_verified === "boolean" &&
+    nullableString(value.status_reason) &&
+    string(value.message)
+  );
+}
+
+function isRiskAssessmentEvidence(
+  value: unknown,
+): value is RiskAssessmentEvidence {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    nullableUuid(value.source_document_id) &&
+    nullableString(value.source_document_title) &&
+    nullableString(value.source_document_url) &&
+    nullableUuid(value.reported_fundamental_observation_id) &&
+    nullableUuid(value.thesis_revision_id) &&
+    nullableUuid(value.thesis_claim_id) &&
+    string(value.source_name) &&
+    nullableString(value.external_identifier) &&
+    nullableString(value.source_url) &&
+    (value.published_at === null || dateOnly(value.published_at)) &&
+    nullableString(value.excerpt) &&
+    nullableString(value.note)
+  );
+}
+
+function isRiskAssessmentFinding(
+  value: unknown,
+): value is RiskAssessmentFinding {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    string(value.finding_key) &&
+    ["COMPANY", "PORTFOLIO"].includes(value.scope as string) &&
+    nullableUuid(value.company_id) &&
+    nullableString(value.company_name) &&
+    [
+      "BUSINESS",
+      "FINANCIAL",
+      "GEOGRAPHIC",
+      "CURRENCY",
+      "BUSINESS_MODEL",
+      "REGULATORY",
+      "GOVERNANCE",
+      "GEOPOLITICAL",
+      "PORTFOLIO_CONCENTRATION",
+      "PORTFOLIO_EXPOSURE",
+      "THESIS_CHANGE",
+      "OTHER",
+    ].includes(value.category as string) &&
+    string(value.title) &&
+    string(value.description) &&
+    ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(value.severity as string) &&
+    ["LOW", "MEDIUM", "HIGH", "UNASSESSED"].includes(
+      value.confidence as string,
+    ) &&
+    ["ACTIVE", "UNDER_REVIEW", "RESOLVED"].includes(value.status as string) &&
+    ["NEW", "WORSENING", "UNCHANGED", "IMPROVING", "RESOLVED"].includes(
+      value.change_direction as string,
+    ) &&
+    string(value.rationale) &&
+    array(value.evidence, isRiskAssessmentEvidence)
+  );
+}
+
+function isRiskAssessmentRevision(
+  value: unknown,
+): value is RiskAssessmentRevision {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    uuid(value.portfolio_id) &&
+    string(value.stream_key) &&
+    Number.isInteger(value.revision_number) &&
+    string(value.contract_version) &&
+    string(value.external_revision_id) &&
+    nullableUuid(value.supersedes_revision_id) &&
+    string(value.author_id) &&
+    string(value.source_id) &&
+    string(value.source_reference) &&
+    timestamp(value.authored_at) &&
+    timestamp(value.published_at) &&
+    timestamp(value.recorded_at) &&
+    string(value.reviewer) &&
+    string(value.reviewer_note) &&
+    timestamp(value.accepted_at) &&
+    [
+      "CURRENT",
+      "STALE_PORTFOLIO_STATE",
+      "STALE_HOLDINGS",
+      "INCOMPLETE_VALUATION",
+    ].includes(value.baseline_status_at_accept as string) &&
+    typeof value.baseline_stale_acknowledged === "boolean" &&
+    string(value.portfolio_state_contract_version) &&
+    /^sha256:[0-9a-f]{64}$/i.test(String(value.portfolio_state_fingerprint)) &&
+    uuid(value.holdings_snapshot_id) &&
+    nullableUuid(value.target_revision_id) &&
+    timestamp(value.valuation_as_of) &&
+    ["COMPLETE", "PARTIAL"].includes(value.coverage_status as string) &&
+    nullableString(value.coverage_note) &&
+    string(value.summary) &&
+    string(value.rationale) &&
+    /^[0-9a-f]{64}$/i.test(String(value.content_fingerprint)) &&
+    array(value.findings, isRiskAssessmentFinding)
+  );
+}
+
+export function isCompanyRiskAssessments(
+  value: unknown,
+): value is CompanyRiskAssessments {
+  return (
+    isRecord(value) &&
+    uuid(value.company_id) &&
+    array(value.current, isRiskAssessmentRevision) &&
+    array(value.history, isRiskAssessmentRevision)
+  );
+}
+
+export function isPortfolioRiskAssessments(
+  value: unknown,
+): value is PortfolioRiskAssessments {
+  return (
+    isRecord(value) &&
+    uuid(value.portfolio_id) &&
+    array(value.current, isRiskAssessmentRevision) &&
+    array(value.history, isRiskAssessmentRevision)
+  );
+}
+
+export function isGoogleSheetsRiskSyncStatus(
+  value: unknown,
+): value is GoogleSheetsRiskSyncStatus {
+  return (
+    isRecord(value) &&
+    typeof value.configured === "boolean" &&
+    typeof value.credentials_available === "boolean" &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_url) &&
+    value.inbox_tab === "Application Risk Assessment Inbox" &&
+    (value.last_run === null || isGoogleSheetsRiskSyncRun(value.last_run))
+  );
+}
+
+export function isGoogleSheetsRiskSyncRun(
+  value: unknown,
+): value is GoogleSheetsRiskSyncRun {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_title) &&
+    ["CONNECTED", "SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"].includes(
+      value.status as string,
+    ) &&
+    timestamp(value.started_at) &&
+    (value.completed_at === null || timestamp(value.completed_at)) &&
+    Number.isInteger(value.candidate_count) &&
+    Number.isInteger(value.new_count) &&
+    Number.isInteger(value.unchanged_count) &&
+    Number.isInteger(value.issue_count) &&
+    nullableString(value.error_code) &&
+    nullableString(value.error_message)
+  );
+}
+
+export function isGoogleSheetsRiskCandidate(
+  value: unknown,
+): value is GoogleSheetsRiskCandidate {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    nullableUuid(value.portfolio_id) &&
+    nullableString(value.stream_key) &&
+    nullableString(value.external_revision_id) &&
+    nullableString(value.contract_version) &&
+    /^[0-9a-f]{64}$/i.test(String(value.content_fingerprint)) &&
+    string(value.source_url) &&
+    string(value.sheet_title) &&
+    Number.isInteger(value.source_row_number) &&
+    [
+      "PENDING",
+      "READY",
+      "STALE_BASELINE",
+      "CONFLICT",
+      "INVALID",
+      "ACCEPTED",
+      "REJECTED",
+    ].includes(value.status as string) &&
+    nullableString(value.issue) &&
+    nullableString(value.author_id) &&
+    nullableString(value.source_id) &&
+    nullableString(value.source_reference) &&
+    (value.authored_at === null || timestamp(value.authored_at)) &&
+    (value.published_at === null || timestamp(value.published_at)) &&
+    nullableString(value.summary) &&
+    Number.isInteger(value.findings_count) &&
+    (value.baseline_status === null ||
+      [
+        "CURRENT",
+        "STALE_PORTFOLIO_STATE",
+        "STALE_HOLDINGS",
+        "INCOMPLETE_VALUATION",
+      ].includes(value.baseline_status as string)) &&
+    (value.preview_data === null || isRecord(value.preview_data)) &&
+    nullableString(value.reviewer) &&
+    nullableString(value.reviewer_note) &&
+    nullableUuid(value.accepted_revision_id) &&
+    timestamp(value.first_observed_at) &&
+    timestamp(value.last_observed_at) &&
+    (value.accepted_at === null || timestamp(value.accepted_at)) &&
+    (value.rejected_at === null || timestamp(value.rejected_at))
+  );
+}
+
+export function isGoogleSheetsRiskSyncCheck(
+  value: unknown,
+): value is GoogleSheetsRiskSyncCheck {
+  return (
+    isRecord(value) &&
+    isGoogleSheetsRiskSyncRun(value.run) &&
+    array(value.new_candidates, isGoogleSheetsRiskCandidate)
+  );
+}
+
+export function isGoogleSheetsResearchSyncStatus(
+  value: unknown,
+): value is GoogleSheetsResearchSyncStatus {
+  return (
+    isRecord(value) &&
+    typeof value.configured === "boolean" &&
+    typeof value.credentials_available === "boolean" &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_url) &&
+    value.research_inbox_tab === "Application Research Inbox" &&
+    value.thesis_inbox_tab === "Application Thesis Inbox" &&
+    (value.last_run === null || isGoogleSheetsResearchSyncRun(value.last_run))
+  );
+}
+
+export function isGoogleSheetsResearchConnectionTest(
+  value: unknown,
+): value is GoogleSheetsResearchConnectionTest {
+  return (
+    isRecord(value) &&
+    typeof value.connected === "boolean" &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_title) &&
+    typeof value.research_inbox_exists === "boolean" &&
+    typeof value.thesis_inbox_exists === "boolean" &&
+    timestamp(value.checked_at) &&
+    string(value.message)
+  );
+}
+
+export function isGoogleSheetsResearchSyncRun(
+  value: unknown,
+): value is GoogleSheetsResearchSyncRun {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    nullableString(value.spreadsheet_id) &&
+    nullableString(value.spreadsheet_title) &&
+    ["SUCCEEDED", "PARTIAL", "BLOCKED", "FAILED"].includes(
+      value.status as string,
+    ) &&
+    timestamp(value.started_at) &&
+    (value.completed_at === null || timestamp(value.completed_at)) &&
+    Number.isInteger(value.candidate_count) &&
+    Number.isInteger(value.new_count) &&
+    Number.isInteger(value.unchanged_count) &&
+    Number.isInteger(value.issue_count) &&
+    nullableString(value.error_code) &&
+    nullableString(value.error_message)
+  );
+}
+
+export function isGoogleSheetsResearchCandidate(
+  value: unknown,
+): value is GoogleSheetsResearchCandidate {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    ["RESEARCH", "THESIS"].includes(value.domain as string) &&
+    nullableUuid(value.company_id) &&
+    nullableUuid(value.security_id) &&
+    nullableString(value.stream_key) &&
+    nullableString(value.external_revision_id) &&
+    nullableUuid(value.base_revision_id) &&
+    nullableString(value.contract_version) &&
+    /^[0-9a-f]{64}$/i.test(String(value.content_fingerprint)) &&
+    string(value.source_url) &&
+    string(value.sheet_title) &&
+    Number.isInteger(value.source_row_number) &&
+    nullableString(value.author_id) &&
+    nullableString(value.source_id) &&
+    nullableString(value.source_reference) &&
+    (value.observed_at === null || timestamp(value.observed_at)) &&
+    nullableString(value.rationale) &&
+    Number.isInteger(value.item_count) &&
+    Number.isInteger(value.evidence_count) &&
+    [
+      "PENDING",
+      "READY",
+      "CONFLICT",
+      "INVALID",
+      "ACCEPTED",
+      "REJECTED",
+    ].includes(value.status as string) &&
+    nullableString(value.issue) &&
+    (value.preview_data === null || isRecord(value.preview_data)) &&
+    nullableString(value.reviewer) &&
+    nullableString(value.reviewer_note) &&
+    nullableUuid(value.accepted_research_revision_id) &&
+    nullableUuid(value.accepted_thesis_revision_id) &&
+    timestamp(value.first_observed_at) &&
+    timestamp(value.last_observed_at) &&
+    (value.accepted_at === null || timestamp(value.accepted_at)) &&
+    (value.rejected_at === null || timestamp(value.rejected_at))
+  );
+}
+
+export function isGoogleSheetsResearchSyncCheck(
+  value: unknown,
+): value is GoogleSheetsResearchSyncCheck {
+  return (
+    isRecord(value) &&
+    isGoogleSheetsResearchSyncRun(value.run) &&
+    array(value.new_candidates, isGoogleSheetsResearchCandidate)
   );
 }
 
@@ -3239,6 +5638,8 @@ function isAttentionEvent(value: unknown): value is AttentionEvent {
       "RANK_CHANGE",
       "EXECUTION_PACE_CHANGE",
       "DATA_QUALITY",
+      "RISK_ASSESSMENT",
+      "RESEARCH_PROPOSAL",
     ].includes(value.event_type as string) &&
     ["HIGH", "MEDIUM", "LOW"].includes(value.severity as string) &&
     ["REVIEW", "INFORMATIONAL"].includes(value.status as string) &&

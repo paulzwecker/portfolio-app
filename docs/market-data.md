@@ -98,6 +98,11 @@ corrections linked by `supersedes` rather than rewriting accepted history. An
 already-covered FX provider date is skipped on same-day reruns and will be requested
 again on a later date.
 
+An applied provider request with fetch failures, unresolved listing identities,
+unmapped FX pairs or rejected normalized rows is reported as `PARTIAL` and exits
+with code 2, even when unaffected batches were committed. Review the per-domain
+failure lists and insertion counts before treating the run as complete.
+
 Yahoo's raw `close` field is preserved in `provider_close`; for canonical listing
 prices it is a split-adjusted, non-dividend-reinvested series. This adapter does
 not claim to provide an unadjusted pre-split exchange close because Yahoo's chart
@@ -148,17 +153,81 @@ Insufficient history leaves the affected field null. It is never filled with zer
 The source's broader regime label is shown alongside its source data-quality state
 and as-of date.
 
+The Company market view computes these measures directly from the latest clean,
+exact-listing canonical daily observations; it does not depend on a legacy
+`PriceRegimeSnapshot`. A 50- or 200-session average and the 20-session volatility
+are exposed as soon as their individual windows exist. The aggregate analytics
+state is `AVAILABLE` only with 252 eligible sessions, `PARTIAL` for shorter
+non-empty history, and `UNAVAILABLE` without clean history. The 52-week high and
+drawdown remain null until all 252 sessions exist. Price charts use the requested
+recent observations while analytics retain enough history for the full window.
+Quotes and historical closes remain separately identified. Returns are
+split-adjusted price returns; Yahoo dividend-adjusted values are not used because
+the stored dividend facts are not independently verified, so the figures are not
+total returns. A current quote can have an exchange-local session-date label one
+day ahead of the UTC date while its actual observation time is already known; in
+that case freshness age uses the UTC date of the quote observation. The session
+date remains unchanged for display and historical cutoff selection.
+
+`GET /v1/market-data/status` reports the latest Yahoo market/FX refresh state and
+the last successful update. Company and Universe market views poll their read APIs
+every 30 seconds so a completed worker run appears without restarting the web
+application. Individual listings report `AVAILABLE`, `STALE`, `REFRESHING`,
+`PARTIAL` or `UNAVAILABLE`; older but clean history remains visible with its own
+as-of date when the current quote is stale or absent.
+
+For local development, `npm run dev` starts a separate market-data worker beside
+the API and web servers. It waits until PostgreSQL and the Alembic schema are
+ready, then checks exact active/held listing history, quote freshness, required
+dated FX and corporate-action run age. It uses the existing Yahoo ingestion
+worker and a PostgreSQL advisory lock, so concurrent API reloaders/development
+launchers do not start overlapping refreshes. Mapped listings with missing or
+stale history are backfilled through the existing bounded ten-year default; later
+refreshes use the ingestion worker's incremental logic and 90-day correction
+overlap. Market-data refreshes also check corporate actions. The long-running
+worker retries a database/schema readiness block after one minute and otherwise
+checks again after the next UTC day boundary. A provider failure is recorded and
+does not stop the API or web server. Live operations remain `PARTIAL` while active
+companies lack reviewed listing mappings or corporate actions remain unverified.
+
 ## Current portfolio valuation
 
-The API multiplies each observed quantity by its listing's fresh split-adjusted
-close to produce a native-currency position value. It converts to portfolio base
-currency only when a fresh, dated FX observation is effective no later than that
-price/snapshot date and is within five calendar days. Holdings and price dates must
-also be within five days. A portfolio total, current company weights and allocation
-gaps are emitted only when the holdings snapshot is complete and every position and
-cash balance can be valued in the base currency. Otherwise the aggregate stays
-null and the response identifies the missing listing/cash/FX inputs. A valid
-position-level native value may still be displayed.
+The API distinguishes a current mark-to-market from an explicit historical as-of
+reconstruction. The ordinary overview request uses the current valuation cutoff;
+`GET /v1/portfolios/{id}/overview?as_of=<timezone-aware timestamp>` reconstructs
+the view at the supplied valuation and knowledge cutoff. Both select the latest
+holdings snapshot whose effective and recorded times are no later than that
+cutoff. Price observations and FX observations are independently selected using
+their own effective/market and recorded/observed times, also bounded by that same
+cutoff. A market close may therefore be newer than the holdings confirmation and
+still mark the last accepted quantities, without introducing future information
+into an earlier as-of query.
+
+For each exact held listing, the API multiplies the accepted quantity by its fresh
+split-adjusted close to produce native-currency value. It then converts cross-
+currency positions and cash using the latest clean dated FX observation effective
+within five calendar days of the requested valuation cutoff and recorded/observed
+by that cutoff. Direct or explicitly observed reverse-pair rates are supported;
+no missing rate is supplied. FX and listing prices can be non-synchronous. For a
+current quote with a provider price timestamp, the API calls inputs
+`SYNCHRONOUS` only when the quote and FX effective timestamps match exactly;
+otherwise it reports `NON_SYNCHRONOUS`. Daily close observations without an exact
+price timestamp report `TIMING_UNKNOWN`, even if their calendar dates match. The
+UI renders the stored market session date as a date, not as a fabricated midnight
+close time. The overview returns each current quote observation time, applied FX
+rate/effective time, and an explicit timing state; aggregate `market_data_through`
+and `fx_data_through` identify the latest effective observations included.
+Per-listing/per-currency timestamps remain authoritative.
+
+Holdings confirmation age is reported independently from quote and FX freshness.
+A complete but older accepted snapshot can still produce a mark-to-market of its
+last observed quantities, but the response reports `holdings_freshness=STALE` and
+the age; current prices do not refresh quantities. Partial/unavailable holdings,
+missing quantities, stale or quality-checked prices, and missing dated FX keep the
+aggregate value, weights and allocation gaps null. Freshness thresholds do not
+invalidate a valid market observation merely because it is newer than the
+holdings snapshot. The current rank and Execution Pace calculators separately
+require a fresh holdings confirmation when using exposure weights for decisions.
 
 Market values and current weights are factual context. The accepted target
 architecture remains unchanged and separate. No price or currency operation owns
@@ -202,8 +271,16 @@ The provider load supplies fresh quotes and daily history beginning in October
 on the first provider observation for each listing; it is not backfilled across
 market holidays or earlier gaps. The database contains about 2,600 dated records
 per mapped EUR currency cross, beginning in October 2016 for AUD, CAD, CHF, DKK,
-GBP, JPY, SEK and USD. TWD/EUR returned only two source observations on one
-effective date, so it does not provide useful historical coverage. A reconciliation snapshot is stored in
+GBP, JPY, SEK and USD. The earlier direct `TWDEUR=X` history request returned only
+one dated bar. In the Milestone 6.10 recovery, Yahoo's exact reciprocal
+`EURTWD=X` series returned dated TWD-per-EUR source values from October 2016
+through 2026-10-09. The adapter now inverts that series only for the reviewed
+canonical `TWD/EUR` pair, after validating the provider's returned symbol, TWD
+quote currency and `CURRENCY` instrument type. The source symbol, source
+orientation, raw response and normalizer version remain recorded; no FX value is
+inferred from a security price or assumed equal across currencies. The canonical
+series has 2,607 current observations (2,611 including superseded values). An
+unchanged replay of the ten-year reciprocal request inserted zero duplicates. A reconciliation snapshot is stored in
 [`reconciliation/provider-market-data-2026-10-05.json`](reconciliation/provider-market-data-2026-10-05.json).
 The accepted provider ingestion receipt, including exact symbols and row counts,
 is stored in
@@ -233,3 +310,16 @@ parity.
 
 The full machine-readable workbook import/reconciliation result is stored in
 [`reconciliation/market-data-2026-10-05.json`](reconciliation/market-data-2026-10-05.json).
+
+## Listing identity update (2026-10-16)
+
+The ten Watchlist listing gaps recorded in the October 5 market-data snapshot
+were reconciled to primary issuer/regulatory evidence and imported as exact
+security/listing identities. The active universe now has 92/92 canonical listings
+(21 Portfolio and 71 Watchlist). Yahoo listing metadata was checked for matching
+provider symbol, exchange, equity type and quote currency; the bounded identity
+work did not import any prices, history, corporate actions or FX observations.
+Medistim's NOK listing now has an explicit NOK/EUR provider series mapping, but
+dated FX must still be ingested before its EUR portfolio valuation is available.
+The per-listing sources and exact status are in the
+[10F identity reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md).

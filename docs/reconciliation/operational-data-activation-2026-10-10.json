@@ -1,0 +1,281 @@
+{
+  "report_version": "1.0.0",
+  "milestone": "6.10 Operational Data Activation & Coverage",
+  "reviewed_at_utc": "2026-10-10T19:03:06Z",
+  "database": "canonical local PostgreSQL",
+  "active_universe": {
+    "portfolio_companies": 21,
+    "watchlist_companies": 71,
+    "active_canonical_listings": 83,
+    "additional_standalone_held_listings": 1,
+    "selected_yahoo_listing_responses": 84
+  },
+  "coverage_before_after": {
+    "market_price_current_quote": {
+      "portfolio": { "before": 21, "after": 21, "total": 21 },
+      "watchlist": { "before": 5, "after": 61, "total": 71 },
+      "watchlist_with_exact_listing": 61,
+      "watchlist_without_exact_listing": 10,
+      "provider_fetch_failures": 0,
+      "normalization_rejections": 0,
+      "initial_run_daily_price_rows_inserted": 336,
+      "same_window_replay_rows_inserted": 1,
+      "replay_insert_explanation": "One provider-sourced quote correction superseded its prior observation; the repeat does not create a second current row with the same source identity."
+    },
+    "market_price_history": {
+      "mapped_active_and_held_listings_with_provider_response": 84,
+      "daily_rows_received_first_run": 470,
+      "daily_rows_received_replay": 418,
+      "history_start": "2016-10",
+      "history_is_complete_calendar_series": false
+    },
+    "fx": {
+      "pairs_with_history": [
+        "AUD/EUR",
+        "CAD/EUR",
+        "CHF/EUR",
+        "DKK/EUR",
+        "GBP/EUR",
+        "JPY/EUR",
+        "SEK/EUR",
+        "TWD/EUR",
+        "USD/EUR"
+      ],
+      "twd_eur_current_rows_before": 4,
+      "twd_eur_current_rows_after": 2607,
+      "twd_eur_total_rows_including_superseded": 2611,
+      "twd_eur_first_effective_date": "2016-10-05",
+      "twd_eur_last_effective_date": "2026-10-09",
+      "twd_eur_provider_symbol": "EURTWD=X",
+      "twd_eur_normalizer": "explicit validated reciprocal into canonical TWD/EUR",
+      "twd_eur_unchanged_replay_inserted": 0
+    },
+    "reported_fundamentals": {
+      "sec_cik_mappings_before": { "portfolio": 0, "watchlist": 0 },
+      "sec_cik_mappings_after": { "portfolio": 20, "watchlist": 7 },
+      "active_companies_with_fundamental_observations": {
+        "portfolio": 0,
+        "watchlist": 0
+      },
+      "sec_user_agent_configured": false,
+      "live_ingestion_status": "BLOCKED_MISSING_SEC_USER_AGENT"
+    },
+    "filings_and_source_documents": {
+      "companies_with_sec_identity_mapped_after": {
+        "portfolio": 20,
+        "watchlist": 7
+      },
+      "companies_with_canonical_source_documents": {
+        "portfolio": 0,
+        "watchlist": 0
+      },
+      "live_ingestion_status": "BLOCKED_MISSING_SEC_USER_AGENT"
+    },
+    "consensus_estimates": {
+      "fmp_primary_mappings": { "portfolio": 0, "watchlist": 0 },
+      "fmp_observations": { "portfolio": 0, "watchlist": 0 },
+      "legacy_data_check_observations": { "portfolio": 64, "watchlist": 3 },
+      "live_ingestion_status": "BLOCKED_MISSING_FMP_API_KEY",
+      "estimate_momentum_ready": false
+    },
+    "corporate_actions": {
+      "active_listings_with_any_observed_action": 45,
+      "unverified_observations_before": 879,
+      "unverified_observations_after": 880,
+      "verified_provider_actions_added": 0,
+      "data_quality": "DATA_CHECK"
+    },
+    "listing_identity": {
+      "portfolio_company_listing_coverage": {
+        "before": 21,
+        "after": 21,
+        "total": 21
+      },
+      "watchlist_company_listing_coverage": {
+        "before": 61,
+        "after": 61,
+        "total": 71
+      },
+      "unresolved_watchlist_companies": [
+        "Accelleron Industries",
+        "BONESUPPORT Holding AB",
+        "Exosens",
+        "Fabrinet",
+        "INVISIO AB",
+        "Medistim ASA",
+        "Meta Platforms",
+        "Nova Ltd",
+        "Rheinmetall AG",
+        "VINCORION SE"
+      ]
+    }
+  },
+  "mapping_evidence": {
+    "portfolio_source": "https://www.sec.gov/files/company_tickers_exchange.json",
+    "watchlist_mapping_replay_idempotent": true,
+    "watchlist_company_identifiers": [
+      {
+        "company": "Axon Enterprise",
+        "cik": "0001069183",
+        "listing": "NASDAQ:AXON",
+        "listing_identity_resolved": true,
+        "evidence": "https://www.sec.gov/Archives/edgar/data/1069183/000162828026025550/annualreportarsproxycombob.pdf"
+      },
+      {
+        "company": "Comfort Systems USA",
+        "cik": "0001035983",
+        "listing": "NYSE:FIX",
+        "listing_identity_resolved": true,
+        "evidence": "https://www.sec.gov/Archives/edgar/data/1035983/000110465926086255/0001104659-26-086255-index.htm"
+      },
+      {
+        "company": "Rubrik",
+        "cik": "0001943896",
+        "listing": "NYSE:RBRK",
+        "listing_identity_resolved": true,
+        "evidence": "https://www.sec.gov/Archives/edgar/data/1943896/000194389626000060/0001943896-26-000060-index.htm"
+      },
+      {
+        "company": "Veeva Systems",
+        "cik": "0001393052",
+        "listing": "NYSE:VEEV",
+        "listing_identity_resolved": true,
+        "evidence": "https://www.sec.gov/Archives/edgar/data/1393052/0001393052-26-000032-index.htm"
+      },
+      {
+        "company": "Meta Platforms",
+        "cik": "0001326801",
+        "listing": null,
+        "listing_identity_resolved": false,
+        "evidence": "https://www.sec.gov/edgar/browse/?CIK=0001326801"
+      },
+      {
+        "company": "Fabrinet",
+        "cik": "0001408710",
+        "listing": null,
+        "listing_identity_resolved": false,
+        "evidence": "https://www.sec.gov/Archives/edgar/data/1408710/000140871026000028/0001408710-26-000028-index.htm"
+      },
+      {
+        "company": "Nova Ltd",
+        "cik": "0001109345",
+        "listing": null,
+        "listing_identity_resolved": false,
+        "evidence": "https://www.sec.gov/Archives/edgar/data/1109345/000117891326000504/0001178913-26-000504-index.html"
+      }
+    ],
+    "unmapped_portfolio_company": {
+      "company": "Adyen",
+      "reason": "The SEC identity is an Adyen N.V. depositary-receipt entity and does not establish the operating issuer's Company Facts identity for the Amsterdam ordinary listing.",
+      "evidence": "https://data.sec.gov/submissions/CIK0001788707.json"
+    }
+  },
+  "provider_diagnostics": {
+    "yahoo": {
+      "status": "LIVE_VERIFIED_FOR_MAPPED_LISTINGS_AND_FX",
+      "transport_failure_root_cause": "One FX request inherited a local HTTP(S)_PROXY at http://127.0.0.1:9; Windows connection refused with error 10061.",
+      "recovery": "Replay with a process-scoped NO_PROXY addition for query1.finance.yahoo.com and query2.finance.yahoo.com succeeded.",
+      "provider_or_symbol_restriction": false
+    },
+    "sec_edgar": {
+      "status": "FIXTURE_TESTED_LIVE_BLOCKED",
+      "missing_configuration": "SEC_USER_AGENT with application name and monitored contact email"
+    },
+    "fmp_estimates": {
+      "status": "FIXTURE_TESTED_LIVE_BLOCKED",
+      "missing_configuration": "FMP_API_KEY and reviewed provider mappings"
+    },
+    "non_us_filings_and_fundamentals": {
+      "status": "NOT_COVERED_BY_CURRENT_ADAPTERS",
+      "reason": "No non-US regulator/company-source adapter was activated in this milestone."
+    }
+  },
+  "operational_runs": {
+    "market_data": {
+      "runs": 2,
+      "status": "PARTIAL",
+      "provider_fetch_failures": 0,
+      "normalization_rejections": 0
+    },
+    "corporate_actions": {
+      "runs": 2,
+      "status": "PARTIAL",
+      "reason": "Actions remain unverified / DATA_CHECK"
+    },
+    "fx": {
+      "complete_runs": 4,
+      "failed_runs": 1,
+      "failed_code": "NO_FX_RESPONSES",
+      "replayed_successfully": true
+    },
+    "reported_fundamentals": {
+      "runs": 1,
+      "status": "BLOCKED",
+      "failure_code": "MISSING_SEC_USER_AGENT"
+    },
+    "source_documents": {
+      "runs": 1,
+      "status": "BLOCKED",
+      "failure_code": "MISSING_SEC_USER_AGENT"
+    },
+    "consensus_estimates": {
+      "runs": 1,
+      "status": "BLOCKED",
+      "failure_code": "MISSING_FMP_API_KEY"
+    },
+    "attempt_status_totals": {
+      "SUCCEEDED": 4,
+      "PARTIAL": 4,
+      "FAILED": 1,
+      "BLOCKED": 3
+    },
+    "unattended_schedule_enabled": false
+  },
+  "preserved_domains": {
+    "accepted_model_revisions_changed": false,
+    "model_assumptions_changed": false,
+    "holdings_or_targets_changed": false,
+    "lifecycle_changed": false,
+    "ranking_or_execution_history_changed": false,
+    "historical_price_or_fx_observations_overwritten": false
+  },
+  "estimate_momentum": {
+    "status": "UNAVAILABLE",
+    "reasons": [
+      "No FMP primary stream or provider observations.",
+      "Legacy estimates are DATA_CHECK and lack sufficient absolute fiscal-period and point-in-time coverage.",
+      "A newly fetched current estimate cannot be represented as historical consensus."
+    ]
+  },
+  "next_actions": [
+    "Configure SEC_USER_AGENT locally with a monitored contact email, then run bounded SEC fundamentals and submissions ingestion for reviewed mappings.",
+    "If licensed FMP access is available, configure FMP_API_KEY locally, add evidence-backed mappings, and begin point-in-time capture; do not backfill current values as history.",
+    "Resolve the ten exact Watchlist listing identities before seeking quotes for them.",
+    "Keep Yahoo corporate-action facts in DATA_CHECK until independently verified against issuer or exchange sources.",
+    "Add jurisdiction-specific primary-source adapters only after prioritizing active non-US Portfolio issuers and source feasibility."
+  ],
+  "verification": {
+    "npm_run_check": {
+      "status": "PASS",
+      "frontend_tests_passed": 88,
+      "backend_tests_passed": 232,
+      "lint_format_typecheck_contracts_build": "PASS"
+    },
+    "postgres_integration_tests": {
+      "status": "PASS",
+      "passed": 43,
+      "isolated_test_database": true
+    },
+    "browser_tests": {
+      "default_suite_passed": 24,
+      "default_suite_skipped": 10,
+      "live_frontend_api_postgres_connectivity_desktop_mobile_passed": 2,
+      "live_listing_market_responsiveness_desktop_mobile_passed": 2
+    },
+    "alembic_check": "PASS_NO_NEW_MIGRATIONS_REQUIRED",
+    "live_api_readiness": "database connected; schema current",
+    "focused_provider_normalization_ingestion_tests_passed": 25,
+    "current_database_coverage_query": "PASS"
+  },
+  "phase_6_11_started": false
+}

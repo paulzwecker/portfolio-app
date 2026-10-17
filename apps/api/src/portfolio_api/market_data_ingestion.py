@@ -66,6 +66,7 @@ INSERT_CHUNK_SIZE = 1000
 
 def active_market_listings(
     session: Session,
+    company_ids: set[UUID] | None = None,
 ) -> tuple[list[tuple[Listing, Security, Company]], set[UUID]]:
     lifecycle = {
         event.company_id: event.new_state
@@ -103,7 +104,39 @@ def active_market_listings(
         if (company is not None and lifecycle.get(company.id) in {"PORTFOLIO", "WATCHLIST"})
         or listing.id in held_ids
     ]
+    if company_ids is not None:
+        selected = [
+            (listing, security, company)
+            for listing, security, company in selected
+            if company is not None and company.id in company_ids
+        ]
     return selected, held_ids
+
+
+def active_companies_without_listing_for_scope(
+    active_companies: dict[UUID, tuple[str, str]],
+    company_ids_with_listing: set[UUID],
+    *,
+    company_scope: set[UUID] | None = None,
+) -> list[dict[str, str]]:
+    """Return missing-listing issues only for companies covered by this ingestion scope."""
+
+    scoped_companies = (
+        active_companies
+        if company_scope is None
+        else {
+            company_id: identity
+            for company_id, identity in active_companies.items()
+            if company_id in company_scope
+        }
+    )
+    return [
+        {"company_id": str(company_id), "company": name, "lifecycle": lifecycle}
+        for company_id, (name, lifecycle) in sorted(
+            scoped_companies.items(), key=lambda item: item[1][0]
+        )
+        if company_id not in company_ids_with_listing
+    ]
 
 
 def portfolio_fx_requirements(session: Session) -> tuple[str | None, set[tuple[str, str]]]:
@@ -388,7 +421,16 @@ def _fx_batch_plan(
                 else observation.provider_symbol,
                 "source_ref": observation.source_ref,
                 "actor": "SYSTEM",
-                "reason": f"Yahoo {observation.provider_symbol} dated observed exchange rate",
+                "reason": (
+                    f"Yahoo {observation.provider_symbol} observed "
+                    f"{observation.provider_base_currency}/{observation.provider_quote_currency} "
+                    + (
+                        "rate inverted to canonical "
+                        f"{observation.base_currency}/{observation.quote_currency}"
+                        if observation.inverted
+                        else "dated exchange rate"
+                    )
+                ),
                 "batch_id": batch_id,
             }
             for observation in facts.observations
@@ -489,10 +531,11 @@ async def build_provider_import(
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
     scope: str = "active",
     listing_keys: set[tuple[str, str]] | None = None,
+    company_ids: set[UUID] | None = None,
     fx_pairs: set[tuple[str, str]] | None = None,
     corporate_action_overlap_days: int = DEFAULT_CORPORATE_ACTION_OVERLAP_DAYS,
 ) -> dict[str, Any]:
-    selected, held_ids = active_market_listings(session)
+    selected, held_ids = active_market_listings(session, company_ids)
     selection_issues: list[dict[str, str]] = []
     if listing_keys is not None:
         selected_by_key = {
@@ -519,19 +562,18 @@ async def build_provider_import(
         for company in session.scalars(select(Company))
         if company.id in company_lifecycle
         and company_lifecycle[company.id] in {"PORTFOLIO", "WATCHLIST"}
+        and (company_ids is None or company.id in company_ids)
     }
     active_company_ids_with_listing = {
         company.id
         for _, _, company in selected
         if company is not None and company.id in active_companies
     }
-    active_companies_without_listing = [
-        {"company_id": str(company_id), "company": name, "lifecycle": state}
-        for company_id, (name, state) in sorted(
-            active_companies.items(), key=lambda item: item[1][0]
-        )
-        if company_id not in active_company_ids_with_listing
-    ]
+    active_companies_without_listing = active_companies_without_listing_for_scope(
+        active_companies,
+        active_company_ids_with_listing,
+        company_scope=company_ids,
+    )
     listing_maps: dict[UUID, YahooListingMapping] = {}
     unresolved: list[dict[str, str]] = []
     for listing, security, company in selected:
@@ -866,9 +908,23 @@ def apply_provider_import(session: Session, report: dict[str, Any]) -> dict[str,
                 "inserted": inserted,
             }
         )
-    report["status"] = "APPLIED"
+    report["status"] = "PARTIAL" if _has_import_gaps(report) else "APPLIED"
     report["persistence"] = {"batches": batch_results, "inserted_totals": totals}
     return report
+
+
+def _has_import_gaps(report: dict[str, Any]) -> bool:
+    """Whether a provider import applied with unresolved subjects or rejected data."""
+
+    return bool(
+        report.get("unresolved_listings")
+        or report.get("provider_fetch_failures")
+        or report.get("unmapped_fx_pairs")
+        or report.get("fx_fetch_failures")
+        or report.get("selection_issues")
+        or any(batch.get("rejected_subjects") for batch in report.get("market_data_batches", []))
+        or any(batch.get("rejected_pairs") for batch in report.get("fx_batches", []))
+    )
 
 
 def _bulk_insert_rows(
@@ -961,16 +1017,7 @@ def run_cli(argv: list[str] | None = None) -> int:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(output + "\n", encoding="utf-8")
     print(output)
-    gaps = (
-        report.get("unresolved_listings")
-        or report.get("provider_fetch_failures")
-        or report.get("unmapped_fx_pairs")
-        or report.get("fx_fetch_failures")
-        or report.get("selection_issues")
-        or any(batch.get("rejected_subjects") for batch in report.get("market_data_batches", []))
-        or any(batch.get("rejected_pairs") for batch in report.get("fx_batches", []))
-    )
-    return 0 if not gaps else 2
+    return 2 if _has_import_gaps(report) else 0
 
 
 if __name__ == "__main__":

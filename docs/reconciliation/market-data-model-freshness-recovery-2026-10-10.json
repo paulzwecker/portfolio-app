@@ -1,0 +1,215 @@
+{
+  "report_version": "1.0.0",
+  "milestone": "Market Data & Model Freshness Recovery",
+  "reviewed_at_utc": "2026-10-10T18:23:07Z",
+  "database": "canonical local PostgreSQL",
+  "provider_diagnosis": {
+    "provider": "YAHOO_FINANCE",
+    "transport": "urllib.request.urlopen honors standard proxy variables",
+    "root_cause": "HTTP_PROXY, HTTPS_PROXY and ALL_PROXY point to a non-listening http://127.0.0.1:9; the proxy refuses connections with Windows error 10061.",
+    "direct_endpoint_check": {
+      "query1.finance.yahoo.com": "HTTP 200 when bypassing the dead proxy",
+      "query2.finance.yahoo.com": "HTTP 200 when bypassing the dead proxy"
+    },
+    "classification": "LOCAL_PROXY_CONFIGURATION",
+    "alternate_provider_required": false,
+    "ongoing_configuration": "Process-scoped NO_PROXY for query1.finance.yahoo.com and query2.finance.yahoo.com is documented; general proxy behavior is preserved."
+  },
+  "market_coverage": {
+    "portfolio_company_listings": {
+      "total": 21,
+      "fresh_before": 5,
+      "stale_before": 16,
+      "fresh_after": 21,
+      "stale_after": 0
+    },
+    "portfolio_all_held_listings": {
+      "total": 22,
+      "includes_standalone": "SPYY · ETR · EUR",
+      "fresh_before": 6,
+      "stale_before": 16,
+      "fresh_after": 22,
+      "stale_after": 0
+    },
+    "watchlist": {
+      "companies": 71,
+      "mapped_listings": 61,
+      "unmapped_companies": 10,
+      "fresh_mapped_listings_before": 13,
+      "stale_mapped_listings_before": 48,
+      "fresh_mapped_listings_after": 18,
+      "stale_mapped_listings_after": 43,
+      "refreshed_exact_listings": [
+        "NASDAQ:AXON",
+        "NYSE:FIX",
+        "NYSE:RBRK",
+        "NYSE:TOST",
+        "NYSE:VEEV"
+      ]
+    },
+    "ingestion": {
+      "portfolio_status": "APPLIED",
+      "portfolio_exact_listing_mappings": 22,
+      "portfolio_fetch_failures": 0,
+      "portfolio_price_observations_inserted": 195,
+      "portfolio_fx_observations_inserted": 4,
+      "portfolio_corporate_actions_inserted": 1,
+      "watchlist_status": "APPLIED",
+      "watchlist_exact_listing_mappings": 5,
+      "watchlist_fetch_failures": 0,
+      "watchlist_price_observations_inserted": 31,
+      "watchlist_fx_observations_inserted": 0,
+      "watchlist_corporate_actions_inserted": 0
+    },
+    "idempotent_replay": {
+      "listing": "NASDAQ:GOOGL",
+      "status": "APPLIED",
+      "price_observations_inserted": 0,
+      "fx_observations_inserted": 0,
+      "corporate_actions_inserted": 0,
+      "raw_payloads_retained": 3
+    },
+    "fx": {
+      "new_pairs": ["USD/EUR", "DKK/EUR"],
+      "new_dated_rows": 4,
+      "new_observation_effective_date": "2026-10-09",
+      "portfolio_cash_gap": "USD cash cannot be valued against the 2026-10-04 holdings snapshot without violating its as-of/freshness rules."
+    }
+  },
+  "price_dependency_findings": {
+    "portfolio_valuation": "Exact held-listing canonical quote, freshness and dated FX; no workbook/model-reference fallback.",
+    "accepted_native_revision": "Immutable output retains its original accepted quote observation and calculation.",
+    "current_native_return": "Read-only deterministic recalculation from accepted assumptions and the exact eligible current listing quote; does not create a revision.",
+    "legacy_output_snapshot": "Historical evidence only; NOT_RETAINED share-price basis cannot be used as a current quote or recalculated without accepted inputs.",
+    "portfolio_rank": "Recomputed preview uses current native calculations and portfolio context.",
+    "watchlist_rank": "Recomputed preview uses current native calculations but preserves legacy method/currency/completeness exclusions.",
+    "execution_pace": "Recomputed preview uses the current native calculation and exact listing; persisted history unchanged.",
+    "dashboard_and_company_ui": "Render canonical API values; do not calculate or select prices in the frontend."
+  },
+  "model_reference_price_audit": {
+    "legacy_workbook_price_used_as_live_quote": false,
+    "accepted_revision_or_output_overwritten": false,
+    "revision_created_for_market_move": false,
+    "example": {
+      "company": "Alphabet",
+      "listing": "NASDAQ:GOOGL",
+      "accepted_reference_price_usd": "338.24",
+      "current_quote_usd": "351.66",
+      "current_calculation_method": "Accepted UFCF DCF revision recalculated at current quote; accepted output and history preserved."
+    }
+  },
+  "native_current_return_availability": {
+    "portfolio": {
+      "before": "6/9 accepted native outputs had fresh reference-price status; 3/9 were stale according to the Phase 6 readiness report.",
+      "after": "9/9 current native calculations have COMPLETE outputs, numeric Expected IRR and FRESH exact-listing quote."
+    },
+    "watchlist": {
+      "before": "1/5 native models had a non-stale listing quote; 4/5 were stale according to the Phase 6 readiness report.",
+      "after": "5/5 current native calculations have COMPLETE outputs, numeric Expected IRR and FRESH exact-listing quote."
+    }
+  },
+  "portfolio_valuation": {
+    "holdings_snapshot_effective_at": "2026-10-04T20:53:02Z",
+    "holdings_snapshot_age_at_review_days": 6,
+    "holdings_snapshot_modified": false,
+    "target_revision_modified": false,
+    "individual_company_positions_valued": "21/21",
+    "standalone_position_valued": "1/1",
+    "portfolio_total_status": "INCOMPLETE_HOLDINGS",
+    "aggregate_gap": "cash:USD / FX_UNAVAILABLE; the holdings snapshot is older than the five-day freshness window and newer FX cannot be backdated to it.",
+    "current_weights": "UNAVAILABLE",
+    "unauthored_targets": [
+      "AMD",
+      "Celsius Holdings",
+      "Hims & Hers",
+      "MSCI Inc.",
+      "Novo Nordisk"
+    ]
+  },
+  "decision_preview": {
+    "as_of": "2026-10-10T18:19:29Z",
+    "persisted": false,
+    "latest_persisted_runs_after_preview": {
+      "portfolio_rank": "52ffc6ae-2825-4cad-9f3e-a35e93bf0d80",
+      "watchlist_rank": "5b719264-e005-47e6-b1a7-b9330be4b411",
+      "execution_pace": "085e9098-b526-4827-8a40-c9b39215b2ba"
+    },
+    "portfolio_rank": {
+      "before": {
+        "ranked": 0,
+        "portfolio_companies": 21,
+        "data_check": 16,
+        "inputs_unavailable": 5
+      },
+      "after": {
+        "ranked": 0,
+        "portfolio_companies": 21,
+        "data_check": 16,
+        "inputs_unavailable": 5
+      },
+      "blockers": [
+        "Stale holdings snapshot and USD cash FX gap prevent current weights for 16 companies.",
+        "Five companies lack an authored target."
+      ]
+    },
+    "watchlist_rank": {
+      "before": {
+        "ranked": 0,
+        "watchlist_companies": 71,
+        "data_check": 55,
+        "inputs_unavailable": 16
+      },
+      "after": {
+        "ranked": 0,
+        "watchlist_companies": 71,
+        "data_check": 59,
+        "inputs_unavailable": 12
+      },
+      "blockers": [
+        "23 unclassified legacy return methods",
+        "31 unknown legacy currencies",
+        "12 missing numeric legacy Expected IRRs",
+        "Incompatible/incomplete return cohort",
+        "10 unmapped exact listings"
+      ]
+    },
+    "execution_pace": {
+      "before": { "available": 0, "portfolio_review": 21 },
+      "after": { "available": 0, "portfolio_review": 21 },
+      "blockers": [
+        "Sixteen require complete current weights",
+        "Five lack explicit accepted targets"
+      ]
+    },
+    "transaction_rolled_back": true
+  },
+  "verification": {
+    "npm_run_check": "PASS",
+    "frontend_unit_tests": "88 passed",
+    "backend_tests": "229 passed",
+    "lint_format_typecheck_contracts_build": "PASS",
+    "alembic_check": "PASS; no new upgrade operations detected",
+    "browser_tests": "24 passed, 10 skipped; database/API-dependent browser cases skipped by suite configuration",
+    "live_local_api_and_postgresql_queries": "PASS for quote coverage, current native model recalculation and rolled-back rank/execution previews",
+    "historical_and_revision_integrity_regressions": "PASS in backend tests"
+  },
+  "state_mutations": {
+    "market_data": "New Yahoo provider observations and raw payload evidence were appended.",
+    "accepted_model_revisions": "UNCHANGED",
+    "model_assumptions": "UNCHANGED",
+    "holdings": "UNCHANGED",
+    "targets": "UNCHANGED",
+    "lifecycle_scores": "UNCHANGED",
+    "ranking_history": "UNCHANGED",
+    "execution_history": "UNCHANGED"
+  },
+  "remaining_blockers": [
+    "Authoritative current holdings/cash snapshot required before weights can be considered current.",
+    "Dated FX must be eligible for the new holdings snapshot cutoff.",
+    "Explicit target evidence remains missing for AMD, Celsius Holdings, Hims & Hers, MSCI Inc. and Novo Nordisk.",
+    "Ten Watchlist companies still lack exact listing mappings.",
+    "Watchlist returns remain unclassifiable or non-comparable where legacy method, currency or numeric output is missing.",
+    "Future Yahoo ingestion needs the documented NO_PROXY setting or a corrected local proxy; no daily schedule was added."
+  ],
+  "phase_7_started": false
+}

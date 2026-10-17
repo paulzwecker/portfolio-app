@@ -102,46 +102,62 @@ All domain endpoints have the `/v1` prefix. Swagger at `/docs` exposes exact req
 and response schemas. Unknown records return 404, conflicts 409, invalid contracts
 422, and database failures a sanitized 503.
 
-| Method     | Path                                                                  | Operation                                                                                 |
-| ---------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| GET        | `/universe?lifecycle=...&search=...`                                  | Query companies and current lifecycle; literal name/ticker search                         |
-| POST       | `/companies`                                                          | Create issuer identity, initially unassigned                                              |
-| GET        | `/companies/{company_id}`                                             | Identity, listings, lifecycle, holding/target and API-computed company allocation context |
-| POST       | `/companies/{company_id}/securities`                                  | Add instrument/share-class identity                                                       |
-| POST       | `/securities/{security_id}/listings`                                  | Add venue quotation identity                                                              |
-| POST       | `/companies/{company_id}/lifecycle-transitions`                       | Record an explicit, attributable decision                                                 |
-| GET / POST | `/portfolios`                                                         | Read/create the logical portfolio                                                         |
-| GET        | `/portfolios/{portfolio_id}/overview`                                 | Current observed holdings and accepted targets                                            |
-| GET / POST | `/portfolios/{portfolio_id}/holding-snapshots`                        | Read/append observations with native cash                                                 |
-| GET / POST | `/portfolios/{portfolio_id}/target-revisions`                         | Read revisions/create a draft                                                             |
-| POST       | `/portfolios/{portfolio_id}/target-revisions/{revision_id}/accept`    | Accept and freeze a valid draft                                                           |
-| GET        | `/companies/{company_id}/scores/current`                              | Current canonical score assessments                                                       |
-| GET        | `/companies/{company_id}/scores/history`                              | Append-only score assessment history                                                      |
-| POST       | `/companies/{company_id}/scores`                                      | Create a new score assessment                                                             |
-| GET        | `/score-definitions`                                                  | Versioned score metadata                                                                  |
-| GET        | `/universe/score-summary`                                             | Current score coverage for the universe                                                   |
-| GET        | `/companies/{company_id}/model-outputs/current`                       | Current normalized imported model outputs and availability                                |
-| GET        | `/companies/{company_id}/model-outputs/history`                       | Current and immutable historical model-output snapshots                                   |
-| GET        | `/companies/{company_id}/temporal-alignment`                          | Point-in-time annual Revenue, selected consensus, later actual and market return          |
-| GET        | `/universe/model-output-summary`                                      | Current model-output coverage for the universe                                            |
-| GET / POST | `/companies/{company_id}/financial-models`                            | List or create an accepted canonical model                                                |
-| GET        | `/financial-models/{model_id}`                                        | Current canonical model, revision history and derived output                              |
-| GET        | `/financial-models/{model_id}/contract`                               | Export versioned portable model state for external authoring                              |
-| POST       | `/financial-models/{model_id}/contract/preview`                       | Validate base revision and show a non-mutating import diff                                |
-| POST       | `/financial-models/{model_id}/contract/import`                        | Revalidate under lock and append an external edit as an immutable revision                |
-| GET        | `/financial-models/{model_id}/revisions`                              | Immutable revision summaries                                                              |
-| GET        | `/financial-models/{model_id}/revisions/{revision_id}`                | Full historical revision with inputs, projections and outputs                             |
-| POST       | `/financial-models/{model_id}/revisions`                              | Validate, recalculate and append a revision (stale base returns 409)                      |
-| GET / POST | `/companies/{company_id}/canonical-financial-models`                  | List or create supported owner-cash-flow and residual-income models                       |
-| POST       | `/companies/{company_id}/canonical-financial-models/{method}/preview` | Calculate an initial method-specific revision without persisting it                       |
-| GET        | `/canonical-financial-models/{model_id}`                              | Read extended model state and immutable method revision history                           |
-| GET / POST | `/canonical-financial-models/{model_id}/contract[/preview             | /import]`                                                                                 | Export, preview and accept portable v2 external model revisions |
-| POST       | `/canonical-financial-models/{model_id}/{method}/revisions[/preview]` | Preview or append an owner-cash-flow/residual-income revision against its current base    |
-| GET        | `/ranking-definitions`                                                | Versioned ranking semantics and input availability                                        |
-| GET        | `/universe/ranking-summary`                                           | Current ranking snapshot states for the universe                                          |
-| GET        | `/companies/{company_id}/rankings`                                    | Current ranking states and company history                                                |
-| GET / POST | `/ranking-runs`                                                       | Read prior runs or calculate and append an immutable ranked/unavailable snapshot          |
-| GET        | `/ranking-runs/{run_id}`                                              | Inspect the immutable run and all company entries                                         |
+| Method     | Path                                                                             | Operation                                                                                 |
+| ---------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| GET        | `/universe?lifecycle=...&search=...`                                             | Query companies and current lifecycle; literal name/ticker search                         |
+| POST       | `/companies`                                                                     | Create issuer identity, initially unassigned                                              |
+| GET        | `/companies/{company_id}`                                                        | Identity, listings, lifecycle, holding/target and API-computed company allocation context |
+| POST       | `/companies/{company_id}/securities`                                             | Add instrument/share-class identity                                                       |
+| POST       | `/securities/{security_id}/listings`                                             | Add venue quotation identity                                                              |
+| POST       | `/companies/{company_id}/lifecycle-transitions`                                  | Record an explicit, attributable decision                                                 |
+| GET / POST | `/portfolios`                                                                    | Read/create the logical portfolio                                                         |
+| GET        | `/portfolios/{portfolio_id}/overview`                                            | Current observed holdings and accepted targets                                            |
+| GET / POST | `/portfolios/{portfolio_id}/holding-snapshots`                                   | Read/append observations with native cash                                                 |
+| GET / POST | `/portfolios/{portfolio_id}/target-revisions`                                    | Read revisions/create a draft                                                             |
+| POST       | `/portfolios/{portfolio_id}/target-revisions/{revision_id}/accept`               | Accept and freeze a valid draft                                                           |
+| GET        | `/candidate-pipeline?search=...`                                                 | Candidate queue with research state, persistent priority, and Research Rank               |
+| GET        | `/companies/{company_id}/candidate-pipeline`                                     | Pipeline snapshot history and same-company evidence choices                               |
+| POST       | `/companies/{company_id}/candidate-pipeline-revisions`                           | Append a complete, evidence-linked Candidate research snapshot                            |
+| GET        | `/research-triggers?as_of=...&processing_state=...`                              | Read source-event trigger captures with provenance and queue state                        |
+| POST       | `/research-triggers/refresh?lookback_days=...`                                   | Capture eligible canonical events idempotently and link them to queue work                |
+| GET        | `/research-queue?lifecycle=...&search=...&include_complete=...`                  | Derive active research reviews from canonical state and show open/completed conditions    |
+| GET        | `/research-queue/history?limit=...`                                              | Read immutable review-completion snapshots                                                |
+| POST       | `/research-queue/{task_id}/complete`                                             | Complete a current queue condition; stale condition fingerprints return 409               |
+| GET        | `/companies/{company_id}/scores/current`                                         | Current canonical score assessments                                                       |
+| GET        | `/companies/{company_id}/scores/history`                                         | Append-only score assessment history                                                      |
+| POST       | `/companies/{company_id}/scores`                                                 | Create a new score assessment                                                             |
+| GET        | `/score-definitions`                                                             | Versioned score metadata                                                                  |
+| GET        | `/universe/score-summary`                                                        | Current score coverage for the universe                                                   |
+| GET        | `/companies/{company_id}/model-outputs/current`                                  | Current normalized imported model outputs and availability                                |
+| GET        | `/companies/{company_id}/model-outputs/history`                                  | Current and immutable historical model-output snapshots                                   |
+| GET        | `/companies/{company_id}/temporal-alignment`                                     | Point-in-time annual Revenue, selected consensus, later actual and market return          |
+| GET        | `/companies/{company_id}/forecast-accuracy`                                      | Source-specific historical forecast errors against later reported facts                   |
+| GET        | `/universe/model-output-summary`                                                 | Current model-output coverage for the universe                                            |
+| GET / POST | `/companies/{company_id}/financial-models`                                       | List or create an accepted canonical model                                                |
+| GET        | `/financial-models/{model_id}`                                                   | Current canonical model, revision history and derived output                              |
+| GET        | `/financial-models/{model_id}/contract`                                          | Export versioned portable model state for external authoring                              |
+| POST       | `/financial-models/{model_id}/contract/preview`                                  | Validate base revision and show a non-mutating import diff                                |
+| POST       | `/financial-models/{model_id}/contract/import`                                   | Revalidate under lock and append an external edit as an immutable revision                |
+| GET        | `/google-sheets-sync/status`                                                     | Read local connector configuration and last sync state                                    |
+| POST       | `/google-sheets-sync/connection-test`                                            | Test read-only access to the configured workbook and contract inbox                       |
+| POST       | `/google-sheets-sync/check`                                                      | Read the explicit model-contract inbox and capture new candidates                         |
+| GET / POST | `/google-sheets-sync/candidates`                                                 | Review candidate queue, preview, explicitly accept or reject                              |
+| GET        | `/google-sheets-sync/runs`                                                       | Read-only sync run and failure history                                                    |
+| GET / POST | `/google-sheets-research-sync/{status,connection-test,check,runs,candidates}`    | Discover and review separate agent research and thesis contract inboxes                   |
+| POST       | `/google-sheets-research-sync/candidates/{candidate_id}/{preview,accept,reject}` | Validate, preview and explicitly record a research/thesis review decision                 |
+| GET        | `/financial-models/{model_id}/revisions`                                         | Immutable revision summaries                                                              |
+| GET        | `/financial-models/{model_id}/revisions/{revision_id}`                           | Full historical revision with inputs, projections and outputs                             |
+| POST       | `/financial-models/{model_id}/revisions`                                         | Validate, recalculate and append a revision (stale base returns 409)                      |
+| GET / POST | `/companies/{company_id}/canonical-financial-models`                             | List or create supported owner-cash-flow and residual-income models                       |
+| POST       | `/companies/{company_id}/canonical-financial-models/{method}/preview`            | Calculate an initial method-specific revision without persisting it                       |
+| GET        | `/canonical-financial-models/{model_id}`                                         | Read extended model state and immutable method revision history                           |
+| GET / POST | `/canonical-financial-models/{model_id}/contract[/preview                        | /import]`                                                                                 | Export, preview and accept portable v2 external model revisions |
+| POST       | `/canonical-financial-models/{model_id}/{method}/revisions[/preview]`            | Preview or append an owner-cash-flow/residual-income revision against its current base    |
+| GET        | `/ranking-definitions`                                                           | Versioned ranking semantics and input availability                                        |
+| GET        | `/universe/ranking-summary`                                                      | Current ranking snapshot states for the universe                                          |
+| GET        | `/companies/{company_id}/rankings`                                               | Current ranking states and company history                                                |
+| GET / POST | `/ranking-runs`                                                                  | Read prior runs or calculate and append an immutable ranked/unavailable snapshot          |
+| GET        | `/ranking-runs/{run_id}`                                                         | Inspect the immutable run and all company entries                                         |
 
 Frontend presentation performs no portfolio valuation calculations. The API emits
 native position values with fresh listing quotes. Base-currency totals, current
@@ -153,8 +169,8 @@ ADR identity does not imply a conversion ratio.
 
 Portfolio Rank implements the documented Portfolio Score for positive current/target
 portfolio companies and requires complete dated holdings, targets, prices/FX, four
-assessed score dimensions, and model inputs. Native shareholder-cash-flow and legacy
-normalized Expected IRR are never mixed. Watchlist Rank uses Expected IRR for explicit
+assessed score dimensions, and model inputs. Versioned return methodology metadata
+governs comparison of native and legacy Expected IRR. Watchlist Rank uses Expected IRR for explicit
 WATCHLIST companies with the same return-methodology cohort separation. Research Rank
 uses only explicit CANDIDATE lifecycle, Candidate High/Low tier, and persistent
 deep-dive seed; Expected IRR and score completeness are not inputs. Missing, stale, or

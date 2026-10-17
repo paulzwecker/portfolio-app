@@ -60,7 +60,10 @@ The API selects a point-in-time portfolio context and snapshots:
   latest observation date;
 - lifecycle as known at the run's `as_of` cutoff for traceability.
 
-The rule first rejects incomplete critical data for review. It then checks
+The rule first rejects incomplete critical data for review. A stale holdings
+confirmation is an independent critical-data issue even when current quotes and FX
+can mark that snapshot: current weights and target gaps may no longer describe the
+positions actually held. It then checks
 model reassessment/data-invalid flags and the legacy 0.3% absolute allocation
 hold band. For an underweight company, below-hurdle Expected IRR and rich value
 cap additions; negative revisions limit the pace; discount, at least 15%
@@ -69,6 +72,18 @@ can support faster building. At/above target, the legacy zero-target exit and
 positive-target trim branches apply. Weighted-upside zones use the workbook
 thresholds: 25%, 10%, -10% and -25%. Price-regime labels are mapped only from
 the documented source vocabulary; an unknown label requires review.
+
+For the market-regime input, a fresh, passing, mapped legacy source label remains
+preferred. When that label is missing, stale or unmapped, Execution Pace may use
+the exact valuation listing's fresh canonical `trend_state` from
+`split-adjusted-price-history-v1`. This is the existing documented trend measure
+computed from clean split-adjusted closes with at least 252 sessions; it is
+not an inferred broad regime or an `EXTENDED` label. The snapshot records the
+canonical analytics method/date as its source and states that the trend fallback
+was used. Analytics older than five days, partial windows or missing trend values
+remain `REVIEW`. This fallback only supplies the rule's existing trend vocabulary;
+it does not alter thresholds or create a pace where another critical input is
+unavailable.
 
 The application does not carry forward the workbook's hidden/fallback 9%
 hurdle when a canonical hurdle is missing. It returns `REVIEW`, because a
@@ -84,9 +99,10 @@ gap, valuation and price regime) do not require an irrelevant estimate signal.
 The current valuation zone is calculated using Weighted Fair Value against the
 fresh exact-listing quote. The quote must share the model currency. The
 Expected-IRR source price may not predate a later exact-listing quote. Price
-regime and market quote must be fresh within five calendar days. Incomplete
+regime/trend and market quote must be fresh within five calendar days. Incomplete
 portfolio market/FX valuation, multiple model/listing candidates, model output
-quality issues, and unmapped regime labels all prevent an available pace.
+quality issues, and an unavailable trend/regime input (including an unmapped
+source label without a fresh canonical trend fallback) prevent an available pace.
 
 ## History and ownership
 
@@ -94,6 +110,11 @@ quality issues, and unmapped regime labels all prevent an available pace.
 company decision stores its complete versioned input snapshot, source record
 IDs, effective/observed dates, and rationale. API queries expose the latest
 decision and history; historical runs are never recomputed from current state.
+
+The backend `preview_execution_pace` builder returns the same point-in-time
+decisions without inserting a run or decision row. `create_execution_pace_run`
+persists that builder's result only when an explicit run is requested, so
+eligibility audits and previews do not need a write-and-rollback transaction.
 
 The calculation writes only these execution-decision records. It cannot alter
 holdings, target revisions, lifecycle, model assumptions, scores, risk, quality,

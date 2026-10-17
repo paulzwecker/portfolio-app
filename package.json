@@ -13,9 +13,11 @@
   "packageManager": "npm@11.9.0",
   "scripts": {
     "setup": "node scripts/setup.mjs",
-    "dev": "concurrently --kill-others --names api,web \"npm:dev:api\" \"npm:dev:web\"",
+    "dev": "concurrently --kill-others --names api,web,market-data,operations \"npm:dev:api\" \"npm:dev:web\" \"npm:dev:market-data\" \"npm:dev:operations\"",
     "dev:api": "node scripts/uv.mjs run --locked --project apps/api uvicorn portfolio_api.main:app --host 127.0.0.1 --port 8000 --reload --reload-dir apps/api/src",
     "dev:web": "node scripts/web.mjs dev",
+    "dev:market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_startup",
+    "dev:operations": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.recurring_operations",
     "build": "npm run build --workspace @portfolio/web",
     "start:web": "node scripts/web.mjs start",
     "db:migrate": "node scripts/uv.mjs run --locked --project apps/api alembic -c apps/api/alembic.ini upgrade head",
@@ -27,6 +29,7 @@
     "db:import-native-models": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_input_migration",
     "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",
     "db:sync-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_ingestion",
+    "db:sync-google-sheets": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.google_sheets_sync",
     "db:ingest-external-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.external_ingestion",
     "db:map-market-listings": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_mapping",
     "db:reconcile-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_reconciliation",
@@ -50,6 +53,8 @@
     "check": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run contracts:check && npm run build"
   },
   "devDependencies": {
+    "@neon/config": "^1.9.2",
+    "@neon/env": "^1.6.3",
     "concurrently": "10.0.5",
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.9"

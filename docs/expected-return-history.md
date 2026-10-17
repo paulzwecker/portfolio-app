@@ -41,11 +41,12 @@ Each history point identifies one of:
 - `IMPORTED_LEGACY_REVISION`: a retained legacy normalized-output snapshot.
 - `IMPORTED_CURRENT_CONTRACT`: an imported current-contract snapshot.
 
-Imported snapshots are not promoted to native model state. Native outputs use
-`NATIVE_METHOD_OUTPUT` semantics. Imported output fields use
-`LEGACY_NORMALIZED_FIELD` semantics: the source value is preserved, but this view
-does not claim that a legacy Expected IRR used the canonical shareholder-cash-flow
-IRR method. Model identity and methodology are shown where available. An imported
+Imported snapshots are not promoted to native model state. Both native and
+imported outputs expose versioned return methodology and classification state.
+Imported output fields use `LEGACY_NORMALIZED_FIELD` semantics: the source value is
+preserved, and only migration-evidenced model keys receive a method definition.
+Unclassified legacy return values remain explicit and are not eligible for method
+comparisons. Model identity and methodology are shown where available. An imported
 snapshot without a unique exact model-key-to-listing mapping has no inferred
 listing or market-price join.
 The history row also preserves the canonical actor and, for imported records, the
@@ -63,7 +64,9 @@ Prices use the exact valuation listing. The read model does not convert currenci
 or substitute another listing. A native revision retains its own calculated
 reference price and the linked raw quote context; a linked source quote that was
 not observable and recorded by the revision is marked unavailable for that
-point-in-time price context. Unknown observation timestamps, untrusted quality,
+point-in-time price context. A legacy output can have a classified return method
+while the exact quote used by that historical calculation is `NOT_RETAINED`.
+Unknown observation timestamps, untrusted quality,
 stale quotes, unknown currency, and currency mismatches remain explicit. Only
 comparable dated prices are plotted against fair value.
 The Company view groups selectable history series by both model identity and
@@ -86,7 +89,8 @@ query cutoff, not a live recalculation. Source snapshots and native outputs rema
 separate. Expected IRR attribution is a separate comparison operation described
 in [expected-return-attribution.md](expected-return-attribution.md); it does not
 change this history response or calculate realized investment return, ranking,
-or model quality.
+or model quality. The separate read-only return and signal diagnostics are defined
+in [decision-evaluation.md](decision-evaluation.md).
 
 Time coverage varies by company and by source. Imported rows with null effective
 dates can be seen in the history list but do not extend chart time coverage.

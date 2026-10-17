@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import select
@@ -13,6 +13,9 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services as ops
 from portfolio_api.domain.models import (
     Company,
+    DcfModelAssumptions,
+    DcfScenarioAssumptions,
+    DcfYearAssumption,
     FinancialModel,
     FinancialModelOutput,
     FinancialModelRevision,
@@ -33,6 +36,52 @@ from portfolio_api.portfolio_ranking import (
     calculate_portfolio_score,
     portfolio_score_positions,
 )
+
+
+def _add_dcf_revision_inputs(session: Session, revision_id: UUID) -> None:
+    session.add(
+        DcfModelAssumptions(
+            revision_id=revision_id,
+            base_revenue=Decimal("100"),
+            base_ebit_margin=Decimal("0.20"),
+            base_tax_rate=Decimal("0.25"),
+            base_da_to_revenue=Decimal("0.03"),
+            base_capex_to_revenue=Decimal("0.02"),
+            base_nwc_to_revenue=Decimal("0.04"),
+            net_cash_debt=Decimal("-5"),
+            diluted_shares=Decimal("10"),
+        )
+    )
+    for scenario, probability, terminal_growth, final_growth, initial_growth in (
+        ("BEAR", "0.20", "0.02", "0.02", "0.08"),
+        ("BASE", "0.60", "0.025", "0.04", "0.12"),
+        ("BULL", "0.20", "0.03", "0.06", "0.16"),
+    ):
+        scenario_row = DcfScenarioAssumptions(
+            revision_id=revision_id,
+            scenario=scenario,
+            probability=Decimal(probability),
+            terminal_growth=Decimal(terminal_growth),
+            year10_ufcf_growth=Decimal(final_growth),
+            rationale=f"{scenario} test assumptions.",
+        )
+        session.add(scenario_row)
+        session.flush()
+        for year in range(1, 6):
+            session.add(
+                DcfYearAssumption(
+                    scenario_id=scenario_row.id,
+                    forecast_year=year,
+                    revenue_growth=Decimal(initial_growth) - Decimal(year - 1) / 100,
+                    ebit_margin=Decimal("0.20"),
+                    tax_rate=Decimal("0.25"),
+                    da_to_revenue=Decimal("0.03"),
+                    capex_to_revenue=Decimal("0.02"),
+                    nwc_to_revenue=Decimal("0.04"),
+                    discount_rate=Decimal("0.10"),
+                )
+            )
+    session.flush()
 
 
 def _googl_inputs(*, lifecycle: str | None = "PORTFOLIO") -> PortfolioScoreInputs:
@@ -174,7 +223,7 @@ def test_portfolio_run_ranks_supported_native_cohort_without_mutating_allocation
         )
         assert holdings and target_revision and atlas_listing and northstar_listing
         as_of = datetime.now(UTC) + timedelta(seconds=20)
-        reference_time = holdings.effective_at
+        reference_time = as_of - timedelta(seconds=2)
         price_by_listing: dict[str, PriceObservation] = {}
         for listing in (atlas_listing, northstar_listing):
             price = PriceObservation(
@@ -211,6 +260,7 @@ def test_portfolio_run_ranks_supported_native_cohort_without_mutating_allocation
             )
         )
         db.flush()
+        assert q._fx_rate_details(db, "USD", "EUR", as_of, known_at=as_of)[0] == Decimal("0.90")
 
         model = FinancialModel(
             company_id=atlas.id,
@@ -238,6 +288,7 @@ def test_portfolio_run_ranks_supported_native_cohort_without_mutating_allocation
         db.add(revision)
         db.flush()
         model.current_revision_id = revision.id
+        _add_dcf_revision_inputs(db, revision.id)
         db.add(
             FinancialModelOutput(
                 revision_id=revision.id,
@@ -290,6 +341,11 @@ def test_portfolio_run_ranks_supported_native_cohort_without_mutating_allocation
         assert atlas_context.target_weight == Decimal("0.35")
         assert atlas_context.target_minus_current_gap is not None
         assert atlas_context.lifecycle == "PORTFOLIO"
+        assert atlas_context.model_source is not None
+        current_calculation = atlas_context.model_source.current_calculation
+        assert current_calculation is not None
+        assert current_calculation.price_observation_id == price_by_listing["ATLA"].id
+        assert atlas_context.expected_irr == current_calculation.expected_cash_flow_irr
         assert entries[northstar.id].status == RankingEntryStatus.INPUTS_UNAVAILABLE
         assert entries[northstar.id].position is None
         assert len(

@@ -1,0 +1,249 @@
+{
+  "milestone": "Decision Coverage & Integrity",
+  "date": "2026-10-10",
+  "database": "canonical local PostgreSQL",
+  "decision_runs": {
+    "source": "decision-coverage-integrity-2026-10-10",
+    "portfolio_rank": {
+      "before": {
+        "run_id": "ecce3252-df8f-4da2-a411-d5c331878dca",
+        "status": "UNAVAILABLE",
+        "entries": 219,
+        "RANKED": 0,
+        "DATA_CHECK": 16,
+        "INPUTS_UNAVAILABLE": 5,
+        "NOT_ELIGIBLE": 198
+      },
+      "after": {
+        "run_id": "52ffc6ae-2825-4cad-9f3e-a35e93bf0d80",
+        "as_of": "2026-10-10T00:11:14.427038+02:00",
+        "status": "UNAVAILABLE",
+        "entries": 219,
+        "RANKED": 0,
+        "DATA_CHECK": 16,
+        "INPUTS_UNAVAILABLE": 5,
+        "NOT_ELIGIBLE": 198,
+        "blockers": {
+          "incomplete_current_market_weights": 16,
+          "missing_authored_targets": 5
+        }
+      }
+    },
+    "watchlist_rank": {
+      "before": {
+        "run_id": "dfc9b27f-33d7-4f22-b477-50e49e008227",
+        "status": "UNAVAILABLE",
+        "entries": 219,
+        "RANKED": 0,
+        "DATA_CHECK": 59,
+        "INPUTS_UNAVAILABLE": 12,
+        "NOT_ELIGIBLE": 148
+      },
+      "after": {
+        "run_id": "5b719264-e005-47e6-b1a7-b9330be4b411",
+        "as_of": "2026-10-10T00:11:14.860936+02:00",
+        "status": "UNAVAILABLE",
+        "entries": 219,
+        "RANKED": 0,
+        "DATA_CHECK": 55,
+        "INPUTS_UNAVAILABLE": 16,
+        "NOT_ELIGIBLE": 148,
+        "blockers": {
+          "unclassified_legacy_methods": 23,
+          "unknown_legacy_currency": 31,
+          "stale_native_reference_price": 1,
+          "missing_numeric_expected_irr": 12,
+          "stale_native_listing_observation": 4
+        },
+        "status_transitions": {
+          "DATA_CHECK_to_INPUTS_UNAVAILABLE": 4,
+          "companies": [
+            "Axon Enterprise",
+            "Comfort Systems USA",
+            "Rubrik",
+            "Veeva Systems"
+          ],
+          "reason": "The latest run now selects their accepted native models; reference prices are stale."
+        }
+      }
+    },
+    "research_rank": {
+      "before": {
+        "run_id": "367b6e87-6a4a-4baa-a920-6e2c5f888896",
+        "status": "PARTIAL",
+        "RANKED": 96,
+        "INPUTS_UNAVAILABLE": 5,
+        "NOT_ELIGIBLE": 118
+      },
+      "after": {
+        "run_id": "f88fa8cb-aeeb-4143-b446-e61863d01b55",
+        "as_of": "2026-10-10T00:11:15.056367+02:00",
+        "status": "PARTIAL",
+        "RANKED": 96,
+        "INPUTS_UNAVAILABLE": 5,
+        "NOT_ELIGIBLE": 118,
+        "blocker": "Point-in-time lifecycle missing for five companies."
+      }
+    },
+    "execution_pace": {
+      "before": null,
+      "after": {
+        "run_id": "085e9098-b526-4827-8a40-c9b39215b2ba",
+        "as_of": "2026-10-10T00:11:15.128526+02:00",
+        "status": "UNAVAILABLE",
+        "decisions": 219,
+        "AVAILABLE": 0,
+        "REVIEW": 21,
+        "NOT_APPLICABLE": 198,
+        "review_blockers": {
+          "incomplete_current_holding_weights": 16,
+          "missing_explicit_targets": 5
+        }
+      }
+    }
+  },
+  "estimate_momentum": {
+    "before_available_portfolio_watchlist": 0,
+    "after_available_portfolio_watchlist": 0,
+    "portfolio": {
+      "companies": 21,
+      "INSUFFICIENT_HISTORY": 17,
+      "NO_MAPPING": 4,
+      "NO_DATA_freshness": 21
+    },
+    "watchlist": {
+      "companies": 71,
+      "INSUFFICIENT_HISTORY": 1,
+      "NO_MAPPING": 70,
+      "NO_DATA_freshness": 71
+    },
+    "legacy_observations": 67,
+    "legacy_observations_data_check": 67,
+    "latest_legacy_snapshot_date": "2026-09-12",
+    "fmp_api_key_configured": false
+  },
+  "reported_fundamentals": {
+    "portfolio_companies": 21,
+    "portfolio_observations": 0,
+    "watchlist_companies": 71,
+    "watchlist_observations": 0
+  },
+  "expected_return_history": {
+    "portfolio_companies_partial": 21,
+    "watchlist_companies_partial": 71,
+    "points": 273,
+    "point_sources": {
+      "IMPORTED_LEGACY_REVISION": 167,
+      "IMPORTED_CURRENT_CONTRACT": 92,
+      "NATIVE_MODEL_REVISION": 14
+    },
+    "methodology": {
+      "CLASSIFIED": 51,
+      "UNCLASSIFIED": 222
+    },
+    "share_price_basis": {
+      "CAPTURED": 14,
+      "NOT_RETAINED": 259
+    },
+    "native_revisions_per_company": {
+      "one": 14,
+      "zero": 78,
+      "more_than_one": 0
+    },
+    "attribution_first_last_status": {
+      "UNDATED": 91,
+      "NO_PAIR": 1,
+      "ATTRIBUTED": 0
+    }
+  },
+  "native_models": {
+    "portfolio": {
+      "native": 9,
+      "companies": 21,
+      "numeric_expected_irr": 9,
+      "model_price_fresh": 6,
+      "model_price_stale": 3,
+      "methods": {
+        "UFCF_ENTERPRISE_IRR": 7,
+        "UFCF_ENTERPRISE_HMODEL_IRR": 2
+      }
+    },
+    "watchlist": {
+      "native": 5,
+      "companies": 71,
+      "complete_numeric_fresh": 1,
+      "partial_without_numeric_stale": 4,
+      "methods": {
+        "OWNER_CASH_FLOW_EQUITY_IRR": 5
+      }
+    }
+  },
+  "portfolio_dashboard": {
+    "held_positions": 21,
+    "fresh_quotes": 5,
+    "stale_quotes": 16,
+    "positions_valued": 5,
+    "targets_authored": 16,
+    "current_weights_available": 0,
+    "valuation_status": "INCOMPLETE_PRICE_COVERAGE",
+    "target_currency": "EUR",
+    "unmapped_required_fx_pairs": 0,
+    "latest_usd_eur": "2026-10-09",
+    "latest_dkk_eur": "2026-10-09"
+  },
+  "listing_coverage": {
+    "watchlist_companies": 71,
+    "exact_listing_mapped": 61,
+    "without_exact_listing": 10,
+    "mapped_listing_observations_fresh": 13,
+    "mapped_listing_observations_stale": 48,
+    "unmapped_companies": [
+      "Accelleron Industries",
+      "BONESUPPORT Holding AB",
+      "Exosens",
+      "Fabrinet",
+      "INVISIO AB",
+      "Medistim ASA",
+      "Meta Platforms",
+      "Nova Ltd",
+      "Rheinmetall AG",
+      "VINCORION SE"
+    ]
+  },
+  "attention_center": {
+    "lookback_days": 30,
+    "raw_current_code_events_before_fix": 247,
+    "events_after_fix": 155,
+    "undated_bulk_import_events_suppressed": 92,
+    "event_types_after_fix": {
+      "RANK_CHANGE": 4,
+      "MODEL_REVISION": 14,
+      "MODEL_OUTPUT_IMPORT": 42,
+      "DATA_QUALITY": 88,
+      "PRICE_MOVE": 7
+    }
+  },
+  "provider_refresh": {
+    "provider": "YAHOO_FINANCE",
+    "mode": "dry-run",
+    "exact_portfolio_listings_requested": 19,
+    "verified_listing_mappings": 19,
+    "network_errors": 19,
+    "fx_refresh_due": false,
+    "fx_failures": 0,
+    "unresolved_mappings": 0,
+    "records_applied": 0,
+    "cause": "Local connection refused with Windows error 10061."
+  },
+  "verification": {
+    "npm_run_check": "PASS",
+    "web_tests": "87 passed",
+    "api_tests": "224 passed",
+    "database_backed_integration": "43 passed",
+    "database_migration_check": "PASS; no upgrade operations detected",
+    "contract_check": "PASS",
+    "production_build": "PASS",
+    "dashboard_attention_e2e": "4 passed across desktop and mobile",
+    "legacy_parity_tests": "PASS: Portfolio Rank, Watchlist Rank, Research Rank, Estimate Momentum, Execution Pace"
+  }
+}

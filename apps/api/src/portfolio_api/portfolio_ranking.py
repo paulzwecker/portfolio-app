@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from portfolio_api.current_model_calculation import current_native_model_calculation
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     Company,
@@ -32,9 +33,10 @@ from portfolio_api.domain.models import (
     Security,
 )
 from portfolio_api.market_data import FRESH_DAYS
+from portfolio_api.return_semantics import ReturnBasis, has_supported_return_methodology
 
 PORTFOLIO_SCORE_VERSION = "LEGACY_IRR_FIRST_ALLOCATION_V1"
-PORTFOLIO_RANK_CONTEXT_VERSION = "portfolio-rank-inputs-v1"
+PORTFOLIO_RANK_CONTEXT_VERSION = "portfolio-rank-inputs-v3"
 NATIVE_RETURN_SEMANTICS = "NATIVE_SHAREHOLDER_CASH_FLOW"
 LEGACY_RETURN_SEMANTICS = "LEGACY_NORMALIZED_EXPECTED_IRR"
 
@@ -75,7 +77,7 @@ class PortfolioScoreResult:
 
 @dataclass(frozen=True)
 class PortfolioRankCandidate:
-    semantics: str
+    semantics: tuple[str, int]
     ticker: str
     score: Decimal
     input_snapshot: dict[str, Any]
@@ -256,6 +258,7 @@ def build_portfolio_rank_entries(
 
     results: dict[UUID, tuple[RankingEntryStatus, str, int | None, dict[str, Any] | None]] = {}
     candidates: dict[UUID, PortfolioRankCandidate] = {}
+    unresolved_method_cohort = False
     for company in companies:
         context = contexts.get(company.id)
         if context is None:
@@ -353,6 +356,16 @@ def build_portfolio_rank_entries(
                 score_snapshot,
             )
             continue
+        if portfolio_view.holdings_freshness != "FRESH":
+            age = portfolio_view.holdings_age_days
+            results[company.id] = (
+                RankingEntryStatus.DATA_CHECK,
+                "Current holdings weights are based on a stale confirmation"
+                + (f" ({age} days old)." if age is not None else "."),
+                None,
+                score_snapshot,
+            )
+            continue
         if (
             portfolio_view.valuation_status != "VALUED"
             or context.allocation_status != "VALUED"
@@ -403,6 +416,16 @@ def build_portfolio_rank_entries(
             legacy_by_company.get(company.id, []),
             as_of=cutoff,
         )
+        if (
+            output is not None
+            and output.expected_cash_flow_irr is not None
+            and source_snapshot is not None
+            and (
+                source_snapshot.get("return_methodology_status") != "CLASSIFIED"
+                or source_snapshot.get("share_price_basis_status") != "CAPTURED"
+            )
+        ):
+            unresolved_method_cohort = True
         if model_error is not None:
             status, reason = model_error
             snapshot = _portfolio_input_snapshot(
@@ -430,6 +453,23 @@ def build_portfolio_rank_entries(
             results[company.id] = (
                 RankingEntryStatus.INPUTS_UNAVAILABLE,
                 "The accepted current model source has no numeric Expected IRR.",
+                None,
+                snapshot,
+            )
+            continue
+        if source_snapshot.get("return_methodology_status") != "CLASSIFIED":
+            snapshot = _portfolio_input_snapshot(
+                portfolio_view,
+                context,
+                score_context,
+                source_snapshot,
+                output,
+                None,
+                lifecycle=lifecycle_by_company.get(company.id),
+            )
+            results[company.id] = (
+                RankingEntryStatus.DATA_CHECK,
+                "Expected IRR has no versioned return-method definition; it cannot enter a rank.",
                 None,
                 snapshot,
             )
@@ -544,26 +584,40 @@ def build_portfolio_rank_entries(
                 full_snapshot,
             )
             continue
+        method_basis = ReturnBasis(
+            methodology_code=cast(str, source_snapshot["return_methodology"]["code"]),
+            methodology_version=int(source_snapshot["return_methodology"]["version"]),
+            currency=cast(str | None, source_snapshot.get("model_currency")),
+            listing_id=cast(str | None, source_snapshot.get("listing_id")),
+            share_price_basis_status=cast(
+                str, source_snapshot.get("share_price_basis_status", "UNAVAILABLE")
+            ),
+        )
+        if not has_supported_return_methodology(method_basis):
+            unresolved_method_cohort = True
+            results[company.id] = (
+                RankingEntryStatus.DATA_CHECK,
+                "The Expected IRR method version is not supported by this rank definition.",
+                None,
+                full_snapshot,
+            )
+            continue
         candidates[company.id] = PortfolioRankCandidate(
-            semantics=semantics,
+            semantics=(method_basis.methodology_code or "", method_basis.methodology_version or 0),
             ticker=ticker,
             score=calculation.score,
             input_snapshot=full_snapshot,
         )
 
-    selected_semantics = (
-        NATIVE_RETURN_SEMANTICS
-        if any(candidate.semantics == NATIVE_RETURN_SEMANTICS for candidate in candidates.values())
-        else LEGACY_RETURN_SEMANTICS
-    )
+    method_codes = {candidate.semantics for candidate in candidates.values()}
     comparable: list[tuple[UUID, str, Decimal]] = []
     for company_id, candidate in candidates.items():
-        if candidate.semantics != selected_semantics:
+        if unresolved_method_cohort or len(method_codes) > 1:
             results[company_id] = (
                 RankingEntryStatus.DATA_CHECK,
-                "Native shareholder-cash-flow Portfolio Scores and legacy normalized-output "
-                "Portfolio Scores are not assumed comparable; this run ranks only the native "
-                "cohort.",
+                "The eligible population contains an unresolved or mixed Expected IRR "
+                "methodology/version cohort. Portfolio Rank also uses Expected Excess, whose "
+                "hurdle basis differs by method; this run does not select or mix cohorts.",
                 None,
                 candidate.input_snapshot,
             )
@@ -587,12 +641,18 @@ def build_portfolio_rank_entries(
             sortable.append((company_id, ticker, score))
 
     positions = portfolio_score_positions(sortable)
+    method_label = (
+        ", ".join(f"{code}@{version}" for code, version in sorted(method_codes)) or "classified"
+    )
     for company_id, position in positions.items():
         results[company_id] = (
             RankingEntryStatus.RANKED,
-            "Ranked by the documented IRR-First Allocation Score descending, then canonical "
+            f"Ranked by the documented IRR-First Allocation Score within the "
+            f"{method_label} return-method cohort, descending, "
+            "then canonical "
             "listing ticker ascending. Target weight, current weight, gap, and Execution Pace "
-            "remain separate state.",
+            "remain separate state. Return rates remain in model-local currency; no FX return "
+            "is added.",
             position,
             candidates[company_id].input_snapshot,
         )
@@ -721,7 +781,7 @@ def _model_inputs(
 ) -> tuple[
     FinancialModel | None,
     FinancialModelRevision | None,
-    FinancialModelOutput | ModelOutputSnapshot | None,
+    FinancialModelOutput | ModelOutputSnapshot | s.FinancialModelCalculationOutputsRead | None,
     str | None,
     dict[str, Any] | None,
     tuple[RankingEntryStatus, str] | None,
@@ -744,29 +804,67 @@ def _model_inputs(
         )
     if effective_native:
         model, revision = effective_native[0]
-        output = output_by_revision.get(revision.id)
-        source = _native_model_source(session, model, revision, output)
-        if output is None:
+        accepted_output = output_by_revision.get(revision.id)
+        if accepted_output is None:
             return (
                 model,
                 revision,
                 None,
                 NATIVE_RETURN_SEMANTICS,
-                source,
+                None,
                 (
                     RankingEntryStatus.DATA_CHECK,
                     "The accepted native model revision has no output.",
                 ),
             )
-        if output.status != "COMPLETE":
+        current = current_native_model_calculation(
+            session, model, revision, as_of=as_of, known_at=as_of
+        )
+        if current is None:
+            source = _native_model_source(session, model, revision, accepted_output)
             return (
                 model,
                 revision,
-                output,
+                accepted_output,
                 NATIVE_RETURN_SEMANTICS,
                 source,
-                (RankingEntryStatus.DATA_CHECK, "The native model status is not COMPLETE."),
+                (
+                    RankingEntryStatus.DATA_CHECK,
+                    "Accepted native inputs could not be recalculated at the exact "
+                    "current listing quote.",
+                ),
             )
+        output = current.outputs
+        source = _native_model_source(session, model, revision, accepted_output)
+        source["accepted_reference_price"] = (
+            str(accepted_output.current_price)
+            if accepted_output.current_price is not None
+            else None
+        )
+        source["accepted_reference_price_observation_id"] = (
+            str(accepted_output.price_observation_id)
+            if accepted_output.price_observation_id
+            else None
+        )
+        source["accepted_reference_price_effective_at"] = (
+            accepted_output.price_effective_at.isoformat()
+            if accepted_output.price_effective_at
+            else None
+        )
+        source["accepted_output_status"] = accepted_output.status
+        source["share_price_basis_status"] = (
+            "CAPTURED"
+            if output.price_observation_id is not None and output.current_price is not None
+            else "UNAVAILABLE"
+        )
+        source["price_status"] = output.price_status
+        source["price_effective_at"] = (
+            output.price_effective_at.isoformat() if output.price_effective_at else None
+        )
+        source["price_observation_id"] = (
+            str(output.price_observation_id) if output.price_observation_id else None
+        )
+        source["current_calculation"] = output.model_dump(mode="json")
         if model.model_currency != output.model_currency:
             return (
                 model,
@@ -776,15 +874,18 @@ def _model_inputs(
                 source,
                 (RankingEntryStatus.DATA_CHECK, "Native model/output currencies are inconsistent."),
             )
-        price_error = _native_price_error(session, model, output, as_of)
-        if price_error:
+        if output.status != "COMPLETE":
             return (
                 model,
                 revision,
                 output,
                 NATIVE_RETURN_SEMANTICS,
                 source,
-                (RankingEntryStatus.DATA_CHECK, price_error),
+                (
+                    RankingEntryStatus.DATA_CHECK,
+                    output.irr_unavailable_reason
+                    or "Current native model calculation is not complete at the selected quote.",
+                ),
             )
         if output.expected_cash_flow_irr is None:
             return (
@@ -861,6 +962,19 @@ def _model_inputs(
             source,
             (RankingEntryStatus.DATA_CHECK, "Legacy model currency is unknown."),
         )
+    if source["share_price_basis_status"] != "CAPTURED":
+        return (
+            None,
+            None,
+            snapshot,
+            LEGACY_RETURN_SEMANTICS,
+            source,
+            (
+                RankingEntryStatus.DATA_CHECK,
+                "The legacy Expected IRR has no retained exact-listing share-price basis; it "
+                "cannot enter a comparable Portfolio Rank.",
+            ),
+        )
     required_field_names = {
         "bear_fv",
         "weighted_fv",
@@ -908,6 +1022,8 @@ def _native_price_error(
     output: FinancialModelOutput,
     as_of: datetime,
 ) -> str | None:
+    if output.price_observation_id is None or output.current_price is None:
+        return "The native model output has no retained exact-listing quote observation."
     if output.price_status != "FRESH" or output.price_effective_at is None:
         return "The native model output has no fresh, dated reference price."
     age_days = (as_of.date() - output.price_effective_at.astimezone(UTC).date()).days
@@ -951,6 +1067,25 @@ def _native_model_source(
         "model_key": model.source_model_key or model.model_name,
         "model_type": revision.model_type,
         "methodology_version": revision.methodology_version,
+        "return_methodology": (
+            s.ReturnMethodologyRead.model_validate(output.return_methodology).model_dump(
+                mode="json"
+            )
+            if output is not None and output.return_methodology is not None
+            else None
+        ),
+        "return_methodology_status": (
+            "CLASSIFIED"
+            if output is not None and output.return_methodology is not None
+            else "UNCLASSIFIED"
+        ),
+        "share_price_basis_status": (
+            "CAPTURED"
+            if output is not None
+            and output.price_observation_id is not None
+            and output.current_price is not None
+            else "UNAVAILABLE"
+        ),
         "source": revision.source,
         "effective_at": revision.effective_at.isoformat(),
         "recorded_at": revision.recorded_at.isoformat(),
@@ -1016,6 +1151,15 @@ def _legacy_model_source(
         "model_key": snapshot.model_key,
         "model_type": None,
         "methodology_version": snapshot.contract_version,
+        "return_methodology": (
+            s.ReturnMethodologyRead.model_validate(snapshot.return_methodology).model_dump(
+                mode="json"
+            )
+            if snapshot.return_methodology is not None
+            else None
+        ),
+        "return_methodology_status": snapshot.return_methodology_status,
+        "share_price_basis_status": "NOT_RETAINED",
         "source": snapshot.source,
         "effective_at": snapshot.effective_at.isoformat() if snapshot.effective_at else None,
         "recorded_at": snapshot.recorded_at.isoformat(),
@@ -1038,7 +1182,10 @@ def _portfolio_input_snapshot(
     context: Any,
     score_context: dict[str, dict[str, Any]],
     model_source: dict[str, Any] | None,
-    output: FinancialModelOutput | ModelOutputSnapshot | None,
+    output: FinancialModelOutput
+    | ModelOutputSnapshot
+    | s.FinancialModelCalculationOutputsRead
+    | None,
     calculation: PortfolioScoreResult | None,
     *,
     lifecycle: str | None,
@@ -1078,6 +1225,8 @@ def _portfolio_input_snapshot(
             "holding_effective_at": (
                 portfolio_view.snapshot.effective_at if portfolio_view.snapshot else None
             ),
+            "holdings_age_days": portfolio_view.holdings_age_days,
+            "holdings_freshness": portfolio_view.holdings_freshness,
             "target_revision_id": (
                 portfolio_view.target_revision.id if portfolio_view.target_revision else None
             ),
@@ -1087,6 +1236,12 @@ def _portfolio_input_snapshot(
                 else None
             ),
             "expected_irr": expected_irr,
+            "return_comparability_cohort": (
+                f"{model_source['return_methodology']['code']}@"
+                f"{model_source['return_methodology']['version']}"
+                if model_source and model_source.get("return_methodology")
+                else None
+            ),
             "expected_excess": expected_excess,
             "hurdle": hurdle,
             "bear_fair_value": bear_fv,
@@ -1127,7 +1282,9 @@ def _portfolio_input_snapshot(
                 "Expected Cash-Flow IRR, 10Y Durability, Compounder Quality, Execution, Risk, "
                 "valuation-range uncertainty penalty, and negative Expected Excess penalty. "
                 "Current weight, strategic target, and their gap remain separate facts; the rank "
-                "does not change targets, holdings, or Execution Pace. Missing inputs remain null."
+                "does not change targets, holdings, or Execution Pace. Each run ranks one exact "
+                "versioned return methodology because Expected Excess depends on method-specific "
+                "hurdles. Missing inputs remain null."
             ),
         }
     )

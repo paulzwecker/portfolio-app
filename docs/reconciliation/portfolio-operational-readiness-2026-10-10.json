@@ -1,0 +1,286 @@
+{
+  "report_version": "1.0.0",
+  "review": "Milestone 6.11 — Operational Readiness & Data Quality",
+  "reviewed_at_utc": "2026-10-10T19:38:13Z",
+  "data_cutoff_utc": "2026-10-10T19:34:13Z",
+  "database": "canonical local PostgreSQL",
+  "classification": "NOT_READY",
+  "classification_reason": "Exact Portfolio quotes have recovered, but the last holdings snapshot is stale, an in-scope USD cash balance cannot be valued at that snapshot's effective time, five Portfolio target rows are unauthored, Portfolio and Watchlist Rank each have zero ranked entries, and Execution Pace has zero available decisions. Reported fundamentals and primary consensus remain unconfigured.",
+  "previous_not_ready_baseline": {
+    "portfolio_fresh_quotes": { "before": 5, "total": 21, "after": 21 },
+    "portfolio_ranked": { "before": 0, "total": 21, "after": 0 },
+    "watchlist_ranked": { "before": 0, "total": 71, "after": 0 },
+    "portfolio_execution_pace_available": {
+      "before": 0,
+      "total": 21,
+      "after": 0
+    },
+    "native_portfolio_models": { "before": 9, "total": 21, "after": 9 },
+    "native_watchlist_models": { "before": 5, "total": 71, "after": 5 },
+    "reported_fundamental_observations": { "before": 0, "after": 0 },
+    "primary_consensus_observations": { "before": 0, "after": 0 }
+  },
+  "coverage": {
+    "active_population": {
+      "portfolio": 21,
+      "watchlist": 71,
+      "tracked_companies": 219
+    },
+    "identity_and_listings": {
+      "portfolio_exact_listing_coverage": "21/21",
+      "held_listing_count_including_standalone_etf": 22,
+      "watchlist_exact_listing_coverage": "61/71",
+      "watchlist_unresolved": [
+        "Accelleron Industries",
+        "BONESUPPORT Holding AB",
+        "Exosens",
+        "Fabrinet",
+        "INVISIO AB",
+        "Medistim ASA",
+        "Meta Platforms",
+        "Nova Ltd",
+        "Rheinmetall AG",
+        "VINCORION SE"
+      ],
+      "substitution_used": false
+    },
+    "market_prices": {
+      "provider": "YAHOO_FINANCE",
+      "portfolio_fresh_companies": "21/21",
+      "watchlist_fresh_companies_with_exact_listing": "61/61",
+      "fresh_held_positions": "22/22",
+      "latest_market_date": "2026-10-09",
+      "price_observation_count": 285439,
+      "latest_repeated_run": {
+        "run_id": "1f9fd191-dfb9-4c6e-b6d0-4796ac50f3fe",
+        "status": "PARTIAL",
+        "exact_mapped_listings_responded": 84,
+        "market_rows_received": 418,
+        "canonical_observations_inserted": 0,
+        "provider_fetch_failures": 0,
+        "normalization_rejections": 0,
+        "partial_reason": "10 active Watchlist companies have no exact canonical listing."
+      }
+    },
+    "fx": {
+      "base_currency": "EUR",
+      "observation_count": 23441,
+      "mapped_pairs": [
+        "AUD/EUR",
+        "CAD/EUR",
+        "CHF/EUR",
+        "DKK/EUR",
+        "GBP/EUR",
+        "JPY/EUR",
+        "SEK/EUR",
+        "TWD/EUR",
+        "USD/EUR"
+      ],
+      "current_held_pairs_usd_eur_and_dkk_eur": "available through 2026-10-09",
+      "snapshot_date_usd_cash_conversion": "unavailable at the 2026-10-04 holdings cutoff under freshness policy"
+    },
+    "reported_fundamentals_and_filings": {
+      "fundamental_observations": 0,
+      "source_documents": 0,
+      "sec_cik_mappings_total": 27,
+      "active_sec_mappings": {
+        "total": "27/92",
+        "portfolio": "20/21",
+        "watchlist": "7/71"
+      },
+      "latest_worker_saved_scope_mappings": 20,
+      "latest_worker_scope_note": "The saved scope predates the current 27-mapping registry; rerun after provider configuration.",
+      "latest_fundamentals_run": "BLOCKED",
+      "latest_source_documents_run": "BLOCKED",
+      "blocking_configuration": "SEC_USER_AGENT is unset",
+      "portfolio_fundamental_coverage": "0/21",
+      "watchlist_fundamental_coverage": "0/71"
+    },
+    "consensus": {
+      "observations": 67,
+      "observation_provider": "legacy_workbook_estimates",
+      "observation_quality": "67/67 DATA_CHECK",
+      "snapshot_date": "2026-09-12",
+      "provider_mappings": { "primary": 0, "fallback_legacy": 18 },
+      "fmp_primary_observations": 0,
+      "latest_fmp_run": "BLOCKED",
+      "blocking_configuration": "FMP_API_KEY is unset"
+    },
+    "corporate_actions": {
+      "observations": 882,
+      "verified": 2,
+      "unverified": 880,
+      "latest_run_status": "PARTIAL",
+      "latest_active_actions_received": 2,
+      "latest_active_actions_inserted": 0,
+      "data_quality": "DATA_CHECK",
+      "price_adjustment_semantics": "Yahoo split-adjusted prices are not adjusted a second time."
+    },
+    "financial_models_and_returns": {
+      "native_models": { "portfolio": "9/21", "watchlist": "5/71" },
+      "accepted_native_revisions": 14,
+      "accepted_native_outputs": 14,
+      "current_quote_recalculation": {
+        "portfolio_numeric_expected_irr": "9/9 native models",
+        "watchlist_numeric_expected_irr": "5/5 native models",
+        "writes_model_revisions": false
+      },
+      "native_method_cohorts": {
+        "portfolio": {
+          "UFCF_ENTERPRISE_IRR_v1": 7,
+          "UFCF_ENTERPRISE_HMODEL_IRR_v1": 2
+        },
+        "watchlist": { "OWNER_CASH_FLOW_EQUITY_IRR_v1": 5 }
+      },
+      "published_imported_output_status": {
+        "portfolio": { "available": 20, "partial": 1 },
+        "watchlist": { "available": 57, "partial": 14 }
+      },
+      "imported_output_snapshots": 344,
+      "return_history": {
+        "companies_with_history": 92,
+        "points": 273,
+        "native_revision_points": 14,
+        "imported_legacy_revision_points": 167,
+        "imported_current_contract_points": 92,
+        "method_classified_points": 51,
+        "method_unclassified_points": 222,
+        "attribution_comparisons_available": 0
+      },
+      "comparability": "Enterprise UFCF and equity owner-cash-flow returns remain separate; unsupported cross-currency conversion and legacy methods are not inferred."
+    },
+    "portfolio_state": {
+      "holding_snapshot_id": "68e1e044-ebff-5e7b-82ad-af139191f72e",
+      "holding_snapshot_effective_at": "2026-10-04T20:53:02.583257Z",
+      "holding_snapshot_completeness": "COMPLETE",
+      "freshness_state": "STALE (six days old; five-day limit)",
+      "positions_with_fresh_quote": "22/22",
+      "portfolio_valuation_status": "INCOMPLETE_HOLDINGS",
+      "portfolio_base_market_value": null,
+      "valuation_gap": "cash:USD / FX_UNAVAILABLE at snapshot effective time",
+      "accepted_target_revision_id": "0137fe6d-e264-5fe3-bae8-74849b095c95",
+      "authored_target_rows": 16,
+      "authored_target_weight_sum": "1.0",
+      "portfolio_companies_without_target": [
+        "AMD",
+        "Celsius Holdings",
+        "Hims & Hers",
+        "MSCI Inc.",
+        "Novo Nordisk"
+      ]
+    }
+  },
+  "decision_availability": {
+    "portfolio_rank": {
+      "run_id": "9bc75bfb-8650-4f7c-b728-2fa93006f11f",
+      "ranked": 0,
+      "data_check": 16,
+      "inputs_unavailable": 5,
+      "reasons": [
+        "16 companies lack complete current weight because the holdings snapshot is stale and USD cash cannot be valued at its cutoff.",
+        "Five Portfolio companies have no explicit accepted target."
+      ]
+    },
+    "watchlist_rank": {
+      "run_id": "ff7ab98b-e952-427f-8d7e-0abb6729c008",
+      "ranked": 0,
+      "data_check": 59,
+      "inputs_unavailable": 12,
+      "data_check_causes": {
+        "unclassified_or_incompatible_population": 5,
+        "unclassified_legacy_return_method": 23,
+        "unknown_legacy_model_currency": 31
+      }
+    },
+    "research_rank": {
+      "latest_run_id": "f88fa8cb-aeeb-4143-b446-e61863d01b55",
+      "ranked": 96,
+      "inputs_unavailable": 5,
+      "not_eligible": 118,
+      "status": "PARTIAL",
+      "interpretation": "Research prioritization works for the explicit Candidate cohort; it is not an investment-attractiveness rank."
+    },
+    "estimate_momentum": {
+      "portfolio": {
+        "available": 0,
+        "insufficient_history": 17,
+        "no_mapping": 4
+      },
+      "watchlist": {
+        "available": 0,
+        "insufficient_history": 1,
+        "no_mapping": 70
+      }
+    },
+    "execution_pace": {
+      "run_id": "9486b26f-d4ea-435c-894a-27ee5f9db0c0",
+      "available": 0,
+      "review": 21,
+      "not_applicable": 198,
+      "review_causes": {
+        "incomplete_current_holdings_or_weights": 16,
+        "no_explicit_target": 5
+      }
+    },
+    "expected_return_attribution": {
+      "available_comparisons": 0,
+      "primary_limitation": "Native models have one accepted revision each; imported history often lacks dated share-price basis and classified return methodology."
+    }
+  },
+  "workflow_and_integrity": {
+    "market_price_to_current_native_model_flow": "Verified: the read-only calculation used the exact GOOGL listing quote $351.66 dated 2026-10-09 and recalculated Expected IRR to 0.123938263092246247 while retaining accepted revision 6bfae7e5-59d0-45ba-a193-79348e9f51ab, revision 1, and its original $338.24 reference price dated 2026-10-01.",
+    "model_revisions_created_by_refresh": 0,
+    "ranking_and_execution_history": "New immutable reassessment runs were appended; prior runs were retained.",
+    "point_in_time": "Temporal query returned explicit FY2027 mapping/actual-unavailable states where records are absent; a future known_at cutoff was rejected with HTTP 422 in the representative edge check.",
+    "ingestion_replay": "A bounded 2026-10-06 through 2026-10-10 active-market replay fetched 418 rows, inserted zero canonical observations, and retained partial coverage only for the ten unresolved Watchlist listings.",
+    "ingestion_recovery": "A prior FX run failed NO_FX_RESPONSES; a later FX run completed. SEC and FMP failures are configuration blocks, not silently retried data.",
+    "schedule_configured": false
+  },
+  "product_verification": {
+    "dashboard": "Shows incomplete portfolio valuation and withheld total/weights; Published Expected IRR is labeled as a dated output snapshot rather than a current quote-repriced return.",
+    "attention_center": {
+      "events": 91,
+      "event_types": {
+        "RANK_CHANGE": 8,
+        "MODEL_REVISION": 14,
+        "PRICE_MOVE": 9,
+        "MODEL_OUTPUT_IMPORT": 35,
+        "DATA_QUALITY": 25
+      },
+      "events_with_source_id_and_company_link": "91/91"
+    },
+    "browser_suite": {
+      "desktop_and_mobile": true,
+      "passed": 30,
+      "skipped": 4,
+      "failed": 0
+    },
+    "skipped_browser_tests": "Two fictional-demo-seed or write-enabled tests in each viewport configuration; they were not run against the real portfolio database."
+  },
+  "verification": {
+    "npm_run_check": "PASS (lint, formatting, frontend/API typechecks, 88 frontend tests, 232 backend tests, contract check, production build)",
+    "npm_run_test_integration": "PASS (43 passed, 189 deselected)",
+    "npm_run_db_check": "PASS (no new upgrade operations)",
+    "live_desktop_mobile_e2e": "PASS (30 passed, 4 intentionally skipped)"
+  },
+  "blockers": [
+    "The imported October 4 holdings/cash snapshot is stale; no current portfolio total, current weights, or allocation gaps are published.",
+    "USD cash cannot be converted under the snapshot's point-in-time freshness cutoff.",
+    "Five Portfolio companies lack authored targets: AMD, Celsius Holdings, Hims & Hers, MSCI Inc., and Novo Nordisk.",
+    "SEC fundamentals and filings are blocked by missing SEC_USER_AGENT; no factual observations are stored.",
+    "FMP estimates are blocked by missing FMP_API_KEY and zero reviewed primary mappings; legacy estimate records remain DATA_CHECK.",
+    "Ten Watchlist companies lack exact listing mappings.",
+    "Watchlist Rank remains blocked by legacy method, currency, quote-basis and cohort comparability gaps.",
+    "880 of 882 corporate-action observations remain unverified.",
+    "No recurring scheduler is configured; the worker has been exercised as a bounded one-shot only."
+  ],
+  "recommended_remediation_order": [
+    "Reconcile and accept an authoritative current Portfolio holdings and cash snapshot, with exact dated FX evidence; then verify aggregate value and weights.",
+    "Obtain explicit owner decisions for the five missing Portfolio targets; do not infer zero or copy adjacent weights.",
+    "Configure SEC_USER_AGENT with an organization/app name and monitored contact, then run the mapped SEC fundamentals and filings pipelines; resolve Adyen identity separately.",
+    "Confirm FMP licensing/access, set FMP_API_KEY, review exact primary provider mappings, and begin prospective point-in-time estimate capture.",
+    "Resolve the ten Watchlist listing identities from issuer/exchange evidence and preserve unresolved states until then.",
+    "Resolve legacy return methodology, currency and captured-price-basis metadata before reconsidering Watchlist Rank coverage.",
+    "Verify corporate actions against primary sources and establish monitored scheduled execution only after credentials, scope and operator ownership are agreed."
+  ]
+}

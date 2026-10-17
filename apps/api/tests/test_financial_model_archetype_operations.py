@@ -95,6 +95,13 @@ def test_additional_archetype_models_create_append_and_read_immutable_history(
         assert response.status_code == 201, response.text
         model = response.json()
         revision1 = model["current_revision"]
+        expected_method = (
+            "OWNER_CASH_FLOW_EQUITY_IRR"
+            if method == "owner-cash-flow"
+            else "RESIDUAL_INCOME_EQUITY_IRR"
+        )
+        assert revision1["outputs"]["return_methodology"]["code"] == expected_method
+        assert revision1["outputs"]["return_methodology"]["perspective"] == "EQUITY"
         assert len(revision1["projections"]) == 30
         assert revision1["outputs"]["status"] == "PARTIAL"
         assert revision1["outputs"]["weighted_fv"] is not None
@@ -191,6 +198,9 @@ def test_owner_cash_flow_portable_contract_round_trip_and_stale_base_conflict(
         assert created.status_code == 201, created.text
         model_id = created.json()["id"]
         contract = client.get(f"/v1/canonical-financial-models/{model_id}/contract").json()
+        assert contract["contract_version"] == "2.1.0"
+        # Keep the round-trip/stale-base case focused on prior contract compatibility.
+        contract["contract_version"] = "2.0.0"
         candidate = contract["candidate_revision"]
         candidate["source_revision_id"] = "sheet-pass-1"
         candidate["rationale"] = "Expanded Year 1 owner cash-flow margin after review."
@@ -213,6 +223,7 @@ def test_owner_cash_flow_portable_contract_round_trip_and_stale_base_conflict(
         assert replay.json()["status"] == "ALREADY_IMPORTED"
 
         stale = client.get(f"/v1/canonical-financial-models/{model_id}/contract").json()
+        stale["contract_version"] = "2.0.0"
         stale["candidate_revision"]["source_revision_id"] = "sheet-pass-stale"
         stale["candidate_revision"]["rationale"] = "A later external change based on old state."
         stale["candidate_revision"]["owner_cash_flow"]["scenarios"][0]["years"][0][

@@ -10,6 +10,7 @@ from uuid import UUID
 
 from portfolio_api.domain.models import DcfScenario
 from portfolio_api.domain.schemas import DcfCalculationInput
+from portfolio_api.return_semantics import UFCF_ENTERPRISE_HMODEL_IRR, UFCF_ENTERPRISE_IRR
 
 PriceState = Literal[
     "FRESH", "STALE", "QUALITY_CHECK", "NO_DATA", "CURRENCY_MISMATCH", "CURRENCY_UNKNOWN"
@@ -50,6 +51,7 @@ class DcfScenarioCalculation:
     probability: Decimal
     fair_value_per_share: Decimal
     terminal_value: Decimal
+    return_terminal_value: Decimal
     projections: tuple[DcfProjectionCalculation, ...]
 
 
@@ -120,14 +122,22 @@ def calculate_ufcf_dcf(
     *,
     model_currency: str,
     market_price: MarketPriceInput,
+    return_methodology_code: str = UFCF_ENTERPRISE_IRR,
 ) -> DcfCalculation:
-    """Run the 5-year detailed / 5-year UFCF growth-fade model using exact decimals.
+    """Run the detailed DCF and its five-year UFCF-only tail using exact decimals.
 
     Years 6-10 intentionally project only UFCF growth, as in the source methodology;
     they do not pretend to contain detailed revenue or operating-statement forecasts.
+    Source-supported explicit annual tail rates take precedence; older revisions retain
+    their original linear fade behavior when no explicit tail is stored.
     """
     with localcontext() as context:
         context.prec = 38
+        if return_methodology_code not in {
+            UFCF_ENTERPRISE_IRR,
+            UFCF_ENTERPRISE_HMODEL_IRR,
+        }:
+            raise ValueError(f"Unsupported DCF return methodology: {return_methodology_code}")
         base = revision.base
         calculations: dict[DcfScenario, DcfScenarioCalculation] = {}
         for scenario in revision.scenarios:
@@ -181,10 +191,16 @@ def calculate_ufcf_dcf(
             final_discount_rate = ordered_years[-1].discount_rate
             previous_ufcf = prior_fcf
             last_ufcf = prior_fcf
+            explicit_tail = {
+                item.forecast_year: item.ufcf_growth for item in scenario.tail_ufcf_growth or []
+            }
             for forecast_year in range(6, 11):
                 assert previous_ufcf is not None
                 fade_fraction = Decimal(forecast_year - 5) / Decimal(5)
-                growth = y5_growth + (scenario.year10_ufcf_growth - y5_growth) * fade_fraction
+                growth = explicit_tail.get(
+                    forecast_year,
+                    y5_growth + (scenario.year10_ufcf_growth - y5_growth) * fade_fraction,
+                )
                 ufcf = previous_ufcf * (Decimal(1) + growth)
                 factor = Decimal(1) / ((Decimal(1) + final_discount_rate) ** forecast_year)
                 projections.append(
@@ -221,6 +237,11 @@ def calculate_ufcf_dcf(
                 * (scenario.year10_ufcf_growth - scenario.terminal_growth)
                 / spread
             )
+            return_terminal_value = (
+                last_ufcf * (Decimal(1) + scenario.terminal_growth) / spread
+                if return_methodology_code == UFCF_ENTERPRISE_HMODEL_IRR
+                else terminal_value
+            )
             last = projections[-1]
             projections[-1] = DcfProjectionCalculation(
                 **{**last.__dict__, "terminal_value": terminal_value}
@@ -233,6 +254,7 @@ def calculate_ufcf_dcf(
                 probability=scenario.probability,
                 fair_value_per_share=fair_value,
                 terminal_value=terminal_value,
+                return_terminal_value=return_terminal_value,
                 projections=tuple(projections),
             )
 
@@ -256,7 +278,11 @@ def calculate_ufcf_dcf(
 
         price_status: PriceState = market_price.freshness
         unavailable_reason: str | None = None
-        comparable_fresh_price = market_price.price is not None and market_price.price > 0
+        comparable_fresh_price = (
+            market_price.freshness == "FRESH"
+            and market_price.price is not None
+            and market_price.price > 0
+        )
         if market_price.price is not None and market_price.currency is None:
             price_status = "CURRENCY_UNKNOWN"
             unavailable_reason = "The listing quote currency is unknown."
@@ -305,7 +331,7 @@ def calculate_ufcf_dcf(
                         )
                     )
                 expected_flows[-1] += sum(
-                    (scenario.terminal_value * scenario.probability for scenario in ordered),
+                    (scenario.return_terminal_value * scenario.probability for scenario in ordered),
                     Decimal(0),
                 )
                 cash_flows = [-enterprise_cost, *expected_flows]

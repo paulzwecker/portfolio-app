@@ -6,6 +6,9 @@ listing prices for one annual fiscal year where their periods can be aligned. Na
 ordinal projections remain explicitly unmapped until the model revision stores a
 fiscal-year anchor. This is an inspection/query layer over canonical records; it does
 not calculate forecast error, ranking, model-quality scores, or investment decisions.
+Historical forecast error is handled separately by
+[`forecast-accuracy.md`](forecast-accuracy.md), which compares dated forecasts with
+later reported facts and does not use market returns as an accuracy measure.
 
 ## Query
 
@@ -100,3 +103,9 @@ No additional market, fundamental, consensus, or model facts are created by this
 feature. It adds no ranking or model-quality metric. Future expansion should first
 add explicit model fiscal periods and source coverage for comparable annual/quarterly
 facts, then introduce other metrics with representative edge-case tests.
+
+The Company Explorer's Scenario Calibration & Decision Evaluation panel composes
+these point-in-time facts with immutable model, rank and Execution Pace snapshots.
+It uses the same strict price-horizon semantics, and adds no look-ahead-prone
+fallback. See [decision-evaluation.md](decision-evaluation.md) for its cohort,
+sample-size and return-method rules.

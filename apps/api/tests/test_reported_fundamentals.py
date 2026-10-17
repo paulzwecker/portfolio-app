@@ -7,7 +7,7 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -38,12 +38,16 @@ from portfolio_api.reported_fundamentals import (
     SEC_NORMALIZER_VERSION,
     SEC_PROVIDER_ID,
     SecCompanyFactsProvider,
+    _companyfacts_response_matches_cik,
     _normalize_companyfacts_json,
+    _normalized_sec_entity_name,
     ingest_sec_company_facts,
     normalize_sec_company_facts,
     record_cik_mapping,
     resolve_fundamental_period,
+    sync_reported_fundamentals,
 )
+from portfolio_api.settings import Settings
 
 COMPANY_ID = UUID("11111111-1111-4111-8111-111111111111")
 CIK = "0000000001"
@@ -51,15 +55,55 @@ OBSERVED_AT = datetime(2026, 10, 5, 12, tzinfo=UTC)
 REVENUE = FundamentalMetric.REVENUE.value
 
 
+@pytest.mark.parametrize(
+    ("provider_name", "verified_name"),
+    [
+        ("COPART, INC.", "COPART INC"),
+        ("MercadoLibre, Inc.", "MERCADOLIBRE INC"),
+        ("MICROSOFT CORPORATION", "MICROSOFT CORP"),
+        ("Mastercard Incorporated", "Mastercard Inc"),
+        ("DLocal Limited", "dLocal Ltd"),
+        ("Intuitive Surgical, Inc.", "INTUITIVE SURGICAL INC"),
+        ("MORNINGSTAR,\u00a0INC.", "Morningstar, Inc."),
+        (
+            "Taiwan Semiconductor Manufacturing Company Limited",
+            "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
+        ),
+        ("Veeva Systems Inc.", "VEEVA SYSTEMS INC"),
+        ("COMFORT SYSTEMS USA,\u00a0INC.", "COMFORT SYSTEMS USA INC"),
+        ("AXON ENTERPRISE, INC.", "AXON ENTERPRISE INC"),
+        ("NOVO NORDISK A/S", "NOVO NORDISK A S"),
+    ],
+)
+def test_sec_entity_name_comparison_accepts_only_format_and_legal_suffix_variants(
+    provider_name: str, verified_name: str
+) -> None:
+    assert _normalized_sec_entity_name(provider_name) == _normalized_sec_entity_name(verified_name)
+
+
+def test_sec_entity_name_comparison_does_not_treat_renames_or_parent_entities_as_aliases() -> None:
+    assert _normalized_sec_entity_name("Facebook, Inc.") != _normalized_sec_entity_name(
+        "Meta Platforms, Inc."
+    )
+    assert _normalized_sec_entity_name("Example Holdings Inc") != _normalized_sec_entity_name(
+        "Example Subsidiary Inc"
+    )
+    assert _companyfacts_response_matches_cik({"cik": 900075}, "0000900075")
+    assert not _companyfacts_response_matches_cik({"cik": 900076}, "0000900075")
+    assert not _companyfacts_response_matches_cik({"cik": True}, "0000000001")
+
+
 def companyfacts_payload(
     annual_revenue: int = 9007199254740993,
     accession: str = "0000000001-24-000001",
     filed: str = "2024-02-10",
+    entity_name: str = "Example Issuer Inc.",
+    cik: int = 1,
 ) -> bytes:
     """Small synthetic SEC-shaped fixture; it is not company or investment data."""
     facts = {
-        "cik": 1,
-        "entityName": "Example Issuer Inc.",
+        "cik": cik,
+        "entityName": entity_name,
         "facts": {
             "us-gaap": {
                 "RevenueFromContractWithCustomerExcludingAssessedTax": {
@@ -188,10 +232,18 @@ def record(
 def test_sec_companyfacts_normalization_preserves_period_currency_units_and_exact_values() -> None:
     facts, counters, issues = _normalize_companyfacts_json(record(), COMPANY_ID, CIK)
     by_metric = {item.metric: item for item in facts if item.period_end.year == 2023}
+    annual_revenue = by_metric[FundamentalMetric.REVENUE]
 
-    assert by_metric[FundamentalMetric.REVENUE].value == Decimal("9007199254740993")
-    assert by_metric[FundamentalMetric.REVENUE].period_type == FundamentalPeriodType.ANNUAL
-    assert by_metric[FundamentalMetric.REVENUE].currency == "USD"
+    assert annual_revenue.value == Decimal("9007199254740993")
+    assert annual_revenue.period_type == FundamentalPeriodType.ANNUAL
+    assert annual_revenue.period_start is not None
+    assert annual_revenue.period_start.date().isoformat() == "2023-01-01"
+    assert annual_revenue.period_end.date().isoformat() == "2023-12-31"
+    assert annual_revenue.fiscal_year == 2023
+    assert annual_revenue.fiscal_period == "FY"
+    assert annual_revenue.filed_at is not None
+    assert annual_revenue.filed_at.date().isoformat() == "2024-02-10"
+    assert annual_revenue.currency == "USD"
     assert by_metric[FundamentalMetric.DILUTED_WEIGHTED_AVERAGE_SHARES].currency is None
     assert by_metric[FundamentalMetric.DILUTED_WEIGHTED_AVERAGE_SHARES].unit == "shares"
     quarterly = [
@@ -202,6 +254,13 @@ def test_sec_companyfacts_normalization_preserves_period_currency_units_and_exac
     ]
     assert len(quarterly) == 1
     assert quarterly[0].period_type == FundamentalPeriodType.QUARTERLY
+    assert quarterly[0].period_start is not None
+    assert quarterly[0].period_start.date().isoformat() == "2024-01-01"
+    assert quarterly[0].period_end.date().isoformat() == "2024-03-31"
+    assert quarterly[0].fiscal_year == 2024
+    assert quarterly[0].fiscal_period == "Q1"
+    assert quarterly[0].filed_at is not None
+    assert quarterly[0].filed_at.date().isoformat() == "2024-05-10"
     assert all(
         item.period_end.date().isoformat() != "2024-06-30" for item in facts
     )  # the six-month year-to-date value is not presented as one quarter
@@ -258,6 +317,55 @@ def test_provider_requires_exact_cik_mapping_and_uses_the_shared_provider_contra
     )
     with pytest.raises(ValueError, match="contact email"):
         SecCompanyFactsProvider({COMPANY_ID: CIK}, "anonymous")
+
+
+def test_sec_company_identity_failure_does_not_discard_other_company_facts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mismatched_company_id = UUID("22222222-2222-4222-8222-222222222222")
+    mismatched_cik = "0000000002"
+    mismatched_record = record().model_copy(update={"source_record_id": f"CIK{mismatched_cik}"})
+    provider_records = [record(), mismatched_record]
+
+    def fake_load_mappings(
+        _session: Session,
+        _company_id: UUID | None,
+        _company_ids: Any,
+    ) -> dict[UUID, str]:
+        return {COMPANY_ID: CIK, mismatched_company_id: mismatched_cik}
+
+    async def fake_fetch(
+        _provider: SecCompanyFactsProvider, _query: ProviderQuery
+    ) -> list[RawProviderRecord]:
+        return provider_records
+
+    def fake_ingest(
+        _session: Session, company_id: UUID, _cik: str, _record: RawProviderRecord
+    ) -> dict[str, object]:
+        if company_id == mismatched_company_id:
+            raise ValueError(
+                "SEC entity name does not match the recorded provider identity mapping"
+            )
+        return {"status": "IMPORTED", "reconciliation": {"source_fact_count": 4}}
+
+    monkeypatch.setattr(
+        "portfolio_api.reported_fundamentals._load_cik_mappings", fake_load_mappings
+    )
+    monkeypatch.setattr(SecCompanyFactsProvider, "fetch", fake_fetch)
+    monkeypatch.setattr("portfolio_api.reported_fundamentals.ingest_sec_company_facts", fake_ingest)
+
+    results = asyncio.run(
+        sync_reported_fundamentals(
+            cast(Session, None),
+            Settings(_env_file=None, sec_user_agent="Portfolio Research App contact@example.com"),
+            company_ids=[COMPANY_ID, mismatched_company_id],
+        )
+    )
+
+    assert results[0]["status"] == "IMPORTED"
+    assert results[1]["status"] == "DATA_CHECK"
+    assert results[1]["failure_code"] == "SEC_RECORD_VALIDATION"
+    assert results[1]["source_record_id"] == f"CIK{mismatched_cik}"
 
 
 def _reported_row(
@@ -348,6 +456,39 @@ def test_resolver_uses_latest_filing_in_a_lineage_and_preserves_data_check() -> 
     assert result.selected.value == Decimal("95")
     assert result.status == "DATA_CHECK"
     assert {item.value for item in [original, restated]} == {Decimal("95"), Decimal("100")}
+
+
+@pytest.mark.integration
+def test_sec_import_allows_documented_name_format_variants_but_checks_exact_cik(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as session:
+        session.add(Company(id=COMPANY_ID, name="Example canonical issuer"))
+        session.flush()
+        record_cik_mapping(
+            session,
+            COMPANY_ID,
+            CIK,
+            "Example Issuer Inc.",
+            "https://www.sec.gov/edgar/browse/?CIK=1",
+        )
+
+        equivalent = record(companyfacts_payload(entity_name="Example Issuer, Incorporated"))
+        assert (
+            ingest_sec_company_facts(session, COMPANY_ID, CIK, equivalent)["status"] == "IMPORTED"
+        )
+
+        wrong_cik = record(companyfacts_payload(cik=2))
+        with pytest.raises(ValueError, match="payload CIK"):
+            ingest_sec_company_facts(session, COMPANY_ID, CIK, wrong_cik)
+
+        different_issuer = record(
+            companyfacts_payload(
+                entity_name="Example Subsidiary Inc.", accession="0000000001-25-000001"
+            )
+        )
+        with pytest.raises(ValueError, match="issuer name"):
+            ingest_sec_company_facts(session, COMPANY_ID, CIK, different_issuer)
 
 
 @pytest.mark.integration

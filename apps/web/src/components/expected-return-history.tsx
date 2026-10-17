@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PendingOrError, useResearch } from "@/components/research-frame";
+import { PendingOrError } from "@/components/app/empty-state";
+import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyExpectedReturnAttribution,
   isCompanyExpectedReturnHistory,

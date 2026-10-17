@@ -1,0 +1,535 @@
+{
+  "active_company_count": 92,
+  "active_company_with_listing_count": 19,
+  "active_company_without_listing": [
+    {
+      "company": "AAON, Inc.",
+      "company_id": "187f816c-4d16-5e8a-bdf7-7b3d5e443ca1",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Accelleron Industries",
+      "company_id": "34b0923a-f908-55a9-82c2-4f87f705e47e",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Affirm Holdings",
+      "company_id": "307683ce-df99-50f8-aef4-e4e3ad51c847",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Airbnb",
+      "company_id": "2d19ea09-5469-5769-8379-303c81ed59e2",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Amer Sports",
+      "company_id": "d1c403d4-bc62-5e8f-8953-78cdcfe3a930",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "AppFolio",
+      "company_id": "c0a9cb5c-8a8c-5543-a38f-40b65b3eabdc",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "AppLovin",
+      "company_id": "e826cc0f-6a80-5524-b825-3ac0de632cfc",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Ares Management",
+      "company_id": "4fb2e08b-8fd7-5963-99f4-4b3b4fd44956",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Astera Labs",
+      "company_id": "9879395c-1ce1-5458-be4d-167bf4df2d31",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Atour Lifestyle",
+      "company_id": "c627b9ae-3f66-55b3-833f-d5d3bf722785",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Axon Enterprise",
+      "company_id": "3d15b467-247e-5f20-926b-79d8d7a548e5",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "BE Semiconductor Industries",
+      "company_id": "cf6405ba-3320-5132-b03f-2e21fc38b3d2",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "BONESUPPORT Holding AB",
+      "company_id": "aa291607-f6a5-5c35-a4c1-6a32e179eb4b",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Brookfield Asset Management",
+      "company_id": "0b411e7e-71e0-5b6d-976b-440dff5b61b7",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Carvana",
+      "company_id": "c404e654-4488-52a9-b395-e5582390090a",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Cloudflare",
+      "company_id": "29f09a26-b288-5c3a-a545-f06200245b9d",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Comfort Systems USA",
+      "company_id": "2684122d-7bdd-5d0c-b625-e89b4e3bf2bd",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Constellation Software",
+      "company_id": "3da57098-76f4-522b-9e99-2bf184740979",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Copart",
+      "company_id": "0b387a57-eebc-502a-9fee-8403085cee72",
+      "lifecycle": "PORTFOLIO"
+    },
+    {
+      "company": "CrowdStrike",
+      "company_id": "373b3fec-b7b4-58d5-a8c3-b749e0903c3b",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "DISCO Corporation",
+      "company_id": "05162760-7388-5348-9224-a2b34df0c44a",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Datadog",
+      "company_id": "0b963454-8d6e-5908-8789-ab1329fd5bfa",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "DoorDash",
+      "company_id": "5f042149-8d36-5195-8995-72e12e4d1268",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Dynavox Group",
+      "company_id": "5e3e08d8-d059-5ba1-95c4-c9835f5bf79f",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Exosens",
+      "company_id": "177bac52-4a69-54f9-b819-537a2b611a9b",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Fabrinet",
+      "company_id": "275e06d4-70a7-5172-b60b-12d5b930a527",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "GE Vernova",
+      "company_id": "1589be54-a8e5-5d25-9a42-11e0a1570d08",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Grab Holdings",
+      "company_id": "3bda3d46-098e-5c12-8515-515bd3558179",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Guidewire Software",
+      "company_id": "d8559d42-ab2b-5691-bb08-586e6568874e",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "HUB24",
+      "company_id": "0821a3c4-4793-5581-9a5d-72016b561976",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "INVISIO AB",
+      "company_id": "ebd14f02-fd1d-5f7a-8522-97794da406cc",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Interactive Brokers Group",
+      "company_id": "aa39ffeb-b385-5c73-9faa-7ef14930fb54",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Judges Scientific",
+      "company_id": "72a811b2-8832-5bdf-bd4a-702aca661e97",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "KLA Corporation",
+      "company_id": "cf11e7a6-f482-57d0-a223-bb2cf872178c",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Kinaxis",
+      "company_id": "402a51ad-840b-5a6d-b344-8bb96bed4e2b",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Kinsale Capital",
+      "company_id": "d7aee505-55de-5d96-ad36-6278575633f4",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Klaviyo",
+      "company_id": "68fd8808-9ef2-5748-9f67-c328814b7bf0",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Life360",
+      "company_id": "e1d8c338-ebe2-54d3-8de8-1bf5b3fbae3b",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "MIPS AB",
+      "company_id": "017cd748-254e-5a06-acff-e8efa3273efc",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "MakeMyTrip",
+      "company_id": "c2645f9f-d4c4-5d27-9b86-e68c08fb2216",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Medistim ASA",
+      "company_id": "5b835c91-c53c-5b48-bf95-6a26cc7cb93b",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Meta Platforms",
+      "company_id": "dc21d2bb-ac6e-5385-9347-480ead4fcc4a",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Monolithic Power Systems",
+      "company_id": "874f88ac-871c-5e09-96f2-106a0ed4ec90",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Natera",
+      "company_id": "746ecb66-3ce2-50d5-b13a-f560f1035cd9",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Nemetschek",
+      "company_id": "1c85dd46-f4fe-52d5-9953-579c0e9dcccb",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Nova Ltd",
+      "company_id": "14d2c822-b320-5467-8d3b-4242475bac02",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Nu Holdings",
+      "company_id": "7c241799-295e-58e2-acca-0911607bfcd7",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "On Holding",
+      "company_id": "369b0c2b-df9f-559d-bd54-ff27e20f0f40",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Palantir Technologies",
+      "company_id": "39c55c2f-6243-560a-816b-6f6f0575f71a",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Palomar Holdings",
+      "company_id": "4fe5b36d-616a-5e00-9c30-facabe223ffc",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Pro Medicus",
+      "company_id": "336fb0ba-8248-53b4-9f9d-551ff8e2398e",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Puuilo",
+      "company_id": "676f14c1-e525-54ff-9168-63ffae96d98e",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Remitly Global",
+      "company_id": "3206ac39-d216-5479-a47f-06cb04021758",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Rheinmetall AG",
+      "company_id": "5d0f7212-d1fb-58bd-ad38-b09e50a10b5f",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Robinhood Markets",
+      "company_id": "385d254b-6a24-59a4-b6ae-25bb22c72281",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Rubrik",
+      "company_id": "46f3107a-b56e-59b2-8db7-353a870df6a3",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Saab",
+      "company_id": "7829ff1a-8f92-5f3f-9385-6d102b042148",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Samsara",
+      "company_id": "d8deab6d-e1e9-5778-8b9b-c87887685a1d",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Sea Limited",
+      "company_id": "db9ce4e0-098f-563d-9fd8-8fcff67738ff",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Sectra",
+      "company_id": "3d9cbb25-7b5c-55e1-ae0f-86f086ca56ae",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Shopify",
+      "company_id": "81540023-e95d-54f5-979c-55f0ef77c6a7",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "SiteMinder",
+      "company_id": "f9c414c6-b706-5d85-8ef9-f9d9b05499a7",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Snowflake",
+      "company_id": "61a53f7a-3012-558a-af4c-b328c503c0d1",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Spotify",
+      "company_id": "0acd0916-9ad5-5fcd-8ee1-04cba3735dfc",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Symbotic",
+      "company_id": "1fa03fd7-5ace-582c-9756-06cc99763bc6",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Toast",
+      "company_id": "1ea17cfe-1ec1-5685-a28f-d1cb0b1a4253",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "TransMedics",
+      "company_id": "e9791a39-6061-561a-9f2d-52caa199ee9c",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Uber Technologies",
+      "company_id": "19ae2f01-c31a-57a9-b8a9-0c577de1bdea",
+      "lifecycle": "PORTFOLIO"
+    },
+    {
+      "company": "VAT Group",
+      "company_id": "e023dd72-ed14-5824-825a-b33d6dabd27c",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "VINCORION SE",
+      "company_id": "9a197d8e-e241-52c8-b358-02a5abb57448",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "Veeva Systems",
+      "company_id": "1564066c-f056-5351-a096-b8d48d450428",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "monday.com",
+      "company_id": "6ef0c65e-d646-540d-a7b9-3e167d5f0b99",
+      "lifecycle": "WATCHLIST"
+    },
+    {
+      "company": "nVent Electric",
+      "company_id": "dd6db81d-c24b-587f-986e-8e8b9e340d99",
+      "lifecycle": "WATCHLIST"
+    }
+  ],
+  "company_listing_coverage_by_lifecycle": {
+    "PORTFOLIO": {
+      "total": 21,
+      "with_listing": 19
+    },
+    "WATCHLIST": {
+      "total": 71,
+      "with_listing": 0
+    }
+  },
+  "end_date": "2026-10-09",
+  "fx_batches": [],
+  "fx_fetch_failures": [],
+  "fx_pairs_not_due": ["DKK/EUR", "USD/EUR"],
+  "held_listing_count": 19,
+  "lookback_start": "2026-09-25",
+  "market_data_batches": [],
+  "planned_batches": 0,
+  "portfolio_base_currency": "EUR",
+  "provider_fetch_failures": [
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "AMD",
+      "retryable": true,
+      "source_record_id": "LISTING:15b282f2-30ae-5c17-8a62-d221c44ba1fa"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "ADYEN.AS",
+      "retryable": true,
+      "source_record_id": "LISTING:3e5da07b-a0e3-5de4-9c92-fe803ddcfc3d"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "AMZN",
+      "retryable": true,
+      "source_record_id": "LISTING:0e0310dd-2a98-5516-a399-b89634587176"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "NOVO-B.CO",
+      "retryable": true,
+      "source_record_id": "LISTING:1be9053c-2270-5113-af06-ca48c0c9a4ba"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "ASML.AS",
+      "retryable": true,
+      "source_record_id": "LISTING:86156b66-9f08-5871-b08c-5f4d936244bb"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "DLO",
+      "retryable": true,
+      "source_record_id": "LISTING:c4670e50-799b-52e6-b97f-c03cb6a5e931"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "ISRG",
+      "retryable": true,
+      "source_record_id": "LISTING:d9a2a9cc-09df-5343-9d86-0c9c52a2c122"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "BKNG",
+      "retryable": true,
+      "source_record_id": "LISTING:6f381626-22a1-5631-a992-c83125df183f"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "GOOGL",
+      "retryable": true,
+      "source_record_id": "LISTING:856b019b-862c-5a8a-b3af-8e46a773ae2c"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "CELH",
+      "retryable": true,
+      "source_record_id": "LISTING:f1944d26-cd99-5ef4-8583-e77947369459"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "MORN",
+      "retryable": true,
+      "source_record_id": "LISTING:8ab3edcc-c58d-5e85-be6e-9b3cec131f45"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "MA",
+      "retryable": true,
+      "source_record_id": "LISTING:37b066aa-0483-59fd-a633-49b378ddadb2"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "MSFT",
+      "retryable": true,
+      "source_record_id": "LISTING:53cd71a8-ad6a-5c37-ae5f-ff8cf49b0607"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "MELI",
+      "retryable": true,
+      "source_record_id": "LISTING:0a183512-6f80-5529-8d81-f7716f8072d6"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "HIMS",
+      "retryable": true,
+      "source_record_id": "LISTING:fee09936-023c-51cd-b04a-3a59e16a36f7"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "MSCI",
+      "retryable": true,
+      "source_record_id": "LISTING:789ec62c-ec84-51c2-bf99-26d9c3eff34f"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "RDDT",
+      "retryable": true,
+      "source_record_id": "LISTING:e5843906-8765-5588-8e20-efa2ba481cb7"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "TSM",
+      "retryable": true,
+      "source_record_id": "LISTING:adcf222b-2033-5626-b601-4eac49460c3f"
+    },
+    {
+      "code": "NETWORK_ERROR",
+      "message": "URLError: <urlopen error [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte>",
+      "provider_symbol": "SPGI",
+      "retryable": true,
+      "source_record_id": "LISTING:23da4f67-d0ac-54c8-85fc-757b658883c2"
+    }
+  ],
+  "provider_id": "YAHOO_FINANCE",
+  "provider_schema_version": "yahoo-chart-v8",
+  "required_fx_pairs": ["DKK/EUR", "USD/EUR"],
+  "scope": "active",
+  "selected_listing_count": 19,
+  "selection_issues": [],
+  "status": "DRY_RUN",
+  "unmapped_fx_pairs": [],
+  "unresolved_listings": [],
+  "verified_listing_mapping_count": 19
+}

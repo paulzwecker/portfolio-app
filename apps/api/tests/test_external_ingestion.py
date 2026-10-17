@@ -206,6 +206,7 @@ def test_operational_run_status_and_attempt_are_durable_and_append_only(
             report={"status": "PARTIAL", "normalized_estimate_count": 5},
         )
         session.add(run)
+        session.flush()
         session.add(
             ExternalIngestionAttempt(
                 id=attempt_id,

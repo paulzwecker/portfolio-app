@@ -1,6 +1,41 @@
 import { expect, test } from "@playwright/test";
+import type { Overview } from "../src/lib/domain-contracts";
 
 const id = "11111111-1111-4111-8111-111111111111";
+const ufcfReturnMethodology = {
+  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  code: "UFCF_ENTERPRISE_IRR",
+  version: 1,
+  title: "Probability-weighted enterprise UFCF IRR",
+  cash_flow_basis: "Probability-weighted annual unlevered free cash flow.",
+  perspective: "ENTERPRISE",
+  entry_value_basis:
+    "Implied enterprise cost from exact listing price and net cash.",
+  share_price_basis: "Exact valuation listing split-adjusted close.",
+  comparability_group: "ENTERPRISE_UFCF",
+  cross_method_policy: "SAME_METHOD_ONLY",
+  limitation: "Not shareholder-distribution IRR.",
+  effective_from: "2026-10-09T00:00:00Z",
+  recorded_at: "2026-10-09T00:00:00Z",
+};
+const ownerCashFlowReturnMethodology = {
+  ...ufcfReturnMethodology,
+  id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  code: "OWNER_CASH_FLOW_EQUITY_IRR",
+  title: "Probability-weighted owner cash-flow equity IRR",
+  perspective: "EQUITY",
+  comparability_group: "EQUITY_RETURN",
+  cross_method_policy: "CONDITIONAL_EQUITY_CROSS_METHOD",
+  limitation: "Owner cash flow is not necessarily a cash distribution.",
+};
+const residualIncomeReturnMethodology = {
+  ...ownerCashFlowReturnMethodology,
+  id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  code: "RESIDUAL_INCOME_EQUITY_IRR",
+  title: "Probability-weighted residual-income equity IRR",
+  limitation:
+    "Dividends and residual-income terminal value use a distinct basis.",
+};
 const company = {
   id,
   name: "Example business",
@@ -143,6 +178,7 @@ const contractScenarios = scenarioNames.map((scenario, scenarioIndex) => ({
 const contractOutputs = {
   id: "44444444-4444-4444-8444-444444444444",
   revision_id: contractRevisionId,
+  return_methodology: ufcfReturnMethodology,
   status: "PARTIAL",
   model_currency: "USD",
   price_observation_id: null,
@@ -344,6 +380,9 @@ test("universe keeps unavailable and data-check ranking states explicit", async 
       model_key: "P-EXAMPLE",
       model_type: null,
       methodology_version: null,
+      return_methodology: null,
+      return_methodology_status: "UNCLASSIFIED",
+      share_price_basis_status: "NOT_RETAINED",
       contract_version: "1.0.0",
       source_revision_id: "legacy-1",
       source: "Workbook fixture",
@@ -391,7 +430,7 @@ test("universe keeps unavailable and data-check ranking states explicit", async 
     const definition = {
       id: `22222222-2222-4222-8222-22222222222${index}`,
       ranking_type,
-      version: ranking_type === "WATCHLIST" ? 3 : 2,
+      version: ranking_type === "WATCHLIST" ? 5 : 2,
       title: `${ranking_type} Rank`,
       methodology: "Documented workbook order; input not migrated.",
       population_rule: "Explicit domain population.",
@@ -499,7 +538,9 @@ test("universe keeps unavailable and data-check ranking states explicit", async 
     page.getByText("DATA_CHECK", { exact: true }).first(),
   ).toBeVisible();
   await expect(
-    page.getByText("Legacy output · separate return semantics"),
+    page.getByText(
+      "USD · Return method unclassified · Quote basis not retained · Legacy output",
+    ),
   ).toBeVisible();
   await expect(page.getByText("12%", { exact: true })).toBeVisible();
   await page
@@ -546,7 +587,7 @@ test("Research Rank explains research priority, records a run, and fits mobile",
     const definition = {
       id: `23232323-2323-4232-8232-23232323232${index}`,
       ranking_type,
-      version: ranking_type === "WATCHLIST" ? 3 : 2,
+      version: ranking_type === "WATCHLIST" ? 5 : 2,
       title: `${ranking_type} Rank`,
       methodology: "Documented ranking methodology.",
       population_rule: "Explicit domain population.",
@@ -703,6 +744,9 @@ test("model outputs keep missing values visible across responsive universe and c
     recorded_at: "2026-10-05T00:00:00Z",
     actor: "IMPORT",
     source: "Portfolio_Watchlist.xlsx:P-EXAMPLE!AZ3:BA20",
+    return_methodology: null,
+    return_methodology_status: "UNCLASSIFIED",
+    share_price_basis_status: "NOT_RETAINED",
     source_revision_id: null,
     revision_source: null,
     revision_type: null,
@@ -868,15 +912,35 @@ test("model outputs keep missing values visible across responsive universe and c
   await page.getByLabel("Sort companies").selectOption("irr-desc");
   await page.getByRole("link", { name: company.name }).click();
   await expect(
-    page.getByRole("navigation", { name: "Company research sections" }),
+    page.getByRole("tablist", { name: "Company research views" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Company context" }),
+    page.getByRole("heading", { name: "Investment summary" }),
   ).toBeVisible();
+  const overviewTab = page.getByRole("tab", { name: "Overview" });
+  await overviewTab.focus();
+  await overviewTab.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Financials" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.getByRole("tab", { name: "Financials" }).press("End");
+  await expect(
+    page.getByRole("tab", { name: "Historical Analysis" }),
+  ).toHaveAttribute("aria-selected", "true");
+  await overviewTab.click();
+  await expect(
+    page.getByText("No target", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No holding observed; data may be incomplete."),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Valuation" }).click();
   await expect(
     page.getByText("No legacy model tab is mapped to this company."),
   ).toBeVisible();
   await expect(page.getByText("Lifecycle unassigned")).toBeVisible();
+  await page.getByRole("tab", { name: "Historical Analysis" }).click();
   await expect(
     page.getByRole("heading", { name: "Estimate Momentum" }),
   ).toBeVisible();
@@ -885,23 +949,16 @@ test("model outputs keep missing values visible across responsive universe and c
       "No usable forward annual Revenue/EPS estimate periods are available.",
     ),
   ).toBeVisible();
-  await expect(
-    page.getByText("No target", { exact: true }).first(),
-  ).toBeVisible();
-  await expect(
-    page.getByText("No holding observed; data may be incomplete."),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "Quality & risk" }).click();
+  await page.getByRole("tab", { name: "Investment Thesis" }).click();
   await expect(
     page.getByRole("heading", { name: "Investment quality" }),
   ).toBeVisible();
   await page.getByText("Record a new score assessment").click();
   await expect(page.getByLabel("Score dimension")).toBeVisible();
-  await page.getByRole("link", { name: "Model & valuation" }).click();
+  await page.getByRole("tab", { name: "Valuation" }).click();
   await expect(
     page.getByRole("heading", { name: "Canonical financial models" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Imported outputs" }).click();
   await expect(
     page.getByRole("heading", { name: "Imported model-output history" }),
   ).toBeVisible();
@@ -913,13 +970,16 @@ test("model outputs keep missing values visible across responsive universe and c
   await expect(
     page.getByText("Prior output retained as a historical model revision."),
   ).toBeVisible();
-  for (const width of [390, 1440]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+  const widths = test.info().project.name === "mobile" ? [390] : [390, 1440];
+  for (const width of widths) {
+    if (test.info().project.name !== "mobile")
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.getByRole("tab", { name: "Overview" }).click();
     await expect(
-      page.getByRole("navigation", { name: "Company research sections" }),
+      page.getByRole("tablist", { name: "Company research views" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Company context" }),
+      page.getByRole("heading", { name: "Investment summary" }),
     ).toBeVisible();
     expect(
       await page.evaluate(
@@ -1051,7 +1111,6 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     unavailable_count: 0,
     not_applicable_count: 0,
   };
-  let submittedPaceReason = "";
   const companyDetail = {
     company: explorerCompany,
     securities: [security],
@@ -1090,6 +1149,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
           quantity: "2",
           latest_price: "42.50",
           price_date: observedAt,
+          price_observed_at: observedAt,
           price_currency: "USD",
           price_freshness: "FRESH",
           native_market_value: "85.00",
@@ -1127,6 +1187,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         quantity: "2",
         latest_price: "42.50",
         price_date: observedAt,
+        price_observed_at: observedAt,
         price_currency: "USD",
         price_freshness: "FRESH",
         native_market_value: "85.00",
@@ -1168,8 +1229,28 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       latest: quote,
       history: [quote, priorQuote],
       freshness: "FRESH",
+      availability: "AVAILABLE",
       age_days: 1,
       price_regime: priceRegime,
+      analytics: {
+        status: "AVAILABLE",
+        methodology_version: "split-adjusted-price-history-v1",
+        observation_count: 252,
+        as_of: observedAt,
+        daily_return: "0.01",
+        dma_20: "41.5",
+        dma_50: "40.0",
+        dma_200: "36.0",
+        high_52w: "45.0",
+        drawdown_52w: "-0.0555",
+        price_return_1m: "0.03",
+        price_return_3m: "0.08",
+        price_return_6m: "0.12",
+        realized_vol_20d: "0.20",
+        trend_state: "UPTREND",
+        correction_state: "NO_CORRECTION",
+      },
+      last_market_update: observedAt,
     },
   ];
   const revenueObservation = {
@@ -1513,6 +1594,12 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       sourceKind === "NATIVE_MODEL_REVISION"
         ? "NATIVE_METHOD_OUTPUT"
         : "LEGACY_NORMALIZED_FIELD",
+    return_methodology:
+      sourceKind === "NATIVE_MODEL_REVISION" ? ufcfReturnMethodology : null,
+    return_methodology_status:
+      sourceKind === "NATIVE_MODEL_REVISION" ? "CLASSIFIED" : "UNCLASSIFIED",
+    share_price_basis_status:
+      sourceKind === "NATIVE_MODEL_REVISION" ? "CAPTURED" : "NOT_RETAINED",
     actor: sourceKind === "NATIVE_MODEL_REVISION" ? "LOCAL_USER" : "IMPORT",
     source_actor:
       sourceKind === "NATIVE_MODEL_REVISION" ? null : "Workbook researcher",
@@ -1620,6 +1707,67 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         quote: "42.5",
       }),
     ],
+    current_calculations: [
+      {
+        model_id: "13131313-1313-4131-8131-131313131313",
+        model_name: "Explorer DCF",
+        model_type: "UFCF_DCF_10Y_FADE",
+        revision_id: "20202020-2020-4202-8202-202020202020",
+        revision_number: 2,
+        methodology_version: "dcf-v1",
+        effective_at: "2026-10-05T16:00:00Z",
+        recorded_at: "2026-10-05T16:00:00Z",
+        calculated_as_of: "2026-10-05T23:59:59Z",
+        known_at: "2026-10-05T23:59:59Z",
+        accepted_output_id: "25252525-2525-4252-8252-252525252525",
+        accepted_reference_price: "42.5",
+        accepted_reference_price_observation_id:
+          "23232323-2323-4232-8232-232323232323",
+        accepted_reference_price_effective_at: "2026-10-05T16:00:00Z",
+        market_price: {
+          status: "AVAILABLE",
+          listing_id: listingId,
+          ticker: "EXPL",
+          venue: "NASDAQ",
+          listing_currency: "USD",
+          quote: "43",
+          quote_currency: "USD",
+          model_reference_price: "43",
+          model_currency: "USD",
+          effective_at: "2026-10-05T20:00:00Z",
+          observed_at: "2026-10-05T20:01:00Z",
+          recorded_at: "2026-10-05T20:01:00Z",
+          provider: "YAHOO_FINANCE",
+          adjustment_basis: "split-adjusted-close",
+          observation_id: "26262626-2626-4262-8262-262626262626",
+          source_ref: "browser-fixture:current-price",
+          reason: null,
+        },
+        outputs: {
+          return_methodology: ufcfReturnMethodology,
+          status: "COMPLETE",
+          model_currency: "USD",
+          price_observation_id: "26262626-2626-4262-8262-262626262626",
+          current_price: "43",
+          price_effective_at: "2026-10-05T20:00:00Z",
+          price_status: "FRESH",
+          price_unavailable_reason: null,
+          irr_unavailable_reason: null,
+          bear_fv: "35",
+          base_fv: "55",
+          bull_fv: "75",
+          bear_probability: "0.2",
+          base_probability: "0.6",
+          bull_probability: "0.2",
+          weighted_fv: "55",
+          weighted_upside: "0.279069767441860465",
+          expected_cash_flow_irr: "0.15",
+          hurdle: "0.10",
+          expected_excess: "0.05",
+          forward_fundamental_cagr: "0.09",
+        },
+      },
+    ],
   };
   const attributionState = (
     point: (typeof expectedReturnHistory.history)[number],
@@ -1635,6 +1783,13 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     model_type: point.model_type,
     methodology_version: point.methodology_version,
     return_semantics: point.return_semantics,
+    return_methodology: point.return_methodology,
+    return_methodology_status: point.return_methodology_status,
+    valuation_listing_id: point.valuation_listing_id,
+    valuation_ticker: point.valuation_ticker,
+    valuation_venue: point.valuation_venue,
+    valuation_listing_currency: point.valuation_listing_currency,
+    share_price_basis_status: point.share_price_basis_status,
     model_currency: point.model_currency,
     expected_cash_flow_irr: point.expected_cash_flow_irr,
     hurdle: point.hurdle,
@@ -1741,6 +1896,88 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       },
     ],
   };
+  const forecastAccuracy = {
+    company_id: id,
+    outcome_known_at: "2028-03-01T12:00:00Z",
+    selected_metric: null,
+    selected_source: null,
+    selected_period_type: null,
+    selected_fiscal_year: null,
+    selected_fiscal_period: null,
+    total_count: 1,
+    returned_count: 1,
+    truncated: false,
+    summaries: [],
+    observations: [
+      {
+        source_type: "ANALYST_CONSENSUS",
+        source_name: "fmp_estimates",
+        source_reference: "https://example.test/consensus",
+        author_id: null,
+        stream_key: null,
+        methodology: "THIRD_PARTY_CONSENSUS",
+        methodology_version: null,
+        model_type: null,
+        scenario: "POINT",
+        scenario_probability: null,
+        forecast_id: "19191919-1919-4191-8191-191919191919",
+        revision_id: null,
+        revision_number: null,
+        supersedes_revision_id: null,
+        supersedes_observation_id: null,
+        metric: "REVENUE",
+        period_type: "ANNUAL",
+        fiscal_year: 2027,
+        fiscal_period: "FY",
+        forecast_period_label: "FY2027",
+        period_end: "2027-12-31",
+        forecast_year: null,
+        forecast_basis: "PROVIDER_MEAN",
+        value: "1100",
+        currency: "USD",
+        unit: "currency",
+        confidence: null,
+        analyst_count: 14,
+        observed_at: "2026-10-04T12:00:00Z",
+        effective_at: null,
+        recorded_at: "2026-10-04T12:01:00Z",
+        forecast_known_at: "2026-10-04T12:01:00Z",
+        horizon_days: 453,
+        horizon_bucket: "OVER_365_DAYS",
+        status: "AVAILABLE",
+        status_reason: null,
+        actual: {
+          status: "AVAILABLE",
+          metric: "REVENUE",
+          period_type: "ANNUAL",
+          fiscal_year: 2027,
+          fiscal_period: "FY",
+          period_end: "2027-12-31",
+          value: "1050",
+          currency: "USD",
+          unit: "currency",
+          provider_id: "sec_edgar",
+          source_reference: "https://example.test/10-k",
+          source_observation_id: "20202020-2020-4202-8202-202020202020",
+          published_at: "2028-02-15T08:00:00Z",
+          observed_at: "2028-02-15T09:00:00Z",
+          recorded_at: "2028-02-15T09:01:00Z",
+          revision_context: "ORIGINAL",
+          supersedes_observation_id: null,
+          data_quality: "PASS",
+          reason: null,
+        },
+        error: {
+          status: "AVAILABLE",
+          signed_error: "50",
+          absolute_error: "50",
+          signed_percentage_error: "0.04761904761904761904761904762",
+          absolute_percentage_error: "0.04761904761904761904761904762",
+          reason: null,
+        },
+      },
+    ],
+  };
   const migrationStatus = {
     company_id: id,
     inventory_available: true,
@@ -1770,6 +2007,460 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ],
   };
 
+  const priorResearchRevision = {
+    id: "a1111111-1111-4111-8111-111111111111",
+    company_id: id,
+    security_id: securityId,
+    stream_key: "research-agent/company-outlook",
+    revision_number: 1,
+    contract_version: "1.0.0",
+    external_revision_id: "expl-r1",
+    supersedes_revision_id: null,
+    author_id: "External research agent",
+    source_id: "Google Sheets",
+    source_reference:
+      "https://docs.google.com/spreadsheets/d/research/edit#gid=123",
+    observed_at: "2026-10-02T09:00:00Z",
+    recorded_at: "2026-10-02T09:01:00Z",
+    status: "PUBLISHED",
+    rationale:
+      "Initial research forecast with clearly marked source limitations.",
+    uncertainty: null,
+    content_fingerprint: "b".repeat(64),
+    forecasts: [
+      {
+        id: "a7777777-7777-4777-8777-777777777777",
+        metric: "REVENUE",
+        period_type: "ANNUAL",
+        fiscal_year: 2027,
+        fiscal_period: "FY",
+        period_end: "2027-12-31",
+        scenario: "POINT",
+        value: "980000",
+        currency: "USD",
+        unit: "currency",
+        availability_status: "AVAILABLE",
+        availability_reason: null,
+        confidence: "LOW",
+        rationale: "Initial baseline estimate.",
+        uncertainty: null,
+      },
+    ],
+    assessments: [],
+    evidence: [],
+  };
+  const currentResearchRevision = {
+    ...priorResearchRevision,
+    id: "a2222222-2222-4222-8222-222222222222",
+    revision_number: 2,
+    external_revision_id: "expl-r2",
+    supersedes_revision_id: priorResearchRevision.id,
+    observed_at: "2026-10-04T09:00:00Z",
+    recorded_at: "2026-10-04T09:01:00Z",
+    rationale: "Updated the forecast after reviewing the annual report.",
+    uncertainty: "Customer retention remains an important unknown.",
+    content_fingerprint: "c".repeat(64),
+    forecasts: [
+      {
+        id: "a3333333-3333-4333-8333-333333333333",
+        metric: "REVENUE",
+        period_type: "ANNUAL",
+        fiscal_year: 2027,
+        fiscal_period: "FY",
+        period_end: "2027-12-31",
+        scenario: "BASE",
+        value: "0",
+        currency: "USD",
+        unit: "currency",
+        availability_status: "AVAILABLE",
+        availability_reason: null,
+        confidence: "MEDIUM",
+        rationale: "Zero is an explicit forecast value.",
+        uncertainty: null,
+      },
+      {
+        id: "a4444444-4444-4444-8444-444444444444",
+        metric: "EPS",
+        period_type: "ANNUAL",
+        fiscal_year: 2028,
+        fiscal_period: "FY",
+        period_end: null,
+        scenario: "POINT",
+        value: null,
+        currency: "USD",
+        unit: "currency/share",
+        availability_status: "UNAVAILABLE",
+        availability_reason: "No supportable estimate is available.",
+        confidence: "UNASSESSED",
+        rationale: null,
+        uncertainty: null,
+      },
+    ],
+    assessments: [
+      {
+        id: "a5555555-5555-4555-8555-555555555555",
+        assessment_type: "BUSINESS_OUTLOOK",
+        status: "AVAILABLE",
+        status_reason: null,
+        narrative: "Growth depends on a small number of renewal decisions.",
+        confidence: "MEDIUM",
+        uncertainty: "Renewal rates have not been reported yet.",
+      },
+    ],
+    evidence: [
+      {
+        id: "a6666666-6666-4666-8666-666666666666",
+        source_document_id: null,
+        source_document_title: null,
+        source_name: "Issuer annual report",
+        external_identifier: "annual-report-2025",
+        source_url: "https://issuer.example.test/reports/2025.pdf",
+        published_at: "2026-02-20",
+        excerpt: "The filing describes the company's end-market exposure.",
+        note: null,
+      },
+    ],
+  };
+  const companyResearchRead = {
+    company_id: id,
+    as_of: null,
+    known_at: null,
+    streams: [
+      {
+        stream_key: currentResearchRevision.stream_key,
+        current_revision: currentResearchRevision,
+        history: [currentResearchRevision, priorResearchRevision],
+      },
+    ],
+  };
+  const priorThesisRevision = {
+    id: "b1111111-1111-4111-8111-111111111111",
+    company_id: id,
+    security_id: securityId,
+    stream_key: "investment-thesis",
+    revision_number: 1,
+    contract_version: "1.0.0",
+    external_revision_id: "expl-thesis-r1",
+    supersedes_revision_id: null,
+    author_id: "Research agent",
+    source_id: "Google Sheets",
+    source_reference:
+      "https://docs.google.com/spreadsheets/d/research/edit#gid=456",
+    observed_at: "2026-10-02T09:00:00Z",
+    recorded_at: "2026-10-02T09:01:00Z",
+    status: "PUBLISHED",
+    thesis_statement: "The initial thesis rests on recurring customer demand.",
+    confidence: "LOW",
+    rationale:
+      "Initial company research before the latest annual report review.",
+    uncertainty: "Retention data was incomplete.",
+    content_fingerprint: "d".repeat(64),
+    claims: [
+      {
+        id: "b2222222-2222-4222-8222-222222222222",
+        claim_key: "recurring-demand",
+        claim_type: "GROWTH_DRIVER",
+        status: "UNDER_REVIEW",
+        statement: "Customer renewals may support steady growth.",
+        confidence: "LOW",
+        uncertainty: "Renewal evidence was not yet available.",
+        evidence: [],
+      },
+    ],
+  };
+  const currentThesisRevision = {
+    ...priorThesisRevision,
+    id: "b3333333-3333-4333-8333-333333333333",
+    revision_number: 2,
+    external_revision_id: "expl-thesis-r2",
+    supersedes_revision_id: priorThesisRevision.id,
+    observed_at: "2026-10-04T11:00:00Z",
+    recorded_at: "2026-10-04T11:01:00Z",
+    thesis_statement:
+      "Recurring renewal revenue supports a durable compounding thesis.",
+    confidence: "MEDIUM",
+    rationale:
+      "Strengthened the thesis after comparing the filing with reported revenue.",
+    uncertainty: "Customer concentration may limit the growth runway.",
+    content_fingerprint: "e".repeat(64),
+    claims: [
+      {
+        id: "b4444444-4444-4444-8444-444444444444",
+        claim_key: "renewal-economics",
+        claim_type: "COMPETITIVE_ADVANTAGE",
+        status: "ACTIVE",
+        statement:
+          "High renewal behavior may reinforce customer switching costs.",
+        confidence: "MEDIUM",
+        uncertainty: null,
+        evidence: [
+          {
+            id: "b5555555-5555-4555-8555-555555555555",
+            relationship: "SUPPORTS",
+            source_document_id: "b6666666-6666-4666-8666-666666666666",
+            source_document_title: "2025 annual report",
+            source_document_type: "ANNUAL_REPORT",
+            source_document_url:
+              "https://issuer.example.test/annual-report-2025.pdf",
+            reported_fundamental_observation_id: null,
+            reported_fundamental: null,
+            source_name: "Issuer annual report",
+            external_identifier: "annual-report-2025",
+            source_url: null,
+            published_at: "2026-02-20",
+            excerpt: "The issuer describes recurring renewal revenue.",
+            note: "Supports the qualitative switching-cost claim.",
+          },
+        ],
+      },
+      {
+        id: "b7777777-7777-4777-8777-777777777777",
+        claim_key: "revenue-trend",
+        claim_type: "GROWTH_DRIVER",
+        status: "UNDER_REVIEW",
+        statement:
+          "Recent revenue performance may be weaker than the thesis assumes.",
+        confidence: "LOW",
+        uncertainty: "One period is not enough to establish a trend.",
+        evidence: [
+          {
+            id: "b8888888-8888-4888-8888-888888888888",
+            relationship: "CONTRADICTS",
+            source_document_id: null,
+            source_document_title: null,
+            source_document_type: null,
+            source_document_url: null,
+            reported_fundamental_observation_id:
+              "b9999999-9999-4999-8999-999999999999",
+            reported_fundamental: {
+              id: "b9999999-9999-4999-8999-999999999999",
+              metric: "REVENUE",
+              statement: "INCOME_STATEMENT",
+              period_type: "ANNUAL",
+              period_start: "2024-01-01T00:00:00Z",
+              period_end: "2024-12-31T00:00:00Z",
+              fiscal_year: 2024,
+              fiscal_period: "FY",
+              filed_at: "2025-02-20T00:00:00Z",
+              observed_at: "2025-02-20T14:00:00Z",
+              recorded_at: "2025-02-20T14:01:00Z",
+              value: "950",
+              currency: "USD",
+              unit: "currency",
+              provider_id: "sec_edgar",
+              data_quality: "PASS",
+              source_url:
+                "https://www.sec.gov/Archives/edgar/data/example/filing-index.html",
+            },
+            source_name: "SEC Company Facts",
+            external_identifier: "sec:revenue:2024",
+            source_url: null,
+            published_at: "2025-02-20",
+            excerpt: null,
+            note: "Reported revenue fell short of the prior internal expectation.",
+          },
+        ],
+      },
+    ],
+  };
+  const companyInvestmentThesisRead = {
+    company_id: id,
+    as_of: null,
+    known_at: null,
+    streams: [
+      {
+        stream_key: currentThesisRevision.stream_key,
+        current_revision: currentThesisRevision,
+        history: [currentThesisRevision, priorThesisRevision],
+      },
+    ],
+  };
+  const riskAssessmentRevision = {
+    id: "bccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    portfolio_id: portfolioId,
+    stream_key: "portfolio-risk-review",
+    revision_number: 1,
+    contract_version: "1.0.0",
+    external_revision_id: "risk-review-1",
+    supersedes_revision_id: null,
+    author_id: "investment-research-agent",
+    source_id: "google-sheets-risk-agent",
+    source_reference: "https://docs.google.com/spreadsheets/d/example/edit",
+    authored_at: observedAt,
+    published_at: observedAt,
+    recorded_at: observedAt,
+    reviewer: "Research reviewer",
+    reviewer_note: "Reviewed against the current published state.",
+    accepted_at: observedAt,
+    baseline_status_at_accept: "CURRENT",
+    baseline_stale_acknowledged: false,
+    portfolio_state_contract_version: "1.0.0",
+    portfolio_state_fingerprint: `sha256:${"a".repeat(64)}`,
+    holdings_snapshot_id: snapshotId,
+    target_revision_id: null,
+    valuation_as_of: observedAt,
+    coverage_status: "COMPLETE",
+    coverage_note: null,
+    summary: "One company-specific risk is under monitoring.",
+    rationale:
+      "The accepted assessment preserves its source and reviewer context.",
+    content_fingerprint: "b".repeat(64),
+    findings: [
+      {
+        id: "bddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        finding_key: "company.customer-concentration",
+        scope: "COMPANY",
+        company_id: id,
+        company_name: explorerCompany.name,
+        category: "BUSINESS",
+        title: "Customer concentration remains elevated",
+        description:
+          "A limited group of customers represents a material share of revenue.",
+        severity: "HIGH",
+        confidence: "MEDIUM",
+        status: "ACTIVE",
+        change_direction: "NEW",
+        rationale:
+          "Recent disclosure supports retaining the finding for review.",
+        evidence: [
+          {
+            id: "beeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            source_document_id: null,
+            source_document_title: null,
+            source_document_url: null,
+            reported_fundamental_observation_id: null,
+            thesis_revision_id: null,
+            thesis_claim_id: null,
+            source_name: "Issuer annual report",
+            external_identifier: "annual-report-2026",
+            source_url: "https://issuer.example.test/annual-report-2026",
+            published_at: "2026-09-30",
+            excerpt: null,
+            note: "Customer concentration disclosure.",
+          },
+        ],
+      },
+    ],
+  };
+  const companyRiskAssessments = {
+    company_id: id,
+    current: [riskAssessmentRevision],
+    history: [riskAssessmentRevision],
+  };
+  const decisionEvaluation = {
+    company_id: id,
+    outcome_known_at: observedAt,
+    horizon_days: [365],
+    minimum_cross_section_sample: 5,
+    scenario_evaluations: [
+      {
+        model_name: "Explorer DCF",
+        model_type: "UFCF_DCF_10Y_FADE",
+        methodology_version: "dcf-v1",
+        revision_id: "29292929-2929-4929-8929-292929292929",
+        revision_number: 2,
+        forecast_known_at: observedAt,
+        metric: "REVENUE",
+        forecast_year: 1,
+        fiscal_year: null,
+        fiscal_period: null,
+        period_end: null,
+        currency: "USD",
+        unit: "currency",
+        scenarios: [
+          { scenario: "BEAR", probability: "0.2", value: "100" },
+          { scenario: "BASE", probability: "0.6", value: "120" },
+          { scenario: "BULL", probability: "0.2", value: "150" },
+        ],
+        actual_status: "FISCAL_PERIOD_MAPPING_UNAVAILABLE",
+        actual_value: null,
+        actual_published_at: null,
+        actual_observed_at: null,
+        actual_recorded_at: null,
+        score_status: "NOT_EVALUATED",
+        continuous_ranked_probability_score: null,
+        probability_calibration_status:
+          "NOT_ESTIMABLE_NO_OUTCOME_EVENT_DEFINITION",
+        reason: "Model year 1 has no documented fiscal-period anchor.",
+      },
+    ],
+    valuation_scenarios: [],
+    signals: [
+      {
+        signal_type: "PORTFOLIO_RANK",
+        signal_id: "30303030-3030-4030-8030-303030303030",
+        run_id: "31313131-3131-4131-8131-313131313131",
+        run_as_of: observedAt,
+        recorded_at: observedAt,
+        source_methodology: "Portfolio Rank v4",
+        status: "RANKED",
+        value: "1",
+        position: 1,
+        expected_irr: "0.14",
+        return_methodology: "UFCF_ENTERPRISE_IRR",
+        return_methodology_version: 1,
+        return_perspective: "ENTERPRISE",
+        valuation_listing_id: listingId,
+        valuation_ticker: "EXPL",
+        valuation_venue: "NASDAQ",
+        listing_currency: "USD",
+        model_currency: "USD",
+        estimate_momentum_direction: null,
+        estimate_momentum_availability: null,
+        estimate_momentum_freshness: null,
+        estimate_momentum_quality: null,
+        price_observation_id: quote.id,
+        outcomes: [
+          {
+            horizon_days: 365,
+            status: "BASE_PRICE_DATA_CHECK",
+            target_date: "2027-10-04",
+            start_market_date: observedAt,
+            end_market_date: null,
+            total_return: null,
+            annualized_return: null,
+            basis: "PROVIDER_TOTAL_RETURN_CLOSE",
+            start_observation_id: quote.id,
+            end_observation_id: null,
+            start_provider: "Fixture market source",
+            end_provider: null,
+            currency: "USD",
+            reason:
+              "The baseline has no eligible source observation timestamp.",
+          },
+        ],
+        reason: "Historical rank fixture.",
+      },
+    ],
+    summaries: [
+      {
+        signal_type: "RANK_RETURN_ASSOCIATION",
+        run_id: "31313131-3131-4131-8131-313131313131",
+        run_as_of: observedAt,
+        source_methodology: "Portfolio Rank v4",
+        horizon_days: 365,
+        grouping: "RETURN_METHOD_AND_LISTING_CURRENCY",
+        group_value: "UFCF_ENTERPRISE_IRR@1",
+        listing_currency: "USD",
+        sample_count: 1,
+        minimum_sample_count: 5,
+        status: "INSUFFICIENT_SAMPLE",
+        spearman_correlation: null,
+        mean_annualized_return: null,
+        median_annualized_return: null,
+        interpretation:
+          "The cross-section is too small for a diagnostic statistic.",
+      },
+    ],
+    portfolio_implementation_status: "NOT_AVAILABLE_NO_TRANSACTION_LEDGER",
+    portfolio_implementation_reason:
+      "Position snapshots do not establish transaction returns.",
+    limitations: [
+      "No fiscal-year mapping is available for ordinal model projections.",
+    ],
+  };
+
+  let marketDataRequestCount = 0;
   await page.route(/\/api\/research\//, (route) => {
     const pathname = new URL(route.request().url()).pathname.replace(
       "/api/research/",
@@ -1790,7 +2481,6 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     if (pathname === "execution-pace-runs") {
       if (route.request().method() === "POST") {
         const body = route.request().postDataJSON() as { reason: string };
-        submittedPaceReason = body.reason;
         return route.fulfill({
           status: 201,
           json: { ...paceRun, reason: body.reason },
@@ -1800,20 +2490,177 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     }
     if (pathname === `companies/${id}/model-migration-status`)
       return route.fulfill({ json: migrationStatus });
-    if (pathname === `companies/${id}/market-data`)
+    if (pathname === `companies/${id}/market-data`) {
+      marketDataRequestCount += 1;
       return route.fulfill({ json: marketData });
+    }
+    if (pathname === "market-data/status")
+      return route.fulfill({
+        json: {
+          state: "AVAILABLE",
+          last_attempt_at: observedAt,
+          last_successful_update: observedAt,
+          market_run_id: null,
+          fx_run_id: null,
+          message: null,
+        },
+      });
     if (pathname === `companies/${id}/reported-fundamentals`)
       return route.fulfill({ json: reportedFundamentals });
+    if (pathname === `companies/${id}/financial-statements`) {
+      const statementUrl = new URL(route.request().url());
+      const quarterly =
+        statementUrl.searchParams.get("period_type") === "QUARTERLY";
+      return route.fulfill({
+        json: {
+          company_id: id,
+          period_type: quarterly ? "QUARTERLY" : "ANNUAL",
+          as_of: null,
+          known_at: null,
+          latest_observed_at: observedAt,
+          periods: [
+            {
+              period_end: "2025-12-31",
+              label: quarterly ? "FY2025 · Q4" : "FY2025",
+              fiscal_year: 2025,
+              fiscal_period: "FY",
+              is_forecast: false,
+            },
+          ],
+          rows: [
+            {
+              id: "REPORTED_ACTUAL::OPERATING_INCOME::USD::currency",
+              metric: "OPERATING_INCOME",
+              label: "Operating income",
+              statement: "INCOME_STATEMENT",
+              source_kind: "REPORTED_ACTUAL",
+              source_name: "Reported actuals",
+              scenario: null,
+              currency: "USD",
+              unit: "currency",
+              availability_reason: null,
+              cells: [
+                {
+                  period_end: "2025-12-31",
+                  value: "250000",
+                  status: "AVAILABLE",
+                  reason: null,
+                  selected_source_id: null,
+                  source_ids: [],
+                },
+              ],
+            },
+            {
+              id: "REPORTED_ACTUAL::REVENUE::USD::currency",
+              metric: "REVENUE",
+              label: "Revenue",
+              statement: "INCOME_STATEMENT",
+              source_kind: "REPORTED_ACTUAL",
+              source_name: "Reported actuals",
+              scenario: null,
+              currency: "USD",
+              unit: "currency",
+              availability_reason: null,
+              cells: [
+                {
+                  period_end: "2025-12-31",
+                  value: "1000000",
+                  status: "AVAILABLE",
+                  reason: null,
+                  selected_source_id: revenueObservation.id,
+                  source_ids: [revenueObservation.id],
+                },
+              ],
+            },
+            {
+              id: "REPORTED_ACTUAL::CASH_AND_CASH_EQUIVALENTS::USD::currency",
+              metric: "CASH_AND_CASH_EQUIVALENTS",
+              label: "Cash and cash equivalents",
+              statement: "BALANCE_SHEET",
+              source_kind: "REPORTED_ACTUAL",
+              source_name: "Reported actuals",
+              scenario: null,
+              currency: null,
+              unit: "currency",
+              availability_reason:
+                "No eligible reported observation in this period view.",
+              cells: [],
+            },
+          ],
+          reported_periods: reportedFundamentals.periods,
+          consensus: consensusEstimateRead,
+          research: companyResearchRead,
+          limitations: [
+            {
+              source_name: "Growth & ratios",
+              reason:
+                "No canonical growth/ratio or reported EPS, EBITDA, FCF calculation is implemented.",
+              reference_id: null,
+            },
+            {
+              source_name: "legacy_workbook_estimates · REVENUE · FY+1",
+              reason:
+                "Currency and fiscal period are unknown; alignment is unavailable.",
+              reference_id: estimateObservation.id,
+            },
+          ],
+        },
+      });
+    }
     if (pathname === `companies/${id}/source-documents`)
       return route.fulfill({ json: sourceDocuments });
     if (pathname === `companies/${id}/consensus-estimates`)
       return route.fulfill({ json: consensusEstimateRead });
+    if (pathname === `companies/${id}/research`)
+      return route.fulfill({ json: companyResearchRead });
+    if (pathname === `companies/${id}/thesis`)
+      return route.fulfill({ json: companyInvestmentThesisRead });
+    if (pathname === `companies/${id}/risk-assessments`)
+      return route.fulfill({ json: companyRiskAssessments });
     if (pathname === `companies/${id}/estimate-momentum`)
       return route.fulfill({ json: estimateMomentumRead });
     if (pathname === `companies/${id}/temporal-alignment`)
       return route.fulfill({ json: temporalAlignment });
+    if (pathname === `companies/${id}/forecast-accuracy`)
+      return route.fulfill({ json: forecastAccuracy });
+    if (pathname === `companies/${id}/decision-evaluation`)
+      return route.fulfill({ json: decisionEvaluation });
     if (pathname === `companies/${id}/expected-return-history`)
       return route.fulfill({ json: expectedReturnHistory });
+    if (pathname === "return-methodologies")
+      return route.fulfill({
+        json: {
+          definitions: [
+            ufcfReturnMethodology,
+            ownerCashFlowReturnMethodology,
+            residualIncomeReturnMethodology,
+          ],
+          rules: [
+            {
+              left_methodology: "UFCF_ENTERPRISE_IRR",
+              right_methodology: "UFCF_ENTERPRISE_IRR",
+              status: "DIRECT",
+              rationale: "Same enterprise cash-flow method and version.",
+            },
+            {
+              left_methodology: "OWNER_CASH_FLOW_EQUITY_IRR",
+              right_methodology: "RESIDUAL_INCOME_EQUITY_IRR",
+              status: "CONDITIONAL_EQUITY",
+              rationale:
+                "Both equity rates use different cash-flow conventions.",
+            },
+            {
+              left_methodology: "RESIDUAL_INCOME_EQUITY_IRR",
+              right_methodology: "UFCF_ENTERPRISE_IRR",
+              status: "NOT_COMPARABLE_PERSPECTIVE",
+              rationale:
+                "Enterprise and equity claimholder perspectives differ.",
+            },
+          ],
+          currency_policy:
+            "IRR is shown in model-local currency. Cross-currency rates are marked FX_EXCLUDED; no FX return, inflation adjustment or currency forecast is inferred.",
+        },
+      });
     if (pathname === `companies/${id}/expected-return-attribution`) {
       const url = new URL(route.request().url());
       const prior = expectedReturnHistory.history.find(
@@ -1898,32 +2745,104 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto(`/company/${id}`);
     await expect(
-      page.getByRole("heading", { name: "Company context" }),
+      page.getByRole("tablist", { name: "Company research views" }),
     ).toBeVisible();
-    await expect(page.getByText("EXPL · NASDAQ · USD").first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Investment summary" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Select exact listing")).toHaveValue(
+      listingId,
+    );
+    expect(marketDataRequestCount).toBeGreaterThanOrEqual(1);
+    await expect(
+      page.getByText("FRESH", { exact: true }).first(),
+    ).toBeVisible();
     await expect(
       page.locator("#overview").getByText("10%", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.locator("#overview").getByText("20%", { exact: true }),
+      page.locator("#overview").getByText("20%", { exact: true }).first(),
     ).toBeVisible();
     await expect(page.getByText("-10%", { exact: true })).toBeVisible();
     await expect(
       page.getByText("VALUED", { exact: true }).first(),
     ).toBeVisible();
+    await expect(page.getByText("$42.50").first()).toBeVisible();
+    await page.getByRole("tab", { name: "Investment Thesis" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Investment quality" }),
+    ).toBeVisible();
     await expect(page.getByText("4.50 / 5", { exact: true })).toBeVisible();
     await expect(page.getByText("Higher means greater risk")).toBeVisible();
-    await expect(page.getByText("$42.50").first()).toBeVisible();
-    await expect(page.getByText("Fresh · 1d")).toBeVisible();
+    await page.getByRole("tab", { name: "Financials" }).click();
     await expect(
-      page.getByRole("heading", { name: "Reported fundamentals" }),
+      page.getByRole("heading", { name: "Financial statements" }),
     ).toBeVisible();
     await expect(
-      page.locator("#reported-fundamentals").getByText("SEC identity · mapped"),
+      page.getByRole("region", {
+        name: "Financial statements table, scrollable periods",
+      }),
     ).toBeVisible();
-    await expect(page.getByText("$1,000,000.00")).toBeVisible();
-    await expect(page.getByText("Cash & equivalents")).toBeVisible();
-    await expect(page.getByText("Not imported").first()).toBeVisible();
+    expect(
+      await page.evaluate(() => document.body.scrollWidth <= innerWidth),
+    ).toBe(true);
+    await expect(
+      page.getByLabel("Chart Revenue · Reported actuals"),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Chart Operating income · Reported actuals"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Revenue, FY2025, 1000000 USD/ }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Balance Sheet", exact: true })
+      .click();
+    await expect(
+      page.getByText("No eligible reported observation in this period view."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Estimates", exact: true }).click();
+    await expect(
+      page.getByText("No aligned estimates", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Growth & Ratios", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Growth & ratios are unavailable" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Income Statement", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Quarterly", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Quarterly", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Annual", exact: true }).click();
+    await page.getByRole("button", { name: "Sources & alignment" }).click();
+    await expect(
+      page.getByText("Accepted agent research archive"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/research-agent\/company-outlook · 2 revisions/),
+    ).toBeVisible();
+    await page
+      .getByText(/research-agent\/company-outlook · 2 revisions/)
+      .click();
+    await expect(
+      page.getByText(
+        "Initial research forecast with clearly marked source limitations.",
+      ),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
+    await page
+      .getByRole("button", { name: /Revenue, FY2025, 1000000 USD/ })
+      .click();
+    await expect(page.getByText("Economic period")).toBeVisible();
+    await expect(page.getByText("0000000001-26-000001")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await page.getByRole("tab", { name: "Research & Evidence" }).click();
     await expect(
       page.getByRole("heading", { name: "Filings & source documents" }),
     ).toBeVisible();
@@ -1944,104 +2863,167 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       documents.getByRole("link", { name: "Open source" }).first(),
     ).toHaveAttribute("href", /https:\/\/www\.sec\.gov\/Archives/);
     await expect(
-      page.getByRole("heading", { name: "Consensus estimates" }),
+      page.getByRole("heading", {
+        name: "Accepted qualitative risk assessments",
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Customer concentration remains elevated"),
+    ).toBeVisible();
+    await expect(page.getByText("Current baseline")).toBeVisible();
+    const activity = page.getByRole("list", {
+      name: "Prioritized research activity",
+    });
+    await page.getByLabel("Evidence category").selectOption("RISKS");
+    await expect(
+      activity.getByText("Risk assessment · revision 1"),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Inspect evidence" })
+      .first()
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(
+      page.getByText("Accepted qualitative risk").first(),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
+    await page.getByLabel("Evidence category").selectOption("ALL");
+    await page.getByRole("tab", { name: "Investment Thesis" }).click();
+    const thesis = page.getByRole("region", { name: "Investment thesis" });
+    await expect(
+      thesis.getByRole("heading", { name: "Investment thesis" }),
+    ).toBeVisible();
+    await expect(
+      thesis.getByText(
+        "Recurring renewal revenue supports a durable compounding thesis.",
+      ),
+    ).toBeVisible();
+    await thesis
+      .getByRole("button")
+      .filter({ hasText: "Recent revenue performance may be weaker" })
+      .click();
+    await expect(
+      thesis.getByText("CONTRADICTS", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      thesis.getByText(/Linked reported fact · REVENUE · \$950\.00 · FY2024/),
+    ).toBeVisible();
+    await thesis
+      .getByRole("button")
+      .filter({ hasText: "High renewal behavior may reinforce" })
+      .click();
+    await expect(
+      thesis.locator(
+        'a[href="https://issuer.example.test/annual-report-2025.pdf"]',
+      ),
+    ).toBeVisible();
+    await thesis.getByRole("button", { name: "Inspect evidence" }).click();
+    await expect(page.getByRole("dialog")).toContainText("Source document");
+    await expect(page.getByRole("dialog")).toContainText(
+      "b6666666-6666-4666-8666-666666666666",
+    );
+    await page.getByRole("button", { name: "Close details" }).click();
+    await thesis.getByText(/Prior thesis revisions · 1/).click();
+    await expect(
+      thesis.getByText(
+        "The initial thesis rests on recurring customer demand.",
+      ),
+    ).toBeVisible();
+    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Historical analysis" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Market history" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Historical date range")).toBeVisible();
+    await page.getByRole("button", { name: "All available" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Expectations history" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Forecast vs. outcome" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Estimate Momentum" }),
     ).toBeVisible();
     await expect(page.getByText("Analyst coverage: 11")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Forecast vs. outcome" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Expected-return history" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Execution Pace" }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("No decision has been recorded."),
-    ).toBeVisible();
     const returnHistory = page.getByRole("region", {
-      name: "Expected-return history",
+      name: "Expectations history",
     });
-    await expect(
-      returnHistory.getByText("Current accepted model state"),
-    ).toBeVisible();
-    await expect(
-      returnHistory.getByText("Why Expected IRR changed"),
-    ).toBeVisible();
-    await expect(
-      returnHistory.getByText("Counterfactual contributions"),
-    ).toBeVisible();
-    await expect(
-      returnHistory.getByText("Residual / unexplained"),
-    ).toBeVisible();
-    await expect(
-      returnHistory.getByLabel("Prior Expected IRR state"),
-    ).toBeVisible();
-    await returnHistory
-      .getByLabel("Expected-return model series")
-      .selectOption("legacy:P-EXPL::USD");
-    await expect(
-      returnHistory.getByText("Imported legacy snapshot"),
-    ).toBeVisible();
-    await returnHistory
-      .locator("details")
-      .filter({ hasText: "Imported legacy snapshot" })
-      .locator("summary")
-      .click();
-    await expect(
-      returnHistory.getByText(/source author Workbook researcher/),
-    ).toBeVisible();
     await expect(
       returnHistory.getByRole("img", {
         name: /Fair value and comparable price/,
       }),
     ).toBeVisible();
-    await expect(returnHistory.getByRole("status")).toContainText(
-      "3 total immutable imported/native model point(s)",
-    );
+    await expect(
+      returnHistory.getByText("Accepted expectations over time"),
+    ).toBeVisible();
+    await expect(
+      returnHistory.getByText("Source: fmp_estimates"),
+    ).toBeVisible();
+    await expect(returnHistory.getByText("Source: sec_edgar")).toBeVisible();
     const temporal = page.getByRole("region", { name: "Forecast vs. outcome" });
-    await expect(temporal.getByText(/FY2027 cannot be assigned/)).toBeVisible();
-    await expect(temporal.getByText("fmp_estimates")).toBeVisible();
-    await expect(temporal.getByText("sec_edgar")).toBeVisible();
-    await expect(temporal.getByText("30%", { exact: true })).toBeVisible();
-    await expect(temporal.getByLabel("Forecast date")).toBeVisible();
-    await expect(temporal.getByLabel("Return horizon")).toBeVisible();
-    await expect(page.getByText("FALLBACK SELECTED")).toBeVisible();
-    await expect(page.getByText("FY+1 · legacy horizon only")).toBeVisible();
     await expect(
-      page
-        .getByRole("region", { name: "Consensus estimates" })
-        .locator("span.text-2xl")
-        .filter({ hasText: "Currency unknown 120.5" }),
+      temporal.getByText("FISCAL YEAR MAPPING UNAVAILABLE").first(),
     ).toBeVisible();
-    await expect(page.getByText("Coverage · Unknown")).toBeVisible();
+    await expect(temporal.getByText("Source: fmp_estimates")).toBeVisible();
+    await expect(temporal.getByText("Source: sec_edgar")).toBeVisible();
+    await expect(temporal.getByLabel("Historical forecast date")).toBeVisible();
     await expect(
-      page.getByText("No captured EPS estimate for this source."),
-    ).toBeVisible();
-    await page.getByText("Revision history · 1 snapshot").click();
-    await expect(
-      page.getByText("Workbook reference · Estimate History!D4"),
-    ).toBeVisible();
-    await page.getByText("Filing history (1)").click();
-    await expect(page.getByText("ORIGINAL · filed")).toBeVisible();
-    await expect(page.getByText("#1", { exact: true }).first()).toBeVisible();
-    await expect(
-      page.getByText(/Ranking inputs are not migrated/).first(),
+      temporal.getByLabel("Historical return horizon"),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Canonical financial models" }),
+      page.getByRole("heading", { name: "Decision history" }),
     ).toBeVisible();
+    await expect(page.getByText("Recorded decision history")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Change timeline" }),
+    ).toBeVisible();
+    await page.getByLabel("Historical event type").selectOption("MODEL");
+    await expect(
+      page.getByRole("button", { name: /Inspect/ }).first(),
+    ).toBeVisible();
+    await page.getByRole("tab", { name: "Financials" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Financial statements" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Sources & alignment" }).click();
+    await expect(
+      page.getByText("FALLBACK SELECTED · selected provider"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Currency and fiscal period are unknown; alignment is unavailable.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Accepted agent research archive"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
+    await page.getByRole("tab", { name: "Valuation" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Valuation workspace" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "No valuation is available" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Model family" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Revision history & migration diagnostics" })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Model migration status" }),
     ).toBeVisible();
     await expect(page.getByText("Native · editable")).toBeVisible();
     await expect(page.getByText("Projections: 30/30 matched")).toBeVisible();
-    await expect(
-      page.getByText(/No application-owned financial model has been accepted/),
-    ).toBeVisible();
+    await page.getByRole("button", { name: /UFCF DCF Not accepted/ }).click();
+    await page.getByRole("button", { name: "Start UFCF DCF model" }).click();
     await page.getByRole("button", { name: "Create first DCF model" }).click();
     await expect(
       page.getByRole("heading", { name: "Create the first DCF model" }),
@@ -2054,12 +3036,18 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Additional canonical models" }),
-    ).toBeVisible();
+    await page
+      .getByRole("button", { name: /Residual income Not accepted/ })
+      .click();
+    await page
+      .getByRole("button", { name: "Start Residual income model" })
+      .click();
     await page
       .getByRole("button", { name: "New residual-income model" })
       .click();
+    await expect(
+      page.getByRole("heading", { name: "Additional canonical models" }),
+    ).toBeVisible();
     await expect(
       page.getByText("Create residual-income model", { exact: true }),
     ).toBeVisible();
@@ -2072,11 +3060,40 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ).toBe(true);
     await page.getByRole("button", { name: "Cancel" }).click();
     await page
-      .getByText("Price history and regime measures (90 sessions)")
+      .getByRole("button", { name: /Owner cash flow Not accepted/ })
+      .click();
+    await page
+      .getByRole("button", { name: "Start Owner cash flow model" })
+      .click();
+    await page
+      .getByRole("button", { name: "New owner cash-flow model" })
       .click();
     await expect(
+      page.getByText("Create owner-cash-flow model", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Base revenue (billions)")).toBeVisible();
+    await expect(
+      page
+        .locator("#canonical-model-archetypes details[open]")
+        .getByLabel("Owner CF margin")
+        .first(),
+    ).toBeVisible();
+    await expect(page.getByLabel("BASE scenario rationale")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Market history" }),
+    ).toBeVisible();
+    await expect(page.getByText("AVAILABLE · FRESH")).toBeVisible();
+    await expect(page.getByText("200DMA")).toBeVisible();
+    await expect(
       page.getByRole("img", {
-        name: "Recent split-adjusted daily closing prices",
+        name: "Exact-listing price history for EXPL",
       }),
     ).toBeVisible();
     expect(
@@ -2085,13 +3102,6 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
   }
-  await page
-    .getByLabel("Review rationale")
-    .fill("Reassessed source coverage before pacing.");
-  await page.getByRole("button", { name: "Record Execution Pace" }).click();
-  await expect
-    .poll(() => submittedPaceReason)
-    .toBe("Reassessed source coverage before pacing.");
   consensusEstimateRead = {
     company_id: id,
     continuity_status: "NO_MAPPING",
@@ -2125,9 +3135,14 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     actual: { ...emptyTemporalValue, status: "NOT_REPORTED" },
   };
   await page.goto(`/company/${id}`);
+  await page.getByRole("tab", { name: "Financials" }).click();
   await expect(
-    page.getByText("No consensus provider identity is mapped."),
+    page.getByRole("heading", { name: "Financial statements" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Sources & alignment" }).click();
+  await expect(page.getByText("No consensus provider mapping.")).toBeVisible();
+  await page.getByRole("button", { name: "Close details" }).click();
+  await page.getByRole("tab", { name: "Historical Analysis" }).click();
   const temporalRegion = page.getByRole("region", {
     name: "Forecast vs. outcome",
   });
@@ -2494,7 +3509,16 @@ test("Company Explorer exports, previews and accepts a Sheets contract responsiv
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/company/${id}`);
-  await page.getByRole("link", { name: "Model & valuation" }).click();
+  await page.getByRole("tab", { name: "Valuation" }).click();
+  await expect(page.getByText("Accepted valuation")).toBeVisible();
+  await expect(page.getByText("Weighted fair value / share")).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Valuation scenarios" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /BULL 20%/ }).click();
+  await expect(page.getByText("BULL assumptions")).toBeVisible();
+  await expect(page.getByText("Method & evidence")).toBeVisible();
+  await page.getByRole("button", { name: "Edit accepted assumptions" }).click();
   await expect(page.getByText("Google Sheets round trip")).toBeVisible();
   const downloadStarted = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export contract" }).click();
@@ -2539,9 +3563,6 @@ test("Company Explorer exports, previews and accepts a Sheets contract responsiv
   await page
     .getByLabel("Source URL or reference (optional)")
     .fill("https://example.test/filing");
-  await expect(
-    page.getByText("Recalculating projections and normalized outputs…"),
-  ).toBeVisible();
   await expect(page.getByText("Accepted revision 2 → draft")).toBeVisible();
   await expect(page.getByText("$21.50")).toBeVisible();
   await expect(page.getByText("100 → 112")).toBeVisible();
@@ -2585,6 +3606,8 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
   const portfolioId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const listingId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const securityId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const untargetedListingId = "44444444-4444-4444-8444-444444444444";
+  const untargetedSecurityId = "55555555-5555-4555-8555-555555555555";
   const watchlistId = "22222222-2222-4222-8222-222222222222";
   const portfolioCompany = { ...company, lifecycle: "PORTFOLIO" as const };
   const watchlistCompany = {
@@ -2593,8 +3616,8 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
     name: "Watchlist opportunity",
     lifecycle: "WATCHLIST" as const,
   };
-  const currentTime = "2026-10-05T12:00:00Z";
-  const overview = {
+  const currentTime = "2026-10-10T12:00:00Z";
+  const overview: Overview = {
     portfolio: {
       id: portfolioId,
       name: "Long-term portfolio",
@@ -2606,13 +3629,16 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
       id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       portfolio_id: portfolioId,
       completeness: "COMPLETE",
-      positions: [{ listing_id: listingId, quantity: "10" }],
+      positions: [
+        { listing_id: listingId, quantity: "10" },
+        { listing_id: untargetedListingId, quantity: "2" },
+      ],
       cash_positions: [{ currency: "USD", balance: "100" }],
       actor: "IMPORT",
       reason: "Complete test holding observation.",
       source: "browser-fixture",
-      effective_at: currentTime,
-      recorded_at: currentTime,
+      effective_at: "2026-10-04T12:00:00Z",
+      recorded_at: "2026-10-04T12:00:00Z",
     },
     target_revision: {
       id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
@@ -2642,7 +3668,12 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
             quantity: "10",
             latest_price: "90",
             price_date: currentTime,
+            price_observed_at: currentTime,
             price_currency: "USD",
+            portfolio_weight: "0.8181818181818182",
+            fx_rate: null,
+            fx_effective_at: null,
+            valuation_sync_status: "NOT_REQUIRED",
             price_freshness: "FRESH",
             native_market_value: "900",
             base_market_value: "900",
@@ -2652,25 +3683,73 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
         target_weight: "0.4",
         current_market_value: "900",
         current_market_currency: "USD",
-        current_weight: "0.9",
-        allocation_gap: "-0.5",
+        current_weight: "0.8181818181818182",
+        allocation_gap: "-0.4181818181818182",
+        allocation_status: "VALUED",
+      },
+      {
+        company: {
+          ...portfolioCompany,
+          id: "33333333-3333-4333-8333-333333333333",
+          name: "AMD",
+        },
+        positions: [
+          {
+            listing_id: untargetedListingId,
+            security_id: untargetedSecurityId,
+            ticker: "AMD",
+            venue: "NASDAQ",
+            currency: "USD",
+            security_name: "Advanced Micro Devices common stock",
+            quantity: "2",
+            latest_price: "50",
+            price_date: currentTime,
+            price_observed_at: currentTime,
+            price_currency: "USD",
+            portfolio_weight: "0.0909090909090909",
+            fx_rate: null,
+            fx_effective_at: null,
+            valuation_sync_status: "NOT_REQUIRED",
+            price_freshness: "FRESH",
+            native_market_value: "100",
+            base_market_value: "100",
+            valuation_status: "VALUED",
+          },
+        ],
+        target_weight: null,
+        current_market_value: "100",
+        current_market_currency: "USD",
+        current_weight: "0.0909090909090909",
+        allocation_gap: null,
         allocation_status: "VALUED",
       },
     ],
     standalone_positions: [],
     valuation_status: "VALUED",
-    base_market_value: "1000",
+    valuation_mode: "CURRENT_MARK_TO_MARKET",
+    valuation_as_of: currentTime,
+    market_data_through: "2026-10-09T16:00:00Z",
+    fx_data_through: null,
+    holdings_age_days: 6,
+    holdings_freshness: "STALE",
+    base_market_value: "1100",
     valuation_currency: "USD",
     cash_valuations: [
       {
         currency: "USD",
         balance: "100",
         base_market_value: "100",
+        portfolio_weight: "0.0909090909090909",
+        fx_rate: null,
+        fx_effective_at: null,
         valuation_status: "VALUED",
       },
     ],
     valuation_gaps: [],
   };
+  let currentOverview = overview;
+  const postedHoldings: { value?: Record<string, unknown> } = {};
+  const confirmedSnapshotId = "dddddddd-dddd-4ddd-8ddd-ddddddddddde";
   const emptyRanks = () =>
     companyRankingCurrent.current.map((rank) => ({
       ...rank,
@@ -2695,8 +3774,68 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
     route.fulfill({ json: [overview.portfolio] }),
   );
   await page.route(
+    `**/api/research/portfolios/${portfolioId}/risk-assessments`,
+    (route) =>
+      route.fulfill({
+        json: { portfolio_id: portfolioId, current: [], history: [] },
+      }),
+  );
+  await page.route(
     `**/api/research/portfolios/${portfolioId}/overview`,
-    (route) => route.fulfill({ json: overview }),
+    (route) => route.fulfill({ json: currentOverview }),
+  );
+  await page.route(
+    `**/api/research/portfolios/${portfolioId}/holding-snapshots`,
+    async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fulfill({ status: 405 });
+        return;
+      }
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      postedHoldings.value = body;
+      const confirmedSnapshot = {
+        ...currentOverview.snapshot,
+        id: confirmedSnapshotId,
+        ...body,
+        recorded_at: new Date().toISOString(),
+      } as NonNullable<Overview["snapshot"]>;
+      currentOverview = {
+        ...currentOverview,
+        snapshot: confirmedSnapshot,
+        holdings_age_days: 0,
+        holdings_freshness: "FRESH",
+        valuation_status: "VALUED",
+        base_market_value: "1305",
+        companies: currentOverview.companies.map((row) =>
+          row.company.id === id
+            ? {
+                ...row,
+                positions: row.positions.map((position) => ({
+                  ...position,
+                  quantity: "12",
+                  native_market_value: "1080",
+                  base_market_value: "1080",
+                  portfolio_weight: "0.8275862068965517",
+                })),
+                current_market_value: "1080",
+                current_weight: "0.8275862068965517",
+                allocation_gap: "-0.4275862068965517",
+              }
+            : row,
+        ),
+        cash_valuations: currentOverview.cash_valuations.map((cash) =>
+          cash.currency === "USD"
+            ? {
+                ...cash,
+                balance: "125",
+                base_market_value: "125",
+                portfolio_weight: "0.0957854406130268",
+              }
+            : cash,
+        ),
+      };
+      await route.fulfill({ status: 201, json: confirmedSnapshot });
+    },
   );
   await page.route("**/api/research/universe/ranking-summary", (route) =>
     route.fulfill({
@@ -2768,13 +3907,28 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
 
   await page.goto("/portfolio");
   await expect(
-    page.getByRole("heading", { name: "Portfolio posture" }),
+    page.getByRole("heading", { name: "Portfolio at a glance" }),
   ).toBeVisible();
-  await expect(page.getByText("$1,000.00", { exact: true })).toBeVisible();
-  await expect(page.getByText("Largest strategic gaps")).toBeVisible();
-  await expect(page.getByText("Above target", { exact: true })).toBeVisible();
+  await expect(page.getByText("$1,100.00", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Current mark-to-market/)).toBeVisible();
   await expect(
-    page.getByText("Portfolio No run", { exact: true }),
+    page.getByText(/Holdings confirmation is 6 days old/),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText(/quote observed/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await expect(page.getByText("Largest strategic gaps")).toBeVisible();
+  await expect(
+    page.getByText("Strategic targets need investor review"),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "AMD" }).first()).toBeVisible();
+  await expect(page.getByText("Above target", { exact: true })).toBeVisible();
+  await page.getByText("Decision and research context").click();
+  await expect(
+    page.getByText("Portfolio No run", { exact: true }).first(),
   ).toBeVisible();
   await expect(
     page.getByText("NO MAPPING", { exact: true }).first(),
@@ -2784,13 +3938,54 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
   ).toBeVisible();
   await expect(page.getByText("Needs attention")).toBeVisible();
   await expect(page.getByText("Model revision 2")).toBeVisible();
-  await page.getByText("Quality, model and decision evidence").click();
+  await page.getByText("Record a new analytical review").click();
+  await expect(
+    page.getByRole("button", { name: "Record Portfolio Rank" }),
+  ).toBeDisabled();
+  await expect(
+    page
+      .getByText(
+        "Confirm positions and cash to refresh the holdings baseline first.",
+      )
+      .first(),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Confirm holdings" }).click();
+  await expect(page.getByLabel("Quantity for EXM")).toHaveValue("10");
+  await expect(page.getByLabel("Quantity for AMD")).toHaveValue("2");
+  await expect(page.getByLabel("Cash balance in USD")).toHaveValue("100");
+  await page.getByLabel("Quantity for EXM").fill("12");
+  await page.getByLabel("Cash balance in USD").fill("125");
+  await page
+    .getByLabel(/I have reviewed these share quantities and currency balances/)
+    .check();
+  await page.getByRole("button", { name: "Append confirmed snapshot" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "new immutable holdings snapshot" }),
+  ).toBeVisible();
+  const savedPayload = postedHoldings.value;
+  expect(savedPayload).not.toBeNull();
+  if (!savedPayload) throw new Error("Holdings request was not captured.");
+  expect(savedPayload).toMatchObject({
+    completeness: "COMPLETE",
+    positions: [
+      { listing_id: listingId, quantity: "12" },
+      { listing_id: untargetedListingId, quantity: "2" },
+    ],
+    cash_positions: [{ currency: "USD", balance: "125" }],
+  });
+  expect(savedPayload.actor).toBe("LOCAL_USER");
+  expect(savedPayload.source).toBe("web-holdings-confirmation");
+
+  await page.getByText("Decision and research context").click();
+  await page.getByText("Quality, model and decision evidence").first().click();
   await expect(page.getByText("Not assessed").first()).toBeVisible();
 
   await page.getByText("Record a new analytical review").click();
   await expect(
     page.getByRole("button", { name: "Record Portfolio Rank" }),
-  ).toBeVisible();
+  ).toBeEnabled();
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     expect(
@@ -2848,15 +4043,19 @@ test("Attention Center keeps missing times explicit and filters by company and e
   });
 
   await page.goto("/attention");
+  await expect(page).toHaveURL(/\/research\?view=changes$/);
   await expect(
-    page.getByRole("heading", { name: "Attention Center" }),
+    page.getByRole("heading", { name: "Research change feed" }),
   ).toBeVisible();
+  const attention = page.getByRole("region", { name: "Attention Center" });
   await expect(
-    page.getByText("No complete normalized model output"),
+    attention.getByText("No complete normalized model output"),
   ).toBeVisible();
-  await expect(page.getByText(/Current status · checked/)).toBeVisible();
-  await page.getByLabel("Filter by company").selectOption(companyId);
-  await page.getByLabel("Filter by event type").selectOption("DATA_QUALITY");
+  await expect(attention.getByText(/Current status · checked/)).toBeVisible();
+  await attention.getByLabel("Filter by company").selectOption(companyId);
+  await attention
+    .getByLabel("Filter by event type")
+    .selectOption("DATA_QUALITY");
   await expect
     .poll(() => queries.some((query) => query.includes("company_id=")))
     .toBe(true);
@@ -2965,4 +4164,873 @@ test("live explicit lifecycle operation preserves company target", async ({
   await page.getByRole("button", { name: "Record lifecycle decision" }).click();
   await expect(page.getByText("Unassigned → WATCHLIST")).toBeVisible();
   await expect(page.getByText("No target", { exact: true })).toBeVisible();
+});
+
+test("Research proposal review requires an explicit final acceptance and stale-baseline acknowledgment", async ({
+  page,
+}) => {
+  const observedAt = "2026-10-16T10:00:00Z";
+  const modelId = "11111111-1111-4111-8111-111111111111";
+  const riskId = "12121212-1212-4121-8121-121212121212";
+  const baseModel = {
+    id: modelId,
+    status: "READY",
+    spreadsheet_id: "configured-test-workbook-id",
+    spreadsheet_title: "Investment Workbook Fixture",
+    sheet_id: 10,
+    sheet_title: "Application Model Sync Inbox",
+    source_row_number: 2,
+    source_url:
+      "https://docs.google.com/spreadsheets/d/configured-test-workbook-id/edit",
+    contract_version: "1.2.0",
+    content_fingerprint: "fixture-fingerprint",
+    external_revision_id: "agent-edit-2",
+    base_revision_id: "22222222-2222-4222-8222-222222222222",
+    model_id: "33333333-3333-4333-8333-333333333333",
+    company_id: "44444444-4444-4444-8444-444444444444",
+    valuation_listing_id: "55555555-5555-4555-8555-555555555555",
+    company_name: "Example Company",
+    model_name: "Example DCF",
+    source_model_key: "EXAMPLE",
+    model_type: "UFCF_DCF_10Y_FADE",
+    model_currency: "USD",
+    rationale: "Updated the Base case after reviewing new evidence.",
+    proposal: {
+      author_id: "research-agent-fixture",
+      authored_at: observedAt,
+      source_reference:
+        "https://docs.google.com/spreadsheets/d/configured-test-workbook-id/edit#gid=10",
+    },
+    supporting_evidence: [],
+    issue: null,
+    preview_status: "READY",
+    preview_data: {
+      status: "READY",
+      reason: null,
+      changes: [
+        {
+          path: "scenarios.BASE.years.1.revenue_growth",
+          previous: "0.1",
+          proposed: "0.11",
+        },
+      ],
+      projection_changes: [
+        { path: "BASE.1.revenue", previous: "100", proposed: "111" },
+      ],
+      output_changes: [
+        { path: "weighted_fv", previous: "120", proposed: "125" },
+      ],
+    },
+    previewed_at: observedAt,
+    accepted_revision_id: null,
+    reviewer: null,
+    decision_note: null,
+    first_observed_at: observedAt,
+    last_observed_at: observedAt,
+    accepted_at: null,
+    rejected_at: null,
+  };
+  const staleRisk = {
+    id: riskId,
+    portfolio_id: "13131313-1313-4131-8131-131313131313",
+    stream_key: "portfolio-risk-review",
+    external_revision_id: "risk-review-2",
+    contract_version: "1.0.0",
+    content_fingerprint: "c".repeat(64),
+    source_url:
+      "https://docs.google.com/spreadsheets/d/configured-test-workbook-id/edit#gid=42&range=A2:E2",
+    sheet_title: "Application Risk Assessment Inbox",
+    source_row_number: 2,
+    status: "STALE_BASELINE",
+    issue: "Portfolio state changed after this assessment was published.",
+    author_id: "investment-research-agent",
+    source_id: "google-sheets-risk-agent",
+    source_reference:
+      "https://docs.google.com/spreadsheets/d/configured-test-workbook-id/edit",
+    authored_at: "2026-10-16T09:00:00Z",
+    published_at: "2026-10-16T09:00:00Z",
+    summary: "A stale-baseline assessment requires reviewer acknowledgement.",
+    findings_count: 1,
+    baseline_status: "STALE_PORTFOLIO_STATE",
+    preview_data: {
+      status: "STALE_BASELINE",
+      baseline_issue:
+        "Canonical holdings or market state changed after publication.",
+      finding_changes: [],
+    },
+    reviewer: null,
+    reviewer_note: null,
+    accepted_revision_id: null,
+    first_observed_at: "2026-10-16T09:00:00Z",
+    last_observed_at: "2026-10-16T09:00:00Z",
+    accepted_at: null,
+    rejected_at: null,
+  };
+  const conflictedModel = {
+    ...baseModel,
+    id: "13131313-1313-4131-8131-131313131313",
+    model_name: "Conflicted DCF",
+    company_name: "Conflicted Company",
+    external_revision_id: "agent-edit-stale-base",
+    status: "CONFLICT",
+    issue:
+      "The accepted model revision changed after this proposal was authored.",
+    preview_status: "CONFLICT",
+    preview_data: {
+      status: "CONFLICT",
+      reason: "The proposal base revision is no longer current.",
+      changes: [],
+    },
+    last_observed_at: "2026-10-16T09:59:00Z",
+  };
+  let acceptCalls = 0;
+  let rejectCalls = 0;
+
+  await page.route("**/api/research/candidate-pipeline", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/research-queue**", (route) =>
+    route.fulfill({
+      json: {
+        as_of: observedAt,
+        tasks: [],
+        counts: {
+          open: 0,
+          complete: 0,
+          portfolio: 0,
+          watchlist: 0,
+          candidate: 0,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/research/research-triggers**", (route) =>
+    route.fulfill({
+      json: { as_of: observedAt, triggers: [] },
+    }),
+  );
+  await page.route("**/api/research/google-sheets-sync/candidates", (route) =>
+    route.fulfill({ json: [baseModel, conflictedModel] }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-research-sync/candidates",
+    (route) => route.fulfill({ json: [] }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-risk-sync/candidates",
+    (route) => route.fulfill({ json: [staleRisk] }),
+  );
+  await page.route("**/api/research/universe", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route(
+    `**/api/research/google-sheets-sync/candidates/${modelId}/accept`,
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        reviewer: "Research reviewer",
+        decision_note: "Reviewed the source and deterministic impact preview.",
+      });
+      acceptCalls += 1;
+      await route.fulfill({
+        json: {
+          ...baseModel,
+          status: "ACCEPTED",
+          accepted_revision_id: "23232323-2323-4323-8323-232323232323",
+          reviewer: "Research reviewer",
+          decision_note:
+            "Reviewed the source and deterministic impact preview.",
+          accepted_at: observedAt,
+        },
+      });
+    },
+  );
+  await page.route(
+    `**/api/research/google-sheets-sync/candidates/${conflictedModel.id}/reject`,
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        reviewer: "Conflict reviewer",
+        decision_note:
+          "Preserved the stale-base conflict for later resolution.",
+      });
+      rejectCalls += 1;
+      await route.fulfill({
+        json: {
+          ...conflictedModel,
+          status: "REJECTED",
+          reviewer: "Conflict reviewer",
+          decision_note:
+            "Preserved the stale-base conflict for later resolution.",
+          rejected_at: observedAt,
+        },
+      });
+    },
+  );
+
+  await page.goto("/research?view=reviews");
+  await expect(
+    page.getByRole("heading", { name: "Agent proposal review" }),
+  ).toBeVisible();
+  await expect(page.getByText("3 proposals awaiting a decision")).toBeVisible();
+  await expect(page.getByText("Research basis for the proposal")).toBeVisible();
+  await expect(
+    page.getByText(
+      "No supporting research evidence was linked to this model proposal.",
+    ),
+  ).toBeVisible();
+  await page.getByText("Projection changes (1)").click();
+  await expect(page.getByText("BASE.1.revenue", { exact: true })).toBeVisible();
+  await expect(page.getByText("Proposed: 111")).toBeVisible();
+  await page.getByLabel("Reviewer", { exact: true }).fill("Research reviewer");
+  await page
+    .getByLabel("Review rationale")
+    .fill("Reviewed the source and deterministic impact preview.");
+  await page.getByRole("button", { name: "Accept proposal" }).click();
+  await expect(
+    page.getByRole("button", { name: "Confirm acceptance" }),
+  ).toBeVisible();
+  expect(acceptCalls).toBe(0);
+  await page.getByRole("button", { name: "Confirm acceptance" }).click();
+  await expect(
+    page.getByText("Accepted into canonical history."),
+  ).toBeVisible();
+  expect(acceptCalls).toBe(1);
+
+  await page.getByRole("button", { name: /Portfolio assessment/ }).click();
+  await page.getByLabel("Reviewer", { exact: true }).fill("Risk reviewer");
+  await page
+    .getByLabel("Review rationale")
+    .fill("Reviewed the cited stale baseline.");
+  const acceptRisk = page.getByRole("button", { name: "Accept proposal" });
+  await expect(acceptRisk).toBeDisabled();
+  await page
+    .getByRole("checkbox", { name: /stale portfolio baseline/i })
+    .check();
+  await expect(acceptRisk).toBeEnabled();
+  expect(acceptCalls).toBe(1);
+
+  await page.getByRole("button", { name: /Conflicted Company/ }).click();
+  await expect(
+    page.getByText(
+      "The accepted model revision changed after this proposal was authored.",
+    ),
+  ).toBeVisible();
+  const acceptConflict = page.getByRole("button", { name: "Accept proposal" });
+  await expect(acceptConflict).toBeDisabled();
+  await page.getByLabel("Reviewer", { exact: true }).fill("Conflict reviewer");
+  await page
+    .getByLabel("Review rationale")
+    .fill("Preserved the stale-base conflict for later resolution.");
+  await page.getByRole("button", { name: "Reject proposal" }).click();
+  await expect(
+    page.getByRole("button", { name: "Confirm rejection" }),
+  ).toBeVisible();
+  expect(rejectCalls).toBe(0);
+  await page.getByRole("button", { name: "Confirm rejection" }).click();
+  await expect(
+    page.getByText("Rejected with the reviewer decision retained."),
+  ).toBeVisible();
+  expect(rejectCalls).toBe(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("portfolio state publication is explicit and preserves incomplete valuation status", async ({
+  page,
+}) => {
+  const portfolioId = "a58be2cb-24f2-5470-9aa4-6960344ec945";
+  await page.route("**/api/research/candidate-pipeline", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route(
+    /\/api\/research\/research-queue(?:\/history)?(?:\?.*)?$/,
+    async (route) => {
+      const isHistory = new URL(route.request().url()).pathname.endsWith(
+        "/history",
+      );
+      await route.fulfill({
+        json: isHistory
+          ? []
+          : {
+              as_of: "2026-10-16T09:00:00Z",
+              tasks: [],
+              counts: {
+                open: 0,
+                complete: 0,
+                portfolio: 0,
+                watchlist: 0,
+                candidate: 0,
+              },
+            },
+      });
+    },
+  );
+  await page.route("**/api/research/research-triggers**", (route) =>
+    route.fulfill({
+      json: {
+        as_of: "2026-10-16T09:00:00Z",
+        triggers: [],
+      },
+    }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-research-sync/candidates**",
+    (route) => route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/universe", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-risk-sync/status", (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        credentials_available: false,
+        spreadsheet_id: "configured-test-workbook-id",
+        spreadsheet_url: null,
+        inbox_tab: "Application Risk Assessment Inbox",
+        last_run: null,
+      },
+    }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-risk-sync/candidates**",
+    (route) => route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-risk-sync/runs**", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-sync/status", (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        credentials_available: true,
+        spreadsheet_id: "configured-test-workbook-id",
+        spreadsheet_url: null,
+        sync_tab: "Application Model Sync Inbox",
+        polling_interval_seconds: 0,
+        last_run: null,
+      },
+    }),
+  );
+  await page.route("**/api/research/google-sheets-sync/candidates**", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-sync/runs**", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/portfolios", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: portfolioId,
+          name: "Primary Portfolio",
+          base_currency: "EUR",
+          created_at: "2026-10-01T10:00:00Z",
+          is_demo: false,
+        },
+      ],
+    }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-sync/portfolio-state/publish",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        portfolio_id: portfolioId,
+      });
+      await route.fulfill({
+        json: {
+          status: "PUBLISHED",
+          spreadsheet_id: "configured-test-workbook-id",
+          spreadsheet_title: "Investment Workbook Fixture",
+          tab: "Application Portfolio State",
+          portfolio_id: portfolioId,
+          contract_version: "1.0.0",
+          content_fingerprint: "sha256:fixture",
+          published_at: "2026-10-15T09:00:00Z",
+          valuation_as_of: "2026-10-15T08:59:00Z",
+          valuation_status: "INCOMPLETE_PRICE_COVERAGE",
+          row_count: 46,
+          read_back_verified: true,
+          message:
+            "Canonical portfolio state was published and verified by read-back.",
+        },
+      });
+    },
+  );
+
+  await page.goto("/research?view=queue");
+  await expect(
+    page.getByText("Publish canonical portfolio state", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Publish current state" }).click();
+  await expect(page.getByText(/PUBLISHED ·/)).toBeVisible();
+  await expect(page.getByText("INCOMPLETE_PRICE_COVERAGE")).toBeVisible();
+  await expect(page.getByText("sha256:fixture")).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("agent work feed publishes a bounded role and offset to Sheets responsively", async ({
+  page,
+}) => {
+  await page.route("**/api/research/candidate-pipeline", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route(
+    /\/api\/research\/research-queue(?:\/history)?(?:\?.*)?$/,
+    async (route) => {
+      const isHistory = new URL(route.request().url()).pathname.endsWith(
+        "/history",
+      );
+      await route.fulfill({
+        json: isHistory
+          ? []
+          : {
+              as_of: "2026-10-16T09:00:00Z",
+              tasks: [],
+              counts: {
+                open: 0,
+                complete: 0,
+                portfolio: 0,
+                watchlist: 0,
+                candidate: 0,
+              },
+            },
+      });
+    },
+  );
+  await page.route("**/api/research/research-triggers**", (route) =>
+    route.fulfill({
+      json: {
+        as_of: "2026-10-16T09:00:00Z",
+        triggers: [],
+      },
+    }),
+  );
+  await page.route("**/api/research/google-sheets-sync/status", (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        credentials_available: true,
+        spreadsheet_id: "configured-test-workbook-id",
+        spreadsheet_url: null,
+        sync_tab: "Application Model Sync Inbox",
+        polling_interval_seconds: 0,
+        last_run: null,
+      },
+    }),
+  );
+  await page.route("**/api/research/google-sheets-sync/candidates**", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-sync/runs**", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-risk-sync/status", (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        credentials_available: true,
+        spreadsheet_id: "configured-test-workbook-id",
+        spreadsheet_url: null,
+        inbox_tab: "Application Risk Assessment Inbox",
+        last_run: null,
+      },
+    }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-risk-sync/candidates**",
+    (route) => route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/google-sheets-risk-sync/runs**", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-research-sync/status",
+    (route) =>
+      route.fulfill({
+        json: {
+          configured: true,
+          credentials_available: true,
+          spreadsheet_id: "configured-test-workbook-id",
+          spreadsheet_url: null,
+          research_inbox_tab: "Application Research Inbox",
+          thesis_inbox_tab: "Application Thesis Inbox",
+          last_run: null,
+        },
+      }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-research-sync/candidates**",
+    (route) => route.fulfill({ json: [] }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-research-sync/runs**",
+    (route) => route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/research/portfolios", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route(
+    "**/api/research/google-sheets-agent-operations/PORTFOLIO_THESIS_SENTINEL/work/publish",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        limit: 10,
+        offset: 10,
+        portfolio_id: null,
+      });
+      await route.fulfill({
+        json: {
+          status: "PUBLISHED",
+          agent_role: "PORTFOLIO_THESIS_SENTINEL",
+          spreadsheet_id: "configured-test-workbook-id",
+          spreadsheet_title: "Portfolio/Watchlist",
+          tab: "Application Agent Work Feed",
+          contract_version: "1.0.0",
+          content_fingerprint: `sha256:${"a".repeat(64)}`,
+          published_at: "2026-10-16T09:00:00Z",
+          row_count: 20,
+          added_count: 5,
+          work_item_count: 10,
+          read_back_verified: true,
+          status_reason: null,
+          message:
+            "Published five new items and verified the feed by read-back.",
+        },
+      });
+    },
+  );
+
+  await page.goto("/research?view=queue");
+  await page
+    .getByLabel("Research agent role")
+    .selectOption("PORTFOLIO_THESIS_SENTINEL");
+  await page.getByLabel("Agent work page offset").fill("10");
+  await page.getByRole("button", { name: "Publish work" }).click();
+  await expect(
+    page.getByText(
+      "Published five new items and verified the feed by read-back.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("PUBLISHED", { exact: true })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("Candidate Pipeline records evidence-aware research without lifecycle promotion", async ({
+  page,
+}) => {
+  const candidateId = "44444444-4444-4444-8444-444444444444";
+  const candidate = {
+    id: candidateId,
+    name: "Pipeline Candidate",
+    reporting_currency: "USD",
+    created_at: "2026-10-15T08:00:00Z",
+    is_demo: false,
+    lifecycle: "CANDIDATE",
+    lifecycle_event_id: "55555555-5555-4555-8555-555555555555",
+  };
+  const initialQueueEntry = {
+    company: candidate,
+    status: "NOT_STARTED",
+    stage: null,
+    disposition: null,
+    candidate_tier: "HIGH",
+    priority_seed: "50.0000",
+    priority_recorded_at: "2026-10-14T08:00:00Z",
+    research_rank_position: 7,
+    research_rank_status: "RANKED",
+    research_rank_reason: "Documented Candidate tier and priority ordering.",
+    current_revision: null,
+  };
+  const postedRevisions: Array<Record<string, unknown>> = [];
+  await page.route("**/api/research/candidate-pipeline**", (route) =>
+    route.fulfill({ json: [initialQueueEntry] }),
+  );
+  await page.route(
+    `**/api/research/companies/${candidateId}/candidate-pipeline`,
+    (route) =>
+      route.fulfill({
+        json: {
+          company: candidate,
+          lifecycle: "CANDIDATE",
+          queue_entry: initialQueueEntry,
+          history: [],
+          evidence_options: [],
+        },
+      }),
+  );
+  await page.route(
+    `**/api/research/companies/${candidateId}/candidate-pipeline-revisions`,
+    async (route) => {
+      const submittedRevision = route.request().postDataJSON() as Record<
+        string,
+        unknown
+      >;
+      postedRevisions.push(submittedRevision);
+      const gates = (
+        submittedRevision.gates as Array<Record<string, unknown>>
+      ).map((gate, index) => ({
+        ...gate,
+        id: `66666666-6666-4666-8666-66666666666${index}`,
+        evidence: [],
+      }));
+      await route.fulfill({
+        status: 201,
+        json: {
+          result: "RECORDED",
+          revision: {
+            id: "77777777-7777-4777-8777-777777777777",
+            company_id: candidateId,
+            revision_number: 1,
+            base_revision_id: null,
+            submission_id: submittedRevision.submission_id,
+            stage: "DISCOVERY",
+            disposition: null,
+            next_action: "Complete the initial company screen.",
+            unresolved_questions: [],
+            actor: "LOCAL_USER",
+            author_id: "local-user",
+            source: "Candidate Pipeline UI",
+            rationale: "Initial evidence review started.",
+            effective_at: "2026-10-15T08:00:00Z",
+            recorded_at: "2026-10-15T08:00:01Z",
+            content_fingerprint: "a".repeat(64),
+            gates,
+          },
+        },
+      });
+    },
+  );
+
+  await page.goto("/candidates");
+  await expect(
+    page.getByRole("heading", { name: "Candidate Pipeline" }),
+  ).toBeVisible();
+  await expect(page.getByText("Research Rank #7")).toBeVisible();
+  await page.getByRole("button", { name: /Pipeline Candidate/ }).click();
+  await expect(
+    page.getByText("No prior Candidate pipeline history exists."),
+  ).toBeVisible();
+  await page
+    .getByLabel("Revision rationale")
+    .fill("Initial evidence review started.");
+  await page.getByRole("button", { name: "Record research revision" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Lifecycle and portfolio state are unchanged",
+  );
+  expect(postedRevisions).toHaveLength(1);
+  const submittedRevision = postedRevisions[0];
+  expect(submittedRevision.stage).toBe("DISCOVERY");
+  expect(submittedRevision.expected_revision_id).toBeNull();
+  expect(
+    (submittedRevision.gates as Array<Record<string, unknown>>).length,
+  ).toBe(5);
+  expect(submittedRevision).not.toHaveProperty("lifecycle");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("Research Queue explains source conditions and records review history", async ({
+  page,
+}) => {
+  const queueTask = {
+    task_id: "a".repeat(64),
+    condition_fingerprint: "b".repeat(64),
+    company: {
+      ...company,
+      id: "88888888-8888-4888-8888-888888888888",
+      name: "Queue Example",
+      lifecycle: "WATCHLIST",
+      lifecycle_event_id: id,
+    },
+    task_type: "WATCHLIST_READINESS",
+    title: "Assess Watchlist research readiness",
+    reason: "No current canonical Watchlist Rank entry is available.",
+    lifecycle_priority: 2,
+    research_rank_position: null,
+    trigger_rule: "One review per unchanged canonical input fingerprint.",
+    judgment_required: true,
+    owner_workflow: "LOCAL_ANALYST",
+    source_effective_at: null,
+    source_published_at: null,
+    source_recorded_at: "2026-10-15T08:00:00Z",
+    due_at: null,
+    sources: [
+      {
+        source_type: "SCORE_ASSESSMENT",
+        source_record_id: id,
+        title: "Durability score is missing",
+        source_url: null,
+        effective_at: null,
+        published_at: null,
+        recorded_at: "2026-10-15T08:00:00Z",
+      },
+    ],
+    status: "OPEN",
+    completed_by: null,
+    completed_at: null,
+    completion_note: null,
+  };
+  let completed = false;
+  const completionId = "99999999-9999-4999-8999-999999999999";
+  const completion = {
+    id: completionId,
+    task: {
+      ...queueTask,
+      status: "COMPLETE",
+      completed_by: "Local analyst",
+      completed_at: "2026-10-15T09:00:00Z",
+      completion_note: "Confirmed the missing inputs need research.",
+    },
+    completed_by: "Local analyst",
+    completion_note: "Confirmed the missing inputs need research.",
+    completed_at: "2026-10-15T09:00:00Z",
+  };
+  await page.route(
+    /\/api\/research\/research-queue(?:\/history)?(?:\?.*)?$/,
+    async (route) => {
+      const isHistory = new URL(route.request().url()).pathname.endsWith(
+        "/history",
+      );
+      await route.fulfill({
+        json: isHistory
+          ? completed
+            ? [completion]
+            : []
+          : {
+              as_of: "2026-10-15T09:00:00Z",
+              tasks: completed ? [] : [queueTask],
+              counts: {
+                open: completed ? 0 : 1,
+                complete: 0,
+                portfolio: 0,
+                watchlist: completed ? 0 : 1,
+                candidate: 0,
+              },
+            },
+      });
+    },
+  );
+  await page.route(
+    "**/api/research/research-queue/**/complete",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        condition_fingerprint: queueTask.condition_fingerprint,
+        completed_by: "Local analyst",
+        completion_note: "Confirmed the missing inputs need research.",
+        trigger_classification: null,
+      });
+      completed = true;
+      await route.fulfill({
+        json: { result: "COMPLETED", task: completion.task },
+      });
+    },
+  );
+  let refreshCalls = 0;
+  await page.route(
+    "**/api/research/research-triggers/refresh**",
+    async (route) => {
+      expect(route.request().method()).toBe("POST");
+      refreshCalls += 1;
+      await route.fulfill({
+        json: {
+          as_of: "2026-10-15T09:00:00Z",
+          lookback_days: 30,
+          examined: 2,
+          created: 0,
+          replayed: 2,
+          triggers: [],
+        },
+      });
+    },
+  );
+  let thesisFeedCalls = 0;
+  await page.route(
+    "**/api/research/google-sheets-sync/thesis-watch/publish",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({ limit: 50, offset: 0 });
+      thesisFeedCalls += 1;
+      await route.fulfill({
+        json: {
+          status: "PUBLISHED",
+          spreadsheet_id: "sheet-id",
+          spreadsheet_title: "Portfolio/Watchlist",
+          tab: "Application Thesis Watch Feed",
+          contract_version: "1.0.0",
+          content_fingerprint: `sha256:${"c".repeat(64)}`,
+          published_at: "2026-10-15T09:01:00Z",
+          row_count: 1,
+          added_count: 1,
+          trigger_ids: [id],
+          read_back_verified: true,
+          message: "Published one new trigger context row.",
+        },
+      });
+    },
+  );
+
+  await page.goto("/research-queue");
+  await expect(
+    page.getByRole("heading", { name: "Research Review Queue" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Assess Watchlist research readiness"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No current canonical Watchlist Rank entry", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Analyst judgment required")).toBeVisible();
+  await page.getByRole("button", { name: "Scan for new triggers" }).click();
+  await expect(
+    page.getByText("0 new triggers captured; 2 exact replays skipped."),
+  ).toBeVisible();
+  expect(refreshCalls).toBe(1);
+  await page
+    .getByRole("button", { name: "Publish trigger page to Sheets" })
+    .click();
+  await expect(
+    page.getByText("Published one new trigger context row."),
+  ).toBeVisible();
+  expect(thesisFeedCalls).toBe(1);
+  await page.getByRole("button", { name: "Complete review" }).click();
+  await page
+    .getByLabel("Review note")
+    .fill("Confirmed the missing inputs need research.");
+  await page.getByRole("button", { name: "Record review complete" }).click();
+  await expect(
+    page.getByText("Confirmed the missing inputs need research."),
+  ).toBeVisible();
+  await expect(page.getByText("Recent completed reviews")).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("button", { name: "Publish trigger page to Sheets" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });

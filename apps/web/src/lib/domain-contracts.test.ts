@@ -8,6 +8,7 @@ import {
   isUniverseRankingSummary,
   isModelOutputSnapshot,
   isFinancialModelOutputs,
+  isReturnMethodologies,
   isFinancialModelContract,
   isFinancialModelContractPreview,
   isFinancialModelCalculationPreview,
@@ -24,14 +25,59 @@ import {
   isPortfolioRankInputSnapshot,
   isResearchRankInputSnapshot,
   isCompanySourceDocuments,
+  isCompanyResearch,
+  isResearchPublicationResult,
+  isCompanyInvestmentThesis,
+  isInvestmentThesisPublicationResult,
   isReportedFundamentalDefinitions,
   isCompanyExecutionPace,
   isUniverseExecutionPaceSummary,
   isAttentionFeed,
+  isGoogleSheetsConnectionTest,
+  isGoogleSheetsSyncCandidate,
+  isGoogleSheetsSyncCheck,
+  isGoogleSheetsSyncRun,
+  isGoogleSheetsSyncStatus,
+  isGoogleSheetsAgentWorkPublish,
+  isCandidatePipelineQueue,
+  isCompanyCandidatePipeline,
+  isResearchQueue,
+  isResearchQueueCompletionResult,
+  isResearchQueueHistory,
+  isResearchTriggerReadResult,
+  isResearchTriggerRefreshResult,
+  isResearchAgentWorkEvent,
+  isResearchAgentWorkEvents,
+  isOperationalJobRequest,
+  isOperationalJobRequestList,
 } from "@/lib/domain-contracts";
 import { percent, quantity } from "@/lib/display";
 
 const id = "11111111-1111-4111-8111-111111111111";
+const ufcfReturnMethodology = {
+  id,
+  code: "UFCF_ENTERPRISE_IRR",
+  version: 1,
+  title: "Probability-weighted enterprise UFCF IRR",
+  cash_flow_basis: "Probability-weighted annual unlevered free cash flow.",
+  perspective: "ENTERPRISE",
+  entry_value_basis:
+    "Implied enterprise cost from exact listing price and net cash.",
+  share_price_basis: "Exact valuation listing split-adjusted close.",
+  comparability_group: "ENTERPRISE_UFCF",
+  cross_method_policy: "SAME_METHOD_ONLY",
+  limitation: "Not shareholder-distribution IRR.",
+  effective_from: "2026-10-09T00:00:00Z",
+  recorded_at: "2026-10-09T00:00:00Z",
+};
+const ownerCashFlowReturnMethodology = {
+  ...ufcfReturnMethodology,
+  code: "OWNER_CASH_FLOW_EQUITY_IRR",
+  title: "Probability-weighted owner cash-flow equity IRR",
+  perspective: "EQUITY",
+  comparability_group: "EQUITY_RETURN",
+  cross_method_policy: "CONDITIONAL_EQUITY_CROSS_METHOD",
+};
 const executionPaceSnapshot = {
   context_version: "execution-pace-inputs-v1",
   lifecycle: "PORTFOLIO",
@@ -74,6 +120,9 @@ const executionPaceSnapshot = {
   model_price_observation_id: id,
   model_reference_price: "100",
   model_price_currency: "USD",
+  accepted_reference_price: null,
+  accepted_reference_price_observation_id: null,
+  accepted_reference_price_effective_at: null,
   weighted_fair_value: "130",
   weighted_upside: "0.3",
   valuation_zone: "DEEP_DISCOUNT",
@@ -227,6 +276,19 @@ describe("Execution Pace contracts", () => {
       }),
     ).toBe(false);
   });
+
+  it("accepts the versioned v2 execution input snapshot contract", () => {
+    const versionTwo = structuredClone(executionPaceHistoryEntry);
+    versionTwo.decision.input_snapshot.context_version =
+      "execution-pace-inputs-v2";
+    expect(
+      isCompanyExecutionPace({
+        company_id: id,
+        current: versionTwo,
+        history: [versionTwo],
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("expected-return history contract", () => {
@@ -244,6 +306,96 @@ describe("expected-return history contract", () => {
         ...noHistory,
         status: "AVAILABLE",
         history: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps current quote calculations separate from accepted revision outputs", () => {
+    const listingId = "22222222-2222-4222-8222-222222222222";
+    const currentCalculation = {
+      model_id: id,
+      model_name: "Example DCF",
+      model_type: "UFCF_DCF_10Y_FADE",
+      revision_id: "33333333-3333-4333-8333-333333333333",
+      revision_number: 1,
+      methodology_version: "dcf-v1",
+      effective_at: "2026-10-01T00:00:00Z",
+      recorded_at: "2026-10-01T00:00:00Z",
+      calculated_as_of: "2026-10-05T23:59:59Z",
+      known_at: "2026-10-05T23:59:59Z",
+      accepted_output_id: "44444444-4444-4444-8444-444444444444",
+      accepted_reference_price: "100",
+      accepted_reference_price_observation_id: id,
+      accepted_reference_price_effective_at: "2026-10-01T00:00:00Z",
+      market_price: {
+        status: "STALE",
+        listing_id: listingId,
+        ticker: "EXM",
+        venue: "NASDAQ",
+        listing_currency: "USD",
+        quote: "110",
+        quote_currency: "USD",
+        model_reference_price: "110",
+        model_currency: "USD",
+        effective_at: "2026-10-01T00:00:00Z",
+        observed_at: "2026-10-01T00:00:00Z",
+        recorded_at: "2026-10-01T00:00:00Z",
+        provider: "YAHOO_FINANCE",
+        adjustment_basis: "split-adjusted-close",
+        observation_id: id,
+        source_ref: "fixture:stale-price",
+        reason: "The latest exact-listing observation is stale.",
+      },
+      outputs: {
+        return_methodology: ufcfReturnMethodology,
+        status: "PARTIAL",
+        model_currency: "USD",
+        price_observation_id: id,
+        current_price: "110",
+        price_effective_at: "2026-10-01T00:00:00Z",
+        price_status: "STALE",
+        price_unavailable_reason: "Stale price.",
+        irr_unavailable_reason: "A fresh comparable price is required.",
+        bear_fv: "80",
+        base_fv: "100",
+        bull_fv: "130",
+        bear_probability: "0.2",
+        base_probability: "0.6",
+        bull_probability: "0.2",
+        weighted_fv: "102",
+        weighted_upside: null,
+        expected_cash_flow_irr: null,
+        hurdle: "0.09",
+        expected_excess: null,
+        forward_fundamental_cagr: null,
+      },
+    };
+    expect(
+      isCompanyExpectedReturnHistory({
+        company_id: id,
+        as_of: "2026-10-05",
+        known_at: "2026-10-05T23:59:59Z",
+        status: "NO_HISTORY",
+        history: [],
+        current_calculations: [currentCalculation],
+      }),
+    ).toBe(true);
+    expect(
+      isCompanyExpectedReturnHistory({
+        company_id: id,
+        as_of: "2026-10-05",
+        known_at: "2026-10-05T23:59:59Z",
+        status: "NO_HISTORY",
+        history: [],
+        current_calculations: [
+          {
+            ...currentCalculation,
+            outputs: {
+              ...currentCalculation.outputs,
+              expected_cash_flow_irr: "NaN",
+            },
+          },
+        ],
       }),
     ).toBe(false);
   });
@@ -274,6 +426,9 @@ describe("expected-return history contract", () => {
       output_quality: "COMPLETE",
       contract_status: "PASS",
       return_semantics: "LEGACY_NORMALIZED_FIELD",
+      return_methodology: null,
+      return_methodology_status: "UNCLASSIFIED",
+      share_price_basis_status: "NOT_RETAINED",
       actor: "IMPORT",
       source_actor: "Workbook researcher",
       revision_source: "Workbook",
@@ -343,6 +498,13 @@ describe("expected-return history contract", () => {
       model_type: "UFCF_DCF_10Y_FADE",
       methodology_version: "fixture-v1",
       return_semantics: "NATIVE_METHOD_OUTPUT",
+      return_methodology: ufcfReturnMethodology,
+      return_methodology_status: "CLASSIFIED",
+      valuation_listing_id: id,
+      valuation_ticker: "TEST",
+      valuation_venue: "NASDAQ",
+      valuation_listing_currency: "USD",
+      share_price_basis_status: "CAPTURED",
       model_currency: "USD",
       expected_cash_flow_irr: null,
       hurdle: "0.09",
@@ -487,6 +649,12 @@ describe("active ranking input snapshot contracts", () => {
       isPortfolioRankInputSnapshot({
         ...missingPortfolioInputs,
         portfolio_score: "0",
+      }),
+    ).toBe(true);
+    expect(
+      isPortfolioRankInputSnapshot({
+        ...missingPortfolioInputs,
+        context_version: "portfolio-rank-inputs-v3",
       }),
     ).toBe(true);
   });
@@ -747,6 +915,295 @@ describe("source document contracts", () => {
     ).toBe(false);
   });
 });
+
+describe("agent research contracts", () => {
+  const forecast = {
+    id,
+    metric: "REVENUE",
+    period_type: "ANNUAL",
+    fiscal_year: 2027,
+    fiscal_period: "FY",
+    period_end: "2027-12-31",
+    scenario: "BASE",
+    value: "0",
+    currency: "USD",
+    unit: "currency",
+    availability_status: "AVAILABLE",
+    availability_reason: null,
+    confidence: "MEDIUM",
+    rationale: "Explicit zero forecast.",
+    uncertainty: null,
+  };
+  const missingForecast = {
+    ...forecast,
+    id: "22222222-2222-4222-8222-222222222222",
+    metric: "EPS",
+    value: null,
+    unit: "currency/share",
+    availability_status: "UNAVAILABLE",
+    availability_reason: "No supportable estimate is available.",
+    confidence: "UNASSESSED",
+    rationale: null,
+  };
+  const revision = {
+    id,
+    company_id: id,
+    security_id: null,
+    stream_key: "research-agent/company-outlook",
+    revision_number: 1,
+    contract_version: "1.0.0",
+    external_revision_id: "agent-r1",
+    supersedes_revision_id: null,
+    author_id: "research-agent",
+    source_id: "Google Sheets",
+    source_reference: "https://docs.google.com/spreadsheets/d/example/edit",
+    observed_at: "2026-10-10T12:00:00Z",
+    recorded_at: "2026-10-10T12:01:00Z",
+    status: "PUBLISHED",
+    rationale: "Research revision rationale.",
+    uncertainty: null,
+    content_fingerprint: "a".repeat(64),
+    forecasts: [forecast, missingForecast],
+    assessments: [],
+    evidence: [],
+  };
+
+  it("keeps explicit zero distinct from unavailable and validates source history", () => {
+    const response = {
+      company_id: id,
+      as_of: null,
+      known_at: null,
+      streams: [
+        {
+          stream_key: revision.stream_key,
+          current_revision: revision,
+          history: [revision],
+        },
+      ],
+    };
+    expect(isCompanyResearch(response)).toBe(true);
+    expect(
+      isCompanyResearch({
+        ...response,
+        streams: [
+          {
+            ...response.streams[0],
+            current_revision: {
+              ...revision,
+              forecasts: [
+                { ...forecast, availability_status: "AVAILABLE", value: null },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      isCompanyResearch({ ...response, known_at: "not-a-timestamp" }),
+    ).toBe(false);
+  });
+
+  it("validates a publication result and rejects insecure evidence links", () => {
+    const result = { result: "PUBLISHED", revision };
+    expect(isResearchPublicationResult(result)).toBe(true);
+    expect(isResearchPublicationResult({ ...result, result: "ACCEPTED" })).toBe(
+      false,
+    );
+    const evidence = {
+      id: "33333333-3333-4333-8333-333333333333",
+      source_document_id: null,
+      source_document_title: null,
+      source_name: "Issuer report",
+      external_identifier: "report-2025",
+      source_url: "http://issuer.example.test/report.pdf",
+      published_at: "2026-02-20",
+      excerpt: null,
+      note: null,
+    };
+    expect(
+      isCompanyResearch({
+        company_id: id,
+        as_of: null,
+        known_at: null,
+        streams: [
+          {
+            stream_key: revision.stream_key,
+            current_revision: { ...revision, evidence: [evidence] },
+            history: [{ ...revision, evidence: [evidence] }],
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("investment thesis contracts", () => {
+  const observationId = "44444444-4444-4444-8444-444444444444";
+  const fact = {
+    id: observationId,
+    metric: "REVENUE",
+    statement: "INCOME_STATEMENT",
+    period_type: "ANNUAL",
+    period_start: "2024-01-01T00:00:00Z",
+    period_end: "2024-12-31T00:00:00Z",
+    fiscal_year: 2024,
+    fiscal_period: "FY",
+    filed_at: "2025-02-20T00:00:00Z",
+    observed_at: "2025-02-20T14:00:00Z",
+    recorded_at: "2025-02-20T14:01:00Z",
+    value: "950",
+    currency: "USD",
+    unit: "currency",
+    provider_id: "sec_edgar",
+    data_quality: "PASS",
+    source_url: "https://www.sec.gov/Archives/edgar/data/example/index.html",
+  };
+  const evidence = {
+    id: "55555555-5555-4555-8555-555555555555",
+    relationship: "CONTRADICTS",
+    source_document_id: null,
+    source_document_title: null,
+    source_document_type: null,
+    source_document_url: null,
+    reported_fundamental_observation_id: observationId,
+    reported_fundamental: fact,
+    source_name: "SEC Company Facts",
+    external_identifier: "sec:revenue:2024",
+    source_url: null,
+    published_at: "2025-02-20",
+    excerpt: null,
+    note: "The reported figure is below the prior thesis expectation.",
+  };
+  const revision = {
+    id,
+    company_id: id,
+    security_id: null,
+    stream_key: "investment-thesis",
+    revision_number: 1,
+    contract_version: "1.0.0",
+    external_revision_id: "thesis-r1",
+    supersedes_revision_id: null,
+    author_id: "research-agent",
+    source_id: "google-sheets",
+    source_reference: "https://docs.google.com/spreadsheets/d/example/edit",
+    observed_at: "2026-10-10T12:00:00Z",
+    recorded_at: "2026-10-10T12:01:00Z",
+    status: "PUBLISHED",
+    thesis_statement:
+      "Recurring demand may support a durable compounding business.",
+    confidence: "MEDIUM",
+    rationale: "Current evidence supports, but does not prove, the thesis.",
+    uncertainty: "Customer concentration remains unresolved.",
+    content_fingerprint: "a".repeat(64),
+    claims: [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        claim_key: "revenue-trend",
+        claim_type: "GROWTH_DRIVER",
+        status: "UNDER_REVIEW",
+        statement: "Growth could normalize below the previous expectation.",
+        confidence: "LOW",
+        uncertainty: "Only one reported period is available.",
+        evidence: [evidence],
+      },
+    ],
+  };
+  const response = {
+    company_id: id,
+    as_of: null,
+    known_at: null,
+    streams: [
+      {
+        stream_key: revision.stream_key,
+        current_revision: revision,
+        history: [revision],
+      },
+    ],
+  };
+
+  it("keeps claims separate from linked canonical reported facts", () => {
+    expect(isCompanyInvestmentThesis(response)).toBe(true);
+    expect(
+      isCompanyInvestmentThesis({
+        ...response,
+        streams: [
+          {
+            ...response.streams[0],
+            history: [
+              {
+                ...revision,
+                claims: [
+                  {
+                    ...revision.claims[0],
+                    evidence: [{ ...evidence, relationship: "PREDICTS" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      isCompanyInvestmentThesis({
+        ...response,
+        streams: [
+          {
+            ...response.streams[0],
+            current_revision: {
+              ...revision,
+              claims: [
+                {
+                  ...revision.claims[0],
+                  evidence: [
+                    {
+                      ...evidence,
+                      reported_fundamental: {
+                        ...fact,
+                        source_url: "http://invalid",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("validates publication results and withdrawn revision history", () => {
+    expect(
+      isInvestmentThesisPublicationResult({ result: "PUBLISHED", revision }),
+    ).toBe(true);
+    expect(
+      isInvestmentThesisPublicationResult({ result: "REPLACED", revision }),
+    ).toBe(false);
+    const withdrawn = {
+      ...revision,
+      id: "77777777-7777-4777-8777-777777777777",
+      revision_number: 2,
+      external_revision_id: "thesis-r2",
+      supersedes_revision_id: revision.id,
+      status: "WITHDRAWN",
+      thesis_statement: null,
+      claims: [],
+    };
+    expect(
+      isCompanyInvestmentThesis({
+        ...response,
+        streams: [
+          {
+            stream_key: revision.stream_key,
+            current_revision: withdrawn,
+            history: [withdrawn, revision],
+          },
+        ],
+      }),
+    ).toBe(true);
+  });
+});
 const modelOutput = {
   id,
   company_id: id,
@@ -759,6 +1216,9 @@ const modelOutput = {
   model_currency: null,
   currency_status: "UNKNOWN",
   currency_source_ref: null,
+  return_methodology: null,
+  return_methodology_status: "UNCLASSIFIED",
+  share_price_basis_status: "NOT_RETAINED",
   model_status: null,
   effective_at: null,
   recorded_at: "2026-10-05T00:00:00Z",
@@ -842,7 +1302,7 @@ const rankingCurrent = rankTypes.map((ranking_type, index) => {
   const definition = {
     id: `22222222-2222-4222-8222-22222222222${index}`,
     ranking_type,
-    version: ranking_type === "WATCHLIST" ? 3 : 2,
+    version: ranking_type === "WATCHLIST" ? 5 : 2,
     title: `${ranking_type} Rank`,
     methodology: "Documented, separate ranking methodology.",
     population_rule: "Explicit domain population.",
@@ -881,6 +1341,28 @@ const companyRankings = {
 };
 
 describe("domain display integrity", () => {
+  it("validates versioned return definitions and their explicit comparison policy", () => {
+    const catalog = {
+      definitions: [ufcfReturnMethodology],
+      rules: [
+        {
+          left_methodology: "UFCF_ENTERPRISE_IRR",
+          right_methodology: "UFCF_ENTERPRISE_IRR",
+          status: "DIRECT",
+          rationale: "Same versioned cash-flow method and currency.",
+        },
+      ],
+      currency_policy: "Local-currency IRR; FX return is excluded.",
+    };
+    expect(isReturnMethodologies(catalog)).toBe(true);
+    expect(
+      isReturnMethodologies({
+        ...catalog,
+        rules: [{ ...catalog.rules[0], status: "NEUTRAL" }],
+      }),
+    ).toBe(false);
+  });
+
   it("preserves native, output-only, unsupported and missing model states", () => {
     const item = {
       model_key: "P-EXAMPLE",
@@ -966,6 +1448,38 @@ describe("domain display integrity", () => {
         companies: [{ ...overview.companies[0], target_weight: "0" }],
       }),
     ).toBe(true);
+  });
+  it("accepts quote and FX timing states without treating unknown close time as synchronous", () => {
+    const position = {
+      listing_id: id,
+      security_id: id,
+      ticker: "EXM",
+      venue: "NASDAQ",
+      currency: "USD",
+      security_name: "Example",
+      quantity: "1",
+      latest_price: "10",
+      price_date: "2026-10-09T00:00:00Z",
+      price_observed_at: null,
+      price_currency: "USD",
+      portfolio_weight: null,
+      fx_rate: "0.9",
+      fx_effective_at: "2026-10-09T23:00:00Z",
+      valuation_sync_status: "TIMING_UNKNOWN",
+      price_freshness: "FRESH",
+      native_market_value: "10",
+      base_market_value: "9",
+      valuation_status: "VALUED",
+    };
+    expect(isOverview({ ...overview, standalone_positions: [position] })).toBe(
+      true,
+    );
+    expect(
+      isOverview({
+        ...overview,
+        standalone_positions: [{ ...position, price_observed_at: "invalid" }],
+      }),
+    ).toBe(false);
   });
   it("retains backend-emitted company allocation and missing coverage states", () => {
     expect(isDetail(companyDetail)).toBe(true);
@@ -1057,8 +1571,28 @@ describe("domain display integrity", () => {
         listing: missingListing,
         latest: null,
         freshness: "NO_DATA",
+        availability: "UNAVAILABLE",
         age_days: null,
         price_regime: null,
+        analytics: {
+          status: "UNAVAILABLE",
+          methodology_version: "split-adjusted-price-history-v1",
+          observation_count: 0,
+          as_of: null,
+          daily_return: null,
+          dma_20: null,
+          dma_50: null,
+          dma_200: null,
+          high_52w: null,
+          drawdown_52w: null,
+          price_return_1m: null,
+          price_return_3m: null,
+          price_return_6m: null,
+          realized_vol_20d: null,
+          trend_state: null,
+          correction_state: null,
+        },
+        last_market_update: null,
         history: [],
       }),
     ).toBe(true);
@@ -1067,8 +1601,28 @@ describe("domain display integrity", () => {
         listing: missingListing,
         latest: null,
         freshness: "FRESH",
+        availability: "AVAILABLE",
         age_days: 0,
         price_regime: null,
+        analytics: {
+          status: "UNAVAILABLE",
+          methodology_version: "split-adjusted-price-history-v1",
+          observation_count: 0,
+          as_of: null,
+          daily_return: null,
+          dma_20: null,
+          dma_50: null,
+          dma_200: null,
+          high_52w: null,
+          drawdown_52w: null,
+          price_return_1m: null,
+          price_return_3m: null,
+          price_return_6m: null,
+          realized_vol_20d: null,
+          trend_state: null,
+          correction_state: null,
+        },
+        last_market_update: null,
         history: [],
       }),
     ).toBe(false);
@@ -1187,6 +1741,7 @@ describe("domain display integrity", () => {
     const partial = {
       id,
       revision_id: id,
+      return_methodology: ufcfReturnMethodology,
       status: "PARTIAL",
       model_currency: "USD",
       price_observation_id: null,
@@ -1228,6 +1783,7 @@ describe("domain display integrity", () => {
     const output = {
       id: "44444444-4444-4444-8444-444444444444",
       revision_id: revisionId,
+      return_methodology: ufcfReturnMethodology,
       status: "PARTIAL",
       model_currency: "USD",
       price_observation_id: null,
@@ -1389,6 +1945,7 @@ describe("domain display integrity", () => {
 
   it("validates draft calculations, explicit missing outputs, and all scenario projections", () => {
     const outputs = {
+      return_methodology: ufcfReturnMethodology,
       status: "PARTIAL",
       model_currency: "USD",
       price_observation_id: null,
@@ -1513,6 +2070,7 @@ describe("domain display integrity", () => {
     expect(isAdditionalModelPortableContractResponse(invalid)).toBe(false);
 
     const partialOutputs = {
+      return_methodology: ownerCashFlowReturnMethodology,
       status: "PARTIAL",
       model_currency: "USD",
       price_observation_id: null,
@@ -1632,6 +2190,415 @@ describe("domain display integrity", () => {
             time_precision: "UNKNOWN",
           },
         ],
+      }),
+    ).toBe(false);
+  });
+
+  it("validates Sheets connection, run and candidate sync contracts", () => {
+    const run = {
+      id,
+      status: "SUCCEEDED",
+      started_at: "2026-10-11T10:00:00Z",
+      completed_at: "2026-10-11T10:00:01Z",
+      spreadsheet_id: "workbook-id",
+      spreadsheet_title: "Investment Workbook",
+      candidate_count: 1,
+      new_count: 1,
+      unchanged_count: 0,
+      issue_count: 0,
+      error_code: null,
+      error_message: null,
+    };
+    const candidate = {
+      id,
+      status: "READY",
+      spreadsheet_id: "workbook-id",
+      spreadsheet_title: "Investment Workbook",
+      sheet_id: 10,
+      sheet_title: "Application Model Sync Inbox",
+      source_row_number: 2,
+      source_url:
+        "https://docs.google.com/spreadsheets/d/workbook-id/edit#gid=10",
+      contract_version: "1.2.0",
+      content_fingerprint: "a".repeat(64),
+      external_revision_id: "sheet-revision-3",
+      base_revision_id: id,
+      model_id: id,
+      company_id: id,
+      company_name: "Example issuer",
+      valuation_listing_id: id,
+      model_name: "Operating DCF",
+      source_model_key: "P-EXAMPLE",
+      model_type: "UFCF_DCF_10Y_FADE",
+      model_currency: "USD",
+      rationale: "Reviewed source-backed changes.",
+      proposal: {
+        author_id: "research-agent-fixture",
+        authored_at: "2026-10-11T10:00:00Z",
+        source_reference:
+          "https://docs.google.com/spreadsheets/d/workbook-id/edit",
+      },
+      supporting_evidence: [
+        {
+          evidence_type: "RESEARCH_FORECAST",
+          reference_id: id,
+          relationship: "SUPPORTS",
+          note: "Published revenue outlook informs the proposal.",
+          summary: "REVENUE FY2027 POINT: 1200 USD (AVAILABLE)",
+          evidence_status: "AVAILABLE",
+          author_id: "research-agent-fixture",
+          source_reference: "https://research.example.com/forecast/1",
+          observed_at: "2026-10-11T09:00:00Z",
+          recorded_at: "2026-10-11T09:30:00Z",
+          resolution_status: "VERIFIED",
+          resolution_issue: null,
+        },
+      ],
+      issue: null,
+      preview_status: "READY",
+      preview_data: { changes: [], output_changes: [] },
+      previewed_at: "2026-10-11T10:00:01Z",
+      accepted_revision_id: null,
+      reviewer: null,
+      decision_note: null,
+      first_observed_at: "2026-10-11T10:00:00Z",
+      last_observed_at: "2026-10-11T10:00:00Z",
+      accepted_at: null,
+      rejected_at: null,
+    };
+    const status = {
+      configured: true,
+      credentials_available: false,
+      spreadsheet_id: "workbook-id",
+      spreadsheet_url:
+        "https://docs.google.com/spreadsheets/d/workbook-id/edit",
+      sync_tab: "Application Model Sync Inbox",
+      polling_interval_seconds: 0,
+      last_run: run,
+    };
+    expect(isGoogleSheetsSyncRun(run)).toBe(true);
+    expect(isGoogleSheetsSyncCandidate(candidate)).toBe(true);
+    expect(
+      isGoogleSheetsSyncCandidate({
+        ...candidate,
+        supporting_evidence: [
+          { ...candidate.supporting_evidence[0], resolution_status: "UNKNOWN" },
+        ],
+      }),
+    ).toBe(false);
+    expect(isGoogleSheetsSyncStatus(status)).toBe(true);
+    expect(isGoogleSheetsSyncCheck({ run, new_candidates: [candidate] })).toBe(
+      true,
+    );
+    expect(
+      isGoogleSheetsConnectionTest({
+        connected: true,
+        spreadsheet_id: "workbook-id",
+        spreadsheet_title: "Investment Workbook",
+        sync_tab_exists: false,
+        checked_at: "2026-10-11T10:00:00Z",
+        message: "The configured inbox is missing.",
+      }),
+    ).toBe(true);
+    expect(
+      isGoogleSheetsSyncCandidate({
+        ...candidate,
+        status: "ACCEPTED",
+        accepted_at: "bad",
+      }),
+    ).toBe(false);
+    expect(
+      isGoogleSheetsSyncStatus({ ...status, credentials_available: "yes" }),
+    ).toBe(false);
+  });
+});
+
+describe("Candidate Pipeline contract states", () => {
+  const company = {
+    id,
+    name: "Pipeline candidate",
+    reporting_currency: "USD",
+    created_at: "2026-10-15T08:00:00Z",
+    is_demo: false,
+    lifecycle: "CANDIDATE",
+    lifecycle_event_id: id,
+  };
+  const queueEntry = {
+    company,
+    status: "NOT_STARTED",
+    stage: null,
+    disposition: null,
+    candidate_tier: "HIGH",
+    priority_seed: "42.0000",
+    priority_recorded_at: "2026-10-14T08:00:00Z",
+    research_rank_position: null,
+    research_rank_status: "INPUTS_UNAVAILABLE",
+    research_rank_reason: "No eligible run entry exists.",
+    current_revision: null,
+  };
+
+  it("keeps missing pipeline history explicit and validates the queue", () => {
+    expect(isCandidatePipelineQueue([queueEntry])).toBe(true);
+    expect(
+      isCompanyCandidatePipeline({
+        company,
+        lifecycle: "CANDIDATE",
+        queue_entry: queueEntry,
+        history: [],
+        evidence_options: [],
+      }),
+    ).toBe(true);
+    expect(
+      isCandidatePipelineQueue([
+        { ...queueEntry, status: "UNAVAILABLE_AS_ZERO" },
+      ]),
+    ).toBe(false);
+  });
+});
+
+describe("Research Queue contract states", () => {
+  const task = {
+    task_id: "a".repeat(64),
+    condition_fingerprint: "b".repeat(64),
+    company: {
+      id,
+      name: "Queue issuer",
+      reporting_currency: "USD",
+      created_at: "2026-10-15T08:00:00Z",
+      is_demo: false,
+      lifecycle: "WATCHLIST",
+      lifecycle_event_id: id,
+    },
+    task_type: "WATCHLIST_READINESS",
+    title: "Assess Watchlist research readiness",
+    reason: "No current Watchlist Rank entry is available.",
+    lifecycle_priority: 2,
+    research_rank_position: null,
+    trigger_rule:
+      "One readiness review per unchanged canonical input fingerprint.",
+    judgment_required: true,
+    owner_workflow: "LOCAL_ANALYST",
+    source_effective_at: null,
+    source_published_at: null,
+    source_recorded_at: "2026-10-15T08:00:00Z",
+    due_at: null,
+    sources: [],
+    status: "OPEN",
+    completed_by: null,
+    completed_at: null,
+    completion_note: null,
+  };
+
+  it("validates explicit missing inputs and immutable completion history", () => {
+    expect(
+      isResearchQueue({
+        as_of: "2026-10-15T08:00:00Z",
+        tasks: [task],
+        counts: {
+          open: 1,
+          complete: 0,
+          portfolio: 0,
+          watchlist: 1,
+          candidate: 0,
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isResearchQueue({
+        as_of: "2026-10-15T08:00:00Z",
+        tasks: [{ ...task, condition_fingerprint: "missing" }],
+        counts: {
+          open: 1,
+          complete: 0,
+          portfolio: 0,
+          watchlist: 1,
+          candidate: 0,
+        },
+      }),
+    ).toBe(false);
+    const completedTask = {
+      ...task,
+      status: "COMPLETE",
+      completed_by: "Analyst",
+      completed_at: "2026-10-15T09:00:00Z",
+      completion_note: "Reviewed missing rank inputs.",
+    };
+    const completion = {
+      id,
+      task: completedTask,
+      completed_by: "Analyst",
+      completion_note: "Reviewed missing rank inputs.",
+      completed_at: "2026-10-15T09:00:00Z",
+    };
+    expect(isResearchQueueHistory([completion])).toBe(true);
+    expect(
+      isResearchQueueCompletionResult({
+        result: "COMPLETED",
+        task: completedTask,
+      }),
+    ).toBe(true);
+    expect(isResearchQueueCompletionResult({ result: "COMPLETED", task })).toBe(
+      false,
+    );
+  });
+
+  it("validates source-linked triggers and explicit processing states", () => {
+    const trigger = {
+      id,
+      company: {
+        id,
+        name: "Queue issuer",
+        reporting_currency: "USD",
+        created_at: "2026-10-15T08:00:00Z",
+        is_demo: false,
+        lifecycle: "WATCHLIST",
+        lifecycle_event_id: id,
+      },
+      event_key: `source_document:${id}`,
+      version: 1,
+      fingerprint: "a".repeat(64),
+      trigger_type: "NEW_FILING",
+      title: "New 10-Q source",
+      reason: "Review the source publication and its context.",
+      source_domain: "source_document",
+      source_record_id: id,
+      source_reference: "https://issuer.example/filing",
+      effective_at: null,
+      source_observed_at: null,
+      source_recorded_at: "2026-10-15T08:00:00Z",
+      detected_at: "2026-10-15T09:00:00Z",
+      source_snapshot: { time_precision: "UNKNOWN" },
+      queue_task_id: "b".repeat(64),
+      queue_condition_fingerprint: "c".repeat(64),
+      processing_state: "OPEN",
+    };
+    expect(
+      isResearchTriggerReadResult({
+        as_of: "2026-10-15T09:00:00Z",
+        triggers: [trigger],
+      }),
+    ).toBe(true);
+    expect(
+      isResearchTriggerReadResult({
+        as_of: "2026-10-15T09:00:00Z",
+        triggers: [{ ...trigger, source_recorded_at: null }],
+      }),
+    ).toBe(false);
+    expect(
+      isResearchTriggerRefreshResult({
+        as_of: "2026-10-15T09:00:00Z",
+        lookback_days: 30,
+        examined: 1,
+        created: 1,
+        replayed: 0,
+        triggers: [trigger],
+      }),
+    ).toBe(true);
+  });
+
+  it("validates the bounded Sheets agent work publication result", () => {
+    const result = {
+      status: "PUBLISHED",
+      agent_role: "PORTFOLIO_THESIS_SENTINEL",
+      spreadsheet_id: "sheet-id",
+      spreadsheet_title: "Portfolio/Watchlist",
+      tab: "Application Agent Work Feed",
+      contract_version: "1.0.0",
+      content_fingerprint: "sha256:" + "a".repeat(64),
+      published_at: "2026-10-16T09:00:00Z",
+      row_count: 2,
+      added_count: 2,
+      work_item_count: 2,
+      read_back_verified: true,
+      status_reason: null,
+      message: "Published and verified.",
+    };
+    expect(isGoogleSheetsAgentWorkPublish(result)).toBe(true);
+    expect(isGoogleSheetsAgentWorkPublish({ ...result, tab: "Other" })).toBe(
+      false,
+    );
+    expect(
+      isGoogleSheetsAgentWorkPublish({ ...result, read_back_verified: false }),
+    ).toBe(true);
+  });
+
+  it("validates append-only research-agent delivery and acknowledgment events", () => {
+    const event = {
+      id,
+      delivery_id: id,
+      agent_role: "PORTFOLIO_THESIS_SENTINEL",
+      work_type: "TRIGGER",
+      work_key: `trigger:${id}`,
+      work_fingerprint: "a".repeat(64),
+      channel: "GOOGLE_SHEETS",
+      event_type: "ACKNOWLEDGED",
+      reason: "Source reviewed; thesis proposal is in progress.",
+      blocker_code: null,
+      external_update_id: "update-17",
+      proposal_domain: "THESIS",
+      proposal_candidate_id: id,
+      recorded_at: "2026-10-16T09:00:00Z",
+    };
+    expect(isResearchAgentWorkEvent(event)).toBe(true);
+    expect(isResearchAgentWorkEvents([event])).toBe(true);
+    expect(isResearchAgentWorkEvents([])).toBe(true);
+    expect(isResearchAgentWorkEvent({ ...event, event_type: "APPROVED" })).toBe(
+      false,
+    );
+    expect(
+      isResearchAgentWorkEvents([event, { ...event, id: "invalid" }]),
+    ).toBe(false);
+  });
+
+  it("validates persisted manual refresh requests and step outcomes", () => {
+    const request = {
+      id,
+      job_name: "MARKET_AND_FX",
+      scope_kind: "ACTIVE_UNIVERSE",
+      company_id: null,
+      company_name: null,
+      lifecycle: null,
+      requested_by: "LOCAL_USER",
+      status: "PARTIAL",
+      requested_at: "2026-10-16T09:00:00Z",
+      started_at: "2026-10-16T09:01:00Z",
+      finished_at: "2026-10-16T09:02:00Z",
+      next_attempt_at: null,
+      attempt_count: 1,
+      retry_of_id: null,
+      affected_domains: ["MARKET_DATA", "CORPORATE_ACTIONS", "FX"],
+      scope_detail: { scope_kind: "ACTIVE_UNIVERSE" },
+      result: { status: "PARTIAL", steps: [] },
+      error_code: "PARTIAL_COVERAGE",
+      error_message: "Some listings have no reviewed provider mapping.",
+      retry_available: true,
+      deduplicated: false,
+      cooldown_until: "2026-10-16T09:05:00Z",
+      attempts: [
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          attempt_number: 1,
+          step_name: "MARKET_AND_FX",
+          status: "PARTIAL",
+          affected_domains: ["MARKET_DATA", "CORPORATE_ACTIONS", "FX"],
+          started_at: "2026-10-16T09:01:00Z",
+          finished_at: "2026-10-16T09:02:00Z",
+          result: { status: "PARTIAL" },
+          error_code: "PARTIAL_COVERAGE",
+          error_message: "Some exact listings are unmapped.",
+        },
+      ],
+    };
+    expect(isOperationalJobRequest(request)).toBe(true);
+    expect(isOperationalJobRequestList([request])).toBe(true);
+    expect(isOperationalJobRequestList([])).toBe(true);
+    expect(
+      isOperationalJobRequest({ ...request, company_id: "not-a-company-id" }),
+    ).toBe(false);
+    expect(
+      isOperationalJobRequest({
+        ...request,
+        attempts: [{ ...request.attempts[0], status: "DECISION_RECOMPUTE" }],
       }),
     ).toBe(false);
   });

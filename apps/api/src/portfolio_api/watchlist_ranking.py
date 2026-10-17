@@ -1,7 +1,7 @@
 """Canonical, auditable Watchlist Rank calculation.
 
-The documented rank is an ordinal Expected IRR sort, not a composite. Native and
-legacy normalized return semantics are kept in separate run cohorts.
+The documented rank is an ordinal Expected IRR sort, not a composite. Runs require
+one explicit comparable return cohort and preserve the source methodology per row.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from portfolio_api.current_model_calculation import current_native_model_calculation
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     Company,
@@ -35,15 +36,21 @@ from portfolio_api.domain.models import (
     Security,
 )
 from portfolio_api.market_data import FRESH_DAYS
+from portfolio_api.return_semantics import (
+    ReturnBasis,
+    classify_comparability,
+    has_comparable_observation_basis,
+    has_supported_return_methodology,
+)
 
 NATIVE_RETURN_SEMANTICS = "NATIVE_METHOD_OUTPUT"
 LEGACY_RETURN_SEMANTICS = "LEGACY_NORMALIZED_FIELD"
-RANK_CONTEXT_VERSION = "watchlist-rank-inputs-v1"
+RANK_CONTEXT_VERSION = "watchlist-rank-inputs-v2"
 
 
 @dataclass(frozen=True)
 class RankCandidate:
-    semantics: str
+    basis: ReturnBasis
     ticker: str
     value: Decimal
     input_snapshot: dict[str, Any]
@@ -151,6 +158,7 @@ def build_watchlist_rank_entries(
 
     base: dict[UUID, RankCandidate] = {}
     errors: dict[UUID, tuple[RankingEntryStatus, str, dict[str, Any] | None]] = {}
+    unresolved_return_basis = False
     for company in companies:
         if lifecycle_by_company.get(company.id) != "WATCHLIST":
             errors[company.id] = (
@@ -177,15 +185,65 @@ def build_watchlist_rank_entries(
             continue
         if eligible_native:
             model, revision = eligible_native[0]
-            output = output_by_revision.get(revision.id)
-            if output is None:
+            accepted_output = output_by_revision.get(revision.id)
+            if accepted_output is None:
                 errors[company.id] = (
                     RankingEntryStatus.DATA_CHECK,
                     "The accepted native model revision has no retained output.",
                     None,
                 )
                 continue
-            source_snapshot = _native_source_snapshot(session, model, revision, output)
+            current = current_native_model_calculation(
+                session, model, revision, as_of=as_of, known_at=as_of
+            )
+            source_snapshot = _native_source_snapshot(session, model, revision, accepted_output)
+            if current is None:
+                errors[company.id] = (
+                    RankingEntryStatus.DATA_CHECK,
+                    "Accepted native inputs could not be recalculated at the exact "
+                    "current listing quote.",
+                    _input_snapshot(
+                        None,
+                        NATIVE_RETURN_SEMANTICS,
+                        source_snapshot,
+                        score_snapshot,
+                        accepted_output.forward_fundamental_cagr,
+                        accepted_output.weighted_fv,
+                        accepted_output.hurdle,
+                        accepted_output.expected_excess,
+                    ),
+                )
+                continue
+            output = current.outputs
+            source_snapshot["accepted_reference_price"] = (
+                str(accepted_output.current_price)
+                if accepted_output.current_price is not None
+                else None
+            )
+            source_snapshot["accepted_reference_price_observation_id"] = (
+                str(accepted_output.price_observation_id)
+                if accepted_output.price_observation_id
+                else None
+            )
+            source_snapshot["accepted_reference_price_effective_at"] = (
+                accepted_output.price_effective_at.isoformat()
+                if accepted_output.price_effective_at
+                else None
+            )
+            source_snapshot["accepted_output_status"] = accepted_output.status
+            source_snapshot["share_price_basis_status"] = (
+                "CAPTURED"
+                if output.price_observation_id is not None and output.current_price is not None
+                else "UNAVAILABLE"
+            )
+            source_snapshot["price_status"] = output.price_status
+            source_snapshot["price_effective_at"] = (
+                output.price_effective_at.isoformat() if output.price_effective_at else None
+            )
+            source_snapshot["price_observation_id"] = (
+                str(output.price_observation_id) if output.price_observation_id else None
+            )
+            source_snapshot["current_calculation"] = output.model_dump(mode="json")
             entry_context = _input_snapshot(
                 output.expected_cash_flow_irr,
                 NATIVE_RETURN_SEMANTICS,
@@ -196,19 +254,26 @@ def build_watchlist_rank_entries(
                 output.hurdle,
                 output.expected_excess,
             )
+            if output.status != "COMPLETE":
+                errors[company.id] = (
+                    RankingEntryStatus.INPUTS_UNAVAILABLE,
+                    output.irr_unavailable_reason
+                    or "The current native model calculation has no valid Expected IRR.",
+                    entry_context,
+                )
+                continue
             if output.expected_cash_flow_irr is None:
                 errors[company.id] = (
                     RankingEntryStatus.INPUTS_UNAVAILABLE,
                     output.irr_unavailable_reason
-                    or "The accepted native model has no valid Expected IRR.",
+                    or "Native Expected Cash-Flow IRR is unavailable at the current quote.",
                     entry_context,
                 )
                 continue
-            native_error = _native_output_error(session, model, output, as_of)
-            if native_error:
+            if output.return_methodology is None:
                 errors[company.id] = (
                     RankingEntryStatus.DATA_CHECK,
-                    native_error,
+                    "The native Expected IRR has no versioned return-method definition.",
                     entry_context,
                 )
                 continue
@@ -221,7 +286,16 @@ def build_watchlist_rank_entries(
                 )
                 continue
             base[company.id] = RankCandidate(
-                NATIVE_RETURN_SEMANTICS, ticker, output.expected_cash_flow_irr, entry_context
+                ReturnBasis(
+                    methodology_code=output.return_methodology.code,
+                    methodology_version=output.return_methodology.version,
+                    currency=output.model_currency,
+                    listing_id=str(model.valuation_listing_id),
+                    share_price_basis_status=source_snapshot["share_price_basis_status"],
+                ),
+                ticker,
+                output.expected_cash_flow_irr,
+                entry_context,
             )
             continue
 
@@ -255,7 +329,14 @@ def build_watchlist_rank_entries(
             contract.hurdle,
             contract.expected_excess,
         )
-        legacy_error = _legacy_output_error(contract)
+        if contract.expected_cash_flow_irr is not None and (
+            contract.return_methodology is None
+            or contract.model_currency is None
+            or source_snapshot["listing_id"] is None
+            or source_snapshot["share_price_basis_status"] != "CAPTURED"
+        ):
+            unresolved_return_basis = True
+        legacy_error = _legacy_output_error(contract, source_snapshot)
         if legacy_error:
             status = (
                 RankingEntryStatus.INPUTS_UNAVAILABLE
@@ -277,26 +358,62 @@ def build_watchlist_rank_entries(
             continue
         assert contract.expected_cash_flow_irr is not None
         base[company.id] = RankCandidate(
-            LEGACY_RETURN_SEMANTICS,
+            ReturnBasis(
+                methodology_code=(
+                    contract.return_methodology.code
+                    if contract.return_methodology is not None
+                    else None
+                ),
+                methodology_version=(
+                    contract.return_methodology.version
+                    if contract.return_methodology is not None
+                    else None
+                ),
+                currency=contract.model_currency,
+                listing_id=source_snapshot["listing_id"],
+                share_price_basis_status=source_snapshot["share_price_basis_status"],
+            ),
             ticker,
             contract.expected_cash_flow_irr,
             entry_context,
         )
 
-    # Never sort native method IRR against an imported legacy normalized field.
-    selected_semantics = (
-        NATIVE_RETURN_SEMANTICS
-        if any(item.semantics == NATIVE_RETURN_SEMANTICS for item in base.values())
-        else LEGACY_RETURN_SEMANTICS
-    )
+    # All ranked inputs need a retained exact-listing quote basis. Pairwise
+    # return rules then allow same-method returns and the explicitly conditional
+    # owner-cash-flow/residual-income equity pair, while rejecting unlike claims.
     result: dict[UUID, tuple[RankingEntryStatus, str, int | None, dict[str, Any] | None]] = {}
     comparable: list[tuple[UUID, str, Decimal, dict[str, Any]]] = []
+    basis_values = list(base.values())
+    incompatible = any(
+        not has_supported_return_methodology(candidate.basis) for candidate in basis_values
+    ) or any(
+        classify_comparability(left.basis, right.basis)
+        not in {
+            "DIRECT",
+            "DIRECT_FX_EXCLUDED",
+            "CONDITIONAL_EQUITY",
+            "CONDITIONAL_EQUITY_FX_EXCLUDED",
+        }
+        for index, left in enumerate(basis_values)
+        for right in basis_values[index + 1 :]
+    )
+    if unresolved_return_basis:
+        incompatible = True
     for company_id, candidate in base.items():
-        if candidate.semantics != selected_semantics:
+        if not has_comparable_observation_basis(candidate.basis):
             result[company_id] = (
                 RankingEntryStatus.DATA_CHECK,
-                "Native shareholder-cash-flow IRR and legacy normalized Expected IRR are not "
-                "assumed comparable; this run ranks only the native cohort.",
+                "The Expected IRR lacks an identified listing or retained exact-listing "
+                "quote basis.",
+                None,
+                candidate.input_snapshot,
+            )
+            continue
+        if incompatible:
+            result[company_id] = (
+                RankingEntryStatus.DATA_CHECK,
+                "The eligible population contains an unclassified, incomplete, or incompatible "
+                "return basis. A single Watchlist Rank cannot order it; no cohort is selected.",
                 None,
                 candidate.input_snapshot,
             )
@@ -323,14 +440,23 @@ def build_watchlist_rank_entries(
         company_id: snapshot for company_id, _ticker, _value, snapshot in comparable
     }
     semantics_label = (
-        "native Expected Cash-Flow IRR"
-        if selected_semantics == NATIVE_RETURN_SEMANTICS
-        else "legacy normalized Expected IRR"
+        ", ".join(
+            sorted(
+                {
+                    f"{candidate.basis.methodology_code}@{candidate.basis.methodology_version}"
+                    for candidate in base.values()
+                }
+            )
+        )
+        or "classified"
     )
     for company_id, position in positions.items():
         result[company_id] = (
             RankingEntryStatus.RANKED,
-            f"Ranked by {semantics_label} descending, then canonical listing ticker ascending. "
+            f"Ranked within the {semantics_label} return cohort by Expected IRR descending, then "
+            "canonical listing ticker ascending. Owner-cash-flow and residual-income equity "
+            "methods may be conditionally comparable; their method labels remain visible. "
+            "Rates remain in model-local currency; no FX return is added. "
             "Durability and Compounder Quality are retained as separate context; no numeric gate "
             "threshold or composite score is inferred.",
             position,
@@ -444,6 +570,8 @@ def _native_output_error(
         return "The native model output quality does not permit a current Expected IRR."
     if not model.model_currency or output.model_currency != model.model_currency:
         return "Native model currency is missing or inconsistent with its normalized output."
+    if output.price_observation_id is None or output.current_price is None:
+        return "The native Expected IRR has no retained exact-listing quote observation."
     if output.price_status != "FRESH" or output.price_effective_at is None:
         return "The native Expected IRR has no fresh, dated reference price."
     age_days = (as_of.date() - output.price_effective_at.astimezone(UTC).date()).days
@@ -471,7 +599,9 @@ def _native_output_error(
     return None
 
 
-def _legacy_output_error(snapshot: ModelOutputSnapshot) -> str | None:
+def _legacy_output_error(
+    snapshot: ModelOutputSnapshot, source_snapshot: dict[str, Any]
+) -> str | None:
     if snapshot.contract_status != "PASS":
         return "The imported current output contract is not in PASS data-quality state."
     if snapshot.output_quality not in {"COMPLETE", "PARTIAL"}:
@@ -481,6 +611,21 @@ def _legacy_output_error(snapshot: ModelOutputSnapshot) -> str | None:
     if snapshot.currency_status != "DOCUMENTED" or snapshot.model_currency is None:
         return (
             "The legacy model currency is unknown; Expected IRR comparability needs a data check."
+        )
+    if snapshot.return_methodology is None:
+        return "The imported Expected IRR method is unclassified; no ranking basis is inferred."
+    if not has_comparable_observation_basis(
+        ReturnBasis(
+            methodology_code=snapshot.return_methodology.code,
+            methodology_version=snapshot.return_methodology.version,
+            currency=snapshot.model_currency,
+            listing_id=source_snapshot["listing_id"],
+            share_price_basis_status=source_snapshot["share_price_basis_status"],
+        )
+    ):
+        return (
+            "The legacy Expected IRR has no retained exact-listing share-price basis; it cannot "
+            "enter a comparable current rank."
         )
     if any(
         issue.get("field") in {"expected_cash_flow_irr", "expected_irr"}
@@ -512,6 +657,17 @@ def _native_source_snapshot(
         "model_key": model.source_model_key,
         "model_type": revision.model_type,
         "methodology_version": revision.methodology_version,
+        "return_methodology": (
+            s.ReturnMethodologyRead.model_validate(output.return_methodology).model_dump(
+                mode="json"
+            )
+        ),
+        "return_methodology_status": "CLASSIFIED",
+        "share_price_basis_status": (
+            "CAPTURED"
+            if output.price_observation_id is not None and output.current_price is not None
+            else "UNAVAILABLE"
+        ),
         "contract_version": None,
         "source_revision_id": revision.source_revision_id,
         "source": revision.source,
@@ -575,6 +731,15 @@ def _legacy_source_snapshot(
         "model_key": snapshot.model_key,
         "model_type": None,
         "methodology_version": None,
+        "return_methodology": (
+            s.ReturnMethodologyRead.model_validate(snapshot.return_methodology).model_dump(
+                mode="json"
+            )
+            if snapshot.return_methodology is not None
+            else None
+        ),
+        "return_methodology_status": snapshot.return_methodology_status,
+        "share_price_basis_status": "NOT_RETAINED",
         "contract_version": snapshot.contract_version,
         "source_revision_id": snapshot.source_revision_id,
         "source": snapshot.source,
@@ -610,6 +775,12 @@ def _input_snapshot(
             "context_version": RANK_CONTEXT_VERSION,
             "expected_irr": expected_irr,
             "return_semantics": semantics,
+            "return_comparability_cohort": (
+                source["return_methodology"]["comparability_group"]
+                + f"@{source['return_methodology']['version']}"
+                if source.get("return_methodology") is not None
+                else None
+            ),
             "return_source": source,
             **scores,
             "forward_fundamental_cagr": forward_cagr,

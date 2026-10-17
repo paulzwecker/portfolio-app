@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from math import sqrt
 from statistics import stdev
 
@@ -6,7 +7,13 @@ import pytest
 from pydantic import ValidationError
 
 from portfolio_api.domain.schemas import FxObservationCreate
-from portfolio_api.market_data import _date, _quality, _regime_metrics
+from portfolio_api.market_data import (
+    _date,
+    _quality,
+    _regime_metrics,
+    calculate_price_history_metrics,
+)
+from portfolio_api.market_data_startup import configure_yahoo_no_proxy
 
 
 def test_legacy_price_regime_metrics_match_documented_session_windows() -> None:
@@ -35,6 +42,39 @@ def test_short_history_keeps_unsupported_windows_null() -> None:
     assert metrics["realized_vol_20d"] is None
     assert metrics["trend_state"] is None
     assert metrics["correction_state"] is None
+
+
+def test_current_analytics_are_price_only_and_keep_unavailable_windows_null() -> None:
+    metrics = calculate_price_history_metrics([Decimal("100"), Decimal("110")])
+    assert metrics["daily_return"] == pytest.approx(0.10)
+    assert metrics["price_return_1m"] is None
+    assert metrics["dma_50"] is None
+    assert metrics["realized_vol_20d"] is None
+
+
+def test_startup_bypasses_only_the_known_local_port_nine_proxy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "portfolio_api.networking.urllib.request.getproxies",
+        lambda: {"https": "http://127.0.0.1:9"},
+    )
+    env = {"NO_PROXY": "localhost,internal.example"}
+    assert configure_yahoo_no_proxy(env)
+    assert env["NO_PROXY"] == (
+        "localhost,internal.example,query1.finance.yahoo.com,query2.finance.yahoo.com"
+    )
+    assert env["no_proxy"] == env["NO_PROXY"]
+
+
+def test_startup_preserves_nonlocal_proxy_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "portfolio_api.networking.urllib.request.getproxies",
+        lambda: {"https": "http://proxy.example:8080"},
+    )
+    env = {"NO_PROXY": "localhost"}
+    assert not configure_yahoo_no_proxy(env)
+    assert env == {"NO_PROXY": "localhost"}
 
 
 def test_legacy_quality_and_excel_market_date_are_preserved_explicitly() -> None:

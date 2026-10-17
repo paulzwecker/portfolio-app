@@ -50,6 +50,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/candidate-pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Candidate Pipeline */
+        get: operations["get_candidate_pipeline_v1_candidate_pipeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/canonical-financial-models/{model_id}": {
         parameters: {
             query?: never;
@@ -237,6 +254,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/candidate-pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Candidate Pipeline */
+        get: operations["get_company_candidate_pipeline_v1_companies__company_id__candidate_pipeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/candidate-pipeline-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Candidate Pipeline Revision */
+        post: operations["post_candidate_pipeline_revision_v1_companies__company_id__candidate_pipeline_revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/canonical-financial-models": {
         parameters: {
             query?: never;
@@ -331,6 +382,23 @@ export interface paths {
         };
         /** Get Company Consensus Estimates */
         get: operations["get_company_consensus_estimates_v1_companies__company_id__consensus_estimates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/decision-evaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Decision Evaluation */
+        get: operations["get_company_decision_evaluation_v1_companies__company_id__decision_evaluation_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -436,6 +504,40 @@ export interface paths {
         put?: never;
         /** Post Financial Model Initial Calculation Preview */
         post: operations["post_financial_model_initial_calculation_preview_v1_companies__company_id__financial_models_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/financial-statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Financial Statements */
+        get: operations["get_company_financial_statements_v1_companies__company_id__financial_statements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/forecast-accuracy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Forecast Accuracy */
+        get: operations["get_company_forecast_accuracy_v1_companies__company_id__forecast_accuracy_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -561,6 +663,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Research */
+        get: operations["get_company_research_v1_companies__company_id__research_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/risk-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Risk Assessments */
+        get: operations["get_company_risk_assessments_v1_companies__company_id__risk_assessments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/score-assessments": {
         parameters: {
             query?: never;
@@ -656,6 +792,23 @@ export interface paths {
         };
         /** Get Company Temporal Alignment */
         get: operations["get_company_temporal_alignment_v1_companies__company_id__temporal_alignment_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/thesis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Investment Thesis */
+        get: operations["get_company_investment_thesis_v1_companies__company_id__thesis_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -837,6 +990,499 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/google-sheets-agent-operations/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Agent Acknowledgment Check */
+        post: operations["post_google_sheets_agent_acknowledgment_check_v1_google_sheets_agent_operations_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-agent-operations/{agent_role}/work/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Agent Work Publish */
+        post: operations["post_google_sheets_agent_work_publish_v1_google_sheets_agent_operations__agent_role__work_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Research Sync Candidates */
+        get: operations["get_google_sheets_research_sync_candidates_v1_google_sheets_research_sync_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/candidates/{candidate_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Research Candidate Accept */
+        post: operations["post_google_sheets_research_candidate_accept_v1_google_sheets_research_sync_candidates__candidate_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/candidates/{candidate_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Research Candidate Preview */
+        post: operations["post_google_sheets_research_candidate_preview_v1_google_sheets_research_sync_candidates__candidate_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/candidates/{candidate_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Research Candidate Reject */
+        post: operations["post_google_sheets_research_candidate_reject_v1_google_sheets_research_sync_candidates__candidate_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Research Sync Check */
+        post: operations["post_google_sheets_research_sync_check_v1_google_sheets_research_sync_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/connection-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Research Connection Test */
+        post: operations["post_google_sheets_research_connection_test_v1_google_sheets_research_sync_connection_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Research Sync Runs */
+        get: operations["get_google_sheets_research_sync_runs_v1_google_sheets_research_sync_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-research-sync/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Research Sync Status */
+        get: operations["get_google_sheets_research_sync_status_v1_google_sheets_research_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Risk Sync Candidates */
+        get: operations["get_google_sheets_risk_sync_candidates_v1_google_sheets_risk_sync_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/candidates/{candidate_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Risk Candidate Accept */
+        post: operations["post_google_sheets_risk_candidate_accept_v1_google_sheets_risk_sync_candidates__candidate_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/candidates/{candidate_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Risk Candidate Preview */
+        post: operations["post_google_sheets_risk_candidate_preview_v1_google_sheets_risk_sync_candidates__candidate_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/candidates/{candidate_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Risk Candidate Reject */
+        post: operations["post_google_sheets_risk_candidate_reject_v1_google_sheets_risk_sync_candidates__candidate_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Risk Sync Check */
+        post: operations["post_google_sheets_risk_sync_check_v1_google_sheets_risk_sync_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/connection-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Risk Connection Test */
+        post: operations["post_google_sheets_risk_connection_test_v1_google_sheets_risk_sync_connection_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Risk Sync Runs */
+        get: operations["get_google_sheets_risk_sync_runs_v1_google_sheets_risk_sync_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-risk-sync/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Risk Sync Status */
+        get: operations["get_google_sheets_risk_sync_status_v1_google_sheets_risk_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Sync Candidates */
+        get: operations["get_google_sheets_sync_candidates_v1_google_sheets_sync_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/candidates/{candidate_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Candidate Accept */
+        post: operations["post_google_sheets_candidate_accept_v1_google_sheets_sync_candidates__candidate_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/candidates/{candidate_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Candidate Preview */
+        post: operations["post_google_sheets_candidate_preview_v1_google_sheets_sync_candidates__candidate_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/candidates/{candidate_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Candidate Reject */
+        post: operations["post_google_sheets_candidate_reject_v1_google_sheets_sync_candidates__candidate_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Sync Check */
+        post: operations["post_google_sheets_sync_check_v1_google_sheets_sync_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/connection-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Connection Test */
+        post: operations["post_google_sheets_connection_test_v1_google_sheets_sync_connection_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/portfolio-state/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Portfolio State Publish */
+        post: operations["post_google_sheets_portfolio_state_publish_v1_google_sheets_sync_portfolio_state_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Sync Runs */
+        get: operations["get_google_sheets_sync_runs_v1_google_sheets_sync_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Google Sheets Sync Status */
+        get: operations["get_google_sheets_sync_status_v1_google_sheets_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-sync/thesis-watch/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Thesis Watch Publish */
+        post: operations["post_google_sheets_thesis_watch_publish_v1_google_sheets_sync_thesis_watch_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/investment-thesis-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Investment Thesis Revision */
+        post: operations["post_investment_thesis_revision_v1_investment_thesis_revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/listings/{listing_id}/corporate-actions": {
         parameters: {
             query?: never;
@@ -865,6 +1511,75 @@ export interface paths {
         get: operations["get_listing_market_data_v1_listings__listing_id__market_data_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/market-data/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Market Refresh Status */
+        get: operations["get_market_refresh_status_v1_market_data_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/job-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Operational Job Requests */
+        get: operations["get_operational_job_requests_v1_operations_job_requests_get"];
+        put?: never;
+        /** Post Operational Job Request */
+        post: operations["post_operational_job_request_v1_operations_job_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/job-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Operational Job Request */
+        get: operations["get_operational_job_request_v1_operations_job_requests__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/job-requests/{request_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Operational Job Request Retry */
+        post: operations["post_operational_job_request_retry_v1_operations_job_requests__request_id__retry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -916,6 +1631,23 @@ export interface paths {
         };
         /** Get Overview */
         get: operations["get_overview_v1_portfolios__portfolio_id__overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/risk-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio Risk Assessments */
+        get: operations["get_portfolio_risk_assessments_v1_portfolios__portfolio_id__risk_assessments_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1011,6 +1743,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/recurring-operations/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recurring Operations Status */
+        get: operations["get_recurring_operations_status_v1_recurring_operations_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reported-fundamental-definitions": {
         parameters: {
             query?: never;
@@ -1020,6 +1769,227 @@ export interface paths {
         };
         /** Get Reported Fundamental Definitions */
         get: operations["get_reported_fundamental_definitions_v1_reported_fundamental_definitions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-agent-operations/acknowledgments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Research Agent Acknowledgment */
+        post: operations["post_research_agent_acknowledgment_v1_research_agent_operations_acknowledgments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-agent-operations/delivery-failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Research Agent Delivery Failure */
+        post: operations["post_research_agent_delivery_failure_v1_research_agent_operations_delivery_failures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-agent-operations/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Agent Events */
+        get: operations["get_research_agent_events_v1_research_agent_operations_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-agent-operations/proposals/{proposal_domain}/{candidate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Agent Proposal Status */
+        get: operations["get_research_agent_proposal_status_v1_research_agent_operations_proposals__proposal_domain___candidate_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-agent-operations/{agent_role}/work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Research Agent Work */
+        post: operations["post_research_agent_work_v1_research_agent_operations__agent_role__work_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Review Queue */
+        get: operations["get_research_review_queue_v1_research_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-queue/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Review History */
+        get: operations["get_research_review_history_v1_research_queue_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-queue/{task_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Research Queue Completion */
+        post: operations["post_research_queue_completion_v1_research_queue__task_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Research Revision */
+        post: operations["post_research_revision_v1_research_revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-triggers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Triggers */
+        get: operations["get_research_triggers_v1_research_triggers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-triggers/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Research Triggers Refresh */
+        post: operations["post_research_triggers_refresh_v1_research_triggers_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/research-triggers/{trigger_id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Trigger Context */
+        get: operations["get_research_trigger_context_v1_research_triggers__trigger_id__context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/return-methodologies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Return Methodologies */
+        get: operations["get_return_methodologies_v1_return_methodologies_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1279,6 +2249,8 @@ export interface components {
             model_id: string;
             /** Output Changes */
             output_changes: components["schemas"]["AdditionalModelContractFieldChange"][];
+            /** Projection Changes */
+            projection_changes: components["schemas"]["AdditionalModelContractFieldChange"][];
             /** Reason */
             reason: string | null;
             /** Source Revision Id */
@@ -1306,10 +2278,10 @@ export interface components {
             company_id: string;
             /**
              * Contract Version
-             * @default 2.0.0
-             * @constant
+             * @default 2.1.0
+             * @enum {string}
              */
-            contract_version: "2.0.0";
+            contract_version: "2.0.0" | "2.1.0";
             /**
              * Exported At
              * Format: date-time
@@ -1329,8 +2301,11 @@ export interface components {
              * @enum {string}
              */
             model_type: "OWNER_CASH_FLOW_10Y" | "RESIDUAL_INCOME_10Y_FADE";
+            proposal?: components["schemas"]["FinancialModelProposalProvenance"] | null;
             /** Source Model Key */
             source_model_key: string | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceReference"][];
             /**
              * Valuation Listing Id
              * Format: uuid
@@ -1354,10 +2329,10 @@ export interface components {
             company_id: string;
             /**
              * Contract Version
-             * @default 2.0.0
-             * @constant
+             * @default 2.1.0
+             * @enum {string}
              */
-            contract_version: "2.0.0";
+            contract_version: "2.0.0" | "2.1.0";
             /**
              * Exported At
              * Format: date-time
@@ -1377,8 +2352,11 @@ export interface components {
              * @enum {string}
              */
             model_type: "OWNER_CASH_FLOW_10Y" | "RESIDUAL_INCOME_10Y_FADE";
+            proposal?: components["schemas"]["FinancialModelProposalProvenance"] | null;
             /** Source Model Key */
             source_model_key: string | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceReference"][];
             /**
              * Valuation Listing Id
              * Format: uuid
@@ -1419,7 +2397,7 @@ export interface components {
              * Event Type
              * @enum {string}
              */
-            event_type: "MODEL_REVISION" | "MODEL_OUTPUT_IMPORT" | "EXPECTED_IRR_CHANGE" | "CONSENSUS_REVISION" | "NEW_FILING" | "PRICE_MOVE" | "RANK_CHANGE" | "EXECUTION_PACE_CHANGE" | "DATA_QUALITY";
+            event_type: "MODEL_REVISION" | "MODEL_OUTPUT_IMPORT" | "EXPECTED_IRR_CHANGE" | "CONSENSUS_REVISION" | "NEW_FILING" | "PRICE_MOVE" | "RANK_CHANGE" | "EXECUTION_PACE_CHANGE" | "DATA_QUALITY" | "RISK_ASSESSMENT" | "RESEARCH_PROPOSAL";
             /** Explanation */
             explanation: string;
             /** Href */
@@ -1471,6 +2449,254 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * CandidateGateEvidenceType
+         * @enum {string}
+         */
+        CandidateGateEvidenceType: "RESEARCH_REVISION" | "THESIS_REVISION" | "THESIS_CLAIM" | "SCORE_ASSESSMENT" | "FINANCIAL_MODEL_OUTPUT" | "LEGACY_MODEL_OUTPUT" | "SOURCE_DOCUMENT" | "SOURCE_URL";
+        /**
+         * CandidateGateOutcome
+         * @enum {string}
+         */
+        CandidateGateOutcome: "NOT_ASSESSED" | "INCOMPLETE" | "PASS" | "FAIL" | "DATA_CHECK";
+        /** CandidatePipelineEvidenceInput */
+        CandidatePipelineEvidenceInput: {
+            evidence_type: components["schemas"]["CandidateGateEvidenceType"];
+            /** Note */
+            note?: string | null;
+            /** Reference Id */
+            reference_id?: string | null;
+            /** @default SUPPORTS */
+            relationship: components["schemas"]["ThesisEvidenceRelationship"];
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /** CandidatePipelineEvidenceOption */
+        CandidatePipelineEvidenceOption: {
+            /** Availability Status */
+            availability_status: string;
+            /** Current */
+            current: boolean;
+            evidence_type: components["schemas"]["CandidateGateEvidenceType"];
+            /** Forward Fundamental Cagr */
+            forward_fundamental_cagr?: string | null;
+            /** Label */
+            label: string;
+            /**
+             * Reference Id
+             * Format: uuid
+             */
+            reference_id: string;
+        };
+        /** CandidatePipelineEvidenceRead */
+        CandidatePipelineEvidenceRead: {
+            evidence_type: components["schemas"]["CandidateGateEvidenceType"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note?: string | null;
+            /** Reference Id */
+            reference_id?: string | null;
+            /** @default SUPPORTS */
+            relationship: components["schemas"]["ThesisEvidenceRelationship"];
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /** CandidatePipelineGateInput */
+        CandidatePipelineGateInput: {
+            /** Evidence */
+            evidence?: components["schemas"]["CandidatePipelineEvidenceInput"][];
+            gate: components["schemas"]["CandidateResearchStage"];
+            /**
+             * Normalized Per Share Basis Confirmed
+             * @default false
+             */
+            normalized_per_share_basis_confirmed: boolean;
+            outcome: components["schemas"]["CandidateGateOutcome"];
+            /** Rationale */
+            rationale?: string | null;
+        };
+        /** CandidatePipelineGateRead */
+        CandidatePipelineGateRead: {
+            /** Evidence */
+            evidence?: components["schemas"]["CandidatePipelineEvidenceRead"][];
+            gate: components["schemas"]["CandidateResearchStage"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Normalized Per Share Basis Confirmed
+             * @default false
+             */
+            normalized_per_share_basis_confirmed: boolean;
+            outcome: components["schemas"]["CandidateGateOutcome"];
+            /** Rationale */
+            rationale?: string | null;
+        };
+        /** CandidatePipelinePublicationResult */
+        CandidatePipelinePublicationResult: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "RECORDED" | "ALREADY_RECORDED";
+            revision: components["schemas"]["CandidatePipelineRevisionRead"];
+        };
+        /** CandidatePipelineQueueEntry */
+        CandidatePipelineQueueEntry: {
+            /** Candidate Tier */
+            candidate_tier: ("HIGH" | "LOW") | null;
+            company: components["schemas"]["CompanyRead"];
+            current_revision: components["schemas"]["CandidatePipelineRevisionSummaryRead"] | null;
+            disposition: components["schemas"]["CandidateResearchDisposition"] | null;
+            /** Priority Recorded At */
+            priority_recorded_at: string | null;
+            /** Priority Seed */
+            priority_seed: string | null;
+            /** Research Rank Position */
+            research_rank_position: number | null;
+            /** Research Rank Reason */
+            research_rank_reason: string | null;
+            research_rank_status: components["schemas"]["RankingEntryStatus"] | null;
+            stage: components["schemas"]["CandidateResearchStage"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETE";
+        };
+        /** CandidatePipelineRevisionCreate */
+        CandidatePipelineRevisionCreate: {
+            actor: components["schemas"]["Actor"];
+            /** Author Id */
+            author_id: string;
+            disposition?: components["schemas"]["CandidateResearchDisposition"] | null;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /** Expected Revision Id */
+            expected_revision_id?: string | null;
+            /** Gates */
+            gates: components["schemas"]["CandidatePipelineGateInput"][];
+            /** Next Action */
+            next_action?: string | null;
+            /** Rationale */
+            rationale: string;
+            /** Source */
+            source?: string | null;
+            stage: components["schemas"]["CandidateResearchStage"];
+            /**
+             * Submission Id
+             * Format: uuid
+             */
+            submission_id: string;
+            /** Unresolved Questions */
+            unresolved_questions?: string[];
+        };
+        /** CandidatePipelineRevisionRead */
+        CandidatePipelineRevisionRead: {
+            actor: components["schemas"]["Actor"];
+            /** Author Id */
+            author_id: string;
+            /** Base Revision Id */
+            base_revision_id: string | null;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            disposition: components["schemas"]["CandidateResearchDisposition"] | null;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /** Gates */
+            gates: components["schemas"]["CandidatePipelineGateRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Next Action */
+            next_action: string | null;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Source */
+            source: string | null;
+            stage: components["schemas"]["CandidateResearchStage"];
+            /**
+             * Submission Id
+             * Format: uuid
+             */
+            submission_id: string;
+            /** Unresolved Questions */
+            unresolved_questions: string[];
+        };
+        /** CandidatePipelineRevisionSummaryRead */
+        CandidatePipelineRevisionSummaryRead: {
+            /** Author Id */
+            author_id: string;
+            /** Base Revision Id */
+            base_revision_id: string | null;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            current_gate_outcome: components["schemas"]["CandidateGateOutcome"];
+            disposition: components["schemas"]["CandidateResearchDisposition"] | null;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Next Action */
+            next_action: string | null;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Number */
+            revision_number: number;
+            stage: components["schemas"]["CandidateResearchStage"];
+            /** Unresolved Questions */
+            unresolved_questions: string[];
+        };
+        /**
+         * CandidateResearchDisposition
+         * @enum {string}
+         */
+        CandidateResearchDisposition: "WATCHLIST" | "INCUBATE" | "DROP";
+        /**
+         * CandidateResearchStage
+         * @enum {string}
+         */
+        CandidateResearchStage: "DISCOVERY" | "INITIAL_SCREEN" | "QUALITY_DURABILITY" | "FUNDAMENTAL_COMPOUNDING" | "DEEP_DIVE" | "RESOLUTION";
         /** CashInput */
         "CashInput-Input": {
             /** Balance */
@@ -1493,11 +2719,27 @@ export interface components {
             base_market_value: string | null;
             /** Currency */
             currency: string;
+            /** Fx Effective At */
+            fx_effective_at?: string | null;
+            /** Fx Rate */
+            fx_rate?: string | null;
+            /** Portfolio Weight */
+            portfolio_weight?: string | null;
             /**
              * Valuation Status
              * @enum {string}
              */
             valuation_status: "VALUED" | "FX_UNAVAILABLE" | "BALANCE_UNAVAILABLE";
+        };
+        /** CompanyCandidatePipelineRead */
+        CompanyCandidatePipelineRead: {
+            company: components["schemas"]["CompanyRead"];
+            /** Evidence Options */
+            evidence_options: components["schemas"]["CandidatePipelineEvidenceOption"][];
+            /** History */
+            history: components["schemas"]["CandidatePipelineRevisionRead"][];
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            queue_entry: components["schemas"]["CandidatePipelineQueueEntry"];
         };
         /** CompanyConsensusEstimatesRead */
         CompanyConsensusEstimatesRead: {
@@ -1526,6 +2768,37 @@ export interface components {
             name: string;
             /** Reporting Currency */
             reporting_currency?: string | null;
+        };
+        /** CompanyDecisionEvaluationRead */
+        CompanyDecisionEvaluationRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Horizon Days */
+            horizon_days: number[];
+            /** Limitations */
+            limitations: string[];
+            /** Minimum Cross Section Sample */
+            minimum_cross_section_sample: number;
+            /**
+             * Outcome Known At
+             * Format: date-time
+             */
+            outcome_known_at: string;
+            /** Portfolio Implementation Reason */
+            portfolio_implementation_reason: string;
+            /** Portfolio Implementation Status */
+            portfolio_implementation_status: string;
+            /** Scenario Evaluations */
+            scenario_evaluations: components["schemas"]["ScenarioEvaluationRead"][];
+            /** Signals */
+            signals: components["schemas"]["DecisionSignalEvaluationRead"][];
+            /** Summaries */
+            summaries: components["schemas"]["DecisionEvaluationSummaryRead"][];
+            /** Valuation Scenarios */
+            valuation_scenarios: components["schemas"]["ValuationScenarioContextRead"][];
         };
         /** CompanyDetail */
         CompanyDetail: {
@@ -1645,7 +2918,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "ATTRIBUTED" | "OUTPUTS_ONLY" | "MISSING_RETURN" | "RETURN_SEMANTICS_CHANGE" | "MODEL_SERIES_CHANGE" | "METHODOLOGY_CHANGE" | "INPUTS_UNAVAILABLE" | "RECALCULATION_MISMATCH" | "UNDATED";
+            status: "ATTRIBUTED" | "OUTPUTS_ONLY" | "MISSING_RETURN" | "RETURN_SEMANTICS_CHANGE" | "RETURN_BASIS_UNAVAILABLE" | "MODEL_SERIES_CHANGE" | "METHODOLOGY_CHANGE" | "INPUTS_UNAVAILABLE" | "RECALCULATION_MISMATCH" | "UNDATED";
         };
         /** CompanyExpectedReturnHistoryRead */
         CompanyExpectedReturnHistoryRead: {
@@ -1659,6 +2932,8 @@ export interface components {
              * Format: uuid
              */
             company_id: string;
+            /** Current Calculations */
+            current_calculations?: components["schemas"]["CurrentNativeModelCalculationRead"][];
             /** History */
             history: components["schemas"]["ExpectedReturnHistoryPointRead"][];
             /**
@@ -1730,6 +3005,79 @@ export interface components {
             inventory_available: boolean;
             /** Models */
             models: components["schemas"]["CompanyFinancialModelMigrationItemRead"][];
+        };
+        /** CompanyFinancialStatementsRead */
+        CompanyFinancialStatementsRead: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            consensus: components["schemas"]["CompanyConsensusEstimatesRead"];
+            /** Known At */
+            known_at: string | null;
+            /** Latest Observed At */
+            latest_observed_at: string | null;
+            /** Limitations */
+            limitations: components["schemas"]["FinancialStatementLimitationRead"][];
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "ANNUAL" | "QUARTERLY";
+            /** Periods */
+            periods: components["schemas"]["FinancialStatementColumnRead"][];
+            /** Reported Periods */
+            reported_periods: components["schemas"]["ReportedFundamentalPeriodRead"][];
+            research: components["schemas"]["CompanyResearchRead"];
+            /** Rows */
+            rows: components["schemas"]["FinancialStatementRowRead"][];
+        };
+        /** CompanyForecastAccuracyRead */
+        CompanyForecastAccuracyRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Observations */
+            observations: components["schemas"]["ForecastAccuracyObservationRead"][];
+            /**
+             * Outcome Known At
+             * Format: date-time
+             */
+            outcome_known_at: string;
+            /** Returned Count */
+            returned_count: number;
+            /** Selected Fiscal Period */
+            selected_fiscal_period: string | null;
+            /** Selected Fiscal Year */
+            selected_fiscal_year: number | null;
+            selected_metric: components["schemas"]["ForecastAccuracyMetric"] | null;
+            selected_period_type: components["schemas"]["ResearchPeriodType"] | null;
+            selected_source: components["schemas"]["ForecastAccuracySourceType"] | null;
+            /** Summaries */
+            summaries: components["schemas"]["ForecastAccuracySummaryRead"][];
+            /** Total Count */
+            total_count: number;
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** CompanyInvestmentThesisRead */
+        CompanyInvestmentThesisRead: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Known At */
+            known_at: string | null;
+            /** Streams */
+            streams: components["schemas"]["InvestmentThesisStreamRead"][];
         };
         /** CompanyModelOutputsCurrentRead */
         CompanyModelOutputsCurrentRead: {
@@ -1823,6 +3171,32 @@ export interface components {
             provider_identity_status: "MAPPED" | "UNMAPPED" | "AMBIGUOUS";
             /** Provider Ids */
             provider_ids: string[];
+        };
+        /** CompanyResearchRead */
+        CompanyResearchRead: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Known At */
+            known_at: string | null;
+            /** Streams */
+            streams: components["schemas"]["ResearchStreamRead"][];
+        };
+        /** CompanyRiskAssessmentsRead */
+        CompanyRiskAssessmentsRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Current */
+            current: components["schemas"]["RiskAssessmentRevisionRead"][];
+            /** History */
+            history: components["schemas"]["RiskAssessmentRevisionRead"][];
         };
         /** CompanySourceDocumentsRead */
         CompanySourceDocumentsRead: {
@@ -2078,6 +3452,66 @@ export interface components {
             /** Verified */
             verified: boolean;
         };
+        /**
+         * CurrentNativeModelCalculationRead
+         * @description Ephemeral current quote calculation; it is not an accepted model revision.
+         */
+        CurrentNativeModelCalculationRead: {
+            /**
+             * Accepted Output Id
+             * Format: uuid
+             */
+            accepted_output_id: string;
+            /** Accepted Reference Price */
+            accepted_reference_price: string | null;
+            /** Accepted Reference Price Effective At */
+            accepted_reference_price_effective_at: string | null;
+            /** Accepted Reference Price Observation Id */
+            accepted_reference_price_observation_id: string | null;
+            /**
+             * Calculated As Of
+             * Format: date-time
+             */
+            calculated_as_of: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /**
+             * Known At
+             * Format: date-time
+             */
+            known_at: string;
+            market_price: components["schemas"]["ExpectedReturnMarketPriceRead"];
+            /** Methodology Version */
+            methodology_version: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Model Name */
+            model_name: string;
+            /**
+             * Model Type
+             * @enum {string}
+             */
+            model_type: "UFCF_DCF_10Y_FADE" | "OWNER_CASH_FLOW_10Y" | "RESIDUAL_INCOME_10Y_FADE";
+            outputs: components["schemas"]["FinancialModelCalculationOutputsRead"];
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /** Revision Number */
+            revision_number: number;
+        };
         /** DcfOperatingBase */
         "DcfOperatingBase-Input": {
             /** Base Capex To Revenue */
@@ -2261,6 +3695,8 @@ export interface components {
             /** Rationale */
             rationale: string;
             scenario: components["schemas"]["DcfScenario"];
+            /** Tail Ufcf Growth */
+            tail_ufcf_growth?: components["schemas"]["DcfTailGrowthAssumptionInput-Input"][] | null;
             /** Terminal Growth */
             terminal_growth: number | string;
             /** Year10 Ufcf Growth */
@@ -2275,6 +3711,8 @@ export interface components {
             /** Rationale */
             rationale: string;
             scenario: components["schemas"]["DcfScenario"];
+            /** Tail Ufcf Growth */
+            tail_ufcf_growth?: components["schemas"]["DcfTailGrowthAssumptionInput-Output"][] | null;
             /** Terminal Growth */
             terminal_growth: string;
             /** Year10 Ufcf Growth */
@@ -2299,12 +3737,45 @@ export interface components {
              */
             revision_id: string;
             scenario: components["schemas"]["DcfScenario"];
+            /** Tail Ufcf Growth */
+            tail_ufcf_growth: components["schemas"]["DcfTailGrowthAssumptionRead"][] | null;
             /** Terminal Growth */
             terminal_growth: string;
             /** Year10 Ufcf Growth */
             year10_ufcf_growth: string;
             /** Years */
             years: components["schemas"]["DcfYearAssumptionRead"][];
+        };
+        /** DcfTailGrowthAssumptionInput */
+        "DcfTailGrowthAssumptionInput-Input": {
+            /** Forecast Year */
+            forecast_year: number;
+            /** Ufcf Growth */
+            ufcf_growth: number | string;
+        };
+        /** DcfTailGrowthAssumptionInput */
+        "DcfTailGrowthAssumptionInput-Output": {
+            /** Forecast Year */
+            forecast_year: number;
+            /** Ufcf Growth */
+            ufcf_growth: string;
+        };
+        /** DcfTailGrowthAssumptionRead */
+        DcfTailGrowthAssumptionRead: {
+            /** Forecast Year */
+            forecast_year: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Ufcf Growth */
+            ufcf_growth: string;
         };
         /** DcfYearAssumptionInput */
         "DcfYearAssumptionInput-Input": {
@@ -2372,6 +3843,144 @@ export interface components {
             scenario_id: string;
             /** Tax Rate */
             tax_rate: string;
+        };
+        /** DecisionEvaluationSummaryRead */
+        DecisionEvaluationSummaryRead: {
+            /** Group Value */
+            group_value: string;
+            /** Grouping */
+            grouping: string;
+            /** Horizon Days */
+            horizon_days: number;
+            /** Interpretation */
+            interpretation: string;
+            /** Listing Currency */
+            listing_currency: string | null;
+            /** Mean Annualized Return */
+            mean_annualized_return: string | null;
+            /** Median Annualized Return */
+            median_annualized_return: string | null;
+            /** Minimum Sample Count */
+            minimum_sample_count: number;
+            /**
+             * Run As Of
+             * Format: date-time
+             */
+            run_as_of: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sample Count */
+            sample_count: number;
+            /** Signal Type */
+            signal_type: string;
+            /** Source Methodology */
+            source_methodology: string;
+            /** Spearman Correlation */
+            spearman_correlation: string | null;
+            /** Status */
+            status: string;
+        };
+        /** DecisionOutcomeRead */
+        DecisionOutcomeRead: {
+            /** Annualized Return */
+            annualized_return: string | null;
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency: string | null;
+            /** End Market Date */
+            end_market_date: string | null;
+            /** End Observation Id */
+            end_observation_id: string | null;
+            /** End Provider */
+            end_provider: string | null;
+            /** Horizon Days */
+            horizon_days: number;
+            /** Reason */
+            reason: string | null;
+            /** Start Market Date */
+            start_market_date: string | null;
+            /** Start Observation Id */
+            start_observation_id: string | null;
+            /** Start Provider */
+            start_provider: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Total Return */
+            total_return: string | null;
+        };
+        /** DecisionSignalEvaluationRead */
+        DecisionSignalEvaluationRead: {
+            /** Estimate Momentum Availability */
+            estimate_momentum_availability: string | null;
+            /** Estimate Momentum Direction */
+            estimate_momentum_direction: string | null;
+            /** Estimate Momentum Freshness */
+            estimate_momentum_freshness: string | null;
+            /** Estimate Momentum Quality */
+            estimate_momentum_quality: string | null;
+            /** Expected Irr */
+            expected_irr: string | null;
+            /** Listing Currency */
+            listing_currency: string | null;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Outcomes */
+            outcomes: components["schemas"]["DecisionOutcomeRead"][];
+            /** Position */
+            position: number | null;
+            /** Price Observation Id */
+            price_observation_id: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Return Methodology */
+            return_methodology: string | null;
+            /** Return Methodology Version */
+            return_methodology_version: number | null;
+            /** Return Perspective */
+            return_perspective: string | null;
+            /**
+             * Run As Of
+             * Format: date-time
+             */
+            run_as_of: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Signal Id
+             * Format: uuid
+             */
+            signal_id: string;
+            /** Signal Type */
+            signal_type: string;
+            /** Source Methodology */
+            source_methodology: string;
+            /** Status */
+            status: string;
+            /** Valuation Listing Id */
+            valuation_listing_id: string | null;
+            /** Valuation Ticker */
+            valuation_ticker: string | null;
+            /** Valuation Venue */
+            valuation_venue: string | null;
+            /** Value */
+            value: string | null;
         };
         /** EstimateMomentumPeriodRead */
         EstimateMomentumPeriodRead: {
@@ -2544,6 +4153,12 @@ export interface components {
         };
         /** ExecutionPaceInputSnapshot */
         ExecutionPaceInputSnapshot: {
+            /** Accepted Reference Price */
+            accepted_reference_price?: string | null;
+            /** Accepted Reference Price Effective At */
+            accepted_reference_price_effective_at?: string | null;
+            /** Accepted Reference Price Observation Id */
+            accepted_reference_price_observation_id?: string | null;
             /** Allocation Gap */
             allocation_gap: string | null;
             /** Allocation Status */
@@ -2552,9 +4167,9 @@ export interface components {
             context_notes: string[];
             /**
              * Context Version
-             * @constant
+             * @enum {string}
              */
-            context_version: "execution-pace-inputs-v1";
+            context_version: "execution-pace-inputs-v1" | "execution-pace-inputs-v2";
             /** Current Weight */
             current_weight: string | null;
             /** Estimate Latest Snapshot Date */
@@ -2577,6 +4192,14 @@ export interface components {
             holding_effective_at: string | null;
             /** Holding Snapshot Id */
             holding_snapshot_id: string | null;
+            /** Holdings Age Days */
+            holdings_age_days?: number | null;
+            /**
+             * Holdings Freshness
+             * @default NO_DATA
+             * @enum {string}
+             */
+            holdings_freshness: "FRESH" | "STALE" | "NO_DATA";
             /** Hurdle */
             hurdle: string | null;
             lifecycle: components["schemas"]["Lifecycle"] | null;
@@ -2817,6 +4440,13 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            return_methodology?: components["schemas"]["ReturnMethodologyRead"] | null;
+            /**
+             * Return Methodology Status
+             * @default UNCLASSIFIED
+             * @enum {string}
+             */
+            return_methodology_status: "CLASSIFIED" | "UNCLASSIFIED";
             /**
              * Return Semantics
              * @enum {string}
@@ -2828,6 +4458,11 @@ export interface components {
             revision_number: number | null;
             /** Series Id */
             series_id: string;
+            /**
+             * Share Price Basis Status
+             * @enum {string}
+             */
+            share_price_basis_status: "CAPTURED" | "NOT_RETAINED" | "UNAVAILABLE";
             /** Source */
             source: string | null;
             /**
@@ -2837,6 +4472,14 @@ export interface components {
             source_kind: "IMPORTED_CURRENT_CONTRACT" | "IMPORTED_LEGACY_REVISION" | "NATIVE_MODEL_REVISION";
             /** Source Revision Id */
             source_revision_id: string | null;
+            /** Valuation Listing Currency */
+            valuation_listing_currency: string | null;
+            /** Valuation Listing Id */
+            valuation_listing_id: string | null;
+            /** Valuation Ticker */
+            valuation_ticker: string | null;
+            /** Valuation Venue */
+            valuation_venue: string | null;
             /** Weighted Fv */
             weighted_fv: string | null;
         };
@@ -2974,6 +4617,13 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            return_methodology?: components["schemas"]["ReturnMethodologyRead"] | null;
+            /**
+             * Return Methodology Status
+             * @default UNCLASSIFIED
+             * @enum {string}
+             */
+            return_methodology_status: "CLASSIFIED" | "UNCLASSIFIED";
             /**
              * Return Semantics
              * @enum {string}
@@ -2989,6 +4639,12 @@ export interface components {
             revision_type: string | null;
             /** Series Id */
             series_id: string;
+            /**
+             * Share Price Basis Status
+             * @default UNAVAILABLE
+             * @enum {string}
+             */
+            share_price_basis_status: "CAPTURED" | "NOT_RETAINED" | "UNAVAILABLE";
             /** Source */
             source: string | null;
             /** Source Actor */
@@ -3131,6 +4787,7 @@ export interface components {
             price_status: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA" | "CURRENCY_MISMATCH" | "CURRENCY_UNKNOWN";
             /** Price Unavailable Reason */
             price_unavailable_reason: string | null;
+            return_methodology: components["schemas"]["ReturnMethodologyRead"];
             /**
              * Status
              * @enum {string}
@@ -3161,9 +4818,9 @@ export interface components {
         FinancialModelContractBaseRevision: {
             /**
              * Methodology Version
-             * @constant
+             * @enum {string}
              */
-            methodology_version: "ufcf-dcf-fade-v1";
+            methodology_version: "ufcf-dcf-fade-v1" | "ufcf-dcf-explicit-tail-v1";
             /**
              * Revision Id
              * Format: uuid
@@ -3362,6 +5019,8 @@ export interface components {
             model_id: string;
             /** Output Changes */
             output_changes: components["schemas"]["FinancialModelContractFieldChange"][];
+            /** Projection Changes */
+            projection_changes: components["schemas"]["FinancialModelContractFieldChange"][];
             /** Proposed Revision Number */
             proposed_revision_number: number | null;
             /** Reason */
@@ -3383,15 +5042,18 @@ export interface components {
             candidate_revision: components["schemas"]["FinancialModelContractCandidateRevision-Input"];
             /**
              * Contract Version
-             * @constant
+             * @enum {string}
              */
-            contract_version: "1.0.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
             /**
              * Exported At
              * Format: date-time
              */
             exported_at: string;
             model: components["schemas"]["FinancialModelContractIdentity"];
+            proposal?: components["schemas"]["FinancialModelProposalProvenance"] | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceReference"][];
         };
         /** FinancialModelContractV1 */
         "FinancialModelContractV1-Output": {
@@ -3400,15 +5062,18 @@ export interface components {
             candidate_revision: components["schemas"]["FinancialModelContractCandidateRevision-Output"];
             /**
              * Contract Version
-             * @constant
+             * @enum {string}
              */
-            contract_version: "1.0.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
             /**
              * Exported At
              * Format: date-time
              */
             exported_at: string;
             model: components["schemas"]["FinancialModelContractIdentity"];
+            proposal?: components["schemas"]["FinancialModelProposalProvenance"] | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceReference"][];
         };
         /** FinancialModelCreate */
         FinancialModelCreate: {
@@ -3430,6 +5095,55 @@ export interface components {
              * Format: uuid
              */
             valuation_listing_id: string;
+        };
+        /** FinancialModelEvidenceRead */
+        FinancialModelEvidenceRead: {
+            /** Author Id */
+            author_id: string | null;
+            /** Evidence Status */
+            evidence_status: string;
+            evidence_type: components["schemas"]["ModelEvidenceType"];
+            /** Note */
+            note?: string | null;
+            /** Observed At */
+            observed_at: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Reference Id
+             * Format: uuid
+             */
+            reference_id: string;
+            relationship: components["schemas"]["ModelEvidenceRelationship"];
+            /** Resolution Issue */
+            resolution_issue?: string | null;
+            /**
+             * Resolution Status
+             * @default VERIFIED
+             * @enum {string}
+             */
+            resolution_status: "VERIFIED" | "UNRESOLVED";
+            /** Source Reference */
+            source_reference: string | null;
+            /** Summary */
+            summary: string | null;
+            /** Trigger References */
+            trigger_references?: components["schemas"]["ResearchTriggerReferenceRead"][];
+        };
+        /** FinancialModelEvidenceReference */
+        FinancialModelEvidenceReference: {
+            evidence_type: components["schemas"]["ModelEvidenceType"];
+            /** Note */
+            note?: string | null;
+            /**
+             * Reference Id
+             * Format: uuid
+             */
+            reference_id: string;
+            relationship: components["schemas"]["ModelEvidenceRelationship"];
         };
         /** FinancialModelInitialCalculationPreviewCreate */
         FinancialModelInitialCalculationPreviewCreate: {
@@ -3488,6 +5202,7 @@ export interface components {
             price_status: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA" | "CURRENCY_MISMATCH" | "CURRENCY_UNKNOWN";
             /** Price Unavailable Reason */
             price_unavailable_reason: string | null;
+            return_methodology: components["schemas"]["ReturnMethodologyRead"];
             /**
              * Revision Id
              * Format: uuid
@@ -3547,6 +5262,7 @@ export interface components {
             price_status: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA" | "CURRENCY_MISMATCH" | "CURRENCY_UNKNOWN";
             /** Price Unavailable Reason */
             price_unavailable_reason: string | null;
+            return_methodology: components["schemas"]["ReturnMethodologyRead"];
             /**
              * Revision Id
              * Format: uuid
@@ -3561,6 +5277,18 @@ export interface components {
             weighted_fv: string;
             /** Weighted Upside */
             weighted_upside: string | null;
+        };
+        /** FinancialModelProposalProvenance */
+        FinancialModelProposalProvenance: {
+            /** Author Id */
+            author_id: string;
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /** Source Reference */
+            source_reference: string;
         };
         /** FinancialModelRead */
         FinancialModelRead: {
@@ -3653,6 +5381,12 @@ export interface components {
             outputs: components["schemas"]["FinancialModelOutputsRead-Output"];
             /** Projections */
             projections: components["schemas"]["DcfProjectionRead-Output"][];
+            /** Proposal Author Id */
+            proposal_author_id?: string | null;
+            /** Proposal Authored At */
+            proposal_authored_at?: string | null;
+            /** Proposal Source Reference */
+            proposal_source_reference?: string | null;
             /** Rationale */
             rationale: string;
             /**
@@ -3668,6 +5402,8 @@ export interface components {
             source: string | null;
             /** Source Revision Id */
             source_revision_id: string | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceRead"][];
         };
         /** FinancialModelRevisionSummary */
         FinancialModelRevisionSummary: {
@@ -3692,6 +5428,12 @@ export interface components {
              */
             model_id: string;
             outputs: components["schemas"]["FinancialModelOutputsRead-Output"];
+            /** Proposal Author Id */
+            proposal_author_id?: string | null;
+            /** Proposal Authored At */
+            proposal_authored_at?: string | null;
+            /** Proposal Source Reference */
+            proposal_source_reference?: string | null;
             /** Rationale */
             rationale: string;
             /**
@@ -3705,12 +5447,256 @@ export interface components {
             source: string | null;
             /** Source Revision Id */
             source_revision_id: string | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceRead"][];
         };
         /**
          * FinancialModelType
          * @enum {string}
          */
         FinancialModelType: "UFCF_DCF_10Y_FADE" | "OWNER_CASH_FLOW_10Y" | "RESIDUAL_INCOME_10Y_FADE";
+        /** FinancialStatementCellRead */
+        FinancialStatementCellRead: {
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /** Reason */
+            reason?: string | null;
+            /** Selected Source Id */
+            selected_source_id?: string | null;
+            /** Source Ids */
+            source_ids?: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "CONFLICT" | "DATA_CHECK" | "UNAVAILABLE";
+            /** Value */
+            value: string | null;
+        };
+        /** FinancialStatementColumnRead */
+        FinancialStatementColumnRead: {
+            /** Fiscal Period */
+            fiscal_period: string | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /** Is Forecast */
+            is_forecast: boolean;
+            /** Label */
+            label: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+        };
+        /** FinancialStatementLimitationRead */
+        FinancialStatementLimitationRead: {
+            /** Reason */
+            reason: string;
+            /** Reference Id */
+            reference_id?: string | null;
+            /** Source Name */
+            source_name: string;
+        };
+        /** FinancialStatementRowRead */
+        FinancialStatementRowRead: {
+            /** Availability Reason */
+            availability_reason?: string | null;
+            /** Cells */
+            cells: components["schemas"]["FinancialStatementCellRead"][];
+            /** Currency */
+            currency: string | null;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** Scenario */
+            scenario?: string | null;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "REPORTED_ACTUAL" | "CONSENSUS" | "AGENT_FORECAST";
+            /** Source Name */
+            source_name: string;
+            /**
+             * Statement
+             * @enum {string}
+             */
+            statement: "INCOME_STATEMENT" | "BALANCE_SHEET" | "CASH_FLOW_STATEMENT";
+            /** Unit */
+            unit: string;
+        };
+        /** ForecastAccuracyActualRead */
+        ForecastAccuracyActualRead: {
+            /** Currency */
+            currency: string | null;
+            /** Data Quality */
+            data_quality: string | null;
+            /** Fiscal Period */
+            fiscal_period: string | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /** Metric */
+            metric: string | null;
+            /** Observed At */
+            observed_at: string | null;
+            /** Period End */
+            period_end: string | null;
+            /** Period Type */
+            period_type: string | null;
+            /** Provider Id */
+            provider_id: string | null;
+            /** Published At */
+            published_at: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Revision Context */
+            revision_context: string | null;
+            /** Source Observation Id */
+            source_observation_id: string | null;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Status */
+            status: string;
+            /** Supersedes Observation Id */
+            supersedes_observation_id: string | null;
+            /** Unit */
+            unit: string | null;
+            /** Value */
+            value: string | null;
+        };
+        /** ForecastAccuracyErrorRead */
+        ForecastAccuracyErrorRead: {
+            /** Absolute Error */
+            absolute_error: string | null;
+            /** Absolute Percentage Error */
+            absolute_percentage_error: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Signed Error */
+            signed_error: string | null;
+            /** Signed Percentage Error */
+            signed_percentage_error: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ForecastAccuracyMetric
+         * @enum {string}
+         */
+        ForecastAccuracyMetric: "REVENUE" | "EPS" | "EBIT" | "EBITDA" | "FREE_CASH_FLOW";
+        /** ForecastAccuracyObservationRead */
+        ForecastAccuracyObservationRead: {
+            actual: components["schemas"]["ForecastAccuracyActualRead"];
+            /** Analyst Count */
+            analyst_count: number | null;
+            /** Author Id */
+            author_id: string | null;
+            /** Confidence */
+            confidence: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            error: components["schemas"]["ForecastAccuracyErrorRead"];
+            /** Fiscal Period */
+            fiscal_period: string | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /** Forecast Basis */
+            forecast_basis: string | null;
+            /** Forecast Id */
+            forecast_id: string | null;
+            /** Forecast Known At */
+            forecast_known_at: string | null;
+            /** Forecast Period Label */
+            forecast_period_label: string | null;
+            /** Forecast Year */
+            forecast_year: number | null;
+            /** Horizon Bucket */
+            horizon_bucket: string | null;
+            /** Horizon Days */
+            horizon_days: number | null;
+            /** Methodology */
+            methodology: string | null;
+            /** Methodology Version */
+            methodology_version: string | null;
+            metric: components["schemas"]["ForecastAccuracyMetric"];
+            model_type: components["schemas"]["FinancialModelType"] | null;
+            /** Observed At */
+            observed_at: string | null;
+            /** Period End */
+            period_end: string | null;
+            period_type: components["schemas"]["ResearchPeriodType"] | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Revision Id */
+            revision_id: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Scenario */
+            scenario: string | null;
+            /** Scenario Probability */
+            scenario_probability: string | null;
+            /** Source Name */
+            source_name: string;
+            /** Source Reference */
+            source_reference: string | null;
+            source_type: components["schemas"]["ForecastAccuracySourceType"];
+            /** Status */
+            status: string;
+            /** Status Reason */
+            status_reason: string | null;
+            /** Stream Key */
+            stream_key: string | null;
+            /** Supersedes Observation Id */
+            supersedes_observation_id: string | null;
+            /** Supersedes Revision Id */
+            supersedes_revision_id: string | null;
+            /** Unit */
+            unit: string | null;
+            /** Value */
+            value: string | null;
+        };
+        /**
+         * ForecastAccuracySourceType
+         * @enum {string}
+         */
+        ForecastAccuracySourceType: "AGENT_RESEARCH" | "FINANCIAL_MODEL" | "ANALYST_CONSENSUS";
+        /** ForecastAccuracySummaryRead */
+        ForecastAccuracySummaryRead: {
+            /** Horizon Bucket */
+            horizon_bucket: string;
+            /** Mean Absolute Percentage Error */
+            mean_absolute_percentage_error: string | null;
+            /** Mean Signed Percentage Error */
+            mean_signed_percentage_error: string | null;
+            /** Methodology */
+            methodology: string | null;
+            /** Methodology Version */
+            methodology_version: string | null;
+            metric: components["schemas"]["ForecastAccuracyMetric"];
+            /** Minimum Sample Count */
+            minimum_sample_count: number;
+            period_type: components["schemas"]["ResearchPeriodType"];
+            /** Reason */
+            reason: string | null;
+            /** Sample Count */
+            sample_count: number;
+            /** Source Name */
+            source_name: string;
+            source_type: components["schemas"]["ForecastAccuracySourceType"];
+            /** Status */
+            status: string;
+        };
         /**
          * FundamentalDataQuality
          * @enum {string}
@@ -3797,6 +5783,662 @@ export interface components {
             /** Source Ref */
             source_ref: string | null;
         };
+        /** GoogleSheetsAgentWorkPublishRead */
+        GoogleSheetsAgentWorkPublishRead: {
+            /** Added Count */
+            added_count: number;
+            /**
+             * Agent Role
+             * @enum {string}
+             */
+            agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            /** Content Fingerprint */
+            content_fingerprint: string | null;
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** Message */
+            message: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Read Back Verified */
+            read_back_verified: boolean;
+            /** Row Count */
+            row_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PUBLISHED" | "UNCHANGED" | "NO_WORK" | "BLOCKED";
+            /** Status Reason */
+            status_reason: string | null;
+            /**
+             * Tab
+             * @constant
+             */
+            tab: "Application Agent Work Feed";
+            /** Work Item Count */
+            work_item_count: number;
+        };
+        /**
+         * GoogleSheetsAgentWorkPublishRequest
+         * @description Bounded, manually requested publication of one agent role's work to Sheets.
+         */
+        GoogleSheetsAgentWorkPublishRequest: {
+            /** As Of */
+            as_of?: string | null;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /** Portfolio Id */
+            portfolio_id?: string | null;
+        };
+        /** GoogleSheetsConnectionTestRead */
+        GoogleSheetsConnectionTestRead: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connected */
+            connected: boolean;
+            /** Message */
+            message: string;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /** Sync Tab Exists */
+            sync_tab_exists: boolean;
+        };
+        /** GoogleSheetsPortfolioStatePublishRead */
+        GoogleSheetsPortfolioStatePublishRead: {
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string;
+            /** Message */
+            message: string;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Read Back Verified */
+            read_back_verified: boolean;
+            /** Row Count */
+            row_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Spreadsheet Title */
+            spreadsheet_title: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PUBLISHED" | "UNCHANGED";
+            /** Tab */
+            tab: string;
+            /** Valuation As Of */
+            valuation_as_of: string | null;
+            /** Valuation Status */
+            valuation_status: string;
+        };
+        /** GoogleSheetsPortfolioStatePublishRequest */
+        GoogleSheetsPortfolioStatePublishRequest: {
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+        };
+        /** GoogleSheetsResearchCandidateRead */
+        GoogleSheetsResearchCandidateRead: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /** Accepted Research Revision Id */
+            accepted_research_revision_id: string | null;
+            /** Accepted Thesis Revision Id */
+            accepted_thesis_revision_id: string | null;
+            /** Author Id */
+            author_id: string | null;
+            /** Base Revision Id */
+            base_revision_id: string | null;
+            /** Company Id */
+            company_id: string | null;
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string | null;
+            /**
+             * Domain
+             * @enum {string}
+             */
+            domain: "RESEARCH" | "THESIS";
+            /** Evidence Count */
+            evidence_count: number;
+            /** External Revision Id */
+            external_revision_id: string | null;
+            /**
+             * First Observed At
+             * Format: date-time
+             */
+            first_observed_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue */
+            issue: string | null;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Last Observed At
+             * Format: date-time
+             */
+            last_observed_at: string;
+            /** Observed At */
+            observed_at: string | null;
+            /** Preview Data */
+            preview_data: {
+                [key: string]: unknown;
+            } | null;
+            /** Rationale */
+            rationale: string | null;
+            /** Rejected At */
+            rejected_at: string | null;
+            /** Reviewer */
+            reviewer: string | null;
+            /** Reviewer Note */
+            reviewer_note: string | null;
+            /** Security Id */
+            security_id: string | null;
+            /** Sheet Title */
+            sheet_title: string;
+            /** Source Id */
+            source_id: string | null;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Source Row Number */
+            source_row_number: number;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "READY" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED";
+            /** Stream Key */
+            stream_key: string | null;
+        };
+        /** GoogleSheetsResearchConnectionTestRead */
+        GoogleSheetsResearchConnectionTestRead: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connected */
+            connected: boolean;
+            /** Message */
+            message: string;
+            /** Research Inbox Exists */
+            research_inbox_exists: boolean;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /** Thesis Inbox Exists */
+            thesis_inbox_exists: boolean;
+        };
+        /** GoogleSheetsResearchSyncCheckRead */
+        GoogleSheetsResearchSyncCheckRead: {
+            /** New Candidates */
+            new_candidates: components["schemas"]["GoogleSheetsResearchCandidateRead"][];
+            run: components["schemas"]["GoogleSheetsResearchSyncRunRead"];
+        };
+        /** GoogleSheetsResearchSyncRejectRequest */
+        GoogleSheetsResearchSyncRejectRequest: {
+            /** Reviewer */
+            reviewer: string;
+            /** Reviewer Note */
+            reviewer_note: string;
+        };
+        /** GoogleSheetsResearchSyncReviewRequest */
+        GoogleSheetsResearchSyncReviewRequest: {
+            /** Reviewer */
+            reviewer: string;
+            /** Reviewer Note */
+            reviewer_note: string;
+        };
+        /** GoogleSheetsResearchSyncRunRead */
+        GoogleSheetsResearchSyncRunRead: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Completed At */
+            completed_at: string | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Error Message */
+            error_message: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue Count */
+            issue_count: number;
+            /** New Count */
+            new_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SUCCEEDED" | "PARTIAL" | "BLOCKED" | "FAILED";
+            /** Unchanged Count */
+            unchanged_count: number;
+        };
+        /** GoogleSheetsResearchSyncStatusRead */
+        GoogleSheetsResearchSyncStatusRead: {
+            /** Configured */
+            configured: boolean;
+            /** Credentials Available */
+            credentials_available: boolean;
+            last_run: components["schemas"]["GoogleSheetsResearchSyncRunRead"] | null;
+            /** Research Inbox Tab */
+            research_inbox_tab: string;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Url */
+            spreadsheet_url: string | null;
+            /** Thesis Inbox Tab */
+            thesis_inbox_tab: string;
+        };
+        /** GoogleSheetsRiskCandidateRead */
+        GoogleSheetsRiskCandidateRead: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /** Accepted Revision Id */
+            accepted_revision_id: string | null;
+            /** Author Id */
+            author_id: string | null;
+            /** Authored At */
+            authored_at: string | null;
+            /** Baseline Status */
+            baseline_status: ("CURRENT" | "STALE_PORTFOLIO_STATE" | "STALE_HOLDINGS" | "INCOMPLETE_VALUATION") | null;
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string | null;
+            /** External Revision Id */
+            external_revision_id: string | null;
+            /** Findings Count */
+            findings_count: number;
+            /**
+             * First Observed At
+             * Format: date-time
+             */
+            first_observed_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue */
+            issue: string | null;
+            /**
+             * Last Observed At
+             * Format: date-time
+             */
+            last_observed_at: string;
+            /** Portfolio Id */
+            portfolio_id: string | null;
+            /** Preview Data */
+            preview_data: {
+                [key: string]: unknown;
+            } | null;
+            /** Published At */
+            published_at: string | null;
+            /** Rejected At */
+            rejected_at: string | null;
+            /** Reviewer */
+            reviewer: string | null;
+            /** Reviewer Note */
+            reviewer_note: string | null;
+            /** Sheet Title */
+            sheet_title: string;
+            /** Source Id */
+            source_id: string | null;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Source Row Number */
+            source_row_number: number;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "READY" | "STALE_BASELINE" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED";
+            /** Stream Key */
+            stream_key: string | null;
+            /** Summary */
+            summary: string | null;
+        };
+        /** GoogleSheetsRiskSyncCheckRead */
+        GoogleSheetsRiskSyncCheckRead: {
+            /** New Candidates */
+            new_candidates: components["schemas"]["GoogleSheetsRiskCandidateRead"][];
+            run: components["schemas"]["GoogleSheetsRiskSyncRunRead"];
+        };
+        /** GoogleSheetsRiskSyncRejectRequest */
+        GoogleSheetsRiskSyncRejectRequest: {
+            /** Reviewer */
+            reviewer: string;
+            /** Reviewer Note */
+            reviewer_note: string;
+        };
+        /** GoogleSheetsRiskSyncReviewRequest */
+        GoogleSheetsRiskSyncReviewRequest: {
+            /**
+             * Acknowledge Stale Baseline
+             * @default false
+             */
+            acknowledge_stale_baseline: boolean;
+            /** Reviewer */
+            reviewer: string;
+            /** Reviewer Note */
+            reviewer_note: string;
+        };
+        /** GoogleSheetsRiskSyncRunRead */
+        GoogleSheetsRiskSyncRunRead: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Completed At */
+            completed_at: string | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Error Message */
+            error_message: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue Count */
+            issue_count: number;
+            /** New Count */
+            new_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "CONNECTED" | "SUCCEEDED" | "PARTIAL" | "BLOCKED" | "FAILED";
+            /** Unchanged Count */
+            unchanged_count: number;
+        };
+        /** GoogleSheetsRiskSyncStatusRead */
+        GoogleSheetsRiskSyncStatusRead: {
+            /** Configured */
+            configured: boolean;
+            /** Credentials Available */
+            credentials_available: boolean;
+            /** Inbox Tab */
+            inbox_tab: string;
+            last_run: components["schemas"]["GoogleSheetsRiskSyncRunRead"] | null;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Url */
+            spreadsheet_url: string | null;
+        };
+        /** GoogleSheetsSyncCandidateRead */
+        GoogleSheetsSyncCandidateRead: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /** Accepted Revision Id */
+            accepted_revision_id: string | null;
+            /** Base Revision Id */
+            base_revision_id: string | null;
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string | null;
+            /** Decision Note */
+            decision_note: string | null;
+            /** External Revision Id */
+            external_revision_id: string | null;
+            /**
+             * First Observed At
+             * Format: date-time
+             */
+            first_observed_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue */
+            issue: string | null;
+            /**
+             * Last Observed At
+             * Format: date-time
+             */
+            last_observed_at: string;
+            /** Model Currency */
+            model_currency: string | null;
+            /** Model Id */
+            model_id: string | null;
+            /** Model Name */
+            model_name: string | null;
+            /** Model Type */
+            model_type: string | null;
+            /** Preview Data */
+            preview_data: {
+                [key: string]: unknown;
+            } | null;
+            /** Preview Status */
+            preview_status: string | null;
+            /** Previewed At */
+            previewed_at: string | null;
+            proposal?: components["schemas"]["FinancialModelProposalProvenance"] | null;
+            /** Rationale */
+            rationale: string | null;
+            /** Rejected At */
+            rejected_at: string | null;
+            /** Reviewer */
+            reviewer: string | null;
+            /** Sheet Id */
+            sheet_id: number;
+            /** Sheet Title */
+            sheet_title: string;
+            /** Source Model Key */
+            source_model_key: string | null;
+            /** Source Row Number */
+            source_row_number: number;
+            /** Source Url */
+            source_url: string;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Spreadsheet Title */
+            spreadsheet_title: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "READY" | "CONFLICT" | "INVALID" | "NO_CHANGES" | "ACCEPTED" | "REJECTED";
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceRead"][];
+            /** Valuation Listing Id */
+            valuation_listing_id: string | null;
+        };
+        /** GoogleSheetsSyncCheckRead */
+        GoogleSheetsSyncCheckRead: {
+            /** New Candidates */
+            new_candidates: components["schemas"]["GoogleSheetsSyncCandidateRead"][];
+            run: components["schemas"]["GoogleSheetsSyncRunRead"];
+        };
+        /** GoogleSheetsSyncRejectRequest */
+        GoogleSheetsSyncRejectRequest: {
+            /** Decision Note */
+            decision_note: string;
+            /** Reviewer */
+            reviewer: string;
+        };
+        /** GoogleSheetsSyncReviewRequest */
+        GoogleSheetsSyncReviewRequest: {
+            /** Decision Note */
+            decision_note?: string | null;
+            /** Reviewer */
+            reviewer: string;
+        };
+        /** GoogleSheetsSyncRunRead */
+        GoogleSheetsSyncRunRead: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Completed At */
+            completed_at: string | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Error Message */
+            error_message: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue Count */
+            issue_count: number;
+            /** New Count */
+            new_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "CONNECTED" | "SUCCEEDED" | "PARTIAL" | "BLOCKED" | "FAILED";
+            /** Unchanged Count */
+            unchanged_count: number;
+        };
+        /** GoogleSheetsSyncStatusRead */
+        GoogleSheetsSyncStatusRead: {
+            /** Configured */
+            configured: boolean;
+            /** Credentials Available */
+            credentials_available: boolean;
+            last_run: components["schemas"]["GoogleSheetsSyncRunRead"] | null;
+            /** Polling Interval Seconds */
+            polling_interval_seconds: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string | null;
+            /** Spreadsheet Url */
+            spreadsheet_url: string | null;
+            /** Sync Tab */
+            sync_tab: string;
+        };
+        /** GoogleSheetsThesisWatchPublishRead */
+        GoogleSheetsThesisWatchPublishRead: {
+            /** Added Count */
+            added_count: number;
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** Message */
+            message: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Read Back Verified */
+            read_back_verified: boolean;
+            /** Row Count */
+            row_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Spreadsheet Title */
+            spreadsheet_title: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PUBLISHED" | "UNCHANGED";
+            /**
+             * Tab
+             * @constant
+             */
+            tab: "Application Thesis Watch Feed";
+            /** Trigger Ids */
+            trigger_ids: string[];
+        };
+        /** GoogleSheetsThesisWatchPublishRequest */
+        GoogleSheetsThesisWatchPublishRequest: {
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3831,6 +6473,10 @@ export interface components {
             base_market_value: string | null;
             /** Currency */
             currency: string | null;
+            /** Fx Effective At */
+            fx_effective_at?: string | null;
+            /** Fx Rate */
+            fx_rate?: string | null;
             /** Latest Price */
             latest_price: string | null;
             /**
@@ -3840,6 +6486,8 @@ export interface components {
             listing_id: string;
             /** Native Market Value */
             native_market_value: string | null;
+            /** Portfolio Weight */
+            portfolio_weight?: string | null;
             /** Price Currency */
             price_currency: string | null;
             /** Price Date */
@@ -3850,6 +6498,8 @@ export interface components {
              * @enum {string}
              */
             price_freshness: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA";
+            /** Price Observed At */
+            price_observed_at?: string | null;
             /** Quantity */
             quantity: string | null;
             /**
@@ -3867,8 +6517,271 @@ export interface components {
              * @enum {string}
              */
             valuation_status: "VALUED" | "PRICE_UNAVAILABLE" | "FX_UNAVAILABLE" | "QUANTITY_UNAVAILABLE";
+            /**
+             * Valuation Sync Status
+             * @default NOT_REQUIRED
+             * @enum {string}
+             */
+            valuation_sync_status: "NOT_REQUIRED" | "SYNCHRONOUS" | "NON_SYNCHRONOUS" | "TIMING_UNKNOWN" | "UNAVAILABLE";
             /** Venue */
             venue: string;
+        };
+        /** InvestmentThesisClaimInput */
+        InvestmentThesisClaimInput: {
+            /** Claim Key */
+            claim_key: string;
+            claim_type: components["schemas"]["ThesisClaimType"];
+            /** @default UNASSESSED */
+            confidence: components["schemas"]["ResearchConfidence"];
+            /** Evidence */
+            evidence?: components["schemas"]["InvestmentThesisEvidenceInput"][];
+            /** Statement */
+            statement: string;
+            /** @default ACTIVE */
+            status: components["schemas"]["ThesisClaimStatus"];
+            /** Uncertainty */
+            uncertainty?: string | null;
+        };
+        /** InvestmentThesisClaimRead */
+        InvestmentThesisClaimRead: {
+            /** Claim Key */
+            claim_key: string;
+            claim_type: components["schemas"]["ThesisClaimType"];
+            confidence: components["schemas"]["ResearchConfidence"];
+            /** Evidence */
+            evidence: components["schemas"]["InvestmentThesisEvidenceRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Statement */
+            statement: string;
+            status: components["schemas"]["ThesisClaimStatus"];
+            /** Uncertainty */
+            uncertainty: string | null;
+        };
+        /** InvestmentThesisEvidenceInput */
+        InvestmentThesisEvidenceInput: {
+            /** Excerpt */
+            excerpt?: string | null;
+            /** External Identifier */
+            external_identifier?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            relationship: components["schemas"]["ThesisEvidenceRelationship"];
+            /** Reported Fundamental Observation Id */
+            reported_fundamental_observation_id?: string | null;
+            /** Source Document Id */
+            source_document_id?: string | null;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /** InvestmentThesisEvidenceRead */
+        InvestmentThesisEvidenceRead: {
+            /** Excerpt */
+            excerpt: string | null;
+            /** External Identifier */
+            external_identifier: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Published At */
+            published_at: string | null;
+            relationship: components["schemas"]["ThesisEvidenceRelationship"];
+            reported_fundamental: components["schemas"]["InvestmentThesisFactRead"] | null;
+            /** Reported Fundamental Observation Id */
+            reported_fundamental_observation_id: string | null;
+            /** Source Document Id */
+            source_document_id: string | null;
+            /** Source Document Title */
+            source_document_title: string | null;
+            source_document_type: components["schemas"]["SourceDocumentType"] | null;
+            /** Source Document Url */
+            source_document_url: string | null;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string | null;
+        };
+        /** InvestmentThesisFactRead */
+        InvestmentThesisFactRead: {
+            /** Currency */
+            currency: string | null;
+            data_quality: components["schemas"]["FundamentalDataQuality"];
+            /** Filed At */
+            filed_at: string | null;
+            /** Fiscal Period */
+            fiscal_period: string | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            metric: components["schemas"]["FundamentalMetric"];
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /**
+             * Period End
+             * Format: date-time
+             */
+            period_end: string;
+            /** Period Start */
+            period_start: string | null;
+            period_type: components["schemas"]["FundamentalPeriodType"];
+            /** Provider Id */
+            provider_id: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source Url */
+            source_url: string;
+            statement: components["schemas"]["FundamentalStatement"];
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+        };
+        /** InvestmentThesisPublicationResult */
+        InvestmentThesisPublicationResult: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "PUBLISHED" | "ALREADY_PUBLISHED";
+            revision: components["schemas"]["InvestmentThesisRevisionRead"];
+        };
+        /**
+         * InvestmentThesisRevisionPublishContract
+         * @description Portable v1 full-snapshot thesis contract for external research authors.
+         */
+        InvestmentThesisRevisionPublishContract: {
+            /** Author Id */
+            author_id: string;
+            /** Claims */
+            claims?: components["schemas"]["InvestmentThesisClaimInput"][];
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** @default UNASSESSED */
+            confidence: components["schemas"]["ResearchConfidence"];
+            /**
+             * Contract Type
+             * @constant
+             */
+            contract_type: "InvestmentThesisContractV1";
+            /**
+             * Contract Version
+             * @enum {string}
+             */
+            contract_version: "1.0.0" | "1.1.0";
+            /** External Revision Id */
+            external_revision_id: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Rationale */
+            rationale: string;
+            /** Security Id */
+            security_id?: string | null;
+            /** Source Id */
+            source_id: string;
+            /** Source Reference */
+            source_reference: string;
+            /** @default PUBLISHED */
+            status: components["schemas"]["ThesisRevisionStatus"];
+            /** Stream Key */
+            stream_key: string;
+            /** Supersedes Revision Id */
+            supersedes_revision_id?: string | null;
+            /** Thesis Statement */
+            thesis_statement?: string | null;
+            /** Trigger References */
+            trigger_references?: components["schemas"]["ResearchTriggerReferenceInput"][];
+            /** Uncertainty */
+            uncertainty?: string | null;
+        };
+        /** InvestmentThesisRevisionRead */
+        InvestmentThesisRevisionRead: {
+            /** Author Id */
+            author_id: string;
+            /** Claims */
+            claims: components["schemas"]["InvestmentThesisClaimRead"][];
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            confidence: components["schemas"]["ResearchConfidence"];
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string;
+            /** External Revision Id */
+            external_revision_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Security Id */
+            security_id: string | null;
+            /** Source Id */
+            source_id: string;
+            /** Source Reference */
+            source_reference: string;
+            status: components["schemas"]["ThesisRevisionStatus"];
+            /** Stream Key */
+            stream_key: string;
+            /** Supersedes Revision Id */
+            supersedes_revision_id: string | null;
+            /** Thesis Statement */
+            thesis_statement: string | null;
+            /** Trigger References */
+            trigger_references?: components["schemas"]["ResearchTriggerReferenceRead"][];
+            /** Uncertainty */
+            uncertainty: string | null;
+        };
+        /** InvestmentThesisStreamRead */
+        InvestmentThesisStreamRead: {
+            current_revision: components["schemas"]["InvestmentThesisRevisionRead"];
+            /** History */
+            history: components["schemas"]["InvestmentThesisRevisionRead"][];
+            /** Stream Key */
+            stream_key: string;
         };
         /**
          * Lifecycle
@@ -3936,6 +6849,12 @@ export interface components {
         ListingMarketData: {
             /** Age Days */
             age_days: number | null;
+            analytics: components["schemas"]["PriceHistoryAnalyticsRead"];
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "AVAILABLE" | "STALE" | "REFRESHING" | "PARTIAL" | "UNAVAILABLE";
             /**
              * Freshness
              * @enum {string}
@@ -3943,6 +6862,8 @@ export interface components {
             freshness: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA";
             /** History */
             history: components["schemas"]["PriceObservationRead"][];
+            /** Last Market Update */
+            last_market_update: string | null;
             latest: components["schemas"]["PriceObservationRead"] | null;
             listing: components["schemas"]["ListingRead"];
             price_regime: components["schemas"]["PriceRegimeRead"] | null;
@@ -3979,6 +6900,34 @@ export interface components {
              */
             status: "ok";
         };
+        /** MarketRefreshStatusRead */
+        MarketRefreshStatusRead: {
+            /** Fx Run Id */
+            fx_run_id: string | null;
+            /** Last Attempt At */
+            last_attempt_at: string | null;
+            /** Last Successful Update */
+            last_successful_update: string | null;
+            /** Market Run Id */
+            market_run_id: string | null;
+            /** Message */
+            message: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "AVAILABLE" | "STALE" | "REFRESHING" | "PARTIAL" | "UNAVAILABLE";
+        };
+        /**
+         * ModelEvidenceRelationship
+         * @enum {string}
+         */
+        ModelEvidenceRelationship: "SUPPORTS" | "CONTRADICTS" | "CONTEXT";
+        /**
+         * ModelEvidenceType
+         * @enum {string}
+         */
+        ModelEvidenceType: "RESEARCH_REVISION" | "RESEARCH_FORECAST" | "THESIS_REVISION" | "THESIS_CLAIM";
         /** ModelOutputCurrentModelRead */
         ModelOutputCurrentModelRead: {
             /** Model Key */
@@ -4069,10 +7018,22 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            return_methodology: components["schemas"]["ReturnMethodologyRead"] | null;
+            /**
+             * Return Methodology Status
+             * @enum {string}
+             */
+            return_methodology_status: "CLASSIFIED" | "UNCLASSIFIED";
             /** Revision Source */
             revision_source: string | null;
             /** Revision Type */
             revision_type: string | null;
+            /**
+             * Share Price Basis Status
+             * @default NOT_RETAINED
+             * @enum {string}
+             */
+            share_price_basis_status: "CAPTURED" | "NOT_RETAINED" | "UNAVAILABLE";
             /** Snapshot Key */
             snapshot_key: string;
             /**
@@ -4090,6 +7051,132 @@ export interface components {
             weighted_fv: string | null;
             /** Weighted Upside */
             weighted_upside: string | null;
+        };
+        /** OperationalJobAttemptRead */
+        OperationalJobAttemptRead: {
+            /** Affected Domains */
+            affected_domains: string[];
+            /** Attempt Number */
+            attempt_number: number;
+            /** Error Code */
+            error_code: string | null;
+            /** Error Message */
+            error_message: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "RUNNING" | "SUCCEEDED" | "PARTIAL" | "BLOCKED" | "FAILED" | "SKIPPED" | "DEFERRED";
+            /** Step Name */
+            step_name: string;
+        };
+        /** OperationalJobRequestCreate */
+        OperationalJobRequestCreate: {
+            /** Company Id */
+            company_id?: string | null;
+            /**
+             * Job Name
+             * @enum {string}
+             */
+            job_name: "MARKET_DATA" | "FX" | "MARKET_AND_FX" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "SHEETS_DISCOVERY" | "RESEARCH_REFRESH" | "AGENT_WORK_FEED" | "COMPANY_REFRESH" | "REFRESH_ALL";
+            /**
+             * Scope Kind
+             * @default ACTIVE_UNIVERSE
+             * @enum {string}
+             */
+            scope_kind: "ACTIVE_UNIVERSE" | "COMPANY";
+        };
+        /** OperationalJobRequestRead */
+        OperationalJobRequestRead: {
+            /** Affected Domains */
+            affected_domains: string[];
+            /** Attempt Count */
+            attempt_count: number;
+            /** Attempts */
+            attempts: components["schemas"]["OperationalJobAttemptRead"][];
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /**
+             * Cooldown Until
+             * Format: date-time
+             */
+            cooldown_until: string;
+            /**
+             * Deduplicated
+             * @default false
+             */
+            deduplicated: boolean;
+            /** Error Code */
+            error_code: string | null;
+            /** Error Message */
+            error_message: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Name
+             * @enum {string}
+             */
+            job_name: "MARKET_DATA" | "FX" | "MARKET_AND_FX" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "SHEETS_DISCOVERY" | "RESEARCH_REFRESH" | "AGENT_WORK_FEED" | "COMPANY_REFRESH" | "REFRESH_ALL";
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            /** Next Attempt At */
+            next_attempt_at: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /**
+             * Requested By
+             * @constant
+             */
+            requested_by: "LOCAL_USER";
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+            /** Retry Available */
+            retry_available: boolean;
+            /** Retry Of Id */
+            retry_of_id: string | null;
+            /** Scope Detail */
+            scope_detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Scope Kind
+             * @enum {string}
+             */
+            scope_kind: "ACTIVE_UNIVERSE" | "COMPANY";
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "PARTIAL" | "BLOCKED" | "FAILED";
         };
         /**
          * OwnerCashFlowBase
@@ -4244,6 +7331,12 @@ export interface components {
             outputs: components["schemas"]["FinancialModelOutputsRead-Output"];
             /** Projections */
             projections: components["schemas"]["OwnerCashFlowProjectionRead"][];
+            /** Proposal Author Id */
+            proposal_author_id?: string | null;
+            /** Proposal Authored At */
+            proposal_authored_at?: string | null;
+            /** Proposal Source Reference */
+            proposal_source_reference?: string | null;
             /** Rationale */
             rationale: string;
             /**
@@ -4259,6 +7352,8 @@ export interface components {
             source: string | null;
             /** Source Revision Id */
             source_revision_id: string | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceRead"][];
         };
         /** OwnerCashFlowScenarioInput */
         "OwnerCashFlowScenarioInput-Input": {
@@ -4321,15 +7416,35 @@ export interface components {
             cash_valuations: components["schemas"]["CashValuation"][];
             /** Companies */
             companies: components["schemas"]["CompanyPortfolioContext"][];
+            /** Fx Data Through */
+            fx_data_through?: string | null;
+            /** Holdings Age Days */
+            holdings_age_days?: number | null;
+            /**
+             * Holdings Freshness
+             * @default NO_DATA
+             * @enum {string}
+             */
+            holdings_freshness: "FRESH" | "STALE" | "NO_DATA";
+            /** Market Data Through */
+            market_data_through?: string | null;
             portfolio: components["schemas"]["PortfolioRead"];
             snapshot: components["schemas"]["SnapshotRead"] | null;
             /** Standalone Positions */
             standalone_positions: components["schemas"]["HoldingContext"][];
             target_revision: components["schemas"]["TargetRead"] | null;
+            /** Valuation As Of */
+            valuation_as_of?: string | null;
             /** Valuation Currency */
             valuation_currency: string;
             /** Valuation Gaps */
             valuation_gaps: components["schemas"]["ValuationGap"][];
+            /**
+             * Valuation Mode
+             * @default HISTORICAL_AS_OF
+             * @enum {string}
+             */
+            valuation_mode: "CURRENT_MARK_TO_MARKET" | "HISTORICAL_AS_OF";
             /**
              * Valuation Status
              * @default NO_HOLDING_SNAPSHOT
@@ -4353,9 +7468,9 @@ export interface components {
             context_note: string;
             /**
              * Context Version
-             * @constant
+             * @enum {string}
              */
-            context_version: "portfolio-rank-inputs-v1";
+            context_version: "portfolio-rank-inputs-v1" | "portfolio-rank-inputs-v2" | "portfolio-rank-inputs-v3";
             /** Current Weight */
             current_weight: string | null;
             durability_10y: components["schemas"]["PortfolioRankScoreSnapshot"];
@@ -4368,12 +7483,22 @@ export interface components {
             holding_effective_at: string | null;
             /** Holding Snapshot Id */
             holding_snapshot_id: string | null;
+            /** Holdings Age Days */
+            holdings_age_days?: number | null;
+            /**
+             * Holdings Freshness
+             * @default NO_DATA
+             * @enum {string}
+             */
+            holdings_freshness: "FRESH" | "STALE" | "NO_DATA";
             /** Hurdle */
             hurdle: string | null;
             lifecycle: components["schemas"]["Lifecycle"] | null;
             model_source: components["schemas"]["PortfolioRankModelSource"] | null;
             /** Portfolio Score */
             portfolio_score: string | null;
+            /** Return Comparability Cohort */
+            return_comparability_cohort?: string | null;
             risk: components["schemas"]["PortfolioRankScoreSnapshot"];
             score_contributions: components["schemas"]["PortfolioRankScoreContributions"];
             /**
@@ -4396,6 +7521,14 @@ export interface components {
         };
         /** PortfolioRankModelSource */
         PortfolioRankModelSource: {
+            /** Accepted Output Status */
+            accepted_output_status?: string | null;
+            /** Accepted Reference Price */
+            accepted_reference_price?: string | null;
+            /** Accepted Reference Price Effective At */
+            accepted_reference_price_effective_at?: string | null;
+            /** Accepted Reference Price Observation Id */
+            accepted_reference_price_observation_id?: string | null;
             /** Contract Status */
             contract_status: ("PASS" | "NOT_MAPPED" | "NO_CONTRACT" | "DATA_CHECK" | "HISTORICAL_ONLY") | null;
             /**
@@ -4403,6 +7536,7 @@ export interface components {
              * @enum {string}
              */
             currency_status: "DOCUMENTED" | "UNKNOWN";
+            current_calculation?: components["schemas"]["FinancialModelCalculationOutputsRead"] | null;
             /** Effective At */
             effective_at: string | null;
             /**
@@ -4447,10 +7581,23 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            return_methodology?: components["schemas"]["ReturnMethodologyRead"] | null;
+            /**
+             * Return Methodology Status
+             * @default UNCLASSIFIED
+             * @enum {string}
+             */
+            return_methodology_status: "CLASSIFIED" | "UNCLASSIFIED";
             /** Revision Id */
             revision_id: string | null;
             /** Revision Number */
             revision_number: number | null;
+            /**
+             * Share Price Basis Status
+             * @default UNAVAILABLE
+             * @enum {string}
+             */
+            share_price_basis_status: "CAPTURED" | "NOT_RETAINED" | "UNAVAILABLE";
             /** Source */
             source: string | null;
             /**
@@ -4515,6 +7662,18 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** PortfolioRiskAssessmentsRead */
+        PortfolioRiskAssessmentsRead: {
+            /** Current */
+            current: components["schemas"]["RiskAssessmentRevisionRead"][];
+            /** History */
+            history: components["schemas"]["RiskAssessmentRevisionRead"][];
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+        };
         /** PositionInput */
         "PositionInput-Input": {
             /**
@@ -4534,6 +7693,47 @@ export interface components {
             listing_id: string;
             /** Quantity */
             quantity: string | null;
+        };
+        /**
+         * PriceHistoryAnalyticsRead
+         * @description Query-layer analytics over exact canonical daily observations.
+         */
+        PriceHistoryAnalyticsRead: {
+            /** As Of */
+            as_of: string | null;
+            /** Correction State */
+            correction_state: string | null;
+            /** Daily Return */
+            daily_return: string | null;
+            /** Dma 20 */
+            dma_20: string | null;
+            /** Dma 200 */
+            dma_200: string | null;
+            /** Dma 50 */
+            dma_50: string | null;
+            /** Drawdown 52W */
+            drawdown_52w: string | null;
+            /** High 52W */
+            high_52w: string | null;
+            /** Methodology Version */
+            methodology_version: string;
+            /** Observation Count */
+            observation_count: number;
+            /** Price Return 1M */
+            price_return_1m: string | null;
+            /** Price Return 3M */
+            price_return_3m: string | null;
+            /** Price Return 6M */
+            price_return_6m: string | null;
+            /** Realized Vol 20D */
+            realized_vol_20d: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+            /** Trend State */
+            trend_state: string | null;
         };
         /** PriceObservationRead */
         PriceObservationRead: {
@@ -4793,6 +7993,62 @@ export interface components {
          * @enum {string}
          */
         RankingType: "PORTFOLIO" | "WATCHLIST" | "RESEARCH";
+        /** RecurringOperationJobRead */
+        RecurringOperationJobRead: {
+            /** Cadence Seconds */
+            cadence_seconds: number;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Failure Message */
+            failure_message: string | null;
+            /**
+             * Job Name
+             * @enum {string}
+             */
+            job_name: "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "FMP_CONSENSUS" | "SHEETS_DISCOVERY" | "RESEARCH_TRIGGER_SCAN" | "AGENT_WORK_FEED" | "DECISION_RECOMPUTE";
+            /** Last Attempt At */
+            last_attempt_at: string | null;
+            /** Last Successful At */
+            last_successful_at: string | null;
+            /** Next Attempt At */
+            next_attempt_at: string | null;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "NOT_RUN" | "RUNNING" | "SUCCEEDED" | "PARTIAL" | "BLOCKED" | "FAILED" | "SKIPPED";
+        };
+        /** RecurringOperationsStatusRead */
+        RecurringOperationsStatusRead: {
+            /** Enabled */
+            enabled: boolean;
+            /** Fmp Consensus Ingestion Enabled */
+            fmp_consensus_ingestion_enabled: boolean;
+            /** Google Sheets Configured */
+            google_sheets_configured: boolean;
+            /** Google Sheets Credentials Available */
+            google_sheets_credentials_available: boolean;
+            /** Google Sheets Poll Seconds */
+            google_sheets_poll_seconds: number;
+            /** Jobs */
+            jobs: components["schemas"]["RecurringOperationJobRead"][];
+            market_data: components["schemas"]["MarketRefreshStatusRead"];
+            /** Sec User Agent Configured */
+            sec_user_agent_configured: boolean;
+            /** Worker Last Seen At */
+            worker_last_seen_at: string | null;
+            /** Worker Started At */
+            worker_started_at: string | null;
+            /**
+             * Worker State
+             * @enum {string}
+             */
+            worker_state: "STARTING" | "RUNNING" | "FAILED" | "STALE" | "STOPPED" | "NOT_STARTED" | "DISABLED";
+        };
         /** ReportedFundamentalCoverageRead */
         ReportedFundamentalCoverageRead: {
             /** Latest Period End */
@@ -4932,6 +8188,698 @@ export interface components {
             /** Value */
             value: string | null;
         };
+        /** ResearchAgentAcknowledgmentContractV1 */
+        ResearchAgentAcknowledgmentContractV1: {
+            /** Actor Id */
+            actor_id: string;
+            /**
+             * Agent Role
+             * @enum {string}
+             */
+            agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            /** Agent Run Id */
+            agent_run_id: string;
+            /** Blocker Code */
+            blocker_code?: string | null;
+            /**
+             * Contract Type
+             * @default ResearchAgentAcknowledgmentContractV1
+             * @constant
+             */
+            contract_type: "ResearchAgentAcknowledgmentContractV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /**
+             * Delivery Channel
+             * @default API
+             * @enum {string}
+             */
+            delivery_channel: "API" | "GOOGLE_SHEETS";
+            /** External Update Id */
+            external_update_id: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Proposal Candidate Id */
+            proposal_candidate_id?: string | null;
+            /** Proposal Domain */
+            proposal_domain?: ("MODEL" | "RESEARCH" | "THESIS" | "RISK") | null;
+            /** Reason */
+            reason?: string | null;
+            /** Source Reference */
+            source_reference?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACKNOWLEDGED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED" | "SOURCE_UNAVAILABLE" | "STALE_SOURCE" | "UNRESOLVED_REVIEW";
+            /** Work Fingerprint */
+            work_fingerprint: string;
+            /** Work Key */
+            work_key: string;
+            /**
+             * Work Type
+             * @enum {string}
+             */
+            work_type: "TRIGGER" | "QUEUE_TASK" | "DATA_DOMAIN" | "PORTFOLIO_STATE";
+        };
+        /** ResearchAgentAcknowledgmentRead */
+        ResearchAgentAcknowledgmentRead: {
+            /** Actor Id */
+            actor_id: string;
+            /**
+             * Agent Role
+             * @enum {string}
+             */
+            agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            /** Agent Run Id */
+            agent_run_id: string;
+            /** Blocker Code */
+            blocker_code: string | null;
+            /**
+             * Delivery Channel
+             * @enum {string}
+             */
+            delivery_channel: "API" | "GOOGLE_SHEETS";
+            /**
+             * Delivery Id
+             * Format: uuid
+             */
+            delivery_id: string;
+            /** External Update Id */
+            external_update_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Proposal Candidate Id */
+            proposal_candidate_id: string | null;
+            /** Proposal Domain */
+            proposal_domain: ("MODEL" | "RESEARCH" | "THESIS" | "RISK") | null;
+            /** Proposal Status */
+            proposal_status?: string | null;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source Reference */
+            source_reference: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACKNOWLEDGED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED" | "SOURCE_UNAVAILABLE" | "STALE_SOURCE" | "UNRESOLVED_REVIEW";
+            /** Work Fingerprint */
+            work_fingerprint: string;
+            /** Work Key */
+            work_key: string;
+            /**
+             * Work Type
+             * @enum {string}
+             */
+            work_type: "TRIGGER" | "QUEUE_TASK" | "DATA_DOMAIN" | "PORTFOLIO_STATE";
+        };
+        /** ResearchAgentAcknowledgmentResult */
+        ResearchAgentAcknowledgmentResult: {
+            acknowledgment: components["schemas"]["ResearchAgentAcknowledgmentRead"];
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "RECORDED" | "ALREADY_RECORDED";
+        };
+        /** ResearchAgentAcknowledgmentSyncRead */
+        ResearchAgentAcknowledgmentSyncRead: {
+            /** Blocked */
+            blocked: number;
+            /** Captured */
+            captured: number;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Invalid */
+            invalid: number;
+            /** Issues */
+            issues: {
+                [key: string]: unknown;
+            }[];
+            /** Replayed */
+            replayed: number;
+            /** Spreadsheet Title */
+            spreadsheet_title: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "COMPLETE" | "PARTIAL" | "BLOCKED" | "FAILED";
+            /**
+             * Tab
+             * @constant
+             */
+            tab: "Application Agent Work Acknowledgment Inbox";
+        };
+        /** ResearchAgentDeliveryFailure */
+        ResearchAgentDeliveryFailure: {
+            /**
+             * Agent Role
+             * @enum {string}
+             */
+            agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            /** Attempt Id */
+            attempt_id: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "API" | "GOOGLE_SHEETS";
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Reason */
+            reason: string;
+            /** Work Fingerprint */
+            work_fingerprint: string;
+            /** Work Key */
+            work_key: string;
+            /**
+             * Work Type
+             * @enum {string}
+             */
+            work_type: "TRIGGER" | "QUEUE_TASK" | "DATA_DOMAIN" | "PORTFOLIO_STATE";
+        };
+        /** ResearchAgentDeliveryFailureResult */
+        ResearchAgentDeliveryFailureResult: {
+            event: components["schemas"]["ResearchAgentWorkEventRead"];
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "RECORDED" | "ALREADY_RECORDED";
+        };
+        /** ResearchAgentProposalStatusRead */
+        ResearchAgentProposalStatusRead: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /** Accepted Revision Id */
+            accepted_revision_id: string | null;
+            /** Base Revision Id */
+            base_revision_id: string | null;
+            /** External Revision Id */
+            external_revision_id: string | null;
+            /** Issue */
+            issue: string | null;
+            /**
+             * Last Observed At
+             * Format: date-time
+             */
+            last_observed_at: string;
+            /**
+             * Proposal Candidate Id
+             * Format: uuid
+             */
+            proposal_candidate_id: string;
+            /**
+             * Proposal Domain
+             * @enum {string}
+             */
+            proposal_domain: "MODEL" | "RESEARCH" | "THESIS" | "RISK";
+            /** Rejected At */
+            rejected_at: string | null;
+            /** Reviewer */
+            reviewer: string | null;
+            /** Reviewer Note */
+            reviewer_note: string | null;
+            /** Status */
+            status: string;
+        };
+        /** ResearchAgentWorkContractV1 */
+        ResearchAgentWorkContractV1: {
+            /**
+             * Agent Role
+             * @enum {string}
+             */
+            agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Contract Type
+             * @default ResearchAgentWorkContractV1
+             * @constant
+             */
+            contract_type: "ResearchAgentWorkContractV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** Items */
+            items: components["schemas"]["ResearchAgentWorkItemRead"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "NO_WORK" | "BLOCKED" | "SOURCE_UNAVAILABLE";
+            /** Status Reason */
+            status_reason?: string | null;
+        };
+        /** ResearchAgentWorkEventRead */
+        ResearchAgentWorkEventRead: {
+            /**
+             * Agent Role
+             * @enum {string}
+             */
+            agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            /** Blocker Code */
+            blocker_code: string | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "API" | "GOOGLE_SHEETS";
+            /** Delivery Id */
+            delivery_id: string | null;
+            /**
+             * Event Type
+             * @enum {string}
+             */
+            event_type: "DELIVERY_SUCCEEDED" | "DELIVERY_FAILED" | "ACKNOWLEDGED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED" | "SOURCE_UNAVAILABLE" | "STALE_SOURCE" | "UNRESOLVED_REVIEW";
+            /** External Update Id */
+            external_update_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Proposal Candidate Id */
+            proposal_candidate_id: string | null;
+            /** Proposal Domain */
+            proposal_domain: ("MODEL" | "RESEARCH" | "THESIS" | "RISK") | null;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Work Fingerprint */
+            work_fingerprint: string;
+            /** Work Key */
+            work_key: string;
+            /**
+             * Work Type
+             * @enum {string}
+             */
+            work_type: "TRIGGER" | "QUEUE_TASK" | "DATA_DOMAIN" | "PORTFOLIO_STATE";
+        };
+        /** ResearchAgentWorkItemRead */
+        ResearchAgentWorkItemRead: {
+            /** Current Reason */
+            current_reason?: string | null;
+            /**
+             * Current Status
+             * @default DELIVERED
+             * @enum {string}
+             */
+            current_status: "DELIVERED" | "ACKNOWLEDGED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED" | "SOURCE_UNAVAILABLE" | "STALE_SOURCE" | "UNRESOLVED_REVIEW";
+            /**
+             * Delivered At
+             * Format: date-time
+             */
+            delivered_at: string;
+            /**
+             * Delivery Channel
+             * @enum {string}
+             */
+            delivery_channel: "API" | "GOOGLE_SHEETS";
+            /**
+             * Delivery Id
+             * Format: uuid
+             */
+            delivery_id: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Work Fingerprint */
+            work_fingerprint: string;
+            /** Work Key */
+            work_key: string;
+            /**
+             * Work Type
+             * @enum {string}
+             */
+            work_type: "TRIGGER" | "QUEUE_TASK" | "DATA_DOMAIN" | "PORTFOLIO_STATE";
+        };
+        /** ResearchAgentWorkRequest */
+        ResearchAgentWorkRequest: {
+            /** As Of */
+            as_of?: string | null;
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /** Portfolio Id */
+            portfolio_id?: string | null;
+        };
+        /** ResearchAssessmentInput */
+        ResearchAssessmentInput: {
+            assessment_type: components["schemas"]["ResearchAssessmentType"];
+            /** @default UNASSESSED */
+            confidence: components["schemas"]["ResearchConfidence"];
+            /** Narrative */
+            narrative?: string | null;
+            /** @default AVAILABLE */
+            status: components["schemas"]["ResearchAssessmentStatus"];
+            /** Status Reason */
+            status_reason?: string | null;
+            /** Uncertainty */
+            uncertainty?: string | null;
+        };
+        /** ResearchAssessmentRead */
+        ResearchAssessmentRead: {
+            assessment_type: components["schemas"]["ResearchAssessmentType"];
+            confidence: components["schemas"]["ResearchConfidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Narrative */
+            narrative: string | null;
+            status: components["schemas"]["ResearchAssessmentStatus"];
+            /** Status Reason */
+            status_reason: string | null;
+            /** Uncertainty */
+            uncertainty: string | null;
+        };
+        /**
+         * ResearchAssessmentStatus
+         * @enum {string}
+         */
+        ResearchAssessmentStatus: "AVAILABLE" | "UNAVAILABLE" | "DATA_CHECK";
+        /**
+         * ResearchAssessmentType
+         * @enum {string}
+         */
+        ResearchAssessmentType: "BUSINESS_OUTLOOK" | "COMPETITIVE_POSITION" | "KEY_RISKS";
+        /**
+         * ResearchConfidence
+         * @enum {string}
+         */
+        ResearchConfidence: "HIGH" | "MEDIUM" | "LOW" | "UNASSESSED";
+        /** ResearchEvidenceInput */
+        ResearchEvidenceInput: {
+            /** Excerpt */
+            excerpt?: string | null;
+            /** External Identifier */
+            external_identifier?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Source Document Id */
+            source_document_id?: string | null;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /** ResearchEvidenceRead */
+        ResearchEvidenceRead: {
+            /** Excerpt */
+            excerpt: string | null;
+            /** External Identifier */
+            external_identifier: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Published At */
+            published_at: string | null;
+            /** Source Document Id */
+            source_document_id: string | null;
+            /** Source Document Title */
+            source_document_title: string | null;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string | null;
+        };
+        /** ResearchForecastInput */
+        ResearchForecastInput: {
+            /** Availability Reason */
+            availability_reason?: string | null;
+            /** @default AVAILABLE */
+            availability_status: components["schemas"]["ResearchObservationStatus"];
+            /** @default UNASSESSED */
+            confidence: components["schemas"]["ResearchConfidence"];
+            /** Currency */
+            currency?: string | null;
+            /**
+             * Fiscal Period
+             * @enum {string}
+             */
+            fiscal_period: "FY" | "Q1" | "Q2" | "Q3" | "Q4";
+            /** Fiscal Year */
+            fiscal_year: number;
+            metric: components["schemas"]["ResearchForecastMetric"];
+            /** Period End */
+            period_end?: string | null;
+            period_type: components["schemas"]["ResearchPeriodType"];
+            /** Rationale */
+            rationale?: string | null;
+            /** @default POINT */
+            scenario: components["schemas"]["ResearchScenario"];
+            /** Uncertainty */
+            uncertainty?: string | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "currency" | "currency/share" | "shares";
+            /** Value */
+            value: (number | string) | null;
+        };
+        /**
+         * ResearchForecastMetric
+         * @enum {string}
+         */
+        ResearchForecastMetric: "REVENUE" | "EPS" | "EBIT" | "EBITDA" | "FREE_CASH_FLOW" | "DILUTED_SHARES";
+        /** ResearchForecastRead */
+        ResearchForecastRead: {
+            /** Availability Reason */
+            availability_reason: string | null;
+            availability_status: components["schemas"]["ResearchObservationStatus"];
+            confidence: components["schemas"]["ResearchConfidence"];
+            /** Currency */
+            currency: string | null;
+            /** Fiscal Period */
+            fiscal_period: string;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            metric: components["schemas"]["ResearchForecastMetric"];
+            /** Period End */
+            period_end: string | null;
+            period_type: components["schemas"]["ResearchPeriodType"];
+            /** Rationale */
+            rationale: string | null;
+            scenario: components["schemas"]["ResearchScenario"];
+            /** Uncertainty */
+            uncertainty: string | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string | null;
+        };
+        /**
+         * ResearchObservationStatus
+         * @enum {string}
+         */
+        ResearchObservationStatus: "AVAILABLE" | "UNAVAILABLE" | "DATA_CHECK";
+        /**
+         * ResearchPeriodType
+         * @enum {string}
+         */
+        ResearchPeriodType: "ANNUAL" | "QUARTERLY";
+        /** ResearchPublicationResult */
+        ResearchPublicationResult: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "PUBLISHED" | "ALREADY_PUBLISHED";
+            revision: components["schemas"]["ResearchRevisionRead"];
+        };
+        /** ResearchQueueCompletionCreate */
+        ResearchQueueCompletionCreate: {
+            /** Completed By */
+            completed_by: string;
+            /** Completion Note */
+            completion_note?: string | null;
+            /** Condition Fingerprint */
+            condition_fingerprint: string;
+            trigger_classification?: components["schemas"]["ThesisWatchClassification"] | null;
+        };
+        /** ResearchQueueCompletionRead */
+        ResearchQueueCompletionRead: {
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            /** Completed By */
+            completed_by: string;
+            /** Completion Note */
+            completion_note: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            task: components["schemas"]["ResearchQueueTask"];
+            trigger_classification?: components["schemas"]["ThesisWatchClassification"] | null;
+        };
+        /** ResearchQueueCompletionResult */
+        ResearchQueueCompletionResult: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "COMPLETED" | "ALREADY_COMPLETED";
+            task: components["schemas"]["ResearchQueueTask"];
+        };
+        /** ResearchQueueCounts */
+        ResearchQueueCounts: {
+            /** Candidate */
+            candidate: number;
+            /** Complete */
+            complete: number;
+            /** Open */
+            open: number;
+            /** Portfolio */
+            portfolio: number;
+            /** Watchlist */
+            watchlist: number;
+        };
+        /** ResearchQueueRead */
+        ResearchQueueRead: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            counts: components["schemas"]["ResearchQueueCounts"];
+            /** Tasks */
+            tasks: components["schemas"]["ResearchQueueTask"][];
+        };
+        /** ResearchQueueSource */
+        ResearchQueueSource: {
+            /** Effective At */
+            effective_at?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Recorded At */
+            recorded_at?: string | null;
+            /** Source Record Id */
+            source_record_id: string;
+            /** Source Type */
+            source_type: string;
+            /** Source Url */
+            source_url?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** ResearchQueueTask */
+        ResearchQueueTask: {
+            company: components["schemas"]["CompanyRead"];
+            /** Completed At */
+            completed_at?: string | null;
+            /** Completed By */
+            completed_by?: string | null;
+            /** Completion Note */
+            completion_note?: string | null;
+            /** Condition Fingerprint */
+            condition_fingerprint: string;
+            /** Due At */
+            due_at?: string | null;
+            /** Judgment Required */
+            judgment_required: boolean;
+            /** Lifecycle Priority */
+            lifecycle_priority: number;
+            /**
+             * Owner Workflow
+             * @enum {string}
+             */
+            owner_workflow: "LOCAL_ANALYST" | "RESEARCH_AGENT" | "DATA_REVIEW";
+            /** Reason */
+            reason: string;
+            /** Research Rank Position */
+            research_rank_position?: number | null;
+            /** Source Effective At */
+            source_effective_at?: string | null;
+            /** Source Published At */
+            source_published_at?: string | null;
+            /** Source Recorded At */
+            source_recorded_at?: string | null;
+            /** Sources */
+            sources: components["schemas"]["ResearchQueueSource"][];
+            /**
+             * Status
+             * @default OPEN
+             * @enum {string}
+             */
+            status: "OPEN" | "COMPLETE";
+            /** Task Id */
+            task_id: string;
+            task_type: components["schemas"]["ResearchQueueTaskType"];
+            /** Title */
+            title: string;
+            trigger_classification?: components["schemas"]["ThesisWatchClassification"] | null;
+            /** Trigger Rule */
+            trigger_rule: string;
+        };
+        /**
+         * ResearchQueueTaskType
+         * @enum {string}
+         */
+        ResearchQueueTaskType: "CANDIDATE_STAGE" | "THESIS_REVIEW" | "THESIS_QUESTION" | "MATERIAL_EVIDENCE" | "RESEARCH_TRIGGER" | "MODEL_REUNDERWRITE" | "MODEL_INTEGRITY" | "WATCHLIST_READINESS" | "STRUCTURAL_RISK";
         /** ResearchRankInputSnapshot */
         ResearchRankInputSnapshot: {
             /** Bucket Source Ref */
@@ -4964,6 +8912,344 @@ export interface components {
             /** Used Legacy Default */
             used_legacy_default: boolean;
         };
+        /**
+         * ResearchRevisionPublishContract
+         * @description Portable v1 publication contract for the external company research workflow.
+         */
+        ResearchRevisionPublishContract: {
+            /** Assessments */
+            assessments?: components["schemas"]["ResearchAssessmentInput"][];
+            /** Author Id */
+            author_id: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * Contract Type
+             * @constant
+             */
+            contract_type: "ResearchRevisionContractV1";
+            /**
+             * Contract Version
+             * @enum {string}
+             */
+            contract_version: "1.0.0" | "1.1.0";
+            /** Evidence */
+            evidence?: components["schemas"]["ResearchEvidenceInput"][];
+            /** External Revision Id */
+            external_revision_id: string;
+            /** Forecasts */
+            forecasts?: components["schemas"]["ResearchForecastInput"][];
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Rationale */
+            rationale: string;
+            /** Security Id */
+            security_id?: string | null;
+            /** Source Id */
+            source_id: string;
+            /** Source Reference */
+            source_reference: string;
+            /** @default PUBLISHED */
+            status: components["schemas"]["ResearchRevisionStatus"];
+            /** Stream Key */
+            stream_key: string;
+            /** Supersedes Revision Id */
+            supersedes_revision_id?: string | null;
+            /** Trigger References */
+            trigger_references?: components["schemas"]["ResearchTriggerReferenceInput"][];
+            /** Uncertainty */
+            uncertainty?: string | null;
+        };
+        /** ResearchRevisionRead */
+        ResearchRevisionRead: {
+            /** Assessments */
+            assessments: components["schemas"]["ResearchAssessmentRead"][];
+            /** Author Id */
+            author_id: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string;
+            /** Evidence */
+            evidence: components["schemas"]["ResearchEvidenceRead"][];
+            /** External Revision Id */
+            external_revision_id: string;
+            /** Forecasts */
+            forecasts: components["schemas"]["ResearchForecastRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Security Id */
+            security_id: string | null;
+            /** Source Id */
+            source_id: string;
+            /** Source Reference */
+            source_reference: string;
+            status: components["schemas"]["ResearchRevisionStatus"];
+            /** Stream Key */
+            stream_key: string;
+            /** Supersedes Revision Id */
+            supersedes_revision_id: string | null;
+            /** Trigger References */
+            trigger_references?: components["schemas"]["ResearchTriggerReferenceRead"][];
+            /** Uncertainty */
+            uncertainty: string | null;
+        };
+        /**
+         * ResearchRevisionStatus
+         * @enum {string}
+         */
+        ResearchRevisionStatus: "PUBLISHED" | "WITHDRAWN";
+        /**
+         * ResearchScenario
+         * @enum {string}
+         */
+        ResearchScenario: "POINT" | "BEAR" | "BASE" | "BULL";
+        /** ResearchStreamRead */
+        ResearchStreamRead: {
+            current_revision: components["schemas"]["ResearchRevisionRead"];
+            /** History */
+            history: components["schemas"]["ResearchRevisionRead"][];
+            /** Stream Key */
+            stream_key: string;
+        };
+        /** ResearchTriggerContextRead */
+        ResearchTriggerContextRead: {
+            /** Accepted Publications */
+            accepted_publications: components["schemas"]["ResearchTriggerPublicationRead"][];
+            /**
+             * Context As Of
+             * Format: date-time
+             */
+            context_as_of: string;
+            /** Listings */
+            listings: components["schemas"]["ListingRead"][];
+            /** Models */
+            models: components["schemas"]["ResearchTriggerModelContextRead"][];
+            research: components["schemas"]["CompanyResearchRead"];
+            /** Securities */
+            securities: components["schemas"]["SecurityRead"][];
+            thesis: components["schemas"]["CompanyInvestmentThesisRead"];
+            trigger: components["schemas"]["ResearchTriggerRead"];
+        };
+        /** ResearchTriggerModelContextRead */
+        ResearchTriggerModelContextRead: {
+            actor: components["schemas"]["Actor"];
+            /**
+             * Current Revision Id
+             * Format: uuid
+             */
+            current_revision_id: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /** Methodology Version */
+            methodology_version: string;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Model Name */
+            model_name: string;
+            model_type: components["schemas"]["FinancialModelType"];
+            outputs: components["schemas"]["FinancialModelOutputsRead-Output"];
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Source */
+            source: string | null;
+            /** Supporting Evidence */
+            supporting_evidence: components["schemas"]["FinancialModelEvidenceRead"][];
+            valuation_listing: components["schemas"]["ListingRead"];
+        };
+        /** ResearchTriggerPublicationRead */
+        ResearchTriggerPublicationRead: {
+            classification: components["schemas"]["ThesisWatchClassification"];
+            /** Classification Rationale */
+            classification_rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /**
+             * Revision Type
+             * @enum {string}
+             */
+            revision_type: "RESEARCH" | "THESIS";
+        };
+        /** ResearchTriggerRead */
+        ResearchTriggerRead: {
+            company: components["schemas"]["CompanyRead"];
+            /**
+             * Detected At
+             * Format: date-time
+             */
+            detected_at: string;
+            /** Effective At */
+            effective_at: string | null;
+            /** Event Key */
+            event_key: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Processing State
+             * @enum {string}
+             */
+            processing_state: "OPEN" | "REVIEWED" | "SUPERSEDED" | "STALE";
+            /** Queue Condition Fingerprint */
+            queue_condition_fingerprint: string | null;
+            /** Queue Task Id */
+            queue_task_id: string | null;
+            /** Reason */
+            reason: string;
+            /** Source Domain */
+            source_domain: string;
+            /** Source Observed At */
+            source_observed_at: string | null;
+            /** Source Record Id */
+            source_record_id: string;
+            /**
+             * Source Recorded At
+             * Format: date-time
+             */
+            source_recorded_at: string;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Source Snapshot */
+            source_snapshot: {
+                [key: string]: unknown;
+            };
+            /** Title */
+            title: string;
+            trigger_type: components["schemas"]["ResearchTriggerType"];
+            /** Version */
+            version: number;
+        };
+        /** ResearchTriggerReadResult */
+        ResearchTriggerReadResult: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Triggers */
+            triggers: components["schemas"]["ResearchTriggerRead"][];
+        };
+        /** ResearchTriggerReferenceInput */
+        ResearchTriggerReferenceInput: {
+            classification: components["schemas"]["ThesisWatchClassification"];
+            /** Classification Rationale */
+            classification_rationale: string;
+            /**
+             * Trigger Id
+             * Format: uuid
+             */
+            trigger_id: string;
+        };
+        /** ResearchTriggerReferenceRead */
+        ResearchTriggerReferenceRead: {
+            classification: components["schemas"]["ThesisWatchClassification"];
+            /** Classification Rationale */
+            classification_rationale: string;
+            /**
+             * Detected At
+             * Format: date-time
+             */
+            detected_at: string;
+            /** Effective At */
+            effective_at: string | null;
+            /** Event Key */
+            event_key: string;
+            /** Source Observed At */
+            source_observed_at: string | null;
+            /**
+             * Source Recorded At
+             * Format: date-time
+             */
+            source_recorded_at: string;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Trigger Id
+             * Format: uuid
+             */
+            trigger_id: string;
+            trigger_type: components["schemas"]["ResearchTriggerType"];
+        };
+        /** ResearchTriggerRefreshResult */
+        ResearchTriggerRefreshResult: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Created */
+            created: number;
+            /** Examined */
+            examined: number;
+            /** Lookback Days */
+            lookback_days: number;
+            /** Replayed */
+            replayed: number;
+            /** Triggers */
+            triggers: components["schemas"]["ResearchTriggerRead"][];
+        };
+        /**
+         * ResearchTriggerType
+         * @enum {string}
+         */
+        ResearchTriggerType: "NEW_FILING" | "MODEL_REVISION" | "EXPECTED_IRR_CHANGE" | "CONSENSUS_REVISION" | "REPORTED_FACT_CORRECTION" | "THESIS_EVIDENCE_LINKED" | "RISK_ASSESSMENT";
         /** ResidualIncomeBase */
         "ResidualIncomeBase-Input": {
             /** Current Book Value Per Share */
@@ -5113,6 +9399,12 @@ export interface components {
             outputs: components["schemas"]["FinancialModelOutputsRead-Output"];
             /** Projections */
             projections: components["schemas"]["ResidualIncomeProjectionRead"][];
+            /** Proposal Author Id */
+            proposal_author_id?: string | null;
+            /** Proposal Authored At */
+            proposal_authored_at?: string | null;
+            /** Proposal Source Reference */
+            proposal_source_reference?: string | null;
             /** Rationale */
             rationale: string;
             /**
@@ -5128,6 +9420,8 @@ export interface components {
             source: string | null;
             /** Source Revision Id */
             source_revision_id: string | null;
+            /** Supporting Evidence */
+            supporting_evidence?: components["schemas"]["FinancialModelEvidenceRead"][];
         };
         /** ResidualIncomeScenarioInput */
         "ResidualIncomeScenarioInput-Input": {
@@ -5160,6 +9454,310 @@ export interface components {
             starting_roe: string;
             /** Terminal Growth */
             terminal_growth: string;
+        };
+        /** ReturnComparabilityRuleRead */
+        ReturnComparabilityRuleRead: {
+            /** Left Methodology */
+            left_methodology: string;
+            /** Rationale */
+            rationale: string;
+            /** Right Methodology */
+            right_methodology: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DIRECT" | "CONDITIONAL_EQUITY" | "NOT_COMPARABLE_PERSPECTIVE" | "NOT_COMPARABLE_METHOD" | "NOT_COMPARABLE_VERSION" | "UNKNOWN_METHOD";
+        };
+        /** ReturnMethodologiesRead */
+        ReturnMethodologiesRead: {
+            /** Currency Policy */
+            currency_policy: string;
+            /** Definitions */
+            definitions: components["schemas"]["ReturnMethodologyRead"][];
+            /** Rules */
+            rules: components["schemas"]["ReturnComparabilityRuleRead"][];
+        };
+        /** ReturnMethodologyRead */
+        ReturnMethodologyRead: {
+            /** Cash Flow Basis */
+            cash_flow_basis: string;
+            /** Code */
+            code: string;
+            /** Comparability Group */
+            comparability_group: string;
+            /**
+             * Cross Method Policy
+             * @enum {string}
+             */
+            cross_method_policy: "SAME_METHOD_ONLY" | "CONDITIONAL_EQUITY_CROSS_METHOD";
+            /**
+             * Effective From
+             * Format: date-time
+             */
+            effective_from: string;
+            /** Entry Value Basis */
+            entry_value_basis: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Limitation */
+            limitation: string;
+            /**
+             * Perspective
+             * @enum {string}
+             */
+            perspective: "ENTERPRISE" | "EQUITY";
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Share Price Basis */
+            share_price_basis: string;
+            /** Title */
+            title: string;
+            /** Version */
+            version: number;
+        };
+        /** RiskAssessmentEvidenceRead */
+        RiskAssessmentEvidenceRead: {
+            /** Excerpt */
+            excerpt: string | null;
+            /** External Identifier */
+            external_identifier: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Published At */
+            published_at: string | null;
+            /** Reported Fundamental Observation Id */
+            reported_fundamental_observation_id: string | null;
+            /** Source Document Id */
+            source_document_id: string | null;
+            /** Source Document Title */
+            source_document_title: string | null;
+            /** Source Document Url */
+            source_document_url: string | null;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string | null;
+            /** Thesis Claim Id */
+            thesis_claim_id: string | null;
+            /** Thesis Revision Id */
+            thesis_revision_id: string | null;
+        };
+        /** RiskAssessmentFindingRead */
+        RiskAssessmentFindingRead: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "BUSINESS" | "FINANCIAL" | "GEOGRAPHIC" | "CURRENCY" | "BUSINESS_MODEL" | "REGULATORY" | "GOVERNANCE" | "GEOPOLITICAL" | "PORTFOLIO_CONCENTRATION" | "PORTFOLIO_EXPOSURE" | "THESIS_CHANGE" | "OTHER";
+            /**
+             * Change Direction
+             * @enum {string}
+             */
+            change_direction: "NEW" | "WORSENING" | "UNCHANGED" | "IMPROVING" | "RESOLVED";
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /**
+             * Confidence
+             * @enum {string}
+             */
+            confidence: "LOW" | "MEDIUM" | "HIGH" | "UNASSESSED";
+            /** Description */
+            description: string;
+            /** Evidence */
+            evidence: components["schemas"]["RiskAssessmentEvidenceRead"][];
+            /** Finding Key */
+            finding_key: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "COMPANY" | "PORTFOLIO";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "UNDER_REVIEW" | "RESOLVED";
+            /** Title */
+            title: string;
+        };
+        /** RiskAssessmentRevisionRead */
+        RiskAssessmentRevisionRead: {
+            /**
+             * Accepted At
+             * Format: date-time
+             */
+            accepted_at: string;
+            /** Author Id */
+            author_id: string;
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /** Baseline Stale Acknowledged */
+            baseline_stale_acknowledged: boolean;
+            /**
+             * Baseline Status At Accept
+             * @enum {string}
+             */
+            baseline_status_at_accept: "CURRENT" | "STALE_PORTFOLIO_STATE" | "STALE_HOLDINGS" | "INCOMPLETE_VALUATION";
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Contract Version */
+            contract_version: string;
+            /** Coverage Note */
+            coverage_note: string | null;
+            /**
+             * Coverage Status
+             * @enum {string}
+             */
+            coverage_status: "COMPLETE" | "PARTIAL";
+            /** External Revision Id */
+            external_revision_id: string;
+            /** Findings */
+            findings: components["schemas"]["RiskAssessmentFindingRead"][];
+            /**
+             * Holdings Snapshot Id
+             * Format: uuid
+             */
+            holdings_snapshot_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Portfolio State Contract Version */
+            portfolio_state_contract_version: string;
+            /** Portfolio State Fingerprint */
+            portfolio_state_fingerprint: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Reviewer */
+            reviewer: string;
+            /** Reviewer Note */
+            reviewer_note: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Source Id */
+            source_id: string;
+            /** Source Reference */
+            source_reference: string;
+            /** Stream Key */
+            stream_key: string;
+            /** Summary */
+            summary: string;
+            /** Supersedes Revision Id */
+            supersedes_revision_id: string | null;
+            /** Target Revision Id */
+            target_revision_id: string | null;
+            /**
+             * Valuation As Of
+             * Format: date-time
+             */
+            valuation_as_of: string;
+        };
+        /** ScenarioEvaluationRead */
+        ScenarioEvaluationRead: {
+            /** Actual Observed At */
+            actual_observed_at: string | null;
+            /** Actual Published At */
+            actual_published_at: string | null;
+            /** Actual Recorded At */
+            actual_recorded_at: string | null;
+            /** Actual Status */
+            actual_status: string;
+            /** Actual Value */
+            actual_value: string | null;
+            /** Continuous Ranked Probability Score */
+            continuous_ranked_probability_score: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Fiscal Period */
+            fiscal_period: string | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Forecast Known At
+             * Format: date-time
+             */
+            forecast_known_at: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /** Methodology Version */
+            methodology_version: string | null;
+            metric: components["schemas"]["ForecastAccuracyMetric"];
+            /** Model Name */
+            model_name: string;
+            model_type: components["schemas"]["FinancialModelType"];
+            /** Period End */
+            period_end: string | null;
+            /** Probability Calibration Status */
+            probability_calibration_status: string;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Scenarios */
+            scenarios: components["schemas"]["ScenarioForecastPointRead"][];
+            /** Score Status */
+            score_status: string;
+            /** Unit */
+            unit: string | null;
+        };
+        /** ScenarioForecastPointRead */
+        ScenarioForecastPointRead: {
+            /** Probability */
+            probability: string | null;
+            /** Scenario */
+            scenario: string;
+            /** Value */
+            value: string | null;
         };
         /** ScoreAssessmentCreate */
         ScoreAssessmentCreate: {
@@ -5687,6 +10285,31 @@ export interface components {
              */
             target_date: string;
         };
+        /**
+         * ThesisClaimStatus
+         * @enum {string}
+         */
+        ThesisClaimStatus: "ACTIVE" | "UNDER_REVIEW" | "RESOLVED" | "INVALIDATED";
+        /**
+         * ThesisClaimType
+         * @enum {string}
+         */
+        ThesisClaimType: "COMPETITIVE_ADVANTAGE" | "DURABILITY" | "GROWTH_DRIVER" | "PRINCIPAL_RISK" | "THESIS_BREAKER" | "CATALYST" | "IMPORTANT_DEVELOPMENT" | "UNRESOLVED_QUESTION";
+        /**
+         * ThesisEvidenceRelationship
+         * @enum {string}
+         */
+        ThesisEvidenceRelationship: "SUPPORTS" | "CONTRADICTS" | "CONTEXT";
+        /**
+         * ThesisRevisionStatus
+         * @enum {string}
+         */
+        ThesisRevisionStatus: "PUBLISHED" | "WITHDRAWN";
+        /**
+         * ThesisWatchClassification
+         * @enum {string}
+         */
+        ThesisWatchClassification: "NOISE" | "INCREMENTAL" | "MAJOR-STRUCTURAL";
         /** UniverseEstimateMomentumRead */
         UniverseEstimateMomentumRead: {
             company: components["schemas"]["CompanyRead"];
@@ -5740,6 +10363,51 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ValuationScenarioContextRead */
+        ValuationScenarioContextRead: {
+            /** Base Fair Value */
+            base_fair_value: string | null;
+            /** Base Probability */
+            base_probability: string | null;
+            /** Bear Fair Value */
+            bear_fair_value: string | null;
+            /** Bear Probability */
+            bear_probability: string | null;
+            /** Bull Fair Value */
+            bull_fair_value: string | null;
+            /** Bull Probability */
+            bull_probability: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Effective At */
+            effective_at: string | null;
+            /** Evaluation Status */
+            evaluation_status: string;
+            /** Methodology */
+            methodology: string | null;
+            /** Methodology Version */
+            methodology_version: number | null;
+            /** Model Key */
+            model_key: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Snapshot Id
+             * Format: uuid
+             */
+            snapshot_id: string;
+            /** Snapshot Kind */
+            snapshot_kind: string;
+            /** Snapshot Status */
+            snapshot_status: string;
+            /** Source */
+            source: string;
+        };
         /** WatchlistRankInputSnapshot */
         WatchlistRankInputSnapshot: {
             compounder_quality: components["schemas"]["WatchlistRankScoreSnapshot"];
@@ -5747,9 +10415,9 @@ export interface components {
             context_note: string;
             /**
              * Context Version
-             * @constant
+             * @enum {string}
              */
-            context_version: "watchlist-rank-inputs-v1";
+            context_version: "watchlist-rank-inputs-v1" | "watchlist-rank-inputs-v2";
             /**
              * Decision Context
              * @constant
@@ -5764,6 +10432,8 @@ export interface components {
             forward_fundamental_cagr: string | null;
             /** Hurdle */
             hurdle: string | null;
+            /** Return Comparability Cohort */
+            return_comparability_cohort?: string | null;
             /**
              * Return Semantics
              * @enum {string}
@@ -5775,6 +10445,14 @@ export interface components {
         };
         /** WatchlistRankReturnSource */
         WatchlistRankReturnSource: {
+            /** Accepted Output Status */
+            accepted_output_status?: string | null;
+            /** Accepted Reference Price */
+            accepted_reference_price?: string | null;
+            /** Accepted Reference Price Effective At */
+            accepted_reference_price_effective_at?: string | null;
+            /** Accepted Reference Price Observation Id */
+            accepted_reference_price_observation_id?: string | null;
             /** Contract Status */
             contract_status: ("PASS" | "NOT_MAPPED" | "NO_CONTRACT" | "DATA_CHECK" | "HISTORICAL_ONLY") | null;
             /** Contract Version */
@@ -5784,6 +10462,7 @@ export interface components {
              * @enum {string}
              */
             currency_status: "DOCUMENTED" | "UNKNOWN";
+            current_calculation?: components["schemas"]["FinancialModelCalculationOutputsRead"] | null;
             /** Effective At */
             effective_at: string | null;
             /**
@@ -5830,10 +10509,23 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            return_methodology?: components["schemas"]["ReturnMethodologyRead"] | null;
+            /**
+             * Return Methodology Status
+             * @default UNCLASSIFIED
+             * @enum {string}
+             */
+            return_methodology_status: "CLASSIFIED" | "UNCLASSIFIED";
             /** Revision Id */
             revision_id: string | null;
             /** Revision Number */
             revision_number: number | null;
+            /**
+             * Share Price Basis Status
+             * @default UNAVAILABLE
+             * @enum {string}
+             */
+            share_price_basis_status: "CAPTURED" | "NOT_RETAINED" | "UNAVAILABLE";
             /** Source */
             source: string | null;
             /**
@@ -5946,6 +10638,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttentionFeedRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_candidate_pipeline_v1_candidate_pipeline_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatePipelineQueueEntry"][];
                 };
             };
             /** @description Validation Error */
@@ -6327,6 +11050,72 @@ export interface operations {
             };
         };
     };
+    get_company_candidate_pipeline_v1_companies__company_id__candidate_pipeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyCandidatePipelineRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_candidate_pipeline_revision_v1_companies__company_id__candidate_pipeline_revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidatePipelineRevisionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatePipelinePublicationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_company_extended_financial_models_v1_companies__company_id__canonical_financial_models_get: {
         parameters: {
             query?: never;
@@ -6519,6 +11308,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyConsensusEstimatesRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_decision_evaluation_v1_companies__company_id__decision_evaluation_get: {
+        parameters: {
+            query?: {
+                outcome_known_at?: string | null;
+                horizons_days?: number[] | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyDecisionEvaluationRead"];
                 };
             };
             /** @description Validation Error */
@@ -6768,6 +11591,81 @@ export interface operations {
             };
         };
     };
+    get_company_financial_statements_v1_companies__company_id__financial_statements_get: {
+        parameters: {
+            query?: {
+                period_type?: "ANNUAL" | "QUARTERLY";
+                period_limit?: number;
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyFinancialStatementsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_forecast_accuracy_v1_companies__company_id__forecast_accuracy_get: {
+        parameters: {
+            query?: {
+                metric?: components["schemas"]["ForecastAccuracyMetric"] | null;
+                source?: components["schemas"]["ForecastAccuracySourceType"] | null;
+                period_type?: components["schemas"]["ResearchPeriodType"] | null;
+                fiscal_year?: number | null;
+                fiscal_period?: string | null;
+                outcome_known_at?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyForecastAccuracyRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_transition_v1_companies__company_id__lifecycle_transitions_post: {
         parameters: {
             query?: never;
@@ -6988,6 +11886,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyReportedFundamentalsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_research_v1_companies__company_id__research_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyResearchRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_risk_assessments_v1_companies__company_id__risk_assessments_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRiskAssessmentsRead"];
                 };
             };
             /** @description Validation Error */
@@ -7228,6 +12193,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyTemporalAlignmentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_investment_thesis_v1_companies__company_id__thesis_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyInvestmentThesisRead"];
                 };
             };
             /** @description Validation Error */
@@ -7657,6 +12656,832 @@ export interface operations {
             };
         };
     };
+    post_google_sheets_agent_acknowledgment_check_v1_google_sheets_agent_operations_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAgentAcknowledgmentSyncRead"];
+                };
+            };
+        };
+    };
+    post_google_sheets_agent_work_publish_v1_google_sheets_agent_operations__agent_role__work_publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsAgentWorkPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsAgentWorkPublishRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_google_sheets_research_sync_candidates_v1_google_sheets_research_sync_candidates_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchCandidateRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_research_candidate_accept_v1_google_sheets_research_sync_candidates__candidate_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsResearchSyncReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_research_candidate_preview_v1_google_sheets_research_sync_candidates__candidate_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_research_candidate_reject_v1_google_sheets_research_sync_candidates__candidate_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsResearchSyncRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_research_sync_check_v1_google_sheets_research_sync_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchSyncCheckRead"];
+                };
+            };
+        };
+    };
+    post_google_sheets_research_connection_test_v1_google_sheets_research_sync_connection_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchConnectionTestRead"];
+                };
+            };
+        };
+    };
+    get_google_sheets_research_sync_runs_v1_google_sheets_research_sync_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchSyncRunRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_google_sheets_research_sync_status_v1_google_sheets_research_sync_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsResearchSyncStatusRead"];
+                };
+            };
+        };
+    };
+    get_google_sheets_risk_sync_candidates_v1_google_sheets_risk_sync_candidates_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskCandidateRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_risk_candidate_accept_v1_google_sheets_risk_sync_candidates__candidate_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsRiskSyncReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_risk_candidate_preview_v1_google_sheets_risk_sync_candidates__candidate_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_risk_candidate_reject_v1_google_sheets_risk_sync_candidates__candidate_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsRiskSyncRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_risk_sync_check_v1_google_sheets_risk_sync_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskSyncCheckRead"];
+                };
+            };
+        };
+    };
+    post_google_sheets_risk_connection_test_v1_google_sheets_risk_sync_connection_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsConnectionTestRead"];
+                };
+            };
+        };
+    };
+    get_google_sheets_risk_sync_runs_v1_google_sheets_risk_sync_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskSyncRunRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_google_sheets_risk_sync_status_v1_google_sheets_risk_sync_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsRiskSyncStatusRead"];
+                };
+            };
+        };
+    };
+    get_google_sheets_sync_candidates_v1_google_sheets_sync_candidates_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncCandidateRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_candidate_accept_v1_google_sheets_sync_candidates__candidate_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsSyncReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_candidate_preview_v1_google_sheets_sync_candidates__candidate_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_candidate_reject_v1_google_sheets_sync_candidates__candidate_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsSyncRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_sync_check_v1_google_sheets_sync_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncCheckRead"];
+                };
+            };
+        };
+    };
+    post_google_sheets_connection_test_v1_google_sheets_sync_connection_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsConnectionTestRead"];
+                };
+            };
+        };
+    };
+    post_google_sheets_portfolio_state_publish_v1_google_sheets_sync_portfolio_state_publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsPortfolioStatePublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsPortfolioStatePublishRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_google_sheets_sync_runs_v1_google_sheets_sync_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncRunRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_google_sheets_sync_status_v1_google_sheets_sync_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsSyncStatusRead"];
+                };
+            };
+        };
+    };
+    post_google_sheets_thesis_watch_publish_v1_google_sheets_sync_thesis_watch_publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSheetsThesisWatchPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsThesisWatchPublishRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_investment_thesis_revision_v1_investment_thesis_revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvestmentThesisRevisionPublishContract"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestmentThesisPublicationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_listing_corporate_actions_v1_listings__listing_id__corporate_actions_get: {
         parameters: {
             query?: {
@@ -7714,6 +13539,152 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListingMarketData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_refresh_status_v1_market_data_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketRefreshStatusRead"];
+                };
+            };
+        };
+    };
+    get_operational_job_requests_v1_operations_job_requests_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationalJobRequestRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_operational_job_request_v1_operations_job_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationalJobRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationalJobRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_operational_job_request_v1_operations_job_requests__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationalJobRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_operational_job_request_retry_v1_operations_job_requests__request_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationalJobRequestRead"];
                 };
             };
             /** @description Validation Error */
@@ -7848,7 +13819,10 @@ export interface operations {
     };
     get_overview_v1_portfolios__portfolio_id__overview_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Historical valuation and knowledge cutoff */
+                as_of?: string | null;
+            };
             header?: never;
             path: {
                 portfolio_id: string;
@@ -7864,6 +13838,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_risk_assessments_v1_portfolios__portfolio_id__risk_assessments_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioRiskAssessmentsRead"];
                 };
             };
             /** @description Validation Error */
@@ -8101,6 +14108,26 @@ export interface operations {
             };
         };
     };
+    get_recurring_operations_status_v1_recurring_operations_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringOperationsStatusRead"];
+                };
+            };
+        };
+    };
     get_reported_fundamental_definitions_v1_reported_fundamental_definitions_get: {
         parameters: {
             query?: never;
@@ -8117,6 +14144,424 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportedFundamentalDefinitionRead"][];
+                };
+            };
+        };
+    };
+    post_research_agent_acknowledgment_v1_research_agent_operations_acknowledgments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchAgentAcknowledgmentContractV1"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAgentAcknowledgmentResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_research_agent_delivery_failure_v1_research_agent_operations_delivery_failures_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchAgentDeliveryFailure"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAgentDeliveryFailureResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_agent_events_v1_research_agent_operations_events_get: {
+        parameters: {
+            query?: {
+                agent_role?: string | null;
+                work_key?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAgentWorkEventRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_agent_proposal_status_v1_research_agent_operations_proposals__proposal_domain___candidate_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_domain: "MODEL" | "RESEARCH" | "THESIS" | "RISK";
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAgentProposalStatusRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_research_agent_work_v1_research_agent_operations__agent_role__work_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_role: "DATA_UNIVERSE_STEWARD" | "PORTFOLIO_THESIS_SENTINEL" | "MODEL_ALLOCATION_STEWARD";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchAgentWorkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAgentWorkContractV1"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_review_queue_v1_research_queue_get: {
+        parameters: {
+            query?: {
+                lifecycle?: components["schemas"]["Lifecycle"] | null;
+                search?: string | null;
+                include_complete?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchQueueRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_review_history_v1_research_queue_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchQueueCompletionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_research_queue_completion_v1_research_queue__task_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchQueueCompletionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchQueueCompletionResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_research_revision_v1_research_revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchRevisionPublishContract"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchPublicationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_triggers_v1_research_triggers_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                company_id?: string | null;
+                trigger_type?: components["schemas"]["ResearchTriggerType"] | null;
+                processing_state?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchTriggerReadResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_research_triggers_refresh_v1_research_triggers_refresh_post: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                company_id?: string | null;
+                lookback_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchTriggerRefreshResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_trigger_context_v1_research_triggers__trigger_id__context_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trigger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchTriggerContextRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_return_methodologies_v1_return_methodologies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnMethodologiesRead"];
                 };
             };
         };

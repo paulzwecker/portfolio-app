@@ -6,8 +6,9 @@ different workbook-proven methodologies: 10-year owner cash flow and 10-year
 residual income. Each has its own relational inputs, projections and calculation
 engine; the shared model/revision envelope and normalized output contract provide
 the common interface. Google Sheets remains an optional authoring environment via
-portable versioned contracts. Sheets is never required at runtime; there is no live
-Sheets API connection.
+portable versioned contracts. An opt-in, read-only Sheets inbox discovers those
+contracts; PostgreSQL remains canonical for accepted state, and normal application
+use does not require Google connectivity.
 
 ## Relational model
 
@@ -107,17 +108,40 @@ listing-specific freshness and data-quality policy; an absent, stale, rejected o
 currency-mismatched quote leaves upside, expected IRR and expected excess null with
 an explicit reason. It never converts currencies or assumes an ADR ratio.
 
-For this source model only, `Expected Cash-Flow IRR` is calculated from the
+For this source model, `Expected Cash-Flow IRR` is calculated from the
 probability-weighted annual UFCF series, its probability-weighted terminal value in
 year 10 and current implied enterprise cost (price times diluted shares less
 net cash/debt). It is solved deterministically by bounded bisection after checking
 for one conventional cash-flow sign change. It does not average scenario IRRs.
-This preserves the source output, whose method is enterprise-value/UFCF based; it
-does not establish that every future normalized expected-return model should use
-UFCF rather than explicit shareholder cash flows. Dividend treatment is not modeled
-by this DCF type. Resolve that interface distinction before adding other return
-methodologies. `Forward Fundamental CAGR` remains null because this method does not
-produce it.
+The output is explicitly `UFCF_ENTERPRISE_IRR` v1: an enterprise-perspective
+return, not a shareholder-distribution IRR. Dividend treatment and a future
+financing/payout schedule are not modeled by this DCF type. Other supported model
+types have separate versioned equity return definitions; no enterprise-to-equity
+bridge is applied. `Forward Fundamental CAGR` remains null because this method
+does not produce it. See [return-semantics.md](return-semantics.md).
+
+## Accepted reference price and current quote
+
+An accepted `financial_model_outputs` row is the immutable calculation snapshot
+for that accepted revision. Its price, observation ID, effective time, and output
+values remain the revision's historical reference basis. A newer quote does not
+edit assumptions, projections, accepted outputs, or revision history.
+
+For a current view, the API can deterministically recalculate an accepted native
+revision's inputs against the exact `FinancialModel.valuation_listing_id` using
+the market observation selected under the `as_of` and `known_at` cutoffs. This is
+a read-only derived result: it is not persisted as an accepted output or new model
+revision. It returns the accepted reference price beside the current quote and
+current outputs so consumers can distinguish the two. Stale, missing, rejected,
+wrong-listing, or non-matching-currency quotes leave price-dependent return fields
+null. There is no FX conversion or listing substitution in this calculation.
+
+Portfolio Rank, Watchlist Rank, and Execution Pace use this current calculation
+for native models. Their immutable runs retain the exact current output and quote
+observation used, plus the accepted reference price and observation. Imported
+workbook output snapshots have no comparable input state to recalculate and remain
+historical output evidence; missing legacy quote basis is not repaired from a
+cached sheet value.
 
 ## Parity results and limits
 
@@ -156,9 +180,9 @@ Year 5 and fades linearly to mature ROE by Year 10. Dividends equal net income t
 the explicit payout ratio; retained earnings roll into ending book value. Residual
 income is `(ROE - cost of equity) × beginning book value`. Scenario fair value is
 opening book value plus discounted annual residual income plus discounted terminal
-residual income. Shareholder IRR includes scenario dividends and Year 10 ending
-book value plus terminal residual income. Hurdle is the probability-weighted cost
-of equity.
+residual income. Residual-income equity IRR includes scenario dividends and Year
+10 ending book value plus terminal residual income. Hurdle is the probability-
+weighted cost of equity.
 
 Both methods have isolated workbook parity fixtures covering all three scenario
 values, Weighted Fair Value/Upside, Expected Cash-Flow IRR, Hurdle, Expected Excess
@@ -176,27 +200,21 @@ The per-tab population, identity/lifecycle checks, currency evidence, output
 contract state and migration batches are maintained in the
 [model migration inventory](model-migration-inventory.md) and its checked-in
 [JSON artifact](reconciliation/model-migration-inventory-2026-10-05.json). The
-workbook's normalized output label `Expected Cash-Flow IRR` is not a guarantee that
-the underlying method computes the canonical shareholder-cash-flow IRR.
-
-The project definition uses probability-weighted explicit shareholder cash flows;
-it does not average scenario IRRs, dividends are represented explicitly and
-terminal proceeds are separate. The legacy `P-GOOGL` reference solves IRR from
-probability-weighted enterprise UFCF and terminal value against an implied
-enterprise cost. That preserves its workbook parity, but it is not the same cash
-flow boundary as shareholder distributions. Owner-cash tabs use their own
-owner-cash-flow convention, while residual-income and other financial-company tabs
-may solve implied equity return from dividends and terminal equity value. Do not
-recompute or relabel historical legacy outputs. A method-specific bridge and
-regression fixture are required before treating any legacy field as canonical
-shareholder-cash-flow IRR.
+workbook's normalized output label `Expected Cash-Flow IRR` does not by itself
+identify the underlying economic return. Native outputs and verified imported
+snapshots carry one of the versioned return definitions documented in
+[return-semantics.md](return-semantics.md). Historical legacy values are preserved
+as reported; no workbook value is recomputed or relabeled as a different
+cash-flow basis.
 
 The inventory distinguishes published outputs from safe assumption mapping.
 Ninety-six normalized contracts are publishable after source identity/layout checks.
 Five active tabs have tab-specific parity evidence: four Portfolio DCFs (`P-GOOGL`,
 `P-ASML`, `P-ISRG`, `P-MA`) and Watchlist owner-cash model `W-TOST`. Those five
-company input sets are accepted as native revisions. `W-HDFC` has residual-income
-parity but is currently Drop and remains outside active migration priority.
+company input sets are accepted as native revisions at the inventory checkpoint.
+`W-HDFC` has residual-income parity but is currently Drop and remains outside
+active migration priority. Subsequent accepted coverage is recorded in the batch-3
+reconciliation linked below.
 
 ## API and Company flow
 
@@ -247,9 +265,12 @@ separate read-only history section.
 
 ## Google Sheets interoperability
 
-The portable boundaries are `FinancialModelContractV1` (`1.0.0`) for DCF and
-`AdditionalModelPortableContractV2` (`2.0.0`) for owner cash flow and residual
-income. `GET /v1/financial-models/{model_id}/contract` exports model identity,
+The portable boundaries are `FinancialModelContractV1` (`1.0.0`–`1.2.0`) for DCF and
+`AdditionalModelPortableContractV2` (`2.0.0`–`2.1.0`) for owner cash flow and residual
+income. Versions `1.2.0` and `2.1.0` add explicit proposal authorship and accepted
+research/thesis references; they require at least one valid canonical reference
+before a Sheets proposal can preview as ready. Older versions remain readable for
+previously published inbox entries. `GET /v1/financial-models/{model_id}/contract` exports model identity,
 listing/currency, base revision identity, methodology, editable candidate
 assumptions and provenance. The v1 DCF contract also includes a read-only snapshot
 of stored outputs and projections so the API can detect an altered export; that
@@ -264,7 +285,17 @@ base, scenario, year-input (owner cash flow only) and revision tabs, then writes
 edits back into contract JSON for review and upload. It does not call the API or
 calculate model outputs. Exact decimal strings are kept as text; the application
 validates ranges, probabilities, scenario structure and terminal-spread constraints,
-then recalculates with the selected canonical implementation.
+then recalculates with the selected canonical implementation. The optional live
+integration reads only the fixed `Application Model Sync Inbox` described in
+[`google-sheets-sync.md`](google-sheets-sync.md); it does not inspect legacy model
+tabs or calculate spreadsheet formulas.
+
+For the auditable research-to-model sequence, publish the supporting research or
+thesis revision first, then cite its canonical UUID in the model contract. The model
+proposal keeps its own author, authored time, source reference and rationale;
+references are stored separately from proposed assumptions and linked to the
+accepted model revision only after human review. See
+[`research-to-model.md`](research-to-model.md).
 
 The v1 DCF API operations are:
 
@@ -294,13 +325,22 @@ method-specific input block. External acceptance uses the same immutable revisio
 history and optimistic base check as an application edit. Integration tests verify
 a v2 round trip, idempotent exact retry and stale-base conflict.
 
+The live inbox endpoints are `GET /v1/google-sheets-sync/status`, `POST
+/v1/google-sheets-sync/connection-test`, and `POST /v1/google-sheets-sync/check`.
+Captured contract candidates are listed through `GET
+/v1/google-sheets-sync/candidates`; each supports a domain preview and explicit
+reviewer `/accept` or `/reject`. Sync run attempts are visible through
+`GET /v1/google-sheets-sync/runs`. The accepted model revision carries the source
+workbook URL and external revision identity; the sync inbox separately retains the
+observed contract fingerprint, retrieval time, preview, and review decision.
+
 Preview recalculation is advisory. Import recalculates at acceptance and captures the
 then-current listing quote under the existing freshness/currency rules. Outputs in
 the portable base snapshot cannot overwrite calculations, market observations,
 assumptions, model identity, or revision history. Unknown contract versions are
-rejected by validation. This development transport is a file handoff; OAuth, live
-Sheets API sync, concurrent cell-level merge, further model methodologies and
-authentication are not included.
+rejected by validation. The file handoff remains available alongside the read-only
+service-account sync. Concurrent cell-level merge, further model methodologies,
+OAuth-based user authentication and multi-user authorization are not included.
 
 The API integration test demonstrates the full round trip: export revision 2, change
 Base-case Year 1 revenue growth from `0.21` to `0.22` in the portable candidate,
@@ -312,10 +352,12 @@ accepted.
 ## Lessons for more model types
 
 The migration inventory lists 116 model tabs and the workbook registry contains
-219 companies. Six tabs have native formula parity fixtures: `P-GOOGL`, `P-ASML`,
-`P-ISRG`, `P-MA`, `W-TOST`, and dropped `W-HDFC`. Five active companies now have
-accepted native input revisions (4 Portfolio and 1 Watchlist). This is a controlled
-5-of-92 active model-tab migration, not workbook-wide issuer coverage.
+219 companies. At the earlier checkpoint, six tabs had native formula parity
+fixtures: `P-GOOGL`, `P-ASML`, `P-ISRG`, `P-MA`, `W-TOST`, and dropped
+`W-HDFC`. The October 9 coverage batch added `P-AMZN`, `P-HIMS`, and `P-MSFT`.
+The local application now has nine native Portfolio models and one Watchlist
+model among 92 active model tabs. This remains a controlled input migration, not
+workbook-wide issuer coverage.
 
 Keep the shared envelope small: company/model identity, methodology discriminator,
 currency/listing, revision chain, rationale/provenance, timestamps and a normalized

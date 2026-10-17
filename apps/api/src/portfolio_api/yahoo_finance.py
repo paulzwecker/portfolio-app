@@ -49,9 +49,14 @@ FX_SYMBOLS: dict[tuple[str, str], str] = {
     ("DKK", "EUR"): "DKKEUR=X",
     ("GBP", "EUR"): "GBPEUR=X",
     ("JPY", "EUR"): "JPYEUR=X",
+    ("NOK", "EUR"): "NOKEUR=X",
     ("SEK", "EUR"): "SEKEUR=X",
-    ("TWD", "EUR"): "TWDEUR=X",
+    # Yahoo has only a single recent observation for TWDEUR=X. The explicit
+    # reverse cross has usable history and is inverted after its source currency
+    # and symbol are validated by the normalizer.
+    ("TWD", "EUR"): "EURTWD=X",
 }
+FX_INVERTED_PAIRS: frozenset[tuple[str, str]] = frozenset({("TWD", "EUR")})
 
 
 class YahooListingMapping(BaseModel):
@@ -139,6 +144,9 @@ class YahooFxFact:
     base_currency: str
     quote_currency: str
     provider_symbol: str
+    provider_base_currency: str
+    provider_quote_currency: str
+    inverted: bool
     effective_at: datetime
     observed_at: datetime | None
     rate: Decimal
@@ -380,7 +388,7 @@ class YahooFxNormalizer:
     """Versioned point-in-time conversion of explicit provider FX crosses."""
 
     domain = ExternalDataDomain.FX
-    version = "yahoo-fx-normalizer-v1"
+    version = "yahoo-fx-normalizer-v2"
 
     def normalize(self, record: RawProviderRecord) -> NormalizationResult[YahooFxFacts]:
         if record.provider_id != YAHOO_PROVIDER_ID or record.domain != ExternalDataDomain.FX:
@@ -392,13 +400,15 @@ class YahooFxNormalizer:
         try:
             base, quote = record.source_record_id[3:].split("/", maxsplit=1)
             symbol = FX_SYMBOLS[(base, quote)]
+            inverted = (base, quote) in FX_INVERTED_PAIRS
         except (ValueError, KeyError):
             return _rejected("FX_PAIR_UNSUPPORTED", "Yahoo FX cross is not explicitly mapped.")
+        provider_base, provider_quote = (quote, base) if inverted else (base, quote)
         parsed = _read_chart(record)
         if isinstance(parsed, NormalizationResult):
             return parsed
         result, meta = parsed
-        if str(meta.get("currency", "")).upper() != quote:
+        if str(meta.get("currency", "")).upper() != provider_quote:
             return _rejected(
                 "FX_QUOTE_CURRENCY_MISMATCH", "Yahoo FX quote currency did not match the pair."
             )
@@ -411,7 +421,7 @@ class YahooFxNormalizer:
             return _rejected("FX_PROVIDER_SYMBOL_MISMATCH", "Yahoo returned a different FX symbol.")
         try:
             prices, _, quote_row, missing, _in_progress, _duplicates = _parse_prices(
-                record, result, meta, currency=quote, price_symbol=symbol, fx=True
+                record, result, meta, currency=provider_quote, price_symbol=symbol, fx=True
             )
         except DuplicateMarketSessionError as error:
             return _rejected("DUPLICATE_FX_SESSION_CONFLICT", str(error))
@@ -422,9 +432,12 @@ class YahooFxNormalizer:
                 base_currency=base,
                 quote_currency=quote,
                 provider_symbol=symbol,
+                provider_base_currency=provider_base,
+                provider_quote_currency=provider_quote,
+                inverted=inverted,
                 effective_at=_fx_effective_at(price.market_date),
                 observed_at=price.observed_at,
-                rate=price.provider_close,
+                rate=Decimal(1) / price.provider_close if inverted else price.provider_close,
                 source_ref=price.source_ref,
             )
             for price in prices
@@ -435,9 +448,14 @@ class YahooFxNormalizer:
                     base_currency=base,
                     quote_currency=quote,
                     provider_symbol=symbol,
+                    provider_base_currency=provider_base,
+                    provider_quote_currency=provider_quote,
+                    inverted=inverted,
                     effective_at=quote_row.observed_at or _fx_effective_at(quote_row.market_date),
                     observed_at=quote_row.observed_at,
-                    rate=quote_row.provider_close,
+                    rate=(Decimal(1) / quote_row.provider_close)
+                    if inverted
+                    else quote_row.provider_close,
                     source_ref=quote_row.source_ref,
                     is_current_quote=True,
                 ),

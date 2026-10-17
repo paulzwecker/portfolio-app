@@ -50,6 +50,7 @@ def test_temporal_alignment_rejects_naive_or_future_forecast_knowledge() -> None
         )
 
 
+@pytest.mark.integration
 def test_temporal_alignment_respects_intraday_effective_and_knowledge_cutoffs(
     postgres_engine: Engine,
 ) -> None:
@@ -365,3 +366,53 @@ def test_temporal_alignment_respects_intraday_effective_and_knowledge_cutoffs(
         assert after_filing.model_forecasts[0].value is None
         assert after_filing.actual.status == "AVAILABLE"
         assert after_filing.actual.value == Decimal("90")
+
+        # A stored retrieval time bounds when this application knew the bar,
+        # but without provider observation time it is not an eligible point-in-
+        # time price and cannot support a subsequent return baseline.
+        session.add(
+            PriceObservation(
+                id=uuid4(),
+                listing_id=listing_id,
+                batch_id=None,
+                price_kind="DAILY_CLOSE",
+                market_date=stamp("2026-10-04T00:00:00"),
+                observed_at=None,
+                recorded_at=stamp("2026-10-04T21:01:00"),
+                provider_close=Decimal("105"),
+                split_adjusted_close=Decimal("105"),
+                total_return_close=Decimal("105"),
+                volume=None,
+                currency="USD",
+                provider_currency="USD",
+                source_price_multiplier=Decimal("1"),
+                provider="YAHOO_FINANCE",
+                provider_symbol="TIME",
+                adjustment_basis="SPLIT_AND_DISTRIBUTION_ADJUSTED",
+                data_quality="PASS",
+                source_ref="synthetic:unknown-provider-observation-time",
+                supersedes_observation_id=None,
+            )
+        )
+        session.flush()
+        unknown_source_time = company_temporal_alignment(
+            session,
+            company_id,
+            fiscal_year=2027,
+            as_of=date(2026, 10, 5),
+            known_at=stamp("2026-10-05T12:00:00"),
+            outcome_known_at=stamp("2028-03-16T00:00:00"),
+            horizon_days=90,
+        )
+        assert unknown_source_time.model_forecasts[0].price_at_forecast.market_date == stamp(
+            "2026-10-04T00:00:00"
+        )
+        assert unknown_source_time.model_forecasts[0].price_at_forecast.status == "DATA_CHECK"
+        assert unknown_source_time.model_forecasts[0].price_at_forecast.observed_at is None
+        assert unknown_source_time.model_forecasts[0].price_at_forecast.recorded_at == stamp(
+            "2026-10-04T21:01:00"
+        )
+        assert (
+            unknown_source_time.model_forecasts[0].subsequent_market_return.status
+            == "BASE_PRICE_DATA_CHECK"
+        )

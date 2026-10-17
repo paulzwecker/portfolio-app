@@ -1,72 +1,50 @@
 # Company Explorer
 
-`/company/[id]` is the company-level research surface. It composes persisted domain
-views and exposes method-specific authoring workflows for three supported canonical
-model methodologies; all model calculation remains in the API.
+`/company/[id]` is the company research cockpit. The route stays thin; the workspace
+loads a focused view and composes the existing feature components. Canonical API
+responses own all portfolio and financial calculations.
 
-## Information structure
+## Company workspace
 
-The Explorer is arranged for a top-down company review:
+The stable header shows canonical company identity, lifecycle, reporting currency,
+the exact selected listing, its quote currency and its listing-specific freshness.
+Selecting another listing changes only the quote context. It does not substitute a
+security or change the model's valuation listing.
 
-1. **Identity header** — company name, lifecycle, reporting currency, and all known
-   listing symbols with their venue and listing currency. Listing identity remains
-   distinct from company identity.
-2. **Company context** — securities and listings, explicit lifecycle with a folded
-   transition form and decision history, plus current holding-snapshot completeness,
-   observed positions and accepted strategic target. Portfolio-currency position
-   values and their price/FX availability are shown as returned by the API.
-3. **Quality and risk** — the independent 10Y Durability, Compounder Quality,
-   Execution and Risk assessments with their definition scale/direction, rationale,
-   effective date, status and per-dimension history. New assessments remain an
-   explicit user action that appends history.
-4. **Market facts** — a listing-specific latest split-adjusted close, source date,
-   provider, quality and freshness. Price history charts and regime measures are
-   available within a per-listing disclosure.
-5. **Reported fundamentals** — annual, quarterly and instant revenue, income,
-   balance-sheet, cash-flow and diluted-share facts, with source/currency/period
-   provenance, filing history, conflicts, quality and explicit not-imported states.
-   The Explorer does not calculate FCF, ratios or growth from these observations.
-6. **Consensus estimates** — provider-specific forward annual/quarterly revenue and
-   EPS, exact fiscal period where available, mean/range, analyst count, currency,
-   snapshot freshness, data-quality reason and expandable revision history. Provider
-   continuity is visible; fallback series remain separate and never fill a primary
-   provider gap. Consensus is not a native model assumption.
-7. **Estimate Momentum** - a separate API-calculated direction and confidence-adjusted
-   score from point-in-time annual Revenue/EPS revisions. The Explorer shows the 12M,
-   6M and 3M comparison values and dates, per-period analyst coverage, separate history coverage/confidence, selected provider, freshness
-   and quality state. Missing history is unavailable, not neutral. Persistence and
-   analyst up/down breadth remain uncalculated because their inputs cannot be safely
-   derived from the captured consensus domain.
-8. **Filings and source documents** ? SEC filings and issuer source links by type,
-   filing/publication date, reporting period, accession/reference, amendment link,
-   retrieval/recorded time and data-quality state. Unmapped SEC identity and empty
-   history remain explicit. The view links to primary sources without downloaded
-   filing text or AI-generated summaries.
-9. **Canonical models** — UFCF DCF, owner-cash-flow and residual-income assumptions,
-   scenarios, method-derived projections, normalized outputs, availability and
-   immutable revision history. Each method has a corresponding form and calculation
-   preview. Imported workbook output snapshots remain separate and read-only.
-10. **Imported valuation outputs** — current normalized Bear/Base/Bull outputs,
-    probabilities, Weighted Fair Value/Upside, Expected Cash-Flow IRR, Hurdle,
-    Expected Excess, Forward Fundamental CAGR, model currency/status, quality,
-    provenance and recorded/effective times. Historical snapshots are expandable.
-11. **Ranking context** — Portfolio, Watchlist and Research state remain separate.
-    Stored rank positions are shown only where recorded; unavailable, excluded,
-    partial and not-migrated states remain explicit. Each type retains its run history.
+The workspace uses six keyboard-accessible tabs and preserves legacy section links:
 
-A compact in-page navigation links to these sections. The layout folds longer
-histories and price details behind native disclosure controls, while keeping current
-company and investment context visible. Cards collapse into a single-column flow on
-small screens; tables and fixed-width spreadsheet layouts are not used on this page.
+| View                | Main purpose and contents                                                                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview            | Company context, lifecycle, holdings/target context and the company Attention Center.                                                                                                   |
+| Financials          | Selectable reported annual/quarterly statement rows with a multi-series chart and source drawer; third-party consensus; agent-authored forecasts. Each source stays separately labeled. |
+| Valuation           | Method-specific native editors for UFCF DCF, owner cash flow and residual income; projections, revisions, imported output snapshots and model migration status.                         |
+| Investment Thesis   | Independent score assessments and their history alongside accepted, versioned thesis claims and evidence.                                                                               |
+| Research & Evidence | Filing/source documents and accepted qualitative risk assessments with their portfolio baseline.                                                                                        |
+| Historical Analysis | Listing-specific market history, Estimate Momentum, point-in-time forecast-versus-outcome alignment, expected-return history, rankings and Execution Pace.                              |
 
-The **Forecast vs. outcome** section follows consensus estimates. It displays the
-selected native model revision, selected consensus period and later reported Revenue
-for the chosen fiscal year where each source can be aligned. Current model projections
-have ordinal years but no fiscal-year anchor, so their requested-FY value remains
-explicitly unavailable instead of using revision time as a proxy. Its controls select
-fiscal year, forecast cutoff and market return horizon. The display retains revision
-provenance, both temporal cutoffs, exact-listing baseline price, total-return outcome
-and explicit coverage states; it does not produce a forecast-quality score.
+Reported metric exploration supports only canonical facts returned by the reported
+fundamentals API (including revenue, operating income/EBIT, cash-flow, balance-sheet
+and shares facts). The selectable chart is presentation-only, supports multiple rows,
+and groups each currency/unit basis into its own facet. Missing, conflicting and
+quality-checked periods break a line; mixed bases remain in the table and are not
+plotted together. The interface does not synthesize EBITDA, EPS, free cash flow,
+ratios or growth from other facts. Missing, conflicting and not-imported values keep
+their explicit status.
+
+Consensus estimates, agent research forecasts, reported actuals and accepted model
+projections use separate sections and labels. A model projection is not mapped to a
+fiscal year unless its accepted revision provides that mapping. Valuation retains the
+distinct economic methodology of each supported model family; normalized output
+formatting is shared, while deterministic recalculation remains in the API. Edits use
+the existing preview, explicit acceptance, stale-base conflict and append-only
+revision workflow. Imported workbook output snapshots remain read-only.
+
+Tabs use the shared responsive layout and preserve URL view state. Long evidence and
+revision histories use disclosure controls. On narrow screens the tab list scrolls
+without page-wide horizontal overflow, tables use the shared responsive table, and
+model editors keep their existing responsive forms and method-specific projections.
+See [company-explorer-11f.md](design/company-explorer-and-modeling-11f.md) for the
+implementation map, shared financial components, verification and limitations.
 
 ## Canonical reads
 
@@ -80,13 +58,19 @@ proxy:
   `GET /v1/companies/{company_id}/scores/history` for versioned assessments.
 - `GET /v1/companies/{company_id}/rankings` for the current stored runs and
   immutable company history.
-- `GET /v1/companies/{company_id}/market-data?history_limit=90` for each supported
+- `GET /v1/companies/{company_id}/market-data?history_limit=252` for each supported
   listing’s quote, price observations, freshness and price-regime facts.
 - `GET /v1/companies/{company_id}/reported-fundamentals` for canonical statement
   periods, coverage, source alternatives, filing provenance and conflicts; optional
   `period_type`, `as_of` and `known_at` filters preserve period and point-in-time
   semantics. `GET /v1/reported-fundamental-definitions` describes observed metrics
   and marks free cash flow as derived.
+- `GET /v1/companies/{company_id}/financial-statements` for the Financials workspace:
+  unique economic-period columns, reported/consensus/agent rows, source IDs,
+  explicit availability states, alignment limitations and nested source history.
+  `period_type`, `period_limit`, `as_of` and `known_at` preserve the same
+  point-in-time rules; fiscal labels are emitted only when contemporaneous filing
+  evidence supports them.
 - `GET /v1/companies/{company_id}/consensus-estimates` for separately retained
   provider streams, their continuity selection, current forward periods and captured
   history; optional `as_of` and timezone-aware `known_at` preserve point-in-time
@@ -105,9 +89,28 @@ proxy:
   anchor. See
   [temporal-alignment.md](temporal-alignment.md) for the exact cutoff and coverage
   rules.
+- `GET /v1/companies/{company_id}/forecast-accuracy` for historical agent,
+  accepted-model and selected-consensus forecasts compared with later reported
+  facts. Source, metric, fiscal period and outcome-known cutoff filters are
+  supported. See [forecast-accuracy.md](forecast-accuracy.md) for timestamp,
+  fiscal-period, exact-metric and aggregation rules.
 - `GET /v1/companies/{company_id}/source-documents` for filing/source metadata,
   SEC identity status and source history; optional `document_type`, `as_of` and
   timezone-aware `known_at` filters preserve type and point-in-time semantics.
+- `GET /v1/companies/{company_id}/research` for the separate agent-authored
+  forecast and assessment streams, with optional `as_of` and timezone-aware
+  `known_at` cutoffs. See [research-forecasts.md](research-forecasts.md).
+- `GET /v1/companies/{company_id}/thesis` for point-in-time thesis streams,
+  keyed claims, current/prior revisions, support/contradicting/context evidence,
+  and linked filing/reported-fact provenance. A Sheets research agent can publish a
+  complete `InvestmentThesisContractV1` snapshot through
+  `POST /v1/investment-thesis-revisions`; see
+  [investment-thesis.md](investment-thesis.md).
+- `GET /v1/companies/{company_id}/risk-assessments` for current company-linked
+  findings and accepted history. `GET /v1/portfolios/{portfolio_id}/risk-assessments`
+  shows portfolio-level accepted assessments. Inbox review is performed in the
+  separate Sheets risk-assessment workflow; no assessment changes portfolio or
+  model state. See [risk-assessments.md](risk-assessments.md).
 - `POST /v1/companies/{company_id}/source-documents` to append an HTTPS issuer
   annual-report or earnings-release reference. SEC filing metadata enters through
   the reviewed CIK ingestion command.
@@ -169,10 +172,19 @@ The score panel keeps Risk’s higher-is-greater-risk direction separate from th
 higher-is-better dimensions. Model output snapshots do not own scores, lifecycle,
 holdings, targets, market facts or ranking state.
 
-The Explorer does not currently contain first-class thesis, evidence or additional
-financial-model input domains. Consensus coverage remains partial until primary
-provider mappings and prospective snapshots are configured. Unsupported model types are
-shown as not natively editable rather than filled with workbook-derived placeholders.
+The Explorer now contains a read/review surface for first-class thesis and evidence
+history; direct web editing of thesis revisions is not included in this slice.
+Consensus coverage remains partial until primary provider mappings and prospective
+snapshots are configured. Unsupported model types are shown as not natively editable
+rather than filled with workbook-derived placeholders.
+
+The Scenario Calibration & Decision Evaluation panel exposes numeric Bear/Base/Bull
+projection groups, eligible proper scores, valuation-only scenario snapshots, and
+subsequent outcomes for immutable Portfolio Rank, Watchlist Rank and Execution Pace
+snapshots. It excludes Research Rank from return evaluation and displays insufficient
+samples and missing source/period states explicitly. See
+[decision-evaluation.md](decision-evaluation.md) for calculation and comparability
+rules.
 
 ## Boundary before broader model support
 

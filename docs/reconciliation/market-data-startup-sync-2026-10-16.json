@@ -1,0 +1,108 @@
+{
+  "milestone": "10.0",
+  "checked_at": "2026-10-16T01:49:00+02:00",
+  "database": "local canonical PostgreSQL",
+  "diagnosis": {
+    "price_provider": "Yahoo requests inherited HTTP(S)_PROXY=http://127.0.0.1:9; the local port refused connections. Direct access to both Yahoo chart hosts succeeded when those exact hosts bypassed the proxy.",
+    "historical_analytics": "Canonical clean daily closes existed, but current Company/Universe measures depended on stored legacy PriceRegimeSnapshot rows instead of deriving metrics from PriceObservation history.",
+    "frontend_rendering": "Some live quotes carried an exchange-local market-date label one day ahead of the UTC calendar date. The query calculated age_days=-1 even though the quote was observed before the knowledge cutoff; strict frontend validation then rejected the entire market-summary response. Current-quote freshness now uses the actual recorded observation date for that ahead-of-UTC session-label case.",
+    "history_coverage_before": {
+      "portfolio_exact_listings_with_at_least_252_clean_daily_closes": 22,
+      "portfolio_exact_listings": 22,
+      "watchlist_exact_listings_with_at_least_252_clean_daily_closes": 61,
+      "watchlist_exact_listings": 61,
+      "watchlist_companies_without_exact_listing_identity": 10
+    },
+    "legacy_regime_snapshot_coverage_before": {
+      "portfolio": "21/22 exact listings",
+      "watchlist": "50/61 exact listings",
+      "total": "71/83 exact active company listings"
+    }
+  },
+  "dependency_analysis": {
+    "provider_to_canonical": "The existing Yahoo adapter stores raw payloads and normalizes exact crosswalk identities into append-only PriceObservation and FxObservation rows. The startup worker calls this existing ingestion path.",
+    "portfolio_value_and_weights": "Portfolio overview selects the accepted holdings snapshot at its valuation/knowledge cutoff, then selects exact-listing clean prices and dated FX independently at that cutoff. Newer market observations can mark older accepted quantities without changing holdings history.",
+    "current_model_return": "Current native model calculations use the accepted revision with a quote for its exact valuation listing, bounded by as-of and known-at cutoffs. Source revision/reference-price outputs remain historical, and a quote update does not append a model revision.",
+    "ranking": "Portfolio and Watchlist ranks are immutable runs that consume eligible canonical model/return state and documented context. Startup ingestion does not create or rewrite ranking runs.",
+    "execution_pace": "Execution Pace separately consumes the exact-listing latest quote and the legacy PriceRegimeSnapshot label/freshness, along with current model, target and portfolio inputs. The broader legacy regime label is not inferred from price history in this milestone; stale or absent regime evidence can still yield REVIEW.",
+    "historical_views": "Historical queries use canonical daily observations and honor both market effective date and recorded/observed knowledge cutoffs. Universe/Company UI reads canonical API outputs and polls market state every 30 seconds."
+  },
+  "coverage_before": {
+    "fresh_current_quotes": "0/83 exact active company listings; latest accepted quote dates were 2026-10-09",
+    "price_analytics_from_legacy_snapshots": "71/83 exact active company listings",
+    "fx": "9/9 required EUR pairs had prior observations, but latest observations were 6-10 days old",
+    "charts": "Underlying daily history was present. The API could already return a 90-session chart for a sampled company; missing chart measures were due to the snapshot-only analytics path."
+  },
+  "live_refresh": {
+    "provider": "YAHOO_FINANCE",
+    "run_status": "PARTIAL",
+    "duration_seconds": 6.22,
+    "proxy_bypass_applied": true,
+    "market_data": {
+      "status": "PARTIAL",
+      "exact_listing_requests_succeeded": "84/84 selected active/held listing identities",
+      "price_rows_received": 5451,
+      "price_rows_inserted": 544,
+      "fetch_failures": 0,
+      "normalization_rejections": 0,
+      "company_listing_coverage_after": {
+        "portfolio": "22/22 fresh exact listings across 21 companies",
+        "watchlist": "61/61 fresh exact listings among 61 mapped companies"
+      }
+    },
+    "fx": {
+      "status": "COMPLETE",
+      "pairs_refreshed": 9,
+      "observations_inserted": 69,
+      "pairs_with_current_dated_observation": "9/9",
+      "latest_effective_session_date": "2026-10-16"
+    },
+    "corporate_actions": {
+      "status": "PARTIAL",
+      "observations_received": 29,
+      "observations_inserted": 1,
+      "observations_unverified": 29,
+      "provider_failures": 0
+    }
+  },
+  "coverage_after": {
+    "fresh_current_quotes": "83/83 exact active company listings",
+    "analytics_available_252_sessions": {
+      "portfolio": "22/22 exact listings: 50DMA, 200DMA, 20-day volatility and 52-week drawdown",
+      "watchlist": "61/61 exact listings: 50DMA, 200DMA, 20-day volatility and 52-week drawdown"
+    },
+    "charts": "90 daily bars returned for a live Company API check; all 83 mapped active company listings have at least 252 eligible sessions for charting and analytics",
+    "fx": "9/9 relevant EUR pairs have current dated observations"
+  },
+  "portfolio_after": {
+    "valuation_mode": "CURRENT_MARK_TO_MARKET",
+    "valuation_status": "VALUED",
+    "valuation_currency": "EUR",
+    "base_market_value": "57825.38722904",
+    "position_count": 22,
+    "valuation_gaps": 0,
+    "holdings_age_days": 11,
+    "holdings_freshness": "STALE",
+    "note": "Prices and FX mark the existing accepted holdings snapshot; its stale confirmation state remains visible and quantities were not changed."
+  },
+  "repeat_startup_check": {
+    "status": "SKIPPED",
+    "duration_seconds": 0.84,
+    "reason": "Canonical prices, FX and ingestion runs were current; no provider run or duplicate observations were created."
+  },
+  "verification": {
+    "full_repository_check": "PASS: lint, formatting, TypeScript, mypy, 107 frontend tests, 321 backend tests, contract check and production build",
+    "full_browser_suite": "PASS: 36 desktop/mobile tests; 10 opt-in live/write tests skipped",
+    "live_market_browser": "PASS: desktop and mobile read-only flows verified exact TSM listings, PARTIAL refresh status, 200-day analytics and price history against the local API/database",
+    "database_regression": "PASS: 28 domain-operation tests including historical cutoff and exchange-local market-date freshness",
+    "database_migration_check": "PASS: no new Alembic upgrade operations detected",
+    "startup_lock": "PASS: a competing worker start skipped while the PostgreSQL advisory lock was held",
+    "startup_worker": "PASS: npm run dev:market-data launched, checked the canonical database, and skipped in under one second when current"
+  },
+  "remaining": {
+    "listing_identity": "10 active Watchlist companies still lack exact canonical listing identity and remain unavailable; no proxy listing was used.",
+    "corporate_actions": "Yahoo action observations remain unverified and are not used to claim dividend total returns.",
+    "refresh_state": "PARTIAL until the unmapped Watchlist companies and unverified action state are resolved through authoritative evidence.",
+    "model_and_decision_history": "No accepted model revisions, assumptions, holdings, targets, ranks, execution decisions or historical snapshots were changed by this refresh."
+  }
+}

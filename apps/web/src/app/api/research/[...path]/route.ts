@@ -1,12 +1,37 @@
 import {
   isAttentionFeed,
+  isGoogleSheetsConnectionTest,
+  isGoogleSheetsPortfolioStatePublish,
+  isGoogleSheetsSyncCandidate,
+  isGoogleSheetsSyncCheck,
+  isGoogleSheetsSyncRun,
+  isGoogleSheetsSyncStatus,
+  isGoogleSheetsThesisWatchPublish,
+  isGoogleSheetsAgentWorkPublish,
+  isGoogleSheetsRiskSyncStatus,
+  isGoogleSheetsRiskSyncRun,
+  isGoogleSheetsRiskCandidate,
+  isGoogleSheetsRiskSyncCheck,
+  isGoogleSheetsResearchCandidate,
+  isGoogleSheetsResearchConnectionTest,
+  isGoogleSheetsResearchSyncCheck,
+  isGoogleSheetsResearchSyncRun,
+  isGoogleSheetsResearchSyncStatus,
+  isCompanyRiskAssessments,
+  isPortfolioRiskAssessments,
   isDetail,
   isEvent,
   isFxObservation,
   isFxObservations,
   isListingMarketData,
+  isMarketRefreshStatus,
+  isOperationalJobRequest,
+  isOperationalJobRequestList,
+  isRecurringOperationsStatus,
+  isResearchAgentWorkEvents,
   isOverview,
   isPortfolios,
+  isSnapshotRead,
   isScoreCurrents,
   isScoreDefinitions,
   isScoreHistory,
@@ -47,28 +72,81 @@ import {
   isOwnerCashFlowCalculationPreview,
   isResidualIncomeCalculationPreview,
   isCompanyReportedFundamentals,
+  isCompanyFinancialStatements,
   isCompanyConsensusEstimates,
+  isCompanyDecisionEvaluation,
   isCompanyEstimateMomentum,
   isCompanyExpectedReturnHistory,
   isCompanyExpectedReturnAttribution,
   isCompanyTemporalAlignment,
   isCompanySourceDocuments,
+  isCompanyResearch,
+  isCandidatePipelineQueue,
+  isCompanyCandidatePipeline,
+  isCandidatePipelinePublicationResult,
+  isResearchPublicationResult,
+  isCompanyInvestmentThesis,
+  isInvestmentThesisPublicationResult,
+  isResearchQueue,
+  isResearchQueueCompletionResult,
+  isResearchQueueHistory,
+  isResearchTriggerReadResult,
+  isResearchTriggerRefreshResult,
   isSourceDocument,
   isReportedFundamentalDefinitions,
 } from "@/lib/domain-contracts";
+import { webAccessRejection } from "@/lib/server-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "no-store" };
 const id = "[0-9a-fA-F-]{36}";
+const digest = "[0-9a-f]{64}";
 const readable = new RegExp(
-  `^(attention|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|portfolios|companies/${id}|companies/${id}/(market-data|reported-fundamentals|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/overview)$`,
+  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(candidate-pipeline|research|thesis|risk-assessments|market-data|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(overview|risk-assessments))$`,
 );
 const writable = new RegExp(
-  `^(companies/${id}/(lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|ranking-runs|execution-pace-runs|fx-observations)$`,
+  `^(operations/job-requests|operations/job-requests/${id}/retry|research-queue/${digest}/complete|research-triggers/refresh|research-revisions|investment-thesis-revisions|companies/${id}/(candidate-pipeline-revisions|lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|google-sheets-agent-operations/(DATA_UNIVERSE_STEWARD|PORTFOLIO_THESIS_SENTINEL|MODEL_ALLOCATION_STEWARD)/work/publish|google-sheets-sync/(connection-test|check|thesis-watch/publish|portfolio-state/publish|candidates/${id}/(preview|accept|reject))|google-sheets-risk-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|google-sheets-research-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|ranking-runs|execution-pace-runs|fx-observations|portfolios/${id}/holding-snapshots)$`,
 );
 
 function validWrite(path: string, data: unknown): boolean {
+  if (path === "operations/job-requests" || path.endsWith("/retry"))
+    return isOperationalJobRequest(data);
+  if (path.startsWith("research-queue/"))
+    return isResearchQueueCompletionResult(data);
+  if (path === "research-triggers/refresh")
+    return isResearchTriggerRefreshResult(data);
+  if (path.endsWith("/candidate-pipeline-revisions"))
+    return isCandidatePipelinePublicationResult(data);
+  if (path === "research-revisions") return isResearchPublicationResult(data);
+  if (path === "investment-thesis-revisions")
+    return isInvestmentThesisPublicationResult(data);
+  if (path === "google-sheets-sync/connection-test")
+    return isGoogleSheetsConnectionTest(data);
+  if (
+    path.startsWith("google-sheets-agent-operations/") &&
+    path.endsWith("/work/publish")
+  )
+    return isGoogleSheetsAgentWorkPublish(data);
+  if (path === "google-sheets-sync/check") return isGoogleSheetsSyncCheck(data);
+  if (path === "google-sheets-sync/thesis-watch/publish")
+    return isGoogleSheetsThesisWatchPublish(data);
+  if (path === "google-sheets-sync/portfolio-state/publish")
+    return isGoogleSheetsPortfolioStatePublish(data);
+  if (path.startsWith("google-sheets-sync/candidates/"))
+    return isGoogleSheetsSyncCandidate(data);
+  if (path === "google-sheets-risk-sync/connection-test")
+    return isGoogleSheetsConnectionTest(data);
+  if (path === "google-sheets-risk-sync/check")
+    return isGoogleSheetsRiskSyncCheck(data);
+  if (path.startsWith("google-sheets-risk-sync/candidates/"))
+    return isGoogleSheetsRiskCandidate(data);
+  if (path === "google-sheets-research-sync/connection-test")
+    return isGoogleSheetsResearchConnectionTest(data);
+  if (path === "google-sheets-research-sync/check")
+    return isGoogleSheetsResearchSyncCheck(data);
+  if (path.startsWith("google-sheets-research-sync/candidates/"))
+    return isGoogleSheetsResearchCandidate(data);
   if (path.startsWith("canonical-financial-models/")) {
     if (path.endsWith("/contract/preview"))
       return isAdditionalModelContractPreview(data);
@@ -109,12 +187,53 @@ function validWrite(path: string, data: unknown): boolean {
   if (path.endsWith("/revisions")) return isFinancialModelRevisionDetail(data);
   if (path === "ranking-runs") return isRankingRun(data);
   if (path === "execution-pace-runs") return isExecutionPaceRun(data);
+  if (/^portfolios\/[0-9a-fA-F-]{36}\/holding-snapshots$/.test(path))
+    return isSnapshotRead(data);
   if (path === "fx-observations") return isFxObservation(data);
   return isEvent(data);
 }
 
 function validRead(path: string, data: unknown): boolean {
+  if (path === "operations/job-requests")
+    return isOperationalJobRequestList(data);
+  if (/^operations\/job-requests\/[0-9a-fA-F-]{36}$/.test(path))
+    return isOperationalJobRequest(data);
+  if (path === "recurring-operations/status")
+    return isRecurringOperationsStatus(data);
+  if (path === "research-agent-operations/events")
+    return isResearchAgentWorkEvents(data);
+  if (path === "market-data/status") return isMarketRefreshStatus(data);
+  if (path === "research-queue") return isResearchQueue(data);
+  if (path === "research-queue/history") return isResearchQueueHistory(data);
+  if (path === "research-triggers") return isResearchTriggerReadResult(data);
+  if (path === "candidate-pipeline") return isCandidatePipelineQueue(data);
+  if (path.startsWith("companies/") && path.endsWith("/candidate-pipeline"))
+    return isCompanyCandidatePipeline(data);
   if (path === "attention") return isAttentionFeed(data);
+  if (path === "google-sheets-sync/status")
+    return isGoogleSheetsSyncStatus(data);
+  if (path === "google-sheets-risk-sync/status")
+    return isGoogleSheetsRiskSyncStatus(data);
+  if (path === "google-sheets-research-sync/status")
+    return isGoogleSheetsResearchSyncStatus(data);
+  if (path === "google-sheets-research-sync/runs")
+    return Array.isArray(data) && data.every(isGoogleSheetsResearchSyncRun);
+  if (path === "google-sheets-research-sync/candidates")
+    return Array.isArray(data) && data.every(isGoogleSheetsResearchCandidate);
+  if (path.startsWith("google-sheets-research-sync/candidates/"))
+    return isGoogleSheetsResearchCandidate(data);
+  if (path === "google-sheets-risk-sync/runs")
+    return Array.isArray(data) && data.every(isGoogleSheetsRiskSyncRun);
+  if (path === "google-sheets-risk-sync/candidates")
+    return Array.isArray(data) && data.every(isGoogleSheetsRiskCandidate);
+  if (path.startsWith("google-sheets-risk-sync/candidates/"))
+    return isGoogleSheetsRiskCandidate(data);
+  if (path === "google-sheets-sync/runs")
+    return Array.isArray(data) && data.every(isGoogleSheetsSyncRun);
+  if (path === "google-sheets-sync/candidates")
+    return Array.isArray(data) && data.every(isGoogleSheetsSyncCandidate);
+  if (path.startsWith("google-sheets-sync/candidates/"))
+    return isGoogleSheetsSyncCandidate(data);
   if (path.startsWith("canonical-financial-models/")) {
     if (path.endsWith("/contract"))
       return isAdditionalModelPortableContractResponse(data);
@@ -127,10 +246,20 @@ function validRead(path: string, data: unknown): boolean {
     return isReportedFundamentalDefinitions(data);
   if (path.startsWith("companies/") && path.endsWith("/reported-fundamentals"))
     return isCompanyReportedFundamentals(data);
+  if (path.startsWith("companies/") && path.endsWith("/financial-statements"))
+    return isCompanyFinancialStatements(data);
+  if (path.startsWith("companies/") && path.endsWith("/research"))
+    return isCompanyResearch(data);
+  if (path.startsWith("companies/") && path.endsWith("/thesis"))
+    return isCompanyInvestmentThesis(data);
+  if (path.startsWith("companies/") && path.endsWith("/risk-assessments"))
+    return isCompanyRiskAssessments(data);
   if (path.startsWith("companies/") && path.endsWith("/consensus-estimates"))
     return isCompanyConsensusEstimates(data);
   if (path.startsWith("companies/") && path.endsWith("/estimate-momentum"))
     return isCompanyEstimateMomentum(data);
+  if (path.startsWith("companies/") && path.endsWith("/decision-evaluation"))
+    return isCompanyDecisionEvaluation(data);
   if (
     path.startsWith("companies/") &&
     path.endsWith("/expected-return-history")
@@ -171,6 +300,8 @@ function validRead(path: string, data: unknown): boolean {
     return isCompanyRankings(data);
   if (path === "portfolios") return isPortfolios(data);
   if (path.endsWith("/overview")) return isOverview(data);
+  if (path.endsWith("/risk-assessments"))
+    return isPortfolioRiskAssessments(data);
   if (path.endsWith("/scores/current")) return isScoreCurrents(data);
   if (path.endsWith("/scores/history")) return isScoreHistory(data);
   if (path.endsWith("/model-outputs/current"))
@@ -194,6 +325,9 @@ function validRead(path: string, data: unknown): boolean {
 }
 
 async function proxy(request: Request, path: string[]) {
+  const accessRejection = webAccessRejection(request);
+  if (accessRejection) return accessRejection;
+
   const joined = path.join("/");
   if (!(request.method === "GET" ? readable : writable).test(joined)) {
     return Response.json(
@@ -205,7 +339,10 @@ async function proxy(request: Request, path: string[]) {
     const base = process.env.API_BASE_URL;
     if (!base) throw new Error("Missing API configuration");
     const url = new URL(`v1/${joined}`, `${base.replace(/\/$/, "")}/`);
-    if (!["http:", "https:"].includes(url.protocol))
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      (process.env.NODE_ENV === "production" && url.protocol !== "https:")
+    )
       throw new Error("Invalid API configuration");
     const search = new URL(request.url).searchParams;
     for (const key of [
@@ -217,16 +354,20 @@ async function proxy(request: Request, path: string[]) {
       "base_currency",
       "quote_currency",
       "period_type",
+      "period_limit",
       "as_of",
       "known_at",
       "outcome_known_at",
       "fiscal_year",
       "horizon_days",
+      "horizons_days",
       "prior_point_id",
       "current_point_id",
       "document_type",
       "company_id",
       "event_type",
+      "trigger_type",
+      "processing_state",
       "severity",
       "status",
       "lookback_days",
@@ -245,6 +386,66 @@ async function proxy(request: Request, path: string[]) {
           "lookback_days",
           "limit",
         ].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
+        joined.endsWith("/decision-evaluation") &&
+        key === "outcome_known_at"
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
+        joined.endsWith("/decision-evaluation") &&
+        key === "horizons_days"
+      ) {
+        for (const horizon of search.getAll(key))
+          url.searchParams.append(key, horizon);
+      }
+      if (
+        value !== null &&
+        joined === "google-sheets-research-sync/candidates" &&
+        ["status", "limit"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined === "research-agent-operations/events" &&
+        key === "limit"
+      )
+        url.searchParams.set(key, value);
+      if (value !== null && joined === "candidate-pipeline" && key === "search")
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined === "research-queue" &&
+        ["lifecycle", "search", "include_complete"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined === "research-queue/history" &&
+        key === "limit"
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined === "research-triggers" &&
+        [
+          "as_of",
+          "company_id",
+          "trigger_type",
+          "processing_state",
+          "limit",
+        ].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined === "research-triggers/refresh" &&
+        ["as_of", "company_id", "lookback_days"].includes(key)
       )
         url.searchParams.set(key, value);
       if (
@@ -306,6 +507,27 @@ async function proxy(request: Request, path: string[]) {
       if (
         value !== null &&
         joined.startsWith("companies/") &&
+        joined.endsWith("/research") &&
+        ["as_of", "known_at"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
+        joined.endsWith("/thesis") &&
+        ["as_of", "known_at"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
+        joined.endsWith("/financial-statements") &&
+        ["period_type", "period_limit", "as_of", "known_at"].includes(key)
+      )
+        url.searchParams.set(key, value);
+      if (
+        value !== null &&
+        joined.startsWith("companies/") &&
         (joined.endsWith("/reported-fundamentals") ||
           joined.endsWith("/consensus-estimates") ||
           joined.endsWith("/estimate-momentum")) &&
@@ -338,9 +560,10 @@ async function proxy(request: Request, path: string[]) {
       // Host retains the browser's actual destination, including its local port.
       const host = request.headers.get("host") ?? requestUrl.host;
       if (
-        origin &&
-        (new URL(origin).host !== host ||
-          new URL(origin).protocol !== requestUrl.protocol)
+        (origin &&
+          (new URL(origin).host !== host ||
+            new URL(origin).protocol !== requestUrl.protocol)) ||
+        (!origin && process.env.NODE_ENV === "production")
       ) {
         return Response.json(
           { detail: "Invalid request origin" },
@@ -348,7 +571,16 @@ async function proxy(request: Request, path: string[]) {
         );
       }
       body = await request.text();
-      if (body.length > (joined.includes("financial-models") ? 100_000 : 5_000))
+      if (
+        body.length >
+        (joined.includes("financial-models") ||
+        joined === "research-revisions" ||
+        joined === "investment-thesis-revisions" ||
+        joined.includes("candidate-pipeline") ||
+        joined.startsWith("research-queue/")
+          ? 500_000
+          : 5_000)
+      )
         return Response.json(
           { detail: "Request is too large" },
           { status: 413, headers },
@@ -362,10 +594,17 @@ async function proxy(request: Request, path: string[]) {
         );
       }
     }
+    const apiAccessToken = process.env.API_ACCESS_TOKEN;
+    if (process.env.NODE_ENV === "production" && !apiAccessToken) {
+      throw new Error("API_ACCESS_TOKEN is missing.");
+    }
     const response = await fetch(url, {
       method: request.method,
       body,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiAccessToken ? { "X-API-Access-Token": apiAccessToken } : {}),
+      },
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(6000),
@@ -380,13 +619,19 @@ async function proxy(request: Request, path: string[]) {
             : response.status === 422
               ? joined.endsWith("score-assessments")
                 ? "Check the score, status, reason and effective timestamp."
-                : joined === "ranking-runs"
-                  ? "Check the ranking type and run reason."
-                  : joined === "fx-observations"
-                    ? "Check the currencies, positive rate, effective timestamp and source."
-                    : joined.includes("financial-models")
-                      ? "Check the model inputs, all three scenarios, probabilities, currency and revision base."
-                      : "Check the lifecycle selection, reason and effective timestamp."
+                : joined.endsWith("candidate-pipeline-revisions")
+                  ? "Check the Candidate stage sequence, gate outcomes, evidence, current score/model inputs and revision base."
+                  : joined === "investment-thesis-revisions"
+                    ? "Check the thesis, company/security identity, source evidence and current revision base."
+                    : joined === "ranking-runs"
+                      ? "Check the ranking type and run reason."
+                      : joined === "fx-observations"
+                        ? "Check the currencies, positive rate, effective timestamp and source."
+                        : joined.endsWith("holding-snapshots")
+                          ? "Check the timezone, non-negative exact listing quantities, cash balances and confirmation reason."
+                          : joined.includes("financial-models")
+                            ? "Check the model inputs, all three scenarios, probabilities, currency and revision base."
+                            : "Check the lifecycle selection, reason and effective timestamp."
               : "Research data is unavailable. Check the API, database and migrations.";
       return Response.json(
         { detail: message },

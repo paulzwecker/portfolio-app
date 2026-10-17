@@ -1,0 +1,102 @@
+{
+  "assessment_date": "2026-10-09",
+  "source_workbook": "reference/workbook/Portfolio_Watchlist.xlsx",
+  "source_workbook_sha256": "27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9",
+  "source_effective_date": null,
+  "accepted_batch": {
+    "models_imported": 4,
+    "replay_models_imported": 0,
+    "replay_models_already_imported": 8,
+    "mapping_version": "watchlist-owner-cf-2026-10-09-v1",
+    "methodology": "OWNER_CASH_FLOW_EQUITY_IRR",
+    "methodology_version": 1,
+    "currency": "USD",
+    "parity_per_model": {
+      "projections_passed": 123,
+      "projections_compared": 123,
+      "normalized_outputs_passed": 22,
+      "normalized_outputs_compared": 22
+    },
+    "models": [
+      {
+        "source_model_key": "W-AXON",
+        "company": "Axon Enterprise",
+        "listing": "AXON · NASDAQ · USD",
+        "net_debt_mapping": "Source B18 net debt is sign-converted into canonical net cash."
+      },
+      {
+        "source_model_key": "W-FIX",
+        "company": "Comfort Systems USA",
+        "listing": "FIX · NYSE · USD",
+        "parity_tolerance_note": "Output tolerance is at most 0.0000005 for six-decimal cached source rounding."
+      },
+      {
+        "source_model_key": "W-RBRK",
+        "company": "Rubrik",
+        "listing": "RBRK · NYSE · USD"
+      },
+      {
+        "source_model_key": "W-VEEV",
+        "company": "Veeva Systems",
+        "listing": "VEEV · NYSE · USD"
+      }
+    ]
+  },
+  "native_coverage": {
+    "watchlist_before": { "native": 1, "total": 71, "percent": 1.4 },
+    "watchlist_after": { "native": 5, "total": 71, "percent": 7.0 },
+    "portfolio_after": { "native": 9, "total": 21, "percent": 42.9 },
+    "active_total_after": { "native": 14, "total": 92, "percent": 15.2 }
+  },
+  "return_coverage": {
+    "method_comparable_watchlist_cohort": 5,
+    "methodology": "OWNER_CASH_FLOW_EQUITY_IRR v1",
+    "currency": "USD",
+    "current_expected_irr_available_for_new_models": 0,
+    "blocker": "Exact-listing price observations for AXON, FIX, RBRK and VEEV are stale; recalculated Expected IRR remains null. Toast's quote is also stale for the current Watchlist Rank freshness rule."
+  },
+  "watchlist_rank": {
+    "new_ranking_run_created": false,
+    "read_only_preview": {
+      "ranked": 0,
+      "data_check": 55,
+      "inputs_unavailable": 16,
+      "data_check_reasons": {
+        "legacy_currency_unknown": 31,
+        "return_method_unclassified": 23,
+        "Toast_stale_captured_price": 1
+      },
+      "inputs_unavailable_reasons": {
+        "contracts_without_numeric_expected_irr": 12,
+        "new_native_models_with_stale_listing_quotes": 4
+      }
+    },
+    "note": "Existing immutable Watchlist Rank v5 run was not changed. Refreshing the four quotes is necessary but not sufficient: unresolved legacy method and currency classifications still prevent choosing a single rank population."
+  },
+  "unaccepted_candidates": [
+    {
+      "source_model_key": "W-PME",
+      "status": "DATA_CHECK",
+      "projection_parity": "123/123",
+      "normalized_output_parity": "14/22",
+      "blocker": "Source Fair Value/return outputs do not fully reconcile; exact AUD/ASX identity is preserved."
+    },
+    {
+      "source_model_key": "W-GEV",
+      "status": "PARTIAL_MAPPING",
+      "blocker": "Base Year 10 UFCF growth input is missing at source cell J24."
+    },
+    {
+      "source_model_key": "W-KXS",
+      "status": "NOT_MAPPED",
+      "blocker": "Legacy model mixes CAD and USD unit bases."
+    }
+  ],
+  "reports": {
+    "parity": "watchlist-native-model-coverage-parity-2026-10-09.json",
+    "dry_run": "watchlist-native-model-coverage-dry-run-2026-10-09.json",
+    "apply": "watchlist-native-model-coverage-apply-2026-10-09.json",
+    "replay": "watchlist-native-model-coverage-replay-2026-10-09.json"
+  },
+  "recommended_next_batch": "Refresh exact-listing prices for the four accepted models, then continue the reviewed active B4 operating-company owner-cash-flow cohort only for exact listing/currency/layout matches with full parity; this also resolves unclassified legacy return bases blocking Watchlist Rank. Keep W-PME blocked until its remaining outputs are explained. Defer W-GEV until its missing source input is recovered and its enterprise return basis can be handled alongside the equity cohort."
+}

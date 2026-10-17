@@ -1,0 +1,365 @@
+{
+  "report_version": "1.0.0",
+  "review": "Portfolio Operating System Readiness Review",
+  "reviewed_at_utc": "2026-10-09T22:54:02Z",
+  "review_date_local": "2026-10-10",
+  "data_cutoff_utc": "2026-10-09T22:53:11Z",
+  "canonical_database": "local PostgreSQL",
+  "classification": "NOT_READY",
+  "classification_reason": "Current Portfolio valuation and market weights are incomplete, no Portfolio or Watchlist company is ranked, and Execution Pace is REVIEW for every Portfolio company. Required current factual inputs and authored targets are not sufficiently available for regular in-app investment management.",
+  "scope": {
+    "tracked_companies": 219,
+    "portfolio_companies": 21,
+    "watchlist_companies": 71,
+    "companies_without_current_lifecycle": 5,
+    "lifecycle_population": {
+      "PORTFOLIO": 21,
+      "WATCHLIST": 71,
+      "CANDIDATE": 96,
+      "DROP": 26
+    }
+  },
+  "workflow": {
+    "external_facts": {
+      "market_prices": {
+        "provider": "YAHOO_FINANCE",
+        "exact_portfolio_listing_coverage": "21/21",
+        "fresh_held_company_quotes": 5,
+        "stale_held_company_quotes": 16,
+        "portfolio_valuation_status": "INCOMPLETE_PRICE_COVERAGE",
+        "held_company_positions_valued": 5,
+        "portfolio_company_valuation_gaps": 16,
+        "all_portfolio_positions_including_standalone_security": 22,
+        "fresh_positions_including_standalone_security": 6,
+        "stale_positions_including_standalone_security": 16,
+        "standalone_security": "SPYY · ETR · EUR",
+        "provider_refresh": {
+          "attempted_exact_listing": "NASDAQ:CPRT",
+          "result": "PARTIAL",
+          "provider_error": "Network connection refused (Windows error 10061)",
+          "provider_fetch_failures": 1,
+          "fx_fetch_failures": 2,
+          "price_rows_inserted": 0,
+          "fx_rows_inserted": 0,
+          "corporate_action_rows_inserted": 0
+        }
+      },
+      "fx": {
+        "portfolio_base_currency": "EUR",
+        "required_pairs_unmapped": 0,
+        "usd_eur_latest_effective_date": "2026-10-09",
+        "dkk_eur_latest_effective_date": "2026-10-09",
+        "worker_freshness": "FRESH",
+        "latest_worker_run": "992894cc-a3c6-40a1-bb25-f78bcd0030d3",
+        "note": "FX is not the current portfolio valuation blocker. The direct one-day provider retry failed, but existing dated rates remain available."
+      },
+      "watchlist_listing_coverage": {
+        "exact_listing_mapped": 61,
+        "total": 71,
+        "unmapped_companies": [
+          "Accelleron Industries",
+          "BONESUPPORT Holding AB",
+          "Exosens",
+          "Fabrinet",
+          "INVISIO AB",
+          "Medistim ASA",
+          "Meta Platforms",
+          "Nova Ltd",
+          "Rheinmetall AG",
+          "VINCORION SE"
+        ],
+        "mapped_listings_fresh": 13,
+        "mapped_listings_stale": 48
+      },
+      "factual_store_counts": {
+        "daily_price_observations": 284876,
+        "fx_observations": 20830,
+        "corporate_actions": 880,
+        "corporate_action_verification": "Provider observations remain unverified."
+      }
+    },
+    "provider_operations": {
+      "market_data_worker_freshness": "UNKNOWN",
+      "corporate_actions_worker_freshness": "UNKNOWN",
+      "reported_fundamentals_worker_freshness": "UNKNOWN",
+      "source_documents_worker_freshness": "UNKNOWN",
+      "consensus_worker_freshness": "UNKNOWN",
+      "fx_worker_freshness": "FRESH",
+      "daily_schedule_configured": false,
+      "market_data_attempt_recorded_in_worker_ledger": false,
+      "sec_user_agent_configured": false,
+      "fmp_api_key_configured": false,
+      "sec_cik_mappings": 0,
+      "fmp_estimate_mappings": 0
+    },
+    "filings_and_fundamentals": {
+      "reported_fundamental_observations": 0,
+      "source_documents": 0,
+      "portfolio_companies_with_fundamentals": "0/21",
+      "watchlist_companies_with_fundamentals": "0/71",
+      "availability": "NOT_INGESTED"
+    },
+    "consensus_and_estimate_momentum": {
+      "legacy_consensus_observations": 67,
+      "legacy_observations_data_check": 67,
+      "primary_provider_observations": 0,
+      "estimate_momentum_available": {
+        "PORTFOLIO": "0/21",
+        "WATCHLIST": "0/71"
+      },
+      "portfolio_unavailable_states": {
+        "INSUFFICIENT_HISTORY": 17,
+        "NO_MAPPING": 4
+      },
+      "watchlist_unavailable_states": {
+        "INSUFFICIENT_HISTORY": 1,
+        "NO_MAPPING": 70
+      },
+      "legacy_snapshot_date": "2026-09-12"
+    },
+    "models_and_returns": {
+      "native_models": {
+        "PORTFOLIO": {
+          "accepted": 9,
+          "total": 21,
+          "numeric_expected_irr": 9,
+          "fresh_model_reference_prices": 6,
+          "stale_model_reference_prices": 3,
+          "method_cohorts": {
+            "UFCF_ENTERPRISE_IRR": 7,
+            "UFCF_ENTERPRISE_HMODEL_IRR": 2
+          }
+        },
+        "WATCHLIST": {
+          "accepted": 5,
+          "total": 71,
+          "methodology": "OWNER_CASH_FLOW_EQUITY_IRR v1",
+          "new_cohort_models_with_partial_outputs_and_stale_listing_quotes": 4
+        }
+      },
+      "expected_return_history": {
+        "portfolio_watchlist_companies_with_partial_history": 92,
+        "points": 273,
+        "native_revision_points": 14,
+        "imported_legacy_revision_points": 167,
+        "imported_current_contract_points": 92,
+        "classified_method_points": 51,
+        "unclassified_method_points": 222,
+        "points_without_retained_share_price_basis": 259,
+        "attribution_first_last_undated": 91,
+        "attribution_without_pair": 1,
+        "attributed_comparisons": 0
+      },
+      "comparability": {
+        "enterprise_uFCF_vs_equity_owner_cash_flow": "NOT_COMPARABLE_PERSPECTIVE",
+        "currency_adjusted_return_bridge": "NOT_SUPPORTED",
+        "historical_legacy_vs_native": "PRESERVED_AS_DISTINCT_SOURCES",
+        "impact": "Comparable methodology cohorts exist, but current price/portfolio inputs and unresolved legacy method/currency metadata block decision coverage."
+      }
+    },
+    "decision_layers": {
+      "portfolio_rank": {
+        "latest_run_id": "52ffc6ae-2825-4cad-9f3e-a35e93bf0d80",
+        "status": "UNAVAILABLE",
+        "ranked": 0,
+        "data_check": 16,
+        "inputs_unavailable": 5,
+        "primary_blockers": [
+          "16 incomplete current market-weight states",
+          "5 Portfolio companies have no authored target row"
+        ]
+      },
+      "watchlist_rank": {
+        "latest_run_id": "5b719264-e005-47e6-b1a7-b9330be4b411",
+        "status": "UNAVAILABLE",
+        "ranked": 0,
+        "data_check": 55,
+        "inputs_unavailable": 16,
+        "data_check_reasons": {
+          "unclassified_legacy_methods": 23,
+          "unknown_legacy_currencies": 31,
+          "stale_native_reference_price": 1
+        },
+        "unavailable_reasons": {
+          "legacy_models_without_numeric_expected_irr": 12,
+          "native_models_with_stale_listing_observations": 4
+        }
+      },
+      "research_rank": {
+        "latest_run_id": "f88fa8cb-aeeb-4143-b446-e61863d01b55",
+        "status": "PARTIAL",
+        "ranked": 96,
+        "inputs_unavailable": 5,
+        "not_eligible": 118,
+        "unavailable_reason": "Missing point-in-time lifecycle for five tracked companies."
+      },
+      "execution_pace": {
+        "latest_run_id": "085e9098-b526-4827-8a40-c9b39215b2ba",
+        "status": "UNAVAILABLE",
+        "portfolio_available": 0,
+        "portfolio_review": 21,
+        "not_applicable_outside_portfolio_context": 198,
+        "review_reasons": {
+          "incomplete_current_holding_weights": 16,
+          "missing_explicit_targets": 5
+        }
+      },
+      "attention_center": {
+        "api_status": "RESPONDS",
+        "as_of": "2026-10-09T22:53:07.844051Z",
+        "lookback_days": 30,
+        "events": 155,
+        "event_types": {
+          "RANK_CHANGE": 4,
+          "MODEL_REVISION": 14,
+          "MODEL_OUTPUT_IMPORT": 42,
+          "DATA_QUALITY": 88,
+          "PRICE_MOVE": 7
+        }
+      }
+    },
+    "portfolio_consistency": {
+      "holdings_snapshot_status": "COMPLETE",
+      "company_positions": 21,
+      "standalone_security_positions": 1,
+      "cash_positions": 2,
+      "accepted_target_revision": true,
+      "company_target_rows": 16,
+      "portfolio_companies_without_authored_target": [
+        "AMD",
+        "Celsius Holdings",
+        "Hims & Hers",
+        "MSCI Inc.",
+        "Novo Nordisk"
+      ],
+      "current_weights_available": false,
+      "strategic_targets_changed_during_review": false
+    }
+  },
+  "workflow_exercises": {
+    "local_api_health": "PASS; database connected and schema current",
+    "live_api_universe": {
+      "portfolio_rows": 21,
+      "watchlist_rows": 71
+    },
+    "provider_refresh": "Exact NASDAQ:CPRT import attempted twice; both attempts were blocked by outbound network refusal; zero observations applied.",
+    "model_revision_and_recalculation": {
+      "company": "Alphabet",
+      "model_method": "UFCF_DCF_10Y_FADE",
+      "base_revision_number": 1,
+      "candidate_revision_number": 2,
+      "candidate_assumptions_changed": false,
+      "projection_rows_recalculated": 30,
+      "candidate_output_status": "COMPLETE",
+      "candidate_expected_irr": "0.126895355129343155",
+      "transaction_rolled_back": true,
+      "original_current_revision_and_history_restored": true
+    },
+    "repeated_decision_calculations": {
+      "portfolio_rank": "Two identical entry/status/reason results; 0 ranked.",
+      "watchlist_rank": "Two identical entry/status/reason results; 0 ranked.",
+      "research_rank": "Two identical entry/status/reason results; 96 ranked.",
+      "execution_pace": "Two identical company decision/status/reason results; 0 available, 21 Portfolio REVIEW.",
+      "persisted_test_runs": false,
+      "rollback_verified": true
+    },
+    "historical_as_of": {
+      "company": "Alphabet",
+      "as_of": "2026-09-30",
+      "forecast_known_at": "2026-09-30T23:59:59Z",
+      "outcome_known_at": "2026-10-09T23:59:59Z",
+      "comparison_status": "NO_MODEL_FORECAST",
+      "consensus_status": "NO_MAPPING",
+      "actual_status": "NOT_REPORTED",
+      "known_at_after_forecast_cutoff_rejected_http": 422,
+      "no_lookahead_assertions": "PASS_WITH_AVAILABLE_DATA_LIMITATIONS"
+    },
+    "canonical_state_mutation": "No holdings, targets, lifecycle, model assumptions, accepted revisions, external observations, or decision runs were retained from rehearsals."
+  },
+  "bounded_remediations": [
+    {
+      "area": "Market data import reporting",
+      "change": "Applied provider imports with fetch, mapping, or normalization gaps now report PARTIAL and exit with code 2; clean no-op runs remain APPLIED.",
+      "files": [
+        "apps/api/src/portfolio_api/market_data_ingestion.py",
+        "apps/api/tests/test_market_data_ingestion.py",
+        "docs/market-data.md"
+      ],
+      "verification": "Two regression tests pass; the live exact-listing request reports PARTIAL with zero inserted rows."
+    },
+    {
+      "area": "Portfolio dashboard ownership visibility",
+      "change": "Standalone positions are now rendered from the canonical overview with exact listing/currency, quantity, price date, freshness, and base-currency value/availability.",
+      "files": [
+        "apps/web/src/app/portfolio/page.tsx",
+        "apps/web/e2e/workspace.spec.ts"
+      ],
+      "verification": "Live desktop and mobile E2E confirms SPYY appears while incomplete valuation remains explicit."
+    }
+  ],
+  "blockers_and_priority": [
+    {
+      "priority": 1,
+      "blocker": "Current quote refresh and scheduled market-data ingestion are not operationally reliable.",
+      "evidence": "16/21 Portfolio company quotes are stale; MARKET_DATA worker freshness is UNKNOWN; exact NASDAQ:CPRT provider requests failed with Windows error 10061.",
+      "remediation": "Restore outbound provider connectivity for this machine, run the documented market-data cycle, verify exact-listing mappings and record fresh observations before recalculating decisions."
+    },
+    {
+      "priority": 2,
+      "blocker": "Portfolio targets are incomplete and current weights cannot be calculated.",
+      "evidence": "Only 16/21 companies have authored target rows; no current weights are available.",
+      "remediation": "Obtain and record explicit target evidence for AMD, Celsius Holdings, Hims & Hers, MSCI Inc., and Novo Nordisk. Do not infer zero targets."
+    },
+    {
+      "priority": 3,
+      "blocker": "Decision coverage is unusable for regular capital allocation and timing.",
+      "evidence": "Portfolio Rank 0/21 ranked; Watchlist Rank 0/71 ranked; Execution Pace 0/21 available.",
+      "remediation": "After fresh exact-listing prices and missing targets are resolved, refresh model reference prices and rerun the existing decision workflows. Keep return-method and currency exclusions explicit."
+    },
+    {
+      "priority": 4,
+      "blocker": "Watchlist identity and return inputs remain incomplete.",
+      "evidence": "10/71 Watchlist companies lack exact listing mappings; 23 legacy return methods are unclassified; 31 legacy return currencies are unknown; 12 legacy outputs lack numeric Expected IRR.",
+      "remediation": "Resolve only from issuer/exchange/source evidence and preserve separate enterprise/equity return bases."
+    },
+    {
+      "priority": 5,
+      "blocker": "Primary filings, reported fundamentals, and point-in-time consensus are not operational.",
+      "evidence": "Zero SEC mappings, filings, or reported-fundamental observations; no FMP mapping/key; no Estimate Momentum available.",
+      "remediation": "Configure SEC_USER_AGENT and FMP_API_KEY through local environment, review issuer/provider mappings, and establish the documented daily worker schedule."
+    },
+    {
+      "priority": 6,
+      "blocker": "Historical Expected Return analysis is sparse and cannot support attribution broadly.",
+      "evidence": "222/273 points have unclassified methods, 259 lack retained share-price basis, 91 first/last pairs are undated, and no active company has multiple native revisions.",
+      "remediation": "Preserve the gaps; improve effective-date and source-price capture prospectively without reconstructing unsupported history."
+    }
+  ],
+  "verification": {
+    "alembic_check": "PASS; no new upgrade operations detected",
+    "npm_run_check": "PASS",
+    "frontend_unit_tests": "87 passed",
+    "api_tests": "226 passed",
+    "postgresql_integration_tests": "43 passed",
+    "lint_format_typechecks": "PASS",
+    "contracts_check": "PASS",
+    "production_build": "PASS",
+    "live_desktop_mobile_browser_checks": "6 passed",
+    "live_api_attention_feed": "PASS; 155 events returned",
+    "model_revision_ranking_execution_repeatability": "PASS in rolled-back PostgreSQL transaction",
+    "database_mutations_from_exercise": "None retained"
+  },
+  "source_reports": [
+    "docs/reconciliation/local-development-handover-2026-10-09.md",
+    "docs/reconciliation/decision-coverage-integrity-2026-10-10.md",
+    "docs/reconciliation/decision-coverage-integrity-2026-10-10.json",
+    "docs/external-data-operations.md",
+    "docs/market-data.md",
+    "docs/financial-models.md",
+    "docs/return-semantics.md",
+    "docs/portfolio-rank.md",
+    "docs/watchlist-rank.md",
+    "docs/execution-pace.md"
+  ],
+  "next_phase_started": false
+}

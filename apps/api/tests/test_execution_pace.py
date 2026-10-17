@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import queries
+from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     ExecutionPace,
     ExecutionPaceDecision,
@@ -20,9 +21,11 @@ from portfolio_api.domain.models import (
 from portfolio_api.domain.schemas import ExecutionPaceInputSnapshot, ExecutionPaceRunCreate
 from portfolio_api.domain.seed import seed
 from portfolio_api.execution_pace import (
+    _price_regime_input,
     create_execution_pace_run,
     derive_execution_pace,
     normalize_price_regime,
+    preview_execution_pace,
     valuation_zone,
 )
 
@@ -36,12 +39,14 @@ MODEL_ID = uuid4()
 
 def inputs(**overrides: object) -> ExecutionPaceInputSnapshot:
     values: dict[str, object] = {
-        "context_version": "execution-pace-inputs-v1",
+        "context_version": "execution-pace-inputs-v2",
         "lifecycle": "PORTFOLIO",
         "target_revision_id": TARGET_ID,
         "target_effective_at": AS_OF,
         "holding_snapshot_id": HOLDING_ID,
         "holding_effective_at": AS_OF,
+        "holdings_age_days": 0,
+        "holdings_freshness": "FRESH",
         "allocation_status": "VALUED",
         "current_weight": "0.01",
         "target_weight": "0.05",
@@ -166,6 +171,124 @@ def test_legacy_thresholds_and_regime_mapping_are_explicit() -> None:
     assert normalize_price_regime("UNMAPPED SOURCE LABEL", None) is None
 
 
+def test_fresh_canonical_trend_replaces_stale_legacy_regime_input() -> None:
+    stale_regime = s.PriceRegimeRead.model_validate(
+        {
+            "listing_id": LISTING_ID,
+            "as_of": "2026-10-01T00:00:00Z",
+            "regime": "DEEP CORRECTION",
+            "trend_state": "DOWNTREND",
+            "correction_state": "DEEP CORRECTION",
+            "data_quality": "PASS",
+            "methodology_version": "legacy-cache-v1",
+            "source_ref": "workbook:stale-regime",
+            **{
+                field: None
+                for field in (
+                    "provider_close",
+                    "split_adjusted_close",
+                    "dma_20",
+                    "dma_50",
+                    "dma_200",
+                    "high_52w",
+                    "drawdown_52w",
+                    "vs_dma_20",
+                    "vs_dma_50",
+                    "vs_dma_200",
+                    "return_1m",
+                    "return_3m",
+                    "return_6m",
+                    "realized_vol_20d",
+                    "quality_reason",
+                )
+            },
+        }
+    )
+    analytics = s.PriceHistoryAnalyticsRead.model_validate(
+        {
+            "status": "AVAILABLE",
+            "methodology_version": "split-adjusted-price-history-v1",
+            "observation_count": 252,
+            "as_of": "2026-10-14T00:00:00Z",
+            "trend_state": "RECOVERING",
+            "correction_state": "DEEP CORRECTION",
+            **{
+                field: None
+                for field in (
+                    "daily_return",
+                    "dma_20",
+                    "dma_50",
+                    "dma_200",
+                    "high_52w",
+                    "drawdown_52w",
+                    "price_return_1m",
+                    "price_return_3m",
+                    "price_return_6m",
+                    "realized_vol_20d",
+                )
+            },
+        }
+    )
+
+    current_as_of = datetime(2026, 10, 16, 20, 0, tzinfo=UTC)
+    selected = _price_regime_input(stale_regime, analytics, current_as_of)
+
+    assert selected.normalized == "RECOVERY"
+    assert selected.raw == "CANONICAL TREND: RECOVERING"
+    assert selected.source_ref == (
+        "canonical-market-analytics:split-adjusted-price-history-v1:2026-10-14T00:00:00+00:00"
+    )
+    assert selected.quality == "PASS"
+    assert selected.freshness == "FRESH"
+    assert selected.note is not None
+
+
+def test_stale_canonical_trend_does_not_make_execution_regime_available() -> None:
+    analytics = s.PriceHistoryAnalyticsRead.model_validate(
+        {
+            "status": "AVAILABLE",
+            "methodology_version": "split-adjusted-price-history-v1",
+            "observation_count": 252,
+            "as_of": "2026-09-20T00:00:00Z",
+            "trend_state": "DOWNTREND",
+            "correction_state": "DEEP CORRECTION",
+            **{
+                field: None
+                for field in (
+                    "daily_return",
+                    "dma_20",
+                    "dma_50",
+                    "dma_200",
+                    "high_52w",
+                    "drawdown_52w",
+                    "price_return_1m",
+                    "price_return_3m",
+                    "price_return_6m",
+                    "realized_vol_20d",
+                )
+            },
+        }
+    )
+
+    current_as_of = datetime(2026, 10, 16, 20, 0, tzinfo=UTC)
+    selected = _price_regime_input(None, analytics, current_as_of)
+
+    assert selected.normalized is None
+    assert selected.freshness == "NO_DATA"
+    result = derive_execution_pace(
+        inputs(
+            price_regime_source_ref=selected.source_ref,
+            price_regime_as_of=selected.as_of,
+            price_regime_quality=selected.quality,
+            price_regime_raw=selected.raw,
+            price_regime=selected.normalized,
+            price_regime_freshness=selected.freshness,
+        )
+    )
+    assert result.status == ExecutionPaceDecisionStatus.REVIEW
+    assert result.pace is None
+
+
 def test_hold_band_and_positive_target_trims_follow_workbook_branches() -> None:
     hold = derive_execution_pace(inputs(allocation_gap="0.002999"))
     assert hold.pace == ExecutionPace.HOLD
@@ -204,6 +327,7 @@ def test_hold_band_and_positive_target_trims_follow_workbook_branches() -> None:
         {"price_regime_quality": "DATA_CHECK"},
         {"model_price_status": "STALE"},
         {"allocation_status": "FX_UNAVAILABLE"},
+        {"holdings_freshness": "STALE", "holdings_age_days": 9},
         {"model_review_flag": "REASSESSMENT REQUIRED"},
         {"model_currency": "EUR"},
     ],
@@ -301,6 +425,12 @@ def test_recorded_run_keeps_review_states_and_does_not_mutate_targets_or_models(
         target_revision_count = db.scalar(select(func.count()).select_from(TargetRevision))
         model_revision_count = db.scalar(select(func.count()).select_from(FinancialModelRevision))
 
+        preview = preview_execution_pace(db, as_of=as_of)
+        assert preview.as_of == as_of
+        assert preview.decisions
+        assert db.scalar(select(func.count()).select_from(ExecutionPaceRun)) == 0
+        assert db.scalar(select(func.count()).select_from(ExecutionPaceDecision)) == 0
+
         run = create_execution_pace_run(
             db,
             ExecutionPaceRunCreate(
@@ -317,6 +447,13 @@ def test_recorded_run_keeps_review_states_and_does_not_mutate_targets_or_models(
 
         assert run.status in {"PARTIAL", "UNAVAILABLE"}
         assert decisions
+        assert [
+            (row.company_id, row.decision_status, row.pace, row.reason, row.input_snapshot)
+            for row in preview.decisions
+        ] == [
+            (row.company_id, row.decision_status, row.pace, row.reason, row.input_snapshot)
+            for row in decisions
+        ]
         assert all(
             decision.decision_status in {"REVIEW", "NOT_APPLICABLE"} and decision.pace is None
             for decision in decisions

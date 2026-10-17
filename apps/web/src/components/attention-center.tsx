@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useResearch } from "@/components/research-frame";
+import { useResearch } from "@/hooks/use-research";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isAttentionFeed, isUniverse } from "@/lib/domain-contracts";
+import { dateOnly, dateTime } from "@/lib/display";
 
 const eventTypes = [
   ["", "All event types"],
@@ -24,13 +25,9 @@ const eventTypes = [
 function eventDate(value: string | null, precision: string, fallback?: string) {
   if (!value)
     return fallback
-      ? `Current status · checked ${new Date(fallback).toLocaleDateString()}`
+      ? `Current status · checked ${dateOnly(fallback)}`
       : "Current status";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.valueOf())) return "Date unavailable";
-  return precision === "DATE"
-    ? parsed.toLocaleDateString()
-    : parsed.toLocaleString();
+  return precision === "DATE" ? dateOnly(value) : dateTime(value);
 }
 
 export function AttentionCenter({
@@ -58,6 +55,19 @@ export function AttentionCenter({
   const path = `attention?${params.toString()}`;
   const state = useResearch(path, isAttentionFeed);
   const events = state.data?.events ?? [];
+  const visibleEvents = compact
+    ? [...events]
+        .sort((left, right) => {
+          const severity = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
+          return (
+            severity[left.severity] - severity[right.severity] ||
+            (right.effective_at ?? right.recorded_at ?? "").localeCompare(
+              left.effective_at ?? left.recorded_at ?? "",
+            )
+          );
+        })
+        .slice(0, 3)
+    : events;
 
   return (
     <section aria-labelledby={compact ? undefined : "attention-title"}>
@@ -158,74 +168,82 @@ export function AttentionCenter({
               Nothing meets the current attention rules and filters.
             </p>
           ) : (
-            events.map((item) => (
-              <article
-                key={item.id}
-                className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-4"
-              >
-                <div className="min-w-0">
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-semibold">{item.title}</h3>
-                    <Badge
-                      variant={
-                        item.severity === "HIGH" ? "destructive" : "secondary"
-                      }
-                    >
-                      {item.severity.toLowerCase()}
-                    </Badge>
-                    {item.status === "REVIEW" && (
-                      <Badge variant="outline">Review</Badge>
-                    )}
-                    <Badge variant="outline">
-                      {item.lifecycle ?? "Lifecycle unknown"}
-                    </Badge>
-                  </div>
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    {item.company_name
-                      ? `${item.company_name} · `
-                      : "Portfolio · "}
-                    {eventDate(
-                      item.effective_at,
-                      item.time_precision,
-                      state.data?.as_of,
-                    )}
-                    {item.recorded_at
-                      ? ` · recorded ${new Date(item.recorded_at).toLocaleString()}`
-                      : " · recorded time unavailable"}
-                  </p>
-                  <p className="mt-2 text-sm leading-5">{item.explanation}</p>
-                  {(item.prior_value || item.current_value) && (
-                    <p className="mt-2 text-xs font-medium tabular-nums">
-                      {item.prior_value ?? "Unavailable"} →{" "}
-                      {item.current_value ?? "Unavailable"}
-                      {item.unit ? ` ${item.unit}` : ""}
-                    </p>
-                  )}
-                  <p className="mt-2 text-[11px] text-muted-foreground">
-                    Source: {item.source_domain}
-                    {item.source_id ? ` · ${item.source_id}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-start gap-2 sm:flex-col sm:items-end">
-                  {item.href && (
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={item.href}>Company detail</Link>
-                    </Button>
-                  )}
-                  {item.source_reference?.startsWith("https://") && (
-                    <Button asChild size="sm" variant="ghost">
-                      <a
-                        href={item.source_reference}
-                        target="_blank"
-                        rel="noreferrer"
+            <>
+              {compact && events.length > visibleEvents.length && (
+                <p className="text-xs text-muted-foreground">
+                  Showing the {visibleEvents.length} highest-priority company
+                  items of {events.length} in the current window.
+                </p>
+              )}
+              {visibleEvents.map((item) => (
+                <article
+                  key={item.id}
+                  className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-4"
+                >
+                  <div className="min-w-0">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold">{item.title}</h3>
+                      <Badge
+                        variant={
+                          item.severity === "HIGH" ? "destructive" : "secondary"
+                        }
                       >
-                        Source record
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </article>
-            ))
+                        {item.severity.toLowerCase()}
+                      </Badge>
+                      {item.status === "REVIEW" && (
+                        <Badge variant="outline">Review</Badge>
+                      )}
+                      <Badge variant="outline">
+                        {item.lifecycle ?? "Lifecycle unknown"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {item.company_name
+                        ? `${item.company_name} · `
+                        : "Portfolio · "}
+                      {eventDate(
+                        item.effective_at,
+                        item.time_precision,
+                        state.data?.as_of,
+                      )}
+                      {item.recorded_at
+                        ? ` · recorded ${dateTime(item.recorded_at)}`
+                        : " · recorded time unavailable"}
+                    </p>
+                    <p className="mt-2 text-sm leading-5">{item.explanation}</p>
+                    {(item.prior_value || item.current_value) && (
+                      <p className="mt-2 text-xs font-medium tabular-nums">
+                        {item.prior_value ?? "Unavailable"} →{" "}
+                        {item.current_value ?? "Unavailable"}
+                        {item.unit ? ` ${item.unit}` : ""}
+                      </p>
+                    )}
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Source: {item.source_domain}
+                      {item.source_id ? ` · ${item.source_id}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2 sm:flex-col sm:items-end">
+                    {item.href && (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={item.href}>Company detail</Link>
+                      </Button>
+                    )}
+                    {item.source_reference?.startsWith("https://") && (
+                      <Button asChild size="sm" variant="ghost">
+                        <a
+                          href={item.source_reference}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Source record
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </>
           )}
         </CardContent>
       </Card>

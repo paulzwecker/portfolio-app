@@ -217,6 +217,25 @@ def _regime_metrics(closes: list[float]) -> dict[str, float | str | None]:
     }
 
 
+def calculate_price_history_metrics(closes: list[Decimal]) -> dict[str, float | str | None]:
+    """Calculate current price-only measures from eligible split-adjusted closes.
+
+    Dividend-adjusted closes are intentionally excluded. Yahoo dividend records are
+    not issuer verified, so these results are price returns, not total returns.
+    """
+
+    values = [float(value) for value in closes]
+    metrics = _regime_metrics(values)
+    daily_return = values[-1] / values[-2] - 1 if len(values) >= 2 else None
+    return {
+        **metrics,
+        "daily_return": daily_return,
+        "price_return_1m": metrics["return_1m"],
+        "price_return_3m": metrics["return_3m"],
+        "price_return_6m": metrics["return_6m"],
+    }
+
+
 def _quality(value: str | None) -> str:
     normalized = (value or "").strip().upper()
     if normalized == "PASS":

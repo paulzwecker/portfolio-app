@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0.0",
+  "milestone": "6.10c Free Consensus Data Source Feasibility",
+  "assessed_at": "2026-10-11",
+  "scope": {
+    "active_portfolio_companies": 21,
+    "active_watchlist_companies": 71,
+    "exact_portfolio_listing_coverage": "21/21",
+    "exact_watchlist_listing_coverage": "61/71",
+    "unresolved_watchlist_listing_count": 10,
+    "representative_portfolio_cohort": [
+      { "company": "Microsoft", "listing": "NASDAQ:MSFT", "currency": "USD" },
+      { "company": "Amazon", "listing": "NASDAQ:AMZN", "currency": "USD" },
+      { "company": "ASML Holding", "listing": "AMS:ASML", "currency": "EUR" },
+      { "company": "Adyen", "listing": "AMS:ADYEN", "currency": "EUR" },
+      {
+        "company": "Taiwan Semiconductor Manufacturing",
+        "listing": "Canonical listing and provider symbol require verification",
+        "currency": "Must be verified for the selected exact listing"
+      }
+    ],
+    "representative_watchlist_cohort": [
+      {
+        "company": "Axon Enterprise",
+        "listing": "NASDAQ:AXON",
+        "currency": "USD"
+      },
+      {
+        "company": "Comfort Systems USA",
+        "listing": "NYSE:FIX",
+        "currency": "USD"
+      },
+      { "company": "Rubrik", "listing": "NYSE:RBRK", "currency": "USD" },
+      { "company": "Veeva Systems", "listing": "NYSE:VEEV", "currency": "USD" }
+    ]
+  },
+  "canonical_baseline": {
+    "as_of_report": "2026-10-10 operational coverage receipt",
+    "primary_provider_mappings": { "portfolio": 0, "watchlist": 0 },
+    "primary_provider_observations": { "portfolio": 0, "watchlist": 0 },
+    "legacy_data_check_observations": { "portfolio": 64, "watchlist": 3 },
+    "usable_point_in_time_consensus_history": {
+      "portfolio": 0,
+      "watchlist": 0
+    },
+    "estimate_momentum": "UNAVAILABLE_NO_SELECTED_PROVIDER_HISTORY"
+  },
+  "providers": [
+    {
+      "provider_id": "alpha_vantage",
+      "status": "CONDITIONAL_PILOT_CANDIDATE",
+      "access_method": "Official EARNINGS_ESTIMATES API, API key required",
+      "cost": "Free key; general free usage limit is 25 requests/day; EARNINGS_ESTIMATES-specific free-tier entitlement is not explicit",
+      "terms": "Free use is limited to private individual non-commercial use; use on behalf of an organization is treated as commercial. The published terms do not clearly specify rights to retain or redisplay API estimates in this application's database/UI",
+      "documented_fields": [
+        "Annual EPS estimate",
+        "Quarterly EPS estimate",
+        "Annual Revenue estimate",
+        "Quarterly Revenue estimate",
+        "Analyst count",
+        "Revision history (description only)"
+      ],
+      "not_documented_or_verified": [
+        "EBIT estimates",
+        "EBITDA estimates",
+        "Response field schema",
+        "Revision event timestamps",
+        "Historical revision depth",
+        "Fiscal period mapping rules",
+        "Currency and units",
+        "Cross-listing identity semantics",
+        "Data retention/redisplay rights in a private app"
+      ],
+      "point_in_time": "No vendor-stamped revision observations verified; prospective app retrieval snapshots could be accumulated only after schema and rights review",
+      "coverage": {
+        "verified_portfolio": 0,
+        "portfolio_total": 21,
+        "verified_watchlist": 0,
+        "watchlist_total": 71,
+        "reason": "No authorized key and no source mapping; official demo response only prompts user to obtain a key"
+      },
+      "rate_limit": "25 requests/day general free usage; one documented request appears to return annual and quarterly estimates, but live response was not verified",
+      "identifier_currency": "Symbol parameter only; exact listing and currency remain unverified",
+      "implementation_effort": "LOW for one-symbol raw capture; MEDIUM for verified identity, normalization and point-in-time semantics",
+      "decision": "Only use for a personal individual raw-response pilot if the operator qualifies; clarify retention/redisplay rights before any canonical storage or display; do not promote before live validation"
+    },
+    {
+      "provider_id": "fmp",
+      "status": "NOT_QUALIFIED_FOR_ZERO_COST_PLATFORM_USE",
+      "access_method": "Existing stable analyst-estimates adapter requires account API key",
+      "cost": "Basic advertises 250 requests/day, but the Financial Estimates endpoint is marked limited access and free-plan entitlement is not established",
+      "terms": "Published personal-use terms restrict to individual personal non-business use and prohibit copying/downloading without written approval and data display through multi-user/internal applications without a specific agreement",
+      "documented_fields": [
+        "Annual/quarter Revenue",
+        "EPS",
+        "EBIT",
+        "EBITDA",
+        "Mean/low/high ranges",
+        "Revenue/EPS analyst counts"
+      ],
+      "documented_currency": "Reported in the currency of the company's financial statements",
+      "documented_historical_claim": "FMP support says 10+ years of analyst estimates where available and describes historical estimates as revision-based and timestamped; stable endpoint documentation does not define an as-of/vintage query contract or expose a revision timestamp field",
+      "point_in_time": "Existing application adapter captures retrieval time for the current endpoint response only; it maps Revenue/EPS and does not access the claimed historical revision feed",
+      "coverage": {
+        "verified_portfolio": 0,
+        "portfolio_total": 21,
+        "verified_watchlist": 0,
+        "watchlist_total": 71
+      },
+      "implementation_effort": "LOW technically because an adapter exists; MEDIUM to validate historical-vintage semantics; BLOCKED by current key, mappings, endpoint entitlement and storage/display licensing evidence",
+      "decision": "Strongest technical field/history candidate, but keep dormant unless FMP confirms storage/display rights and endpoint entitlement in writing; no free-plan assumption"
+    },
+    {
+      "provider_id": "yahoo_finance",
+      "status": "AUTOMATION_NOT_PERMITTED_WITHOUT_PRIOR_PERMISSION",
+      "access_method": "Estimate pages are web UI; no official public financial-estimates API found",
+      "documented_fields": [
+        "Estimate information visible on some company pages; not systematically field-verified"
+      ],
+      "point_in_time": "No supported point-in-time estimate history verified",
+      "terms": "Yahoo Terms prohibit automated access/collection absent express prior permission",
+      "coverage": "Not sampled through automation",
+      "decision": "Do not scrape web pages or use unofficial libraries/endpoints as an estimate provider"
+    },
+    {
+      "provider_id": "finanzen_net",
+      "status": "AUTOMATED_AND_MANUAL_EXTRACTION_PROHIBITED_BY_HELP_NOTICE",
+      "access_method": "Website; data-source help identifies FactSet for estimates; no permitted public estimates API found",
+      "point_in_time": "No supported point-in-time history verified",
+      "terms": "Official help notice says data extraction is not permitted, including via API and manual copying from the website",
+      "coverage": "Not sampled or extracted",
+      "decision": "Do not automate, copy, or import website estimate values"
+    },
+    {
+      "provider_id": "marketscreener",
+      "status": "NO_PERMITTED_MACHINE_ACCESS_ESTABLISHED",
+      "access_method": "Website; no permitted public estimates API found",
+      "point_in_time": "No supported point-in-time history verified",
+      "terms": "Terms grant personal non-collective consultation and restrict copying, transmission, redistribution, exploitation and downloading beyond personal limited-time use, including non-commercial use",
+      "coverage": "Not sampled or extracted",
+      "decision": "Do not automate or copy public estimate tables"
+    },
+    {
+      "provider_id": "sec_and_issuer_publications",
+      "status": "PERMITTED_COMPLEMENT_FOR_FACTS_NOT_CONSENSUS",
+      "fields": [
+        "Reported actuals",
+        "Issuer guidance where explicitly published",
+        "Filings/releases"
+      ],
+      "point_in_time": "Filing/publication timestamps are available and can be captured prospectively",
+      "decision": "Keep guidance and actuals separate; do not label as analyst consensus"
+    }
+  ],
+  "proof_of_concept": {
+    "module": "apps/api/src/portfolio_api/consensus_estimate_probe.py",
+    "provider_adapter_contract": "ProviderQuery -> RawProviderRecord",
+    "max_subjects_per_request": 1,
+    "database_access": false,
+    "canonical_persistence": false,
+    "scheduled_ingestion_registration": false,
+    "api_key_environment_variable": "ALPHA_VANTAGE_API_KEY",
+    "live_verification": "NOT_RUN_NO_AUTHORIZED_API_KEY",
+    "demo_endpoint_result": "Official demo response said to claim an API key; no estimate payload returned",
+    "validated": [
+      "Raw response capture contract",
+      "Local retrieval timestamp capture",
+      "Response hash",
+      "API-key redaction from stored source URL and transport errors",
+      "Response symbol mismatch rejection when response symbol is present",
+      "Provider error/entitlement message rejection"
+    ],
+    "not_validated": [
+      "Actual field accuracy",
+      "Fiscal periods",
+      "Currency/units",
+      "Analyst counts",
+      "Revision timestamp/history depth",
+      "Coverage by issuer/listing",
+      "Parity against another source"
+    ],
+    "test_fixture_is_source_data": false
+  },
+  "recommendation": {
+    "primary_zero_cost_source": "No unconditional primary source for a general private/organizational platform. Alpha Vantage is the only conditional zero-cost pilot candidate for a single individual under its published terms.",
+    "complementary_sources": [
+      "SEC EDGAR for reported actuals",
+      "Issuer filings/releases for published guidance, never represented as consensus"
+    ],
+    "unreliable_or_unavailable_fields": [
+      "Permitted free EBIT/EBITDA consensus for canonical app storage/display",
+      "Usable vendor-stamped historical revisions through the current adapter",
+      "Verified global exact-listing coverage",
+      "Validated currencies/units/fiscal-period mappings",
+      "Reliable analyst counts across the tracked universe"
+    ],
+    "prospective_history_strategy": "After permission and schema verification, capture immutable provider snapshots with raw payload/hash, exact reviewed symbol mapping, per-request retrieval time, recording time, fiscal period, units/currency, analyst count and data-quality result. Never backfill old timestamps from a current response.",
+    "estimated_full_universe_pass": "At 25 requests/day and one estimate request per company for all 92 active companies, at least four quota days per pass; capture timestamps per company and label the pass non-synchronous.",
+    "do_not": [
+      "Scrape Yahoo Finance, finanzen.net or MarketScreener",
+      "Use workbook legacy values as canonical history",
+      "Blend providers",
+      "Treat revision-count summaries as dated historical snapshots",
+      "Enable scheduled ingestion in this milestone"
+    ]
+  },
+  "source_urls": [
+    "https://www.alphavantage.co/documentation/",
+    "https://www.alphavantage.co/terms_of_service/",
+    "https://www.alphavantage.co/support/",
+    "https://site.financialmodelingprep.com/developer/docs/stable/financial-estimates",
+    "https://site.financialmodelingprep.com/faqs?code=statements",
+    "https://site.financialmodelingprep.com/developer/docs/pricing",
+    "https://site.financialmodelingprep.com/terms-of-service",
+    "https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html",
+    "https://hilfe.finanzen.net/hc/de/articles/7444475913244-Hinweis-zum-automatisierten-Auslesen",
+    "https://hilfe.finanzen.net/hc/de/articles/360014725599-Datenaktualisierung",
+    "https://www.marketscreener.com/navigation/contrat-4T.htm"
+  ]
+}

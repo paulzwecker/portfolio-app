@@ -51,10 +51,10 @@ unranked. Watchlist Candidate Rank, which orders Fit Tier before Expected IRR, i
 separate concept and must not replace canonical Watchlist Rank.
 
 Milestone 1C persists the definitions, cached source observations, and explicit
-per-company states. Watchlist Rank sorts comparable Expected IRR inputs, keeping
-native shareholder-cash-flow and legacy normalized return semantics in separate
-cohorts. Portfolio Rank implements the workbook's IRR-first Portfolio Score and
-also keeps those return semantics separate. Research Rank implements the Candidate
+per-company states. Watchlist Rank sorts only a classified perspective cohort;
+Portfolio Rank requires one exact versioned method cohort because its formula uses
+method-specific hurdle state. Return-method definitions and their comparison
+policy are documented in [return-semantics.md](return-semantics.md). Research Rank implements the Candidate
 High/Low tier and persistent-seed Research Sort Key, including its explicit blank
 seed fallback. Each run retains exact inputs, source references, status and output;
 later state cannot regenerate old results. Missing inputs, stale/mismatched prices,
@@ -145,7 +145,8 @@ evaluate financial formulas. The first import accepted parity-proven `P-GOOGL` a
 [native model-input import runbook and reconciliation](native-model-input-migration.md).
 Future batches still require a tab-specific input/output fixture,
 listing/currency validation, immutable revision provenance, and an explicit
-decision on legacy versus canonical shareholder-cash-flow IRR semantics.
+decision on how to compare unlike legacy return methodologies. Supported methods
+are now explicitly versioned; no unsupported cross-method bridge is inferred.
 
 ## Milestones 6.1–6.3: operational coverage, ingestion and native-model evidence
 
