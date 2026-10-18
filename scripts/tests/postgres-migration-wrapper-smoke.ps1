@@ -66,7 +66,6 @@ foreach ($name in $environmentNames) {
 
 $queuedInputs = New-Object System.Collections.Queue
 $inputValues = @(
-    @{ value = "postgresql+psycopg://source:synthetic@127.0.0.1/portfolio_app"; secret = $true },
     @{ value = "postgresql+psycopg://target:synthetic@synthetic.neon.tech/portfolio_migration?sslmode=require"; secret = $true },
     @{ value = "synthetic.neon.tech"; secret = $false },
     @{ value = "portfolio_migration"; secret = $false },
@@ -115,8 +114,8 @@ if ($restoreExitCode -ne 0) {
     $details = $successErrorWriter.ToString().Trim()
     throw "A successful synthetic Node invocation did not propagate exit code 0. Details: $details"
 }
-if ($global:MigrationWrapperSmokeSource -notlike "postgresql+psycopg://source:*") {
-    throw "The child process did not receive the source URL in its environment."
+if ($global:MigrationWrapperSmokeSource) {
+    throw "The restore operation unexpectedly received a source URL."
 }
 if ($global:MigrationWrapperSmokeTarget -notlike "postgresql+psycopg://target:*") {
     throw "The child process did not receive the target URL in its environment."
@@ -130,8 +129,7 @@ if (($global:MigrationWrapperSmokeArguments -join "`n") -cne ($expectedRestoreAr
 if ($global:MigrationWrapperSmokeLegacyHost) {
     throw "A legacy user-entered production hostname remained active."
 }
-if ($global:MigrationWrapperSmokeArguments -contains $global:MigrationWrapperSmokeSource -or
-    $global:MigrationWrapperSmokeArguments -contains $global:MigrationWrapperSmokeTarget -or
+if ($global:MigrationWrapperSmokeArguments -contains $global:MigrationWrapperSmokeTarget -or
     $global:MigrationWrapperSmokeArguments -contains $global:MigrationWrapperSmokeApiKey) {
     throw "A database URL or Neon API key was exposed in command-line arguments."
 }
