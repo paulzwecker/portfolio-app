@@ -13,6 +13,7 @@
   "packageManager": "npm@11.9.0",
   "scripts": {
     "setup": "node scripts/setup.mjs",
+    "check:environment": "node scripts/environment.mjs",
     "dev": "concurrently --kill-others --names api,web,market-data,operations \"npm:dev:api\" \"npm:dev:web\" \"npm:dev:market-data\" \"npm:dev:operations\"",
     "dev:api": "node scripts/uv.mjs run --locked --project apps/api uvicorn portfolio_api.main:app --host 127.0.0.1 --port 8000 --reload --reload-dir apps/api/src",
     "dev:web": "node scripts/web.mjs dev",
@@ -44,17 +45,18 @@
     "format:check": "prettier --check . && node scripts/uv.mjs run --locked --project apps/api ruff format --check apps/api",
     "typecheck": "npm run typecheck --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src apps/api/tests",
     "test": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests",
+    "test:unit": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests -m \"not integration\"",
     "test:integration": "node scripts/integration.mjs",
     "browsers:install": "node scripts/browser.mjs install chromium",
     "test:e2e": "node scripts/browser.mjs test",
     "test:e2e:api": "node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py",
     "contracts:generate": "node scripts/contracts.mjs",
     "contracts:check": "node scripts/contracts.mjs --check",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run contracts:check && npm run build"
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run contracts:check && npm run build"
   },
   "devDependencies": {
-    "@neon/config": "^1.9.2",
-    "@neon/env": "^1.6.3",
+    "@neon/config": "1.9.2",
+    "@neon/env": "1.6.3",
     "concurrently": "10.0.5",
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.9"

@@ -73,7 +73,7 @@ npm run db:check
 npm run test:integration
 ```
 
-The current repository has one Alembic head, `6e6c2d4e8a19`. Keep the test URL
+The current repository has one Alembic head, `12a6f0d9c3e1`. Keep the test URL
 separate from the application URL; integration tests do not use the application
 database.
 

@@ -1,18 +1,32 @@
-import { copyFileSync, existsSync, mkdirSync, constants } from "node:fs";
+import {
+  constants,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+} from "node:fs";
 import path from "node:path";
 import { root, run, toolPython, uv, uvEnv, windows } from "./process.mjs";
 
 mkdirSync(path.join(root, ".tools"), { recursive: true });
+const expectedPython = readFileSync(
+  path.join(root, ".python-version"),
+  "utf8",
+).trim();
+if (!/^3\.\d+\.\d+$/.test(expectedPython)) {
+  throw new Error(
+    ".python-version must contain an exact Python major.minor.patch version.",
+  );
+}
+const pythonCommand =
+  process.env.PORTFOLIO_PYTHON || (windows ? "python" : "python3");
 if (!existsSync(toolPython)) {
-  run(process.env.PORTFOLIO_PYTHON || (windows ? "python" : "python3"), [
-    "-m",
-    "venv",
-    path.join(root, ".tools", "venv"),
-  ]);
+  run(pythonCommand, ["-m", "venv", path.join(root, ".tools", "venv")]);
 }
 run(toolPython, [
   "-c",
-  "import sys; assert sys.version_info[:2] == (3, 12), 'Python 3.12 is required; set PORTFOLIO_PYTHON to its executable before setup.'",
+  "import sys; actual = '.'.join(map(str, sys.version_info[:3])); expected = sys.argv[1]; assert actual == expected, f'{expected} is required, found {actual}; set PORTFOLIO_PYTHON to its executable before setup.'",
+  expectedPython,
 ]);
 run(toolPython, [
   "-m",

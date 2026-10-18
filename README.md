@@ -343,6 +343,7 @@ Important documentation includes:
 - `docs/workbook-map.md`
 - `docs/migration.md`
 - `docs/verification.md`
+- `docs/codex-cloud-development.md`
 
 Read domain-specific documentation only when relevant to the task.
 
@@ -352,10 +353,10 @@ Read domain-specific documentation only when relevant to the task.
 
 ## Requirements
 
-- Node.js 24 LTS
-- Python 3.12
-- PostgreSQL
-- npm
+- Node.js 24.14.0
+- Python 3.12.3
+- npm 11.9.0
+- PostgreSQL for database-backed development
 
 Docker is not required.
 
@@ -367,8 +368,14 @@ From the repository root:
 
 ```sh
 npm ci
+npm run check:environment
 npm run setup
 ```
+
+For a GitHub-first Linux/Codex Cloud workflow, see
+[`docs/codex-cloud-development.md`](docs/codex-cloud-development.md). Setup is
+database-independent and does not run migrations, connect to Neon, seed data or
+start workers.
 
 Configure the root `.env` with at least:
 
@@ -465,6 +472,12 @@ npm run test:integration
 npm run db:check
 npm run test:e2e
 ```
+
+`npm run check` is intentionally safe without `DATABASE_URL`; PostgreSQL-backed
+tests are excluded explicitly from the check (`-m "not integration"`). Run
+`npm run test:integration` only when `TEST_DATABASE_URL` explicitly points to a
+dedicated database ending in `_test`. The GitHub Actions workflow runs those
+integration tests against an ephemeral PostgreSQL service.
 
 The project expects:
 
