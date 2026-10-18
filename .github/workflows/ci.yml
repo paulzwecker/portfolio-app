@@ -13,6 +13,11 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  APP_ENV: development
+  GOOGLE_SHEETS_SPREADSHEET_ID: ""
+  GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: ""
+
 jobs:
   quality:
     name: Quality, contracts and build

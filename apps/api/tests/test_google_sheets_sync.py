@@ -54,7 +54,7 @@ from portfolio_api.settings import Settings
 
 FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
 ADDITIONAL_FIXTURES = Path(__file__).parent / "fixtures"
-SPREADSHEET_ID = "11DXXrAp4nuVAzLNSSrJ6ZXtT6RJo3Kk1MVEEORDdMHk"
+SPREADSHEET_ID = "fictional-test-spreadsheet-id-0000000000000000000000"
 
 
 class FakeResponse:
