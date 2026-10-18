@@ -8,25 +8,27 @@ must not be queried, exported, or migrated for this workflow. No Neon, Render, o
 Vercel changes are part of this preparation.
 
 The manifest `validate` and `verify-inputs` commands check metadata and frozen
-source bytes without connecting to PostgreSQL or providers. The shared SQLAlchemy
-engine now checks mutating operations against the exact live database connection
-and, for Neon, verifies project, branch, and endpoint metadata through the control
-plane. Writes require an explicit target environment and authorization; production
-bootstrap additionally requires interactive confirmation of the verified target.
-See [`database-write-targets.md`](database-write-targets.md) for the policy.
+source bytes without connecting to PostgreSQL or providers. The `preflight`
+command also verifies the explicitly selected target through the shared database
+write guard and checks that the database is at the exact Alembic head. It is
+read-only; it does not import data or call providers. The guard verifies Neon
+project, branch, and endpoint metadata through the control plane. Writes require an
+explicit target environment and authorization; production bootstrap additionally
+requires interactive confirmation of the verified target. See
+[`database-write-targets.md`](database-write-targets.md) for the policy.
 
-A target-identity-bound bootstrap orchestrator and full domain reconciliation are
-still future work. Existing importers are not yet coordinated by one resumable
-bootstrap command, and several require a database even for dry-run. Do not use
-their `--apply` switches to initialize this baseline until a later reviewed change
-provides the bounded orchestrator and a disposable PostgreSQL 18 rehearsal.
+A bounded domain-import orchestrator and full reconciliation remain future work.
+Existing importers are not yet coordinated by one resumable bootstrap command,
+and several require a database even for dry-run. Do not use their `--apply`
+switches to initialize this baseline until later reviewed changes provide the
+domain stages and a disposable PostgreSQL 18 rehearsal.
 
-| State       | Current implementation status                                                                                                                                                                                                            |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implemented | Closed metadata manifest contract; frozen-input SHA-256 verification; SQLAlchemy write-target guard; dependency, identity-map, timestamp, history, exact-decimal, and missing-versus-zero validation; CI excludes source artifacts.       |
-| Tested      | Synthetic manifest/artifact tests and write-target policy tests; PostgreSQL 18 write-guard integration tests use a disposable local database.                                                                                            |
-| Staged      | Operator-populated source manifest and artifacts, exact identity mappings, recovery decisions, orchestration, domain import phases, target authorization, and full reconciliation.                                                        |
-| Executed    | Artifact checks against synthetic temporary files and write-guard integration tests on disposable PostgreSQL only. No portfolio source data, canonical database, or cloud resource was accessed or changed.                              |
+| State       | Current implementation status                                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implemented | Closed metadata manifest contract; frozen-input SHA-256 verification; target-authorized, Alembic-aware read-only preflight; shared SQLAlchemy write-target guard; exact-decimal and missing-versus-zero validation. |
+| Tested      | Synthetic manifest/artifact/preflight checks; PostgreSQL 18 target-preflight and write-guard integration tests use only a disposable local database.                                                                |
+| Staged      | Operator-populated source manifest and artifacts, exact identity mappings, recovery decisions, resumable domain imports, and full data reconciliation.                                                              |
+| Executed    | Artifact checks on synthetic temporary files and target/write-guard checks on disposable PostgreSQL only. No portfolio source data, canonical database, or cloud resource was accessed or changed.                  |
 
 The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
 `test_model_input_migration.py`, `test_model_input_parity.py`,
@@ -143,6 +145,45 @@ operator-decision entries with null artifact hashes are reported as
 `not_required`. The verifier never prints a private path, hash, file content, or
 row value. A successful result proves byte integrity only; it does not approve the
 source, validate mappings or imported records, or authorize a database write.
+
+## Verify the selected target and schema
+
+Run this after the source artifacts pass verification. It compares the explicit
+CLI environment to `DATABASE_TARGET_ENVIRONMENT`, then invokes the shared database
+write-target guard on the configured connection. Neon targets must resolve to the
+configured project, branch, and direct endpoint through the control plane. The
+command also requires the application schema and table privileges and checks the
+exact Alembic head used by this checkout.
+
+Use the same private input directory and manifest. Configure `DATABASE_URL`,
+`DATABASE_TARGET_ENVIRONMENT`, `DATABASE_TARGET_DATABASE`, and the appropriate
+target authorization in the local operator environment. Never paste these values
+into chat, a PR, or the manifest.
+
+```powershell
+npm run db:bootstrap-preflight -- --manifest $manifest --input-root $inputRoot --target-environment rehearsal
+```
+
+Choose `development`, `rehearsal`, or `production` to match the intended target.
+For production, the write guard additionally requires the production authorization
+setting and interactive confirmation of the verified project/branch/endpoint/
+database identity. Do not run that path without the separately approved production
+activation procedure.
+
+Expected success output contains only the target environment, migration status,
+source and artifact counts, and safe dependency order:
+
+```text
+Bootstrap preflight passed: target=rehearsal; alembic=current; sources=N; artifacts_verified=M; artifacts_not_required=K; no writes or provider calls.
+Dependency order: <source-id> -> <source-id> -> ...
+```
+
+The guard emits a redacted target-authorization audit record. A failed target,
+authorization, privilege, or migration check exits nonzero and reports a safe
+reason. No import starts. A passing preflight proves target and schema readiness
+at that moment only; every later writer is checked again by the shared guard.
+This command does not establish that the database is empty, reconcile domain data,
+create a resumable run ledger, or import source records.
 
 ## Dependencies and pipeline readiness
 
