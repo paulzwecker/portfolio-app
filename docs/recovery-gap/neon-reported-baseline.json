@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "role": "target",
+  "basis": "operator_reported_no_meaningful_canonical_data",
+  "verified": false,
+  "domains": {
+    "companies": { "count": 0, "precision": "exact", "recovery_class": "A" },
+    "securities": { "count": 0, "precision": "exact", "recovery_class": "A" },
+    "listings": { "count": 0, "precision": "exact", "recovery_class": "A" },
+    "holdings": { "count": 0, "precision": "exact", "recovery_class": "A" },
+    "target_allocations": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "A"
+    },
+    "price_observations": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "B"
+    },
+    "fx_observations": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "B"
+    },
+    "reported_fundamental_observations": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "B"
+    },
+    "model_output_snapshots": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "A"
+    },
+    "score_assessments": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "A"
+    },
+    "current_derived_analytics": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "C"
+    },
+    "historical_ranking_runs": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "D"
+    },
+    "accepted_native_model_revisions": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "D"
+    },
+    "accepted_research_and_thesis_revisions": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "D"
+    },
+    "source_evidence_and_provenance": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "D"
+    },
+    "provider_payloads_and_ingestion_history": {
+      "count": 0,
+      "precision": "exact",
+      "recovery_class": "D"
+    }
+  }
+}

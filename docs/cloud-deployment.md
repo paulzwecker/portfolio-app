@@ -1,6 +1,12 @@
 # Milestone 13B — Neon Provisioning & Cloud Deployment Activation
 
-This document carries forward the Milestone 13A deployment foundation and records the current activation state. Neon is now connected to the existing `portfolio-research` project and `production` branch. Render and Vercel remain unprovisioned, and no scheduled ingestion is active.
+This document carries forward the Milestone 13A deployment foundation and a
+Milestone 13B status snapshot dated 2026-10-17. That snapshot records Neon as
+connected to the existing `portfolio-research` project and `production` branch,
+with Render and Vercel then unprovisioned and scheduled ingestion inactive. The
+Milestone 14B-R task context says Render and Vercel have since been deployed; no
+live cloud check was made during this review, so confirm the present service
+settings in their consoles before relying on deployment steps below.
 
 ## Milestone 13B activation status — 2026-10-17
 
@@ -130,6 +136,11 @@ The password must be URL-encoded. Never put the real URL in this guide, Git, Ver
 Use Neon's direct endpoint for this application. The market and recurring workers acquire session-scoped PostgreSQL advisory locks with `pg_try_advisory_lock`; transaction-pooler connections do not preserve the session semantics these locks require. SQLAlchemy provides the small persistent application-side pool, and `sslmode=require` encrypts each database connection. Alembic reads the same `DATABASE_URL` as the API.
 
 ## Migrations and safe database migration
+
+For the current cloud-native recovery assessment and counts-only bootstrap
+rehearsal, follow [cloud-native-bootstrap-readiness.md](cloud-native-bootstrap-readiness.md).
+That runbook treats a rebuild as a current-state reconstruction and lists the
+historical domains that require preservation or explicit omission approval.
 
 Deploying the API does not change the database. For a **new empty Neon database**, apply the checked-in Alembic chain from a trusted workstation after setting its `DATABASE_URL` for that PowerShell session:
 
