@@ -31,7 +31,13 @@
     "transient_rows_excluded": ["recurring_operations_worker_state"]
   },
   "isolated_target": {
-    "neon_branch_label_for_operator_reference_only": null,
+    "purpose": "rehearsal_only_not_final_canonical_database",
+    "neon_project_id": null,
+    "neon_branch_id": null,
+    "neon_parent_branch_id": null,
+    "verified_primary_branch_id": null,
+    "neon_endpoint_id": null,
+    "environment_identity_verification": "neon_control_plane_api_v2",
     "direct_endpoint_host": null,
     "database": null,
     "schema": "public",
@@ -47,6 +53,8 @@
   },
   "cutover_preflight": {
     "status": null,
+    "review_scope": "isolated_rehearsal_only",
+    "final_canonical_database_certified": false,
     "blockers": [],
     "source_active_operations": {},
     "isolated_target_active_operations": {},

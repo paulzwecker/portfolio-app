@@ -19,13 +19,17 @@ import socket
 import subprocess
 import sys
 import tempfile
-from collections.abc import Iterator, Sequence
+import time as time_module
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import psycopg
 from psycopg import sql
@@ -174,6 +178,7 @@ class DatabaseEndpoint:
     username: str
     schema: str
     test_target: bool = False
+    neon_environment: dict[str, str] | None = field(default=None, repr=False, compare=False)
 
     @property
     def password(self) -> str | None:
@@ -190,6 +195,152 @@ def _required_environment(name: str) -> str:
     if not value:
         raise MigrationToolError(f"Set {name}; the migration tool has no database default.")
     return value
+
+
+def _neon_api_json(path: str, api_key: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        f"https://console.neon.tech/api/v2/{path.lstrip('/')}",
+        headers={"Accept": "application/json", "Authorization": f"Bearer {api_key}"},
+        method="GET",
+    )
+
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(
+            self, req: Any, fp: Any, code: int, msg: str, headers: Any, new_url: str
+        ) -> None:
+            return None
+
+    try:
+        opener = urllib.request.build_opener(NoRedirect)
+        with opener.open(request, timeout=15) as response:
+            if not response.geturl().startswith("https://console.neon.tech/"):
+                raise MigrationToolError(
+                    "Neon control-plane identity verification redirected to an unexpected host."
+                )
+            payload = json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        raise MigrationToolError(
+            f"Neon control-plane identity verification failed (HTTP {error.code})."
+        ) from None
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+    ):
+        raise MigrationToolError(
+            "Neon control-plane identity verification failed; the target identity is unproven."
+        ) from None
+    except MigrationToolError:
+        raise
+    except Exception:
+        raise MigrationToolError(
+            "Neon control-plane identity verification failed; the target identity is unproven."
+        ) from None
+    if not isinstance(payload, dict):
+        raise MigrationToolError("Neon control-plane returned an invalid identity response.")
+    return payload
+
+
+def _neon_api_list(resource: str, project_id: str, api_key: str) -> list[dict[str, Any]]:
+    encoded_project = urllib.parse.quote(project_id, safe="")
+    cursor: str | None = None
+    seen_cursors: set[str] = set()
+    results: list[dict[str, Any]] = []
+    for _ in range(20):
+        query = {"limit": "100"}
+        if cursor is not None:
+            query["cursor"] = cursor
+        payload = _neon_api_json(
+            f"projects/{encoded_project}/{resource}?{urllib.parse.urlencode(query)}", api_key
+        )
+        items = payload.get(resource)
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise MigrationToolError(
+                f"Neon control-plane returned an invalid {resource} identity list."
+            )
+        results.extend(items)
+        pagination = payload.get("pagination")
+        next_cursor = pagination.get("cursor") if isinstance(pagination, dict) else None
+        if next_cursor is None:
+            if len(items) == 100:
+                raise MigrationToolError(
+                    "Neon control-plane identity results may be truncated; "
+                    "target isolation is unproven."
+                )
+            return results
+        if not isinstance(next_cursor, str) or not next_cursor or next_cursor in seen_cursors:
+            raise MigrationToolError("Neon control-plane pagination could not be verified.")
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    raise MigrationToolError("Neon control-plane identity list exceeded the safe pagination limit.")
+
+
+def _verify_neon_target_identity(endpoint: DatabaseEndpoint) -> dict[str, str]:
+    """Prove the entered endpoint belongs to a non-primary Neon child branch."""
+    api_key = _required_environment("MIGRATION_NEON_API_KEY")
+    project_id = _required_environment("MIGRATION_NEON_PROJECT_ID")
+    target_branch_id = _required_environment("MIGRATION_NEON_TARGET_BRANCH_ID")
+    target_endpoint_id = _required_environment("MIGRATION_NEON_TARGET_ENDPOINT_ID")
+    for value in (project_id, target_branch_id, target_endpoint_id):
+        if not re.fullmatch(r"[A-Za-z0-9_-]{3,128}", value):
+            raise MigrationToolError("Neon project, branch and endpoint IDs must be plain IDs.")
+
+    branches = _neon_api_list("branches", project_id, api_key)
+    endpoints = _neon_api_list("endpoints", project_id, api_key)
+    primary_branches = [branch for branch in branches if branch.get("primary") is True]
+    if len(primary_branches) != 1:
+        raise MigrationToolError(
+            "Neon did not identify exactly one primary branch; target isolation is unproven."
+        )
+    primary_branch = primary_branches[0]
+    primary_branch_id = primary_branch.get("id")
+    if not isinstance(primary_branch_id, str) or not primary_branch_id:
+        raise MigrationToolError(
+            "Neon did not return the primary branch ID; target isolation is unproven."
+        )
+    target_branches = [branch for branch in branches if branch.get("id") == target_branch_id]
+    target_endpoints = [
+        endpoint_data
+        for endpoint_data in endpoints
+        if endpoint_data.get("id") == target_endpoint_id
+    ]
+    if len(target_branches) != 1 or len(target_endpoints) != 1:
+        raise MigrationToolError(
+            "The Neon project does not resolve the selected branch and endpoint IDs uniquely."
+        )
+    target_branch = target_branches[0]
+    target_endpoint = target_endpoints[0]
+    if target_branch.get("primary") is True or target_branch_id == primary_branch_id:
+        raise MigrationToolError("The selected Neon branch is the primary production branch.")
+    if target_branch.get("parent_id") != primary_branch_id:
+        raise MigrationToolError(
+            "The selected Neon branch is not a direct child of the verified primary branch."
+        )
+    if target_endpoint.get("branch_id") != target_branch_id:
+        raise MigrationToolError(
+            "The selected Neon endpoint is not attached to the verified migration branch."
+        )
+    endpoint_host = str(target_endpoint.get("host", "")).rstrip(".").lower()
+    if endpoint_host != endpoint.host:
+        raise MigrationToolError(
+            "The PostgreSQL hostname does not match the verified Neon endpoint identity."
+        )
+    if target_endpoint.get("type") != "read_write":
+        raise MigrationToolError("The verified Neon endpoint is not a read-write endpoint.")
+    if target_branch.get("project_id") not in {None, project_id}:
+        raise MigrationToolError("The selected Neon branch belongs to another project.")
+    if target_endpoint.get("project_id") not in {None, project_id}:
+        raise MigrationToolError("The selected Neon endpoint belongs to another project.")
+    return {
+        "project_id": project_id,
+        "production_branch_id": str(primary_branch_id),
+        "branch_id": target_branch_id,
+        "endpoint_id": target_endpoint_id,
+        "parent_branch_id": str(primary_branch_id),
+        "verified_by": "neon_control_plane_api_v2",
+    }
 
 
 def _required_row(row: tuple[Any, ...] | None, message: str) -> tuple[Any, ...]:
@@ -268,11 +419,8 @@ def endpoint_from_environment(role: str) -> DatabaseEndpoint:
 
     expected_host = _required_environment("MIGRATION_EXPECTED_TARGET_HOST").rstrip(".").lower()
     expected_database = _required_environment("MIGRATION_EXPECTED_TARGET_DATABASE")
-    production_host = _required_environment("MIGRATION_PRODUCTION_HOST").rstrip(".").lower()
     if "/" in expected_host or ":" in expected_host or "@" in expected_host:
         raise MigrationToolError("MIGRATION_EXPECTED_TARGET_HOST must be a hostname only.")
-    if "/" in production_host or ":" in production_host or "@" in production_host:
-        raise MigrationToolError("MIGRATION_PRODUCTION_HOST must be a hostname only.")
     if host != expected_host:
         raise MigrationToolError(
             "Resolved target endpoint does not match the explicitly expected host."
@@ -281,8 +429,6 @@ def endpoint_from_environment(role: str) -> DatabaseEndpoint:
         raise MigrationToolError(
             "Connected target database does not match the explicitly expected name."
         )
-    if host == production_host:
-        raise MigrationToolError("The target endpoint matches the protected production endpoint.")
     if "-pooler." in host:
         raise MigrationToolError(
             "The target must use the direct PostgreSQL endpoint, not a pooler."
@@ -313,6 +459,18 @@ def endpoint_from_environment(role: str) -> DatabaseEndpoint:
     elif endpoint.port != 5432:
         raise MigrationToolError(
             "A direct Neon migration endpoint must use the PostgreSQL port 5432."
+        )
+    else:
+        endpoint = DatabaseEndpoint(
+            role=endpoint.role,
+            url=endpoint.url,
+            host=endpoint.host,
+            port=endpoint.port,
+            database=endpoint.database,
+            username=endpoint.username,
+            schema=endpoint.schema,
+            test_target=False,
+            neon_environment=_verify_neon_target_identity(endpoint),
         )
     return endpoint
 
@@ -361,7 +519,10 @@ def _ssl_options(endpoint: DatabaseEndpoint) -> dict[str, str]:
 
 
 def connection_identity(
-    connection: psycopg.Connection[Any], endpoint: DatabaseEndpoint
+    connection: psycopg.Connection[Any],
+    endpoint: DatabaseEndpoint,
+    *,
+    require_supported: bool = True,
 ) -> dict[str, Any]:
     row = connection.execute(
         """
@@ -392,7 +553,7 @@ def connection_identity(
             "Connected database identity does not match the explicit target identity."
         )
     major = int(version_num) // 10000
-    if major != EXPECTED_POSTGRES_MAJOR:
+    if require_supported and major != EXPECTED_POSTGRES_MAJOR:
         raise MigrationToolError(
             f"PostgreSQL {major} is unsupported; this migration chain requires "
             f"PostgreSQL {EXPECTED_POSTGRES_MAJOR}."
@@ -420,7 +581,7 @@ def connection_identity(
         and (server_address is None or not ipaddress.ip_interface(server_address).ip.is_loopback)
     ):
         raise MigrationToolError("The source server did not resolve to a loopback address.")
-    return {
+    identity = {
         "role": endpoint.role,
         "endpoint_host": endpoint.host,
         "resolved_address_count": len(addresses),
@@ -439,6 +600,9 @@ def connection_identity(
         "locale_provider": provider,
         "collation_version": collversion,
     }
+    if endpoint.neon_environment is not None:
+        identity["neon_environment"] = dict(endpoint.neon_environment)
+    return identity
 
 
 def _schema_tables(connection: psycopg.Connection[Any], schema: str) -> list[str]:
@@ -1064,12 +1228,22 @@ def schema_check(source: DatabaseEndpoint, target: DatabaseEndpoint) -> dict[str
             connect_read_only(target) as target_connection,
         ):
             source_identity = _identity_and_schema(source_connection, source, strict_head=True)
-            if source_identity["foreign_keys"]["unvalidated"]:
-                raise MigrationToolError(
-                    "The source has unvalidated foreign keys; referential integrity "
-                    "must be reviewed."
-                )
-            target_identity = connection_identity(target_connection, target)
+            target_identity = connection_identity(
+                target_connection, target, require_supported=False
+            )
+            target_objects = _public_object_count(target_connection, target.schema)
+            privileges = _database_privileges(target_connection, target.schema)
+            target_extensions = extension_inventory(target_connection)
+            target_extra_schemas = _additional_user_schemas(target_connection, target.schema)
+            target_identity.update(
+                {
+                    "public_object_count": target_objects,
+                    "restore_privileges": privileges,
+                    "extensions": target_extensions,
+                    "additional_user_schemas": target_extra_schemas,
+                }
+            )
+            blockers: list[dict[str, Any]] = []
             for field_name in (
                 "postgres_major",
                 "server_encoding",
@@ -1077,37 +1251,117 @@ def schema_check(source: DatabaseEndpoint, target: DatabaseEndpoint) -> dict[str
                 "database_ctype",
                 "locale_provider",
                 "collation_version",
+                "extensions",
             ):
                 if source_identity[field_name] != target_identity[field_name]:
-                    raise MigrationToolError(
-                        f"Source and target {field_name} values are incompatible."
+                    blockers.append(
+                        {
+                            "code": f"{field_name}_differs",
+                            "source": source_identity[field_name],
+                            "target": target_identity[field_name],
+                        }
                     )
-            target_objects = _public_object_count(target_connection, target.schema)
+            if source_identity["foreign_keys"]["unvalidated"]:
+                blockers.append(
+                    {
+                        "code": "source_has_unvalidated_foreign_keys",
+                        "count": source_identity["foreign_keys"]["unvalidated"],
+                    }
+                )
+            if source_identity["additional_user_schemas"]:
+                blockers.append(
+                    {
+                        "code": "source_has_additional_user_schemas",
+                        "schemas": source_identity["additional_user_schemas"],
+                    }
+                )
+            if target_extra_schemas:
+                blockers.append(
+                    {
+                        "code": "target_has_additional_user_schemas",
+                        "schemas": target_extra_schemas,
+                    }
+                )
             if target_objects == 0:
-                privileges = _database_privileges(target_connection, target.schema)
                 if not privileges["schema_usage"] or not privileges["schema_create"]:
-                    raise MigrationToolError(
-                        "The selected role needs USAGE and CREATE on the empty target schema."
-                    )
-                target_identity["public_object_count"] = target_objects
-                target_identity["restore_privileges"] = privileges
-                target_identity["extensions"] = extension_inventory(target_connection)
-                if source_identity["extensions"] != target_identity["extensions"]:
-                    raise MigrationToolError(
-                        "Source and empty target PostgreSQL extension sets do not match."
+                    blockers.append(
+                        {
+                            "code": "target_schema_restore_privileges_missing",
+                            "required": ["USAGE", "CREATE"],
+                            "actual": privileges,
+                        }
                     )
                 return {
-                    "status": "EMPTY_TARGET_COMPATIBLE_FOR_FULL_RESTORE",
+                    "status": "BLOCKED" if blockers else "EMPTY_TARGET_COMPATIBLE_FOR_FULL_RESTORE",
                     "restore_format": "postgres-custom-full-schema-and-data",
+                    "blockers": blockers,
                     "source": source_identity,
                     "target": target_identity,
                     "data_only_restore_compatible": source_identity["data_only_restore_compatible"],
                 }
-            source_identity, target_identity = _assert_target_schema_matches_source(
-                source_connection, target_connection, source, target
+            source_descriptor = schema_descriptor(source_connection, source.schema)
+            target_descriptor = schema_descriptor(target_connection, target.schema)
+            source_fingerprint = hashlib.sha256(_canonical_json(source_descriptor)).hexdigest()
+            target_fingerprint = hashlib.sha256(_canonical_json(target_descriptor)).hexdigest()
+            target_identity["schema_fingerprint"] = target_fingerprint
+            target_identity["alembic_heads"] = _schema_alembic_heads(
+                target_connection, target.schema
             )
+            target_identity["foreign_keys"] = _foreign_key_status(target_connection, target.schema)
+            target_identity["additional_user_schemas"] = _additional_user_schemas(
+                target_connection, target.schema
+            )
+            target_identity["table_count"] = len(
+                target_connection.execute(
+                    """
+                    SELECT table_name FROM information_schema.tables
+                     WHERE table_schema = %s AND table_type = 'BASE TABLE'
+                    """,
+                    (target.schema,),
+                ).fetchall()
+            )
+            if source_fingerprint != target_fingerprint:
+                blockers.append(
+                    {
+                        "code": "schema_definitions_differ",
+                        "source_fingerprint": source_fingerprint,
+                        "target_fingerprint": target_fingerprint,
+                        "objects": _schema_difference_summary(source_descriptor, target_descriptor),
+                    }
+                )
+            if source_identity["alembic_heads"] != target_identity["alembic_heads"]:
+                blockers.append(
+                    {
+                        "code": "alembic_revisions_differ",
+                        "source": source_identity["alembic_heads"],
+                        "target": target_identity["alembic_heads"],
+                    }
+                )
+            if target_identity["foreign_keys"]["unvalidated"]:
+                blockers.append(
+                    {
+                        "code": "target_has_unvalidated_foreign_keys",
+                        "count": target_identity["foreign_keys"]["unvalidated"],
+                    }
+                )
+            if privileges["tables_without_insert_or_sequence_update"]:
+                blockers.append(
+                    {
+                        "code": "target_table_or_sequence_restore_privileges_missing",
+                        "objects": privileges["tables_without_insert_or_sequence_update"],
+                    }
+                )
+            if not privileges["schema_usage"] or not privileges["schema_create"]:
+                blockers.append(
+                    {
+                        "code": "target_schema_restore_privileges_missing",
+                        "required": ["USAGE", "CREATE"],
+                        "actual": privileges,
+                    }
+                )
             return {
-                "status": "SCHEMAS_MATCH",
+                "status": "BLOCKED" if blockers else "SCHEMAS_MATCH",
+                "blockers": blockers,
                 "source": source_identity,
                 "target": target_identity,
                 "data_only_restore_compatible": source_identity["data_only_restore_compatible"],
@@ -1131,6 +1385,109 @@ def schema_check(source: DatabaseEndpoint, target: DatabaseEndpoint) -> dict[str
         raise MigrationToolError(
             f"Schema compatibility check failed ({type(error).__name__}){detail}{location}."
         ) from None
+
+
+def _schema_alembic_heads(connection: psycopg.Connection[Any], schema: str) -> list[str]:
+    row = connection.execute(
+        """
+        SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+             WHERE table_schema = %s AND table_name = 'alembic_version'
+        )
+        """,
+        (schema,),
+    ).fetchone()
+    if not _required_row(row, "Could not inspect target migration metadata.")[0]:
+        return []
+    return alembic_heads(connection, schema)
+
+
+def _schema_difference_summary(
+    source: dict[str, Any], target: dict[str, Any], *, limit: int = 50
+) -> dict[str, Any]:
+    """Show changed schema object names without exposing definitions or row data."""
+    identity_functions: dict[str, Callable[[Any], str]] = {
+        "tables": lambda row: str(row[0]),
+        "columns": lambda row: f"{row[0]}.{row[1]}",
+        "constraints": lambda row: f"{row[0]}.{row[1]}",
+        "indexes": lambda row: f"{row[0]}.{row[1]}",
+        "sequences": lambda row: str(row[0]),
+        "types": lambda row: str(row[0]),
+        "triggers": lambda row: f"{row[0]}.{row[1]}",
+        "extensions": lambda row: str(row[0]),
+        "views": lambda row: str(row[0]),
+    }
+    field_names = {
+        "tables": {1: "relation_kind", 2: "persistence"},
+        "columns": {
+            2: "data_type",
+            3: "not_null",
+            4: "default_changed",
+            5: "identity",
+            6: "generated",
+            7: "collation",
+        },
+        "constraints": {
+            2: "constraint_type",
+            3: "validated",
+            4: "deferrable",
+            5: "initially_deferred",
+            6: "definition_changed",
+        },
+        "indexes": {2: "definition_changed"},
+        "sequences": {
+            1: "sequence_type",
+            2: "start",
+            3: "minimum",
+            4: "maximum",
+            5: "increment",
+            6: "cycle",
+            7: "cache",
+            8: "owner_changed",
+            9: "owner_column_changed",
+        },
+        "types": {1: "type_kind", 2: "type_definition", 3: "labels_changed"},
+        "triggers": {2: "definition_changed"},
+        "extensions": {1: "version", 2: "schema"},
+        "views": {1: "definition_changed"},
+    }
+    summary: dict[str, Any] = {}
+    for section, identity_of in identity_functions.items():
+        source_items = {identity_of(row): row for row in source.get(section, [])}
+        target_items = {identity_of(row): row for row in target.get(section, [])}
+        source_keys = set(source_items)
+        target_keys = set(target_items)
+        added = sorted(target_keys - source_keys)
+        removed = sorted(source_keys - target_keys)
+        changed = []
+        for key in sorted(source_keys & target_keys):
+            source_row = source_items[key]
+            target_row = target_items[key]
+            if source_row != target_row:
+                fields = field_names[section]
+                changed.append(
+                    {
+                        "name": key,
+                        "fields": [
+                            fields[index]
+                            for index, (source_value, target_value) in enumerate(
+                                zip(source_row, target_row, strict=True)
+                            )
+                            if source_value != target_value
+                        ],
+                    }
+                )
+        if added or removed or changed:
+            summary[section] = {
+                "added": added[:limit],
+                "added_count": len(added),
+                "removed": removed[:limit],
+                "removed_count": len(removed),
+                "changed": changed[:limit],
+                "changed_count": len(changed),
+                "truncated": len(added) > limit or len(removed) > limit or len(changed) > limit,
+            }
+    return summary
 
 
 def _source_target_distinct(source: DatabaseEndpoint, target: DatabaseEndpoint) -> None:
@@ -1326,8 +1683,17 @@ def _sha256_file(path: Path) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def _native_tool_environment(endpoint: DatabaseEndpoint) -> dict[str, str]:
+def _native_tool_environment(
+    endpoint: DatabaseEndpoint, *, application_name: str | None = None
+) -> dict[str, str]:
     environment = os.environ.copy()
+    for name in tuple(environment):
+        if (
+            name.startswith(("MIGRATION_", "NEON_"))
+            or name == "DATABASE_URL"
+            or name.endswith("_DATABASE_URL")
+        ):
+            environment.pop(name, None)
     for name in (
         "PGHOST",
         "PGPORT",
@@ -1351,7 +1717,7 @@ def _native_tool_environment(endpoint: DatabaseEndpoint) -> dict[str, str]:
             "PGPORT": str(endpoint.port),
             "PGUSER": endpoint.username,
             "PGDATABASE": endpoint.database,
-            "PGAPPNAME": f"portfolio-migration-{endpoint.role}",
+            "PGAPPNAME": application_name or f"portfolio-migration-{endpoint.role}",
             "PGOPTIONS": _connection_options(endpoint, read_only=endpoint.role == "source"),
             "PGCONNECT_TIMEOUT": "10",
         }
@@ -1371,7 +1737,9 @@ def _native_tool_environment(endpoint: DatabaseEndpoint) -> dict[str, str]:
     return environment
 
 
-def _container_tool_prefix(endpoint: DatabaseEndpoint, container: str) -> list[str]:
+def _container_tool_prefix(
+    endpoint: DatabaseEndpoint, container: str, *, application_name: str | None = None
+) -> list[str]:
     if not endpoint.test_target and not (
         _is_loopback(endpoint.host) and endpoint.database.endswith("_test")
     ):
@@ -1400,7 +1768,7 @@ def _container_tool_prefix(endpoint: DatabaseEndpoint, container: str) -> list[s
         "--env",
         f"PGDATABASE={endpoint.database}",
         "--env",
-        f"PGAPPNAME=portfolio-migration-{endpoint.role}",
+        f"PGAPPNAME={application_name or f'portfolio-migration-{endpoint.role}'}",
         "--env",
         _container_pgoptions(endpoint),
         "--env",
@@ -1416,18 +1784,21 @@ def _container_pgoptions(endpoint: DatabaseEndpoint) -> str:
 
 
 def _tool_prefix(
-    endpoint: DatabaseEndpoint, tool_name: str
+    endpoint: DatabaseEndpoint, tool_name: str, *, application_name: str | None = None
 ) -> tuple[list[str], dict[str, str] | None]:
     container = os.environ.get("MIGRATION_PG_TOOLS_CONTAINER", "").strip()
     if container:
-        return [*_container_tool_prefix(endpoint, container), tool_name], None
+        return [
+            *_container_tool_prefix(endpoint, container, application_name=application_name),
+            tool_name,
+        ], None
     executable = shutil.which(tool_name)
     if not executable:
         raise MigrationToolError(
             f"{tool_name} is required. Install PostgreSQL 18 client tools or use the "
             "CI-only _test container setting."
         )
-    return [executable], _native_tool_environment(endpoint)
+    return [executable], _native_tool_environment(endpoint, application_name=application_name)
 
 
 def _tool_major(endpoint: DatabaseEndpoint, tool_name: str) -> int:
@@ -1466,6 +1837,45 @@ def _stop_process(process: subprocess.Popen[bytes]) -> None:
     except subprocess.TimeoutExpired:
         process.kill()
         process.communicate()
+
+
+def _cancel_restore_backend(endpoint: DatabaseEndpoint, application_name: str) -> None:
+    """Terminate and confirm the unique pg_restore session after local interruption."""
+    try:
+        with psycopg.connect(
+            host=endpoint.host,
+            port=endpoint.port,
+            dbname=endpoint.database,
+            user=endpoint.username,
+            password=endpoint.password,
+            connect_timeout=10,
+            application_name="portfolio-migration-interrupt-cleanup",
+            **dict[str, Any](_ssl_options(endpoint)),
+        ) as connection:
+            connection.autocommit = True
+            for _ in range(30):
+                rows = connection.execute(
+                    """
+                    SELECT pid
+                      FROM pg_stat_activity
+                     WHERE datname = %s AND usename = %s AND application_name = %s
+                       AND pid <> pg_backend_pid()
+                    """,
+                    (endpoint.database, endpoint.username, application_name),
+                ).fetchall()
+                if not rows:
+                    return
+                for (pid,) in rows:
+                    connection.execute("SELECT pg_terminate_backend(%s)", (int(pid),))
+                time_module.sleep(0.1)
+    except Exception:
+        raise MigrationToolError(
+            "Restore interruption could not confirm termination of the target session; "
+            "discard the target database."
+        ) from None
+    raise MigrationToolError(
+        "Restore interruption left a target session active; discard the target database."
+    )
 
 
 def _run_tool_capture(
@@ -1922,14 +2332,24 @@ def _assert_target_isolated(target: DatabaseEndpoint) -> dict[str, Any]:
         raise MigrationToolError(
             "Production migration operations are restricted to the public schema."
         )
+    if not target.test_target and target.neon_environment is None:
+        raise MigrationToolError(
+            "Neon branch and endpoint identity were not verified against the control plane."
+        )
     try:
         with connect_read_only(target) as connection:
             identity = connection_identity(connection, target)
             object_count = _public_object_count(connection, target.schema)
             privileges = _database_privileges(connection, target.schema)
+            extra_schemas = _additional_user_schemas(connection, target.schema)
             if object_count:
                 raise MigrationToolError(
                     "The selected migration database is not empty; restore requires a new database."
+                )
+            if extra_schemas:
+                raise MigrationToolError(
+                    "The selected migration database has additional user schemas; "
+                    "restore requires a new database."
                 )
             if not privileges["schema_usage"] or not privileges["schema_create"]:
                 raise MigrationToolError(
@@ -1953,7 +2373,10 @@ def _pg_restore(
     *,
     restore: bool,
 ) -> None:
-    prefix, environment = _tool_prefix(endpoint, "pg_restore")
+    restore_application_name = f"portfolio-restore-{uuid4().hex}"
+    prefix, environment = _tool_prefix(
+        endpoint, "pg_restore", application_name=restore_application_name
+    )
     arguments = ["--no-password", "--no-owner", "--no-acl", "--exit-on-error"]
     if restore:
         arguments.extend(["--single-transaction", "--dbname", endpoint.database])
@@ -1973,23 +2396,37 @@ def _pg_restore(
                 process.communicate(timeout=3600)
             except KeyboardInterrupt:
                 _stop_process(process)
-                raise MigrationToolError(
-                    "Restore interrupted; pg_restore was stopped and its connection closed."
-                ) from None
+                if restore:
+                    _cancel_restore_backend(endpoint, restore_application_name)
+                    message = (
+                        "Restore interrupted; its PostgreSQL session was terminated and the "
+                        "single-transaction restore was rolled back. Discard the target database."
+                    )
+                else:
+                    message = "Backup archive validation was interrupted; no result is valid."
+                raise MigrationToolError(message) from None
             except subprocess.TimeoutExpired:
                 _stop_process(process)
-                raise MigrationToolError(
-                    "pg_restore exceeded the configured time limit; its transaction was aborted."
-                ) from None
+                if restore:
+                    _cancel_restore_backend(endpoint, restore_application_name)
+                    message = (
+                        "pg_restore exceeded the configured time limit; its PostgreSQL session "
+                        "was terminated and transaction rolled back. Discard the target database."
+                    )
+                else:
+                    message = (
+                        "Backup archive validation exceeded its time limit; no result is valid."
+                    )
+                raise MigrationToolError(message) from None
     except MigrationToolError:
         raise
     except KeyboardInterrupt:
         raise MigrationToolError(
-            "Restore interrupted; the pg_restore process was stopped and its connection closed."
+            "Restore interrupted before pg_restore completed; do not treat the target as migrated."
         ) from None
     except subprocess.TimeoutExpired:
         raise MigrationToolError(
-            "pg_restore exceeded the configured time limit; its transaction was aborted."
+            "pg_restore exceeded the configured time limit; do not treat the target as migrated."
         ) from None
     except Exception:
         raise MigrationToolError("Could not execute pg_restore.") from None
@@ -2100,6 +2537,7 @@ def restore(
                 )
             return {
                 "status": "RESTORED_AND_RECONCILED",
+                "target_use": "isolated_rehearsal_only",
                 "target": restored_identity,
                 "table_count": len(manifest["data_tables"]),
                 "archive_sha256": manifest["archive_sha256"],
@@ -2200,7 +2638,11 @@ def cutover_preflight(
             if source_identity["database_collation"] != target_identity["database_collation"]:
                 blockers.append("database_collation_differs")
             return {
-                "status": "READY_FOR_SEPARATE_PRODUCTION_REVIEW" if not blockers else "BLOCKED",
+                "status": (
+                    "REHEARSAL_READY_FOR_SEPARATE_PRODUCTION_REVIEW" if not blockers else "BLOCKED"
+                ),
+                "review_scope": "isolated_rehearsal_only",
+                "final_canonical_database_certified": False,
                 "production_accessed": False,
                 "production_modified": False,
                 "blockers": blockers,
@@ -2302,7 +2744,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             raise MigrationToolError("Unknown migration command.")
         _write_report(getattr(arguments, "report", None), report)
-        return 0
+        return 2 if report.get("status") in {"BLOCKED", "DIFFERENCES_FOUND"} else 0
     except MigrationToolError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2

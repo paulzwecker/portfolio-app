@@ -6,12 +6,15 @@ import hashlib
 import os
 import re
 import shutil
+import threading
+import time
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 from uuid import UUID, uuid4
 
+import psycopg
 import pytest
 from alembic import command
 from sqlalchemy import Table, create_engine, text
@@ -22,11 +25,16 @@ from portfolio_api.migrations import alembic_config
 from portfolio_api.postgres_migration import (
     DatabaseEndpoint,
     MigrationToolError,
+    _cancel_restore_backend,
     _canonical_json,
+    _native_tool_environment,
+    _neon_api_json,
     _pg_restore,
+    _schema_difference_summary,
     backup,
     cutover_preflight,
     endpoint_from_environment,
+    main,
     reconcile,
     restore,
     schema_check,
@@ -42,6 +50,10 @@ MIGRATION_ENVIRONMENT_NAMES = (
     "MIGRATION_EXPECTED_TARGET_HOST",
     "MIGRATION_EXPECTED_TARGET_DATABASE",
     "MIGRATION_PRODUCTION_HOST",
+    "MIGRATION_NEON_API_KEY",
+    "MIGRATION_NEON_PROJECT_ID",
+    "MIGRATION_NEON_TARGET_BRANCH_ID",
+    "MIGRATION_NEON_TARGET_ENDPOINT_ID",
     "MIGRATION_ALLOW_TEST_TARGET",
     "MIGRATION_PG_TOOLS_CONTAINER",
 )
@@ -62,7 +74,6 @@ def _set_target_environment(
     monkeypatch.setenv("MIGRATION_TARGET_URL", url)
     monkeypatch.setenv("MIGRATION_EXPECTED_TARGET_HOST", host)
     monkeypatch.setenv("MIGRATION_EXPECTED_TARGET_DATABASE", database)
-    monkeypatch.setenv("MIGRATION_PRODUCTION_HOST", "protected-production.invalid")
 
 
 def test_source_does_not_fall_back_to_application_database(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -130,8 +141,7 @@ def test_production_and_default_database_targets_are_rejected(
         host="production.neon.tech",
         database="neondb",
     )
-    monkeypatch.setenv("MIGRATION_PRODUCTION_HOST", "production.neon.tech")
-    with pytest.raises(MigrationToolError, match="protected production"):
+    with pytest.raises(MigrationToolError, match="end in _migration"):
         endpoint_from_environment("target")
 
     _set_target_environment(
@@ -144,11 +154,199 @@ def test_production_and_default_database_targets_are_rejected(
         endpoint_from_environment("target")
 
 
+def test_neon_target_requires_control_plane_proof_of_a_child_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_migration_environment(monkeypatch)
+    _set_target_environment(
+        monkeypatch,
+        url="postgresql+psycopg://synthetic:secret@ep-migration.neon.tech/portfolio_migration?sslmode=require",
+        host="ep-migration.neon.tech",
+        database="portfolio_migration",
+    )
+    monkeypatch.setenv("MIGRATION_NEON_API_KEY", "synthetic-api-key")
+    monkeypatch.setenv("MIGRATION_NEON_PROJECT_ID", "synthetic-project")
+    monkeypatch.setenv("MIGRATION_NEON_TARGET_BRANCH_ID", "br-migration")
+    monkeypatch.setenv("MIGRATION_NEON_TARGET_ENDPOINT_ID", "ep-migration")
+    lists: dict[str, Any] = {
+        "branches": [
+            {"id": "br-primary", "primary": True, "parent_id": None},
+            {"id": "br-migration", "primary": False, "parent_id": "br-primary"},
+        ],
+        "endpoints": [
+            {
+                "id": "ep-migration",
+                "branch_id": "br-migration",
+                "host": "ep-migration.neon.tech",
+                "type": "read_write",
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration._neon_api_list",
+        lambda resource, _project, _key: lists[resource],
+    )
+
+    endpoint = endpoint_from_environment("target")
+    assert endpoint.neon_environment == {
+        "project_id": "synthetic-project",
+        "production_branch_id": "br-primary",
+        "branch_id": "br-migration",
+        "endpoint_id": "ep-migration",
+        "parent_branch_id": "br-primary",
+        "verified_by": "neon_control_plane_api_v2",
+    }
+
+    monkeypatch.setenv("MIGRATION_NEON_TARGET_BRANCH_ID", "br-primary")
+    with pytest.raises(MigrationToolError, match="primary production branch"):
+        endpoint_from_environment("target")
+    lists["branches"][0]["id"] = None
+    with pytest.raises(MigrationToolError, match="primary branch ID"):
+        endpoint_from_environment("target")
+
+
+def test_neon_target_identity_fails_closed_when_proof_is_missing_or_wrong(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_migration_environment(monkeypatch)
+    _set_target_environment(
+        monkeypatch,
+        url="postgresql+psycopg://synthetic:secret@ep-migration.neon.tech/portfolio_migration?sslmode=require",
+        host="ep-migration.neon.tech",
+        database="portfolio_migration",
+    )
+    with pytest.raises(MigrationToolError, match="MIGRATION_NEON_API_KEY") as error:
+        endpoint_from_environment("target")
+    assert "secret" not in str(error.value)
+
+    for name, value in {
+        "MIGRATION_NEON_API_KEY": "synthetic-api-key",
+        "MIGRATION_NEON_PROJECT_ID": "synthetic-project",
+        "MIGRATION_NEON_TARGET_BRANCH_ID": "br-migration",
+        "MIGRATION_NEON_TARGET_ENDPOINT_ID": "ep-migration",
+    }.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration._neon_api_list",
+        lambda resource, _project, _key: (
+            [
+                {"id": "br-primary", "primary": True, "parent_id": None},
+                {"id": "br-migration", "primary": False, "parent_id": "br-primary"},
+            ]
+            if resource == "branches"
+            else [
+                {
+                    "id": "ep-migration",
+                    "branch_id": "br-primary",
+                    "host": "ep-migration.neon.tech",
+                    "type": "read_write",
+                }
+            ]
+        ),
+    )
+    with pytest.raises(MigrationToolError, match="not attached to the verified migration branch"):
+        endpoint_from_environment("target")
+
+
+def test_neon_identity_request_uses_fixed_get_endpoint_without_logging_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeResponse:
+        def __enter__(self) -> FakeResponse:
+            return self
+
+        def __exit__(self, *_args: Any) -> None:
+            return None
+
+        def geturl(self) -> str:
+            return "https://console.neon.tech/api/v2/projects/synthetic/branches"
+
+        def read(self) -> bytes:
+            return b'{"branches": []}'
+
+    class FakeOpener:
+        def open(self, request: Any, timeout: int) -> FakeResponse:
+            assert timeout == 15
+            assert request.method == "GET"
+            assert request.full_url.startswith("https://console.neon.tech/api/v2/")
+            assert request.get_header("Authorization") == "Bearer synthetic-api-key"
+            assert "synthetic-api-key" not in request.full_url
+            return FakeResponse()
+
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration.urllib.request.build_opener",
+        lambda *_handlers: FakeOpener(),
+    )
+    assert _neon_api_json("projects/synthetic/branches?limit=100", "synthetic-api-key") == {
+        "branches": []
+    }
+
+
 def test_financial_decimal_fingerprints_preserve_exact_values() -> None:
     left = _canonical_json({"expected_irr": Decimal("0.150000000000000000")})
     right = _canonical_json({"expected_irr": Decimal("0.150000000000000001")})
 
     assert hashlib.sha256(left).digest() != hashlib.sha256(right).digest()
+
+
+def test_schema_difference_report_names_objects_without_definitions_or_data() -> None:
+    source = {"columns": [("companies", "name", "text", False, "'private-value'", "", "", None)]}
+    target = {
+        "columns": [
+            ("companies", "name", "character varying", False, "'private-value'", "", "", None)
+        ]
+    }
+
+    differences = _schema_difference_summary(source, target)
+    assert differences["columns"]["changed"] == [
+        {"name": "companies.name", "fields": ["data_type"]}
+    ]
+    assert "private-value" not in str(differences)
+
+
+def test_postgres_tool_environment_does_not_inherit_urls_or_neon_api_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    endpoint = DatabaseEndpoint(
+        role="target",
+        url=URL.create(
+            "postgresql+psycopg",
+            username="synthetic",
+            password="synthetic-password",
+            host="127.0.0.1",
+            database="migration_test",
+        ),
+        host="127.0.0.1",
+        port=5432,
+        database="migration_test",
+        username="synthetic",
+        schema="public",
+        test_target=True,
+    )
+    monkeypatch.setenv("DATABASE_URL", "postgresql://db:secret@db.example/prod")
+    monkeypatch.setenv("TEST_DATABASE_URL", "postgresql://test:secret@127.0.0.1/ci_test")
+    monkeypatch.setenv("MIGRATION_NEON_API_KEY", "synthetic-api-key")
+    monkeypatch.setenv("MIGRATION_TARGET_URL", "postgresql://target:secret@db.example/db")
+
+    environment = _native_tool_environment(endpoint)
+
+    assert not any(name.startswith("MIGRATION_") for name in environment)
+    assert "DATABASE_URL" not in environment
+    assert "TEST_DATABASE_URL" not in environment
+    assert "synthetic-api-key" not in environment.values()
+    assert environment["PGDATABASE"] == "migration_test"
+    assert environment["PGPASSWORD"] == "synthetic-password"
+
+
+def test_powershell_smoke_test_is_required_by_ci_without_migration_credentials() -> None:
+    workflow = (REPOSITORY_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    powershell_job = workflow.split("  powershell:", maxsplit=1)[1]
+    assert "runs-on: windows-latest" in powershell_job
+    assert "shell: powershell" in powershell_job
+    assert "shell: pwsh" in powershell_job
+    assert "postgres-migration-wrapper-smoke.ps1" in powershell_job
+    assert "MIGRATION_NEON_API_KEY" not in workflow
+    assert "MIGRATION_NEON_PROJECT_ID" not in workflow
 
 
 def test_interrupted_restore_stops_its_child_process(
@@ -188,7 +386,12 @@ def test_interrupted_restore_stops_its_child_process(
     archive.write_bytes(b"synthetic archive")
     monkeypatch.setattr(
         "portfolio_api.postgres_migration._tool_prefix",
-        lambda _endpoint, _tool: (["pg_restore"], None),
+        lambda _endpoint, _tool, **_kwargs: (["pg_restore"], None),
+    )
+    cancelled: list[tuple[DatabaseEndpoint, str]] = []
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration._cancel_restore_backend",
+        lambda current_endpoint, app_name: cancelled.append((current_endpoint, app_name)),
     )
     monkeypatch.setattr(
         "portfolio_api.postgres_migration.subprocess.Popen", lambda *_args, **_kwargs: process
@@ -197,6 +400,8 @@ def test_interrupted_restore_stops_its_child_process(
     with pytest.raises(MigrationToolError, match="Restore interrupted"):
         _pg_restore(endpoint, archive, restore=True)
     assert process.terminated is True
+    assert cancelled[0][0] == endpoint
+    assert cancelled[0][1].startswith("portfolio-restore-")
 
 
 def test_ci_isolated_postgresql_configuration_has_no_migration_credentials() -> None:
@@ -213,6 +418,114 @@ def test_ci_isolated_postgresql_configuration_has_no_migration_credentials() -> 
     assert 'GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: ""' in workflow
     assert "NEON_DATABASE_URL" not in workflow
     assert "DATABASE_URL" not in quality_job
+
+
+def test_blocked_schema_check_writes_diagnostics_and_exits_nonzero(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration.endpoint_from_environment",
+        lambda role: role,
+    )
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration.schema_check",
+        lambda _source, _target: {
+            "status": "BLOCKED",
+            "blockers": [{"code": "database_collation_differs"}],
+        },
+    )
+    assert main(["schema-check"]) == 2
+    assert '"database_collation_differs"' in capsys.readouterr().out
+
+
+def test_reconciliation_differences_exit_nonzero(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration.endpoint_from_environment",
+        lambda role: role,
+    )
+    monkeypatch.setattr(
+        "portfolio_api.postgres_migration.reconcile",
+        lambda _source, _target: {"status": "DIFFERENCES_FOUND", "tables": {"companies": {}}},
+    )
+    assert main(["reconcile"]) == 2
+    assert '"DIFFERENCES_FOUND"' in capsys.readouterr().out
+
+
+@pytest.mark.integration
+def test_restore_interruption_terminates_the_exact_database_session(
+    migration_databases: dict[str, Any],
+) -> None:
+    url = migration_databases["restore_target_url"].set(database=migration_databases["abort"])
+    endpoint = DatabaseEndpoint(
+        role="target",
+        url=url,
+        host=url.host or "127.0.0.1",
+        port=url.port or 5432,
+        database=url.database or "",
+        username=url.username or "portfolio_app",
+        schema="public",
+        test_target=True,
+    )
+    app_name = f"portfolio-restore-{uuid4().hex}"
+    started = threading.Event()
+    result: list[str] = []
+
+    def long_running_restore_statement() -> None:
+        try:
+            with psycopg.connect(
+                host=endpoint.host,
+                port=endpoint.port,
+                dbname=endpoint.database,
+                user=endpoint.username,
+                password=endpoint.password,
+                application_name=app_name,
+                connect_timeout=5,
+            ) as connection:
+                started.set()
+                connection.execute("SELECT pg_sleep(30)")
+            result.append("finished")
+        except psycopg.Error:
+            result.append("terminated")
+
+    worker = threading.Thread(target=long_running_restore_statement, daemon=True)
+    worker.start()
+    assert started.wait(timeout=5)
+    engine = create_engine(url, hide_parameters=True)
+    try:
+        deadline = time.monotonic() + 5
+        active: int = 0
+        while time.monotonic() < deadline:
+            with engine.connect() as connection:
+                active = connection.execute(
+                    text(
+                        "SELECT count(*) FROM pg_stat_activity "
+                        "WHERE application_name = :application_name"
+                    ),
+                    {"application_name": app_name},
+                ).scalar_one()
+            if active:
+                break
+            time.sleep(0.05)
+        assert active == 1
+        _cancel_restore_backend(endpoint, app_name)
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+        assert result == ["terminated"]
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM pg_stat_activity "
+                        "WHERE application_name = :application_name"
+                    ),
+                    {"application_name": app_name},
+                ).scalar_one()
+                == 0
+            )
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture
@@ -235,6 +548,8 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
         pytest.fail("Set MIGRATION_PG_TOOLS_CONTAINER or install PostgreSQL 18 client tools")
 
     names = [f"m14b1_{uuid4().hex[:12]}_{suffix}_test" for suffix in ("source", "target", "abort")]
+    restore_role = f"m14b1_restore_{uuid4().hex[:10]}"
+    restore_password = uuid4().hex
     admin_engine = create_engine(
         admin_url.set(database="postgres"),
         isolation_level="AUTOCOMMIT",
@@ -259,6 +574,24 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
                     finally:
                         engine.dispose()
 
+            connection.execute(
+                text(
+                    f'CREATE ROLE "{restore_role}" LOGIN NOSUPERUSER NOCREATEDB '
+                    f"NOCREATEROLE PASSWORD '{restore_password}'"
+                )
+            )
+            connection.execute(text(f'GRANT CONNECT ON DATABASE "{names[1]}" TO "{restore_role}"'))
+            connection.execute(text(f'GRANT CONNECT ON DATABASE "{names[2]}" TO "{restore_role}"'))
+
+        limited_target_engine = create_engine(database_urls[names[1]], hide_parameters=True)
+        try:
+            with limited_target_engine.begin() as connection:
+                connection.execute(
+                    text(f'GRANT USAGE, CREATE ON SCHEMA public TO "{restore_role}"')
+                )
+        finally:
+            limited_target_engine.dispose()
+
         source_name, target_name, abort_name = names
         source_url = database_urls[source_name].render_as_string(hide_password=False)
         target_url = database_urls[target_name].render_as_string(hide_password=False)
@@ -282,11 +615,16 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
             "source_url": database_urls[source_name],
             "target_url": database_urls[target_name],
             "abort_url": database_urls[abort_name],
+            "restore_target_url": admin_url.set(
+                username=restore_role, password=restore_password, database=target_name
+            ),
         }
     finally:
         for name in reversed(created):
             with admin_engine.connect() as connection:
                 connection.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        with admin_engine.connect() as connection:
+            connection.execute(text(f'DROP ROLE IF EXISTS "{restore_role}"'))
         admin_engine.dispose()
 
 
@@ -557,12 +895,55 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     with pytest.raises(MigrationToolError, match="hash or size"):
         verify_backup(corrupted_archive)
 
+    restore_target_url = migration_databases["restore_target_url"]
+    limited_target = DatabaseEndpoint(
+        role="target",
+        url=restore_target_url,
+        host=restore_target_url.host or "127.0.0.1",
+        port=restore_target_url.port or 5432,
+        database=restore_target_url.database or "",
+        username=restore_target_url.username or "",
+        schema="public",
+        test_target=True,
+    )
+    role_engine = create_engine(restore_target_url, hide_parameters=True)
+    try:
+        with role_engine.connect() as connection:
+            assert connection.execute(
+                text(
+                    "SELECT r.rolsuper, r.rolcreatedb "
+                    "FROM pg_roles AS r WHERE r.rolname = current_user"
+                )
+            ).one() == (False, False)
+    finally:
+        role_engine.dispose()
+    limited_empty_check = schema_check(source, limited_target)
+    assert limited_empty_check["status"] == "EMPTY_TARGET_COMPATIBLE_FOR_FULL_RESTORE"
+    admin_target_engine = create_engine(target_url, hide_parameters=True)
+    try:
+        with admin_target_engine.begin() as connection:
+            connection.execute(
+                text(f'REVOKE CREATE ON SCHEMA public FROM "{limited_target.username}"')
+            )
+        blocked_privileges = schema_check(source, limited_target)
+        assert blocked_privileges["status"] == "BLOCKED"
+        assert any(
+            item["code"] == "target_schema_restore_privileges_missing"
+            for item in blocked_privileges["blockers"]
+        )
+        with admin_target_engine.begin() as connection:
+            connection.execute(
+                text(f'GRANT CREATE ON SCHEMA public TO "{limited_target.username}"')
+            )
+    finally:
+        admin_target_engine.dispose()
     restore_result = restore(
         archive,
-        target,
-        confirmation=f"RESTORE {target.host}/{target.database}",
+        limited_target,
+        confirmation=f"RESTORE {limited_target.host}/{limited_target.database}",
     )
     assert restore_result["status"] == "RESTORED_AND_RECONCILED"
+    assert restore_result["target_use"] == "isolated_rehearsal_only"
     assert restore_result["target"]["alembic_heads"] == ["12a6f0d9c3e1"]
     target_engine = create_engine(target_url, hide_parameters=True)
     try:
@@ -604,7 +985,8 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     assert reconcile(source, target)["status"] == "MATCH"
 
     preflight = cutover_preflight(source, target, archive)
-    assert preflight["status"] == "READY_FOR_SEPARATE_PRODUCTION_REVIEW"
+    assert preflight["status"] == "REHEARSAL_READY_FOR_SEPARATE_PRODUCTION_REVIEW"
+    assert preflight["final_canonical_database_certified"] is False
     assert preflight["production_accessed"] is False
     assert preflight["production_modified"] is False
 
@@ -635,8 +1017,15 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     try:
         with incompatible_engine.begin() as connection:
             connection.execute(text("ALTER TABLE companies ADD COLUMN migration_test_extra text"))
-        with pytest.raises(MigrationToolError, match="schema definitions"):
-            schema_check(source, target)
+        schema_report = schema_check(source, target)
+        assert schema_report["status"] == "BLOCKED"
+        schema_blocker = next(
+            item
+            for item in schema_report["blockers"]
+            if item["code"] == "schema_definitions_differ"
+        )
+        assert schema_blocker["objects"]["columns"]["added"] == ["companies.migration_test_extra"]
+        assert "CREATE TABLE" not in str(schema_report)
         with incompatible_engine.begin() as connection:
             connection.execute(text("ALTER TABLE companies DROP COLUMN migration_test_extra"))
     finally:
