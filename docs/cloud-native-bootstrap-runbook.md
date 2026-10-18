@@ -23,12 +23,12 @@ Do not use importer `--apply` switches to initialize this baseline until a later
 reviewed change provides the bounded orchestrator and a disposable PostgreSQL 18
 rehearsal.
 
-| State       | Current implementation status                                                                                                                                                                     |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| State       | Current implementation status                                                                                                                                                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Implemented | Closed metadata manifest contract; verified write-target guard for SQLAlchemy writers; dependency, source hash, identity map, timestamp, history decision, exact decimal, and missing-versus-zero validation; CI checkout excludes source artifacts. |
-| Tested      | Synthetic manifest validation and write-target policy tests; PostgreSQL 18 write-guard integration tests run only against a disposable local database.                                         |
-| Staged      | Operator-populated source manifest, source artifact hashes, exact input mapping, recovery decisions, rehearsal target, and future orchestrator.                                                  |
-| Executed    | Manifest and synthetic tests, plus write-guard integration tests on disposable PostgreSQL. No source portfolio data, canonical database, or cloud resource was accessed or changed.               |
+| Tested      | Synthetic manifest validation and write-target policy tests; PostgreSQL 18 write-guard integration tests run only against a disposable local database.                                                                                               |
+| Staged      | Operator-populated source manifest, source artifact hashes, exact input mapping, recovery decisions, rehearsal target, and future orchestrator.                                                                                                      |
+| Executed    | Manifest and synthetic tests, plus write-guard integration tests on disposable PostgreSQL. No source portfolio data, canonical database, or cloud resource was accessed or changed.                                                                  |
 
 The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
 `test_model_input_migration.py`, `test_model_input_parity.py`,
