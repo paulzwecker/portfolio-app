@@ -84,34 +84,33 @@ def _add_dcf_revision_inputs(session: Session, revision_id: UUID) -> None:
     session.flush()
 
 
-def _googl_inputs(*, lifecycle: str | None = "PORTFOLIO") -> PortfolioScoreInputs:
-    # Captured source inputs and cached score from Portfolio_Watchlist.xlsx.
+def _synthetic_inputs(*, lifecycle: str | None = "PORTFOLIO") -> PortfolioScoreInputs:
     return PortfolioScoreInputs(
         lifecycle=lifecycle,
-        current_weight=Decimal("0.08644111749"),
-        target_weight=Decimal("0.09"),
-        expected_irr=Decimal("0.1268953551"),
-        durability_10y=Decimal("4.575"),
-        compounder_quality=Decimal("4.63"),
-        execution=Decimal("4"),
-        risk=Decimal("3"),
-        valuation_uncertainty=Decimal("0.879126213"),
-        expected_excess=Decimal("0.03665021294"),
+        current_weight=Decimal("0.05"),
+        target_weight=Decimal("0.15"),
+        expected_irr=Decimal("0.14"),
+        durability_10y=Decimal("4"),
+        compounder_quality=Decimal("4.25"),
+        execution=Decimal("3"),
+        risk=Decimal("2"),
+        valuation_uncertainty=Decimal("0.25"),
+        expected_excess=Decimal("0.04"),
     )
 
 
-def test_documented_score_reconciles_to_legacy_cached_company_score() -> None:
-    result = calculate_portfolio_score(_googl_inputs())
-    assert abs(result.score - Decimal("57.66995863")) <= Decimal("0.00000001")
+def test_portfolio_score_is_deterministic_for_synthetic_inputs() -> None:
+    result = calculate_portfolio_score(_synthetic_inputs())
+    assert result.score == Decimal("68.55")
     assert result.contributions["target_underweight"] > 0
     assert result.contributions["valuation_uncertainty_penalty"] < 0
     assert result.contributions["negative_expected_excess_penalty"] == 0
 
 
 def test_target_underweight_credit_is_only_for_portfolio_lifecycle() -> None:
-    portfolio = calculate_portfolio_score(_googl_inputs(lifecycle="PORTFOLIO"))
-    watchlist = calculate_portfolio_score(_googl_inputs(lifecycle="WATCHLIST"))
-    unknown_lifecycle = calculate_portfolio_score(_googl_inputs(lifecycle=None))
+    portfolio = calculate_portfolio_score(_synthetic_inputs(lifecycle="PORTFOLIO"))
+    watchlist = calculate_portfolio_score(_synthetic_inputs(lifecycle="WATCHLIST"))
+    unknown_lifecycle = calculate_portfolio_score(_synthetic_inputs(lifecycle=None))
 
     assert portfolio.contributions["target_underweight"] > 0
     assert watchlist.contributions["target_underweight"] == 0
@@ -184,7 +183,7 @@ def test_ties_use_canonical_ticker_ascending_and_never_emit_rank_zero() -> None:
 def test_invalid_score_inputs_do_not_become_numeric_positions(
     field: str, value: Decimal, message: str
 ) -> None:
-    inputs = _googl_inputs()
+    inputs = _synthetic_inputs()
     with pytest.raises(ValueError, match=message):
         calculate_portfolio_score(inputs.__class__(**{**inputs.__dict__, field: value}))
 

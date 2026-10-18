@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from portfolio_api.legacy_import import Workbook
 from portfolio_api.model_input_migration import (
     DEFAULT_WORKBOOK,
@@ -11,6 +13,8 @@ from portfolio_api.model_input_migration import (
     PARITY_PROVEN_MODEL_KEYS,
     build_native_model_parity_report,
 )
+
+pytestmark = pytest.mark.source_data
 
 
 def source_workbook() -> Workbook:

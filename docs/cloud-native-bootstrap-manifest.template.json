@@ -1,0 +1,57 @@
+{
+  "format_version": 1,
+  "baseline_id": "replace-with-reviewed-baseline-id",
+  "sources": [
+    {
+      "source_id": "company-identities",
+      "domain": "company_identities",
+      "source_kind": "workbook_snapshot",
+      "source_version": "replace-with-version",
+      "artifact_sha256": "",
+      "identity_map_sha256": "",
+      "recorded_at": "replace-with-rfc3339-time",
+      "effective_at": null,
+      "expected_records": null,
+      "decimal_semantics": "not_applicable",
+      "missing_value_semantics": "not_applicable",
+      "history_disposition": "current_snapshot_only",
+      "methodology_sha256": null,
+      "approval_ref": null,
+      "depends_on": []
+    },
+    {
+      "source_id": "portfolio-state",
+      "domain": "portfolio_state",
+      "source_kind": "workbook_snapshot",
+      "source_version": "replace-with-version",
+      "artifact_sha256": "",
+      "identity_map_sha256": "",
+      "recorded_at": "replace-with-rfc3339-time",
+      "effective_at": null,
+      "expected_records": null,
+      "decimal_semantics": "exact_decimal_strings",
+      "missing_value_semantics": "null_absent_distinct_from_zero",
+      "history_disposition": "current_snapshot_only",
+      "methodology_sha256": null,
+      "approval_ref": null,
+      "depends_on": ["company-identities"]
+    },
+    {
+      "source_id": "historical-operations-omission",
+      "domain": "operations_history",
+      "source_kind": "operator_decision",
+      "source_version": "replace-with-decision-version",
+      "artifact_sha256": null,
+      "identity_map_sha256": null,
+      "recorded_at": "replace-with-approval-time",
+      "effective_at": null,
+      "expected_records": null,
+      "decimal_semantics": "not_applicable",
+      "missing_value_semantics": "not_applicable",
+      "history_disposition": "omit_history_approved",
+      "methodology_sha256": null,
+      "approval_ref": "",
+      "depends_on": []
+    }
+  ]
+}

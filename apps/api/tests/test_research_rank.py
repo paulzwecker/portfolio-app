@@ -48,6 +48,7 @@ def test_research_rank_ties_use_canonical_ticker_and_start_at_one() -> None:
     ) == {aaa: 1, zzz: 2}
 
 
+@pytest.mark.source_data
 def test_legacy_source_inputs_reconcile_representative_cached_research_ranks() -> None:
     workbook_path = Path(__file__).resolve().parents[3] / "reference" / "workbook" / MAIN_BOOK
     workbook = Workbook.read(

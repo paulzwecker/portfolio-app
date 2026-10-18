@@ -1,10 +1,8 @@
 """API/storage integration for canonical model creation and append-only revisions."""
 
 import copy
-import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from pathlib import Path
 from typing import cast
 from unittest.mock import patch
 from uuid import UUID
@@ -14,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from synthetic_financial_fixtures import dcf_fixture
 
 from portfolio_api.domain.models import (
     DcfProjection,
@@ -25,11 +24,9 @@ from portfolio_api.domain.models import (
 from portfolio_api.main import create_app
 from portfolio_api.settings import Settings
 
-FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
-
 
 def fixture_payload() -> dict[str, object]:
-    return cast(dict[str, object], json.loads(FIXTURE.read_text(encoding="utf-8")))
+    return cast(dict[str, object], dcf_fixture())
 
 
 def now_iso() -> str:
@@ -48,16 +45,16 @@ def test_canonical_dcf_api_persists_projection_output_and_immutable_revision_his
     ):
         company = client.post(
             "/v1/companies",
-            json={"name": "P-GOOGL parity issuer", "reporting_currency": "USD"},
+            json={"name": "Synthetic issuer", "reporting_currency": "USD"},
         ).json()
         company_id = company["id"]
         security = client.post(
             f"/v1/companies/{company_id}/securities",
-            json={"name": "Alphabet Class A", "security_type": "COMMON_STOCK"},
+            json={"name": "Synthetic common stock", "security_type": "COMMON_STOCK"},
         ).json()
         listing = client.post(
             f"/v1/securities/{security['id']}/listings",
-            json={"venue": "NASDAQ", "ticker": "GOOGL", "currency": "USD"},
+            json={"venue": "XNAS", "ticker": "SYNTH", "currency": "USD"},
         ).json()
 
         observed_at = datetime.now(UTC) - timedelta(days=1)
@@ -66,16 +63,16 @@ def test_canonical_dcf_api_persists_projection_output_and_immutable_revision_his
                 PriceObservation(
                     listing_id=UUID(listing["id"]),
                     market_date=observed_at,
-                    provider_close=Decimal("343.5"),
-                    split_adjusted_close=Decimal("343.5"),
+                    provider_close=Decimal("20"),
+                    split_adjusted_close=Decimal("20"),
                     total_return_close=None,
                     volume=None,
                     currency="USD",
                     provider="fixture-provider",
-                    provider_symbol="NASDAQ:GOOGL",
+                    provider_symbol="XNAS:SYNTH",
                     adjustment_basis="Reference price fixture",
                     data_quality="PASS",
-                    source_ref="test-financial-model:googl-price-v1",
+                    source_ref="test-financial-model:synthetic-price-v1",
                 )
             )
 
@@ -106,10 +103,10 @@ def test_canonical_dcf_api_persists_projection_output_and_immutable_revision_his
             f"/v1/companies/{company_id}/financial-models",
             json={
                 "model_type": "UFCF_DCF_10Y_FADE",
-                "model_name": "Alphabet operating UFCF DCF",
+                "model_name": "Synthetic issuer operating UFCF DCF",
                 "valuation_listing_id": listing["id"],
                 "model_currency": "USD",
-                "source_model_key": "P-GOOGL",
+                "source_model_key": "SYNTHETIC_DCF",
                 "initial_revision": initial_revision,
             },
         )
@@ -149,16 +146,16 @@ def test_canonical_dcf_api_persists_projection_output_and_immutable_revision_his
                 PriceObservation(
                     listing_id=UUID(listing["id"]),
                     market_date=quote_observed_at,
-                    provider_close=Decimal("390"),
-                    split_adjusted_close=Decimal("390"),
+                    provider_close=Decimal("25"),
+                    split_adjusted_close=Decimal("25"),
                     total_return_close=None,
                     volume=None,
                     currency="USD",
                     provider="fixture-provider",
-                    provider_symbol="NASDAQ:GOOGL",
+                    provider_symbol="XNAS:SYNTH",
                     adjustment_basis="Reference price fixture",
                     data_quality="PASS",
-                    source_ref="test-financial-model:googl-price-current-v2",
+                    source_ref="test-financial-model:synthetic-price-current-v2",
                 )
             )
         known_at = (quote_observed_at + timedelta(seconds=2)).isoformat()
@@ -179,8 +176,8 @@ def test_canonical_dcf_api_persists_projection_output_and_immutable_revision_his
             current_calculation["outputs"]["price_observation_id"]
             != outputs1["price_observation_id"]
         )
-        assert Decimal(current_calculation["outputs"]["current_price"]) == Decimal("390")
-        assert Decimal(current_calculation["accepted_reference_price"]) == Decimal("343.5")
+        assert Decimal(current_calculation["outputs"]["current_price"]) == Decimal("25")
+        assert Decimal(current_calculation["accepted_reference_price"]) == Decimal("20")
         assert Decimal(current_calculation["outputs"]["expected_cash_flow_irr"]) != Decimal(
             outputs1["expected_cash_flow_irr"]
         )
@@ -276,7 +273,7 @@ def test_canonical_dcf_api_persists_projection_output_and_immutable_revision_his
         old = client.get(f"/v1/financial-models/{model_id}/revisions/{revision1['id']}")
         assert old.status_code == 200
         assert old.json()["outputs"]["base_fv"] == outputs1["base_fv"]
-        assert Decimal(old.json()["scenarios"][1]["years"][0]["revenue_growth"]) == Decimal("0.2")
+        assert Decimal(old.json()["scenarios"][1]["years"][0]["revenue_growth"]) == Decimal("0.08")
 
         conflict = client.post(f"/v1/financial-models/{model_id}/revisions", json=edit)
         assert conflict.status_code == 409

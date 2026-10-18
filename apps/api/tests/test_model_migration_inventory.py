@@ -7,6 +7,8 @@ import pytest
 
 from portfolio_api.model_migration_inventory import DEFAULT_OUTPUT, build_inventory
 
+pytestmark = pytest.mark.source_data
+
 
 @pytest.fixture(scope="module")
 def inventory() -> dict[str, Any]:

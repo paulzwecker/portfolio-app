@@ -197,7 +197,7 @@ def test_history_composes_as_of_sources_without_merging_or_lookahead(
                 effective_at=stamp("2026-10-03T16:00:00Z"),
                 recorded_at=stamp("2026-10-04T10:00:00Z"),
                 actor="IMPORT",
-                source="Portfolio_Watchlist.xlsx:P-HIST",
+                source="synthetic-fixture:P-HIST",
                 source_revision_id="legacy-2026-10-03",
                 revision_source="Workbook",
                 revision_type="Periodic review",
