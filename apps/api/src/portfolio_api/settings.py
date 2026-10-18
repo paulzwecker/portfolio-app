@@ -24,6 +24,16 @@ class Settings(BaseSettings):
 
     database_url: SecretStr | None = None
     app_env: Literal["development", "preview", "production"] = "development"
+    database_target_environment: Literal["development", "rehearsal", "production"] | None = None
+    database_target_database: str | None = None
+    database_local_test_writes_authorized: bool = False
+    database_local_writes_authorized: bool = False
+    database_rehearsal_writes_authorized: bool = False
+    database_production_writes_authorized: bool = False
+    neon_api_key: SecretStr | None = None
+    neon_project_id: str | None = None
+    neon_branch_id: str | None = None
+    neon_endpoint_id: str | None = None
     api_access_token: SecretStr | None = None
     cloud_ingestion_enabled: bool = False
     sec_user_agent: str | None = None

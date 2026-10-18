@@ -22,7 +22,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        engine = create_database_engine(configured_settings)
+        engine = create_database_engine(
+            configured_settings,
+            write_operation="api_request",
+            write_operation_kind="application",
+        )
         application.state.database_engine = engine
         application.state.migration_heads = expected_heads()
         try:

@@ -2377,7 +2377,11 @@ def run_cli(argv: list[str] | None = None) -> int:
     try:
         plan = build_plan(args.portfolio_workbook, args.market_data_workbook, args.observed_at)
         report: dict[str, Any] = plan.report()
-        engine = create_database_engine(Settings())
+        engine = create_database_engine(
+            Settings(),
+            write_operation="legacy_workbook_import",
+            write_operation_kind="import",
+        )
         if args.apply:
             if engine is None:
                 raise ValueError("DATABASE_URL is required to apply an import.")

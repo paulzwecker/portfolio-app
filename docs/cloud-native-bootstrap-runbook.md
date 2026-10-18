@@ -9,18 +9,26 @@ Vercel changes are part of this preparation.
 
 The implemented command validates only manifest metadata. It does not open input
 artifacts, connect to PostgreSQL, call Google Sheets or market-data providers, or
-write canonical state. A target-identity-bound bootstrap orchestrator and full
-domain reconciliation are still blocked. Existing importer CLIs do not all verify
-Neon branch identity, and some importers need a database even for their dry-run.
-Do not use their `--apply` switches for this baseline until a later reviewed PR
-provides the target guard and a disposable PostgreSQL 18 rehearsal.
+write canonical state. The shared SQLAlchemy engine now checks every mutating
+operation against the exact live database connection and, for Neon, verifies the
+project, branch, and endpoint through the control plane. Writes also require an
+explicit target environment and authorization; production bootstrap requires an
+interactive confirmation of the full target identity. See
+[`database-write-targets.md`](database-write-targets.md) for the exact policy.
 
-| State       | What exists in this PR                                                                                                                                                                           |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Implemented | Closed metadata manifest contract; dependency, source hash, identity map, timestamp, history decision, exact decimal, and missing-versus-zero validation; CI checkout excludes source artifacts. |
-| Tested      | Synthetic manifest validation and synthetic financial model fixtures; existing database integration tests run against disposable PostgreSQL only.                                                |
-| Staged      | Operator-populated source manifest, source artifact hashes, exact input mapping, recovery decisions, rehearsal target, and future orchestrator.                                                  |
-| Executed    | Manifest validator and synthetic tests only. No source data was opened, no source database was queried, and no cloud resource was changed.                                                       |
+A target-identity-bound bootstrap orchestrator and full domain reconciliation are
+still blocked. Some existing importers need a database even for their dry-run, and
+the target guard does not validate a complete baseline or authorize its import.
+Do not use importer `--apply` switches to initialize this baseline until a later
+reviewed change provides the bounded orchestrator and a disposable PostgreSQL 18
+rehearsal.
+
+| State       | Current implementation status                                                                                                                                                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implemented | Closed metadata manifest contract; verified write-target guard for SQLAlchemy writers; dependency, source hash, identity map, timestamp, history decision, exact decimal, and missing-versus-zero validation; CI checkout excludes source artifacts. |
+| Tested      | Synthetic manifest validation and write-target policy tests; PostgreSQL 18 write-guard integration tests run only against a disposable local database.                                                                                               |
+| Staged      | Operator-populated source manifest, source artifact hashes, exact input mapping, recovery decisions, rehearsal target, and future orchestrator.                                                                                                      |
+| Executed    | Manifest and synthetic tests, plus write-guard integration tests on disposable PostgreSQL. No source portfolio data, canonical database, or cloud resource was accessed or changed.                                                                  |
 
 The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
 `test_model_input_migration.py`, `test_model_input_parity.py`,

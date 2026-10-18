@@ -915,7 +915,11 @@ def run_cli(argv: list[str] | None = None) -> int:
         args.observed_at.tzinfo is None or args.observed_at.utcoffset() is None
     ):
         parser.error("--observed-at must include a timezone offset")
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(
+        Settings(),
+        write_operation="model_output_import",
+        write_operation_kind="import",
+    )
     if engine is None:
         print("Set DATABASE_URL before running model-output import.", file=sys.stderr)
         return 2

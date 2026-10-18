@@ -983,7 +983,11 @@ def run_cli(argv: list[str] | None = None) -> int:
             if len(parts) != 2 or not all(parts):
                 parser.error("--listing values must use VENUE:TICKER form")
             listing_keys.add((parts[0].casefold(), parts[1].casefold()))
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(
+        Settings(),
+        write_operation="market_data_provider_ingestion",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         parser.error("DATABASE_URL is required to resolve canonical listing identities")
     try:

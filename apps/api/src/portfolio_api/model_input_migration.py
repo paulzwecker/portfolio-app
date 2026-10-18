@@ -1627,7 +1627,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     settings = Settings()
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation="native_model_input_import",
+        write_operation_kind="import",
+    )
     if engine is None:
         print(
             "Database is unavailable; configure DATABASE_URL before importing models.",
