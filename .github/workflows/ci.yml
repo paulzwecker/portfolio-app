@@ -92,5 +92,14 @@ jobs:
           npm ci
           npm run setup
 
+      - name: Select PostgreSQL 18 client tools container
+        run: |
+          container_id="$(docker ps --filter ancestor=postgres:18 --format '{{.ID}}' | head -n 1)"
+          if [ -z "$container_id" ]; then
+            echo "The disposable PostgreSQL 18 service container was not found." >&2
+            exit 1
+          fi
+          echo "MIGRATION_PG_TOOLS_CONTAINER=$container_id" >> "$GITHUB_ENV"
+
       - name: Run isolated PostgreSQL tests
         run: npm run test:integration

@@ -1,0 +1,58 @@
+{
+  "report_version": 1,
+  "milestone": "14B.1",
+  "operator_review": {
+    "reviewed_at_utc": null,
+    "operator": null,
+    "second_operator": null,
+    "production_accessed": false,
+    "production_modified": false
+  },
+  "source": {
+    "host": null,
+    "database": "portfolio_app",
+    "schema": "public",
+    "postgres_major": null,
+    "alembic_heads": [],
+    "schema_fingerprint": null,
+    "database_bytes": null,
+    "additional_user_schemas": [],
+    "large_object_count": null,
+    "foreign_key_cycles": [],
+    "data_only_restore_compatible": null,
+    "table_row_counts": {}
+  },
+  "backup": {
+    "archive_path_local_only": null,
+    "created_at_utc": null,
+    "archive_sha256": null,
+    "archive_bytes": null,
+    "verification_status": null,
+    "transient_rows_excluded": ["recurring_operations_worker_state"]
+  },
+  "isolated_target": {
+    "neon_branch_label_for_operator_reference_only": null,
+    "direct_endpoint_host": null,
+    "database": null,
+    "schema": "public",
+    "postgres_major": null,
+    "alembic_heads": [],
+    "schema_fingerprint": null,
+    "database_bytes": null,
+    "schema_compatibility_status": null,
+    "restore_status": null,
+    "reconciliation_status": null,
+    "table_differences": [],
+    "sequence_differences": []
+  },
+  "cutover_preflight": {
+    "status": null,
+    "blockers": [],
+    "source_active_operations": {},
+    "isolated_target_active_operations": {},
+    "production_accessed": false,
+    "production_modified": false
+  },
+  "manual_review_notes": [],
+  "credentials_or_row_values_recorded": false
+}
