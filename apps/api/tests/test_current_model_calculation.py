@@ -1,13 +1,12 @@
 """Current quote calculations never mutate accepted model state."""
 
-import json
 from datetime import UTC, datetime
 from decimal import Decimal
-from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid4
 
 import pytest
+from synthetic_financial_fixtures import dcf_fixture
 
 from portfolio_api.current_model_calculation import (
     NativeCurrentCalculation,
@@ -22,11 +21,9 @@ from portfolio_api.domain.schemas import (
 from portfolio_api.financial_models import MarketPriceInput
 from portfolio_api.return_semantics import DEFINITIONS, UFCF_ENTERPRISE_IRR
 
-FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
-
 
 def accepted_inputs() -> tuple[dict[str, object], DcfCalculationInput]:
-    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    fixture = dcf_fixture()
     revision = FinancialModelRevisionCreate.model_validate(fixture["input"])
     return fixture, DcfCalculationInput(base=revision.base, scenarios=revision.scenarios)
 
@@ -52,7 +49,7 @@ def quote_read(
     return ExpectedReturnMarketPriceRead(
         status=status,
         listing_id=listing_id,
-        ticker="GOOGL",
+        ticker="SYNTH",
         venue="NASDAQ",
         listing_currency="USD",
         quote=price,
@@ -101,7 +98,7 @@ def recalculate(
         ),
         market_price_read=quote_read(listing_id, observation_id, price),
         model_id=uuid4(),
-        model_name="GOOGL UFCF DCF",
+        model_name="Synthetic issuer UFCF DCF",
         revision_id=uuid4(),
         revision_number=1,
         methodology_version="ufcf-dcf-v1",

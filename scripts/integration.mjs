@@ -17,7 +17,7 @@ run(
     "pytest",
     "apps/api/tests",
     "-m",
-    "integration",
+    "integration and not source_data",
   ],
   { env: uvEnv() },
 );

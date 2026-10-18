@@ -28,6 +28,7 @@
     "db:import-research-priority": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.research_priority_import",
     "db:import-model-outputs": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_outputs",
     "db:import-native-models": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_input_migration",
+    "db:bootstrap-manifest-check": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.bootstrap_manifest",
     "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",
     "db:sync-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_ingestion",
     "db:sync-google-sheets": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.google_sheets_sync",
@@ -44,15 +45,16 @@
     "format": "prettier --write . && node scripts/uv.mjs run --locked --project apps/api ruff format apps/api",
     "format:check": "prettier --check . && node scripts/uv.mjs run --locked --project apps/api ruff format --check apps/api",
     "typecheck": "npm run typecheck --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src apps/api/tests",
-    "test": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests",
-    "test:unit": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests -m \"not integration\"",
+    "test": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests -m \"not source_data\"",
+    "test:unit": "npm run test --workspace @portfolio/web && node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests -m \"not integration and not source_data\"",
     "test:integration": "node scripts/integration.mjs",
     "browsers:install": "node scripts/browser.mjs install chromium",
     "test:e2e": "node scripts/browser.mjs test",
     "test:e2e:api": "node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py",
+    "test:repo-policy": "node --test scripts/tests/ci-source-data-policy.test.mjs",
     "contracts:generate": "node scripts/contracts.mjs",
     "contracts:check": "node scripts/contracts.mjs --check",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run contracts:check && npm run build"
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run test:repo-policy && npm run contracts:check && npm run build"
   },
   "devDependencies": {
     "@neon/config": "1.9.2",

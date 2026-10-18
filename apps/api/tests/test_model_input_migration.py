@@ -47,7 +47,7 @@ from portfolio_api.model_input_migration import (
 )
 from portfolio_api.settings import Settings
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.source_data]
 
 
 def source_workbook() -> Workbook:

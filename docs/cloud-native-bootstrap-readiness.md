@@ -2,12 +2,13 @@
 
 ## Decision
 
-Use a gated, domain-by-domain bootstrap on a clean isolated PostgreSQL 18 database
-only after the operator has decided which historical application-owned state must
-be preserved. Do not describe a fresh rebuild as a faithful copy of the local
-database. Current workbook snapshots and current provider responses can recover a
-useful starting state, but they cannot recreate every accepted decision, point-in-
-time observation, revision, or provenance receipt.
+The operator has selected a **new canonical cloud baseline built from reproducible
+authoritative inputs**. The historical local PostgreSQL database is not an input to
+this workflow and will not be migrated. This is a new baseline, not a faithful copy
+of the local database. Its canonical state must be explainable from versioned source
+artifacts, exact identity mappings, recorded source/effective times, and pinned
+calculation methods. Missing values stay distinct from explicit zero, and financial
+values retain exact decimal semantics.
 
 No local/source or Neon production database, workbook, provider, or cloud
 credential was accessed for this review. A disposable PostgreSQL 18 test database
@@ -17,7 +18,7 @@ request; the Neon baseline is also operator-reported and not independently audit
 The report contains counts only and must be replaced with read-only count snapshots
 before it is used as an execution gate.
 
-The recommended route is a **hybrid bootstrap**:
+The planned route is a **gated, domain-by-domain cloud bootstrap**:
 
 1. Reimport current authoritative snapshots where an existing importer has a
    reviewed mapping and a reconciliation report.
@@ -25,11 +26,15 @@ The recommended route is a **hybrid bootstrap**:
    terms permit storage and display.
 3. Recompute only outputs whose complete canonical inputs and parity conditions
    are present.
-4. Preserve or explicitly approve omission of historical, manually accepted, and
-   audit state before considering the rebuild complete.
+4. Keep historical local-database-only state out of scope and record each omitted
+   history class explicitly in the input manifest and recovery report.
 
-There is no general restore, data reset, automatic scheduler, or bootstrap
-orchestrator in this change. An orchestrator would currently wrap multiple
+There is no general restore, data reset, automatic scheduler, or complete bootstrap
+orchestrator in this change. The metadata-only manifest validator is an
+independently testable first interface; it validates source metadata, exact-value
+policies, history decisions, and dependency order without opening source files or
+connecting to a database. It does not apply inputs. A full orchestrator would
+currently wrap multiple
 independent transactions and provider operations that have different review,
 retry, and acceptance rules. Adding one now would make partial completion harder
 to interpret. The supported importers already provide bounded transactions or
@@ -44,7 +49,10 @@ orchestrator or approve a production run. Any future bootstrap must use the shar
 engine factory, call its explicit preflight before source/provider work, and retain
 the clean-schema, Alembic, domain reconciliation, and operator review gates. See
 [`database-write-targets.md`](database-write-targets.md) for the integration
-contract and operator procedure.
+contract and operator procedure. The metadata-only authoritative-input manifest
+is validated separately through the procedure in
+[`cloud-native-bootstrap-runbook.md`](cloud-native-bootstrap-runbook.md); it
+does not apply inputs or authorize a write.
 
 ## Recovery classes
 
@@ -260,40 +268,37 @@ without a separate archive or selective preservation plan loses or changes:
 - manually authored thesis, research, risk, and evidence history that is not
   available as a complete accepted-contract archive.
 
-Recommendation: do not choose a full cloud-native rebuild as an equivalent
-replacement for the canonical local database. Use this route only if the owner
-accepts the listed omissions. Otherwise preserve the D-class domains selectively
-through reviewed portable contracts or a separately reviewed data transfer, then
-rebuild A/B and recompute C. No selective history-export contract exists for every
-D-class domain today, so that preservation work is a blocker to a faithful
-bootstrap. The local PostgreSQL database should remain unchanged and available as
-the recovery source until the gap and omission decisions are approved.
+The current decision is to create a new cloud baseline, not to reproduce or replace
+the historical database. D-class histories that have no authoritative portable
+archive are outside this baseline; they must be listed as omitted, never inferred
+from current snapshots. The operator's instruction rules out using the historical
+database as an input. Keep that local database untouched. The old aggregate counts
+in this readiness audit are context only, not import expectations or acceptance
+criteria for the new baseline. Do not proceed until the authoritative input files,
+versions, exact identity-map hashes, source times, decimal/null policies, and domain
+decisions are assembled in the metadata manifest on the trusted operator machine.
 
 ## Safe rehearsal and production activation sequence
 
-1. Create a disposable Neon branch/database separate from production and verify
-   branch/database identity out of band. Do not infer isolation from a branch
-   label, hostname, or this documentation.
-2. Apply the schema to that clean database only. Keep source workbooks and
-   importer reports on the trusted operator workstation; do not upload them to
-   Codex Cloud, GitHub, or a PR. Run and retain local dry-run
-   reports for each available workbook import; review source issues and exact
-   decimal reconciliation before each apply.
-3. Apply only approved A-class source snapshots. Reconcile after every domain.
-   Do not seed demo data, truncate, replace, or run all imports unattended.
-4. Run selected provider jobs manually, one domain at a time. Review mapping,
-   rights, freshness, partial writes, source quality, storage, and capacity after
-   each job. Do not enable Cron, Sheets polling, or `CLOUD_INGESTION_ENABLED`.
-5. Import only parity-passing native model inputs and explicitly reviewed research
-   contracts. Preserve the source's method/return label and unknown times. Do not
-   recalculate output-only workbook models or auto-accept inbox proposals.
-6. Produce a fresh counts-only gap report, verify exact financial decimals and
-   expected return/hurdle semantics, and separately document recovered,
-   recomputed, and intentionally omitted history.
-7. Stop at the rehearsal. Production writes require a separate approved milestone
-   with current production counts, a verified backup/recovery plan, data-owner
-   decisions for D-class gaps, and reviewer sign-off. Never reset or replace the
-   existing production branch as a bootstrap shortcut.
+1. Complete the input manifest locally using the template and procedure in
+   [`cloud-native-bootstrap-runbook.md`](cloud-native-bootstrap-runbook.md). Keep
+   source artifacts, manifests with private paths, and detailed reports on the
+   trusted operator machine. CI receives only synthetic fixtures.
+2. Validate the metadata manifest with the no-database command in that runbook.
+   This checks dependency order and blocks ambiguous history, identity, decimal,
+   missing-value, or approval metadata.
+3. Stop. This PR does not provide a safe end-to-end import command. Do not run
+   importer `--apply` commands or provider jobs against Neon. A later PR must add
+   and test a target-identity-bound orchestrator on a disposable PostgreSQL 18
+   target before any operator rehearsal.
+4. Do not enable Cron, Sheets polling, `CLOUD_INGESTION_ENABLED`, Render jobs, or
+   Vercel/Render configuration changes as part of this baseline preparation.
+5. A separate future milestone must define recovery reports and financial/domain
+   reconciliation for exact identities, decimal values, null/zero distinctions,
+   accepted outputs, provenance, and approved history omissions.
+6. Production activation requires a separately authorized change, a verified
+   production target, reviewer sign-off, and an explicit operational rollback plan.
+   Never reset, truncate, or replace the existing production branch as a shortcut.
 
 ## Known limits
 
@@ -303,8 +308,9 @@ the recovery source until the gap and omission decisions are approved.
 - The latest prompt reports 110 securities. Older workbook documentation records
   a different securities/listings snapshot. Resolve the exact source artifact and
   mapping inventory before using either count as an import expectation.
-- This change intentionally does not import workbook data, connect to a database,
-  fetch provider data, enable a worker, or add an end-to-end bootstrap command.
+- This change intentionally does not import workbook data, connect to Neon, fetch
+  provider data, enable a worker, or add an end-to-end bootstrap command. CI uses
+  synthetic PostgreSQL fixtures only.
   Existing importer tests cover individual transactions and repeat behavior;
   they do not prove that a complete current dataset can be recovered from
   external sources.
