@@ -96,15 +96,24 @@ $successfulNode = {
     $global:MigrationWrapperSmokeLegacyHost = $env:MIGRATION_PRODUCTION_HOST
     $global:LASTEXITCODE = 0
 }
-$restoreExitCode = Invoke-PostgresMigrationOperation `
-    -Operation "restore" `
-    -Archive "C:\migration private\source.dump" `
-    -Report "C:\migration private\restore report.json" `
-    -RepositoryRoot $repositoryRoot `
-    -InputProvider $inputProvider `
-    -NodeInvoker $successfulNode
+$originalErrorWriter = [Console]::Error
+$successErrorWriter = New-Object System.IO.StringWriter
+[Console]::SetError($successErrorWriter)
+try {
+    $restoreExitCode = Invoke-PostgresMigrationOperation `
+        -Operation "restore" `
+        -Archive "C:\migration private\source.dump" `
+        -Report "C:\migration private\restore report.json" `
+        -RepositoryRoot $repositoryRoot `
+        -InputProvider $inputProvider `
+        -NodeInvoker $successfulNode
+}
+finally {
+    [Console]::SetError($originalErrorWriter)
+}
 if ($restoreExitCode -ne 0) {
-    throw "A successful synthetic Node invocation did not propagate exit code 0."
+    $details = $successErrorWriter.ToString().Trim()
+    throw "A successful synthetic Node invocation did not propagate exit code 0. Details: $details"
 }
 if ($global:MigrationWrapperSmokeSource -notlike "postgresql+psycopg://source:*") {
     throw "The child process did not receive the source URL in its environment."
@@ -146,13 +155,21 @@ $failingNode = {
     $global:MigrationWrapperSmokeSource = $env:MIGRATION_SOURCE_URL
     $global:LASTEXITCODE = 23
 }
-$failedExitCode = Invoke-PostgresMigrationOperation `
-    -Operation "inventory" `
-    -RepositoryRoot $repositoryRoot `
-    -InputProvider $failedInputProvider `
-    -NodeInvoker $failingNode
+$failureErrorWriter = New-Object System.IO.StringWriter
+[Console]::SetError($failureErrorWriter)
+try {
+    $failedExitCode = Invoke-PostgresMigrationOperation `
+        -Operation "inventory" `
+        -RepositoryRoot $repositoryRoot `
+        -InputProvider $failedInputProvider `
+        -NodeInvoker $failingNode
+}
+finally {
+    [Console]::SetError($originalErrorWriter)
+}
 if ($failedExitCode -ne 23) {
-    throw "The wrapper did not propagate the child process failure exit code."
+    $details = $failureErrorWriter.ToString().Trim()
+    throw "The wrapper did not propagate the child process failure exit code. Details: $details"
 }
 if ($global:MigrationWrapperSmokeSource -notlike "postgresql+psycopg://source:*") {
     throw "The failure-path child process did not receive its synthetic source URL."
