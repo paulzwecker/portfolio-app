@@ -83,7 +83,7 @@ $inputProvider = {
     param($Prompt, $Secret)
     $next = $queuedInputs.Dequeue()
     if ([bool]$next.secret -ne [bool]$Secret) {
-        throw "PowerShell requested an input using the wrong secrecy mode."
+        throw "PowerShell requested prompt '$Prompt' with secret=$([bool]$Secret), but its queued input expects secret=$([bool]$next.secret)."
     }
     return [string]$next.value
 }.GetNewClosure()
