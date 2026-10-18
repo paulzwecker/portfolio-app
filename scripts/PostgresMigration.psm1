@@ -183,10 +183,10 @@ function Invoke-PostgresMigrationOperation {
         Push-Location $RepositoryRoot
         try {
             if ($NodeInvoker) {
-                & $NodeInvoker -Arguments $arguments
+                & $NodeInvoker -Arguments $arguments | Out-Host
             }
             else {
-                & node @arguments
+                & node @arguments | Out-Host
             }
             if ($null -eq $LASTEXITCODE) {
                 $exitCode = 1

@@ -93,6 +93,9 @@ $successfulNode = {
     $global:MigrationWrapperSmokeTarget = $env:MIGRATION_TARGET_URL
     $global:MigrationWrapperSmokeApiKey = $env:MIGRATION_NEON_API_KEY
     $global:MigrationWrapperSmokeLegacyHost = $env:MIGRATION_PRODUCTION_HOST
+    Write-Output "synthetic inventory report line one"
+    Write-Output "synthetic inventory report line two"
+    [Console]::Error.WriteLine("synthetic native stderr diagnostic")
     $global:LASTEXITCODE = 0
 }
 $originalErrorWriter = [Console]::Error
@@ -110,9 +113,12 @@ try {
 finally {
     [Console]::SetError($originalErrorWriter)
 }
-if ($restoreExitCode -ne 0) {
+if ($restoreExitCode -isnot [int] -or $restoreExitCode -ne 0) {
     $details = $successErrorWriter.ToString().Trim()
-    throw "A successful synthetic Node invocation did not propagate exit code 0. Details: $details"
+    throw "A successful synthetic Node invocation did not return exactly one integer 0. Details: $details"
+}
+if ($successErrorWriter.ToString() -notlike "*synthetic native stderr diagnostic*") {
+    throw "The successful synthetic Node invocation did not preserve stderr diagnostics."
 }
 if ($global:MigrationWrapperSmokeSource) {
     throw "The restore operation unexpectedly received a source URL."
@@ -151,6 +157,9 @@ $failedInputProvider = {
 $failingNode = {
     param($Arguments)
     $global:MigrationWrapperSmokeSource = $env:MIGRATION_SOURCE_URL
+    Write-Output "synthetic failed report line one"
+    Write-Output "synthetic failed report line two"
+    [Console]::Error.WriteLine("synthetic failed native stderr diagnostic")
     $global:LASTEXITCODE = 23
 }
 $failureErrorWriter = New-Object System.IO.StringWriter
@@ -165,9 +174,12 @@ try {
 finally {
     [Console]::SetError($originalErrorWriter)
 }
-if ($failedExitCode -ne 23) {
+if ($failedExitCode -isnot [int] -or $failedExitCode -ne 23) {
     $details = $failureErrorWriter.ToString().Trim()
-    throw "The wrapper did not propagate the child process failure exit code. Details: $details"
+    throw "The wrapper did not return exactly one integer child failure exit code 23. Details: $details"
+}
+if ($failureErrorWriter.ToString() -notlike "*synthetic failed native stderr diagnostic*") {
+    throw "The failed synthetic Node invocation did not preserve stderr diagnostics."
 }
 if ($global:MigrationWrapperSmokeSource -notlike "postgresql+psycopg://source:*") {
     throw "The failure-path child process did not receive its synthetic source URL."
@@ -178,7 +190,138 @@ foreach ($name in $environmentNames) {
     }
 }
 
+$global:LASTEXITCODE = 0
+$nativeSmokeRoot = Join-Path ([System.IO.Path]::GetTempPath()) `
+    ("postgres-migration-wrapper-smoke-" + [Guid]::NewGuid().ToString("N"))
+$nativeSmokeNodeDirectory = Join-Path $nativeSmokeRoot "bin"
+$nativeSmokeNodePath = Join-Path $nativeSmokeNodeDirectory "node.cmd"
+$nativeSmokeDriverPath = Join-Path $nativeSmokeRoot "invoke-wrapper.ps1"
+$wrapperPath = Join-Path $repositoryRoot "scripts/postgres-migration.ps1"
+$wrapperLiteral = "'" + $wrapperPath.Replace("'", "''") + "'"
+$nodeStub = @'
+@echo off
+echo synthetic native inventory report line one
+echo synthetic native inventory report line two
+echo synthetic native stderr diagnostic 1>&2
+echo synthetic native exit marker %MIGRATION_WRAPPER_SMOKE_EXIT_CODE% 1>&2
+exit /b %MIGRATION_WRAPPER_SMOKE_EXIT_CODE%
+'@
+$driver = @"
+function global:Read-Host {
+    param([string]`$Prompt, [switch]`$AsSecureString)
+    if (`$Prompt -notlike "Paste the local portfolio_app PostgreSQL 18 URL*") {
+        throw "Unexpected wrapper prompt."
+    }
+    `$value = "postgresql+psycopg://source:synthetic@127.0.0.1/portfolio_app"
+    if (`$AsSecureString) {
+        return ConvertTo-SecureString -String `$value -AsPlainText -Force
+    }
+    return `$value
+}
+try {
+    & $wrapperLiteral -Operation inventory
+}
+catch {
+    [Console]::Error.WriteLine("The end-to-end wrapper invocation threw: " + [string]$_.Exception.Message)
+    exit 97
+}
+`$remainingMigrationEnvironment = @(
+    "MIGRATION_SOURCE_URL", "MIGRATION_SOURCE_SCHEMA", "MIGRATION_TARGET_URL",
+    "MIGRATION_TARGET_SCHEMA", "MIGRATION_EXPECTED_TARGET_HOST",
+    "MIGRATION_EXPECTED_TARGET_DATABASE", "MIGRATION_NEON_API_KEY",
+    "MIGRATION_NEON_PROJECT_ID", "MIGRATION_NEON_TARGET_BRANCH_ID",
+    "MIGRATION_NEON_TARGET_ENDPOINT_ID", "MIGRATION_PRODUCTION_HOST",
+    "MIGRATION_ALLOW_TEST_TARGET", "MIGRATION_PG_TOOLS_CONTAINER"
+) | Where-Object { `$null -ne [Environment]::GetEnvironmentVariable(`$_, "Process") }
+if (`$remainingMigrationEnvironment.Count -gt 0) {
+    [Console]::Error.WriteLine("The wrapper left migration environment variables active: " + (`$remainingMigrationEnvironment -join ", "))
+    exit 98
+}
+Write-Output "synthetic wrapper last exit marker `$LASTEXITCODE"
+exit [int]$LASTEXITCODE
+"@
+
+$originalPath = $env:PATH
+$hadOriginalNativeExit = Test-Path Env:MIGRATION_WRAPPER_SMOKE_EXIT_CODE
+$originalNativeExit = $env:MIGRATION_WRAPPER_SMOKE_EXIT_CODE
+$hadOriginalNativeSource = Test-Path Env:MIGRATION_SOURCE_URL
+$originalNativeSource = $env:MIGRATION_SOURCE_URL
+try {
+    New-Item -ItemType Directory -Path $nativeSmokeNodeDirectory -Force | Out-Null
+    Set-Content -LiteralPath $nativeSmokeNodePath -Value $nodeStub -Encoding ASCII
+    Set-Content -LiteralPath $nativeSmokeDriverPath -Value $driver -Encoding ASCII
+    $env:PATH = "$nativeSmokeNodeDirectory;$originalPath"
+    $nativeShell = if ($PSVersionTable.PSEdition -eq "Desktop") {
+        Join-Path $PSHOME "powershell.exe"
+    }
+    else {
+        Join-Path $PSHOME "pwsh.exe"
+    }
+    foreach ($expectedExitCode in @(0)) {
+        $env:MIGRATION_WRAPPER_SMOKE_EXIT_CODE = [string]$expectedExitCode
+        Remove-Item Env:MIGRATION_SOURCE_URL -ErrorAction SilentlyContinue
+        $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $startInfo.FileName = $nativeShell
+        $startInfo.Arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$nativeSmokeDriverPath`""
+        $startInfo.WorkingDirectory = $repositoryRoot
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $startInfo
+        if (-not $process.Start()) {
+            throw "Could not start the end-to-end wrapper smoke process."
+        }
+        $childStdout = $process.StandardOutput.ReadToEnd()
+        $childStderr = $process.StandardError.ReadToEnd()
+        $process.WaitForExit()
+        $processExitCode = $process.ExitCode
+        $process.Dispose()
+
+        if ($processExitCode -ne $expectedExitCode) {
+            throw "The wrapper process returned $processExitCode for the synthetic native exit code $expectedExitCode. stdout: $childStdout stderr: $childStderr"
+        }
+        if ($childStdout -notlike "*synthetic native inventory report line one*" -or
+            $childStdout -notlike "*synthetic native inventory report line two*") {
+            throw "The end-to-end wrapper did not preserve multiple native stdout lines. stdout: $childStdout stderr: $childStderr"
+        }
+        if (($childStdout + $childStderr) -notlike "*synthetic native stderr diagnostic*") {
+            throw "The end-to-end wrapper did not preserve the native stderr diagnostic. stdout: $childStdout stderr: $childStderr"
+        }
+        if (($childStdout + $childStderr) -notlike "*synthetic native exit marker $expectedExitCode*") {
+            throw "The end-to-end native shim did not receive its configured exit code. stdout: $childStdout stderr: $childStderr"
+        }
+        if (($childStdout + $childStderr) -match "postgresql\+psycopg://source:synthetic") {
+            throw "The end-to-end wrapper exposed its hidden database URL."
+        }
+    }
+}
+finally {
+    $env:PATH = $originalPath
+    if ($hadOriginalNativeExit) {
+        $env:MIGRATION_WRAPPER_SMOKE_EXIT_CODE = $originalNativeExit
+    }
+    else {
+        Remove-Item Env:MIGRATION_WRAPPER_SMOKE_EXIT_CODE -ErrorAction SilentlyContinue
+    }
+    if ($hadOriginalNativeSource) {
+        $env:MIGRATION_SOURCE_URL = $originalNativeSource
+    }
+    else {
+        Remove-Item Env:MIGRATION_SOURCE_URL -ErrorAction SilentlyContinue
+    }
+    $temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+    $temporaryPrefix = $temporaryRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + `
+        [System.IO.Path]::DirectorySeparatorChar
+    $smokeRoot = [System.IO.Path]::GetFullPath($nativeSmokeRoot)
+    if (-not $smokeRoot.StartsWith($temporaryPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+        [System.IO.Path]::GetFileName($smokeRoot) -notlike "postgres-migration-wrapper-smoke-*") {
+        throw "Refusing to remove a path outside this migration smoke test's temporary directory."
+    }
+    Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Remove-Variable MigrationWrapperSmokeArguments, MigrationWrapperSmokeSource, `
     MigrationWrapperSmokeTarget, MigrationWrapperSmokeApiKey, MigrationWrapperSmokeLegacyHost `
     -Scope Global -ErrorAction SilentlyContinue
-Write-Output "PowerShell migration wrapper syntax, argument, environment and exit-code smoke tests passed."
+Write-Output "PowerShell migration wrapper syntax, argument, environment, stdout/stderr and end-to-end exit-code smoke tests passed."
