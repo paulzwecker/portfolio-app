@@ -1,4 +1,10 @@
 $ErrorActionPreference = "Stop"
+trap {
+    $failureMessage = [string]$_.Exception.Message
+    $failureMessage = $failureMessage.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
+    Write-Output "::error title=PowerShell migration wrapper smoke failure::$failureMessage"
+    exit 1
+}
 
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $powerShellFiles = @(
