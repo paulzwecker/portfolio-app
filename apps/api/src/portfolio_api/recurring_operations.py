@@ -1364,7 +1364,11 @@ def main(argv: list[str] | None = None) -> int:
             "Added process-local NO_PROXY entries for SEC and Google APIs after detecting "
             "the known loopback port-9 development proxy."
         )
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation="recurring_operations_worker",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         print(json.dumps({"status": "BLOCKED", "reason": "DATABASE_URL is not configured."}))
         return 2

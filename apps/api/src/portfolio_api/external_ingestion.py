@@ -1525,7 +1525,11 @@ def run_cli(argv: list[str] | None = None) -> int:
         ):
             parser.error("--fx-pair requires FX to be among the selected domains")
     settings = Settings()
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation=f"external_data_{args.command}",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         parser.error("DATABASE_URL is required for external-data operations")
     try:

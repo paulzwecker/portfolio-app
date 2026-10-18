@@ -1178,7 +1178,11 @@ def _run_cli() -> int:
     sync_parser.add_argument("--company-id", type=UUID)
     args = parser.parse_args()
     settings = Settings()
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation=f"reported_fundamentals_{args.command}",
+        write_operation_kind="ingestion" if args.command == "sync" else "import",
+    )
     if engine is None:
         parser.error("Set DATABASE_URL before running reported-fundamentals ingestion")
     try:

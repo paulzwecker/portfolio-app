@@ -919,7 +919,11 @@ def main() -> None:
     sync.add_argument("--company-id", type=UUID)
     args = parser.parse_args()
     settings = Settings()
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation="source_document_sync",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         raise SystemExit("Set DATABASE_URL before synchronizing source documents")
     try:

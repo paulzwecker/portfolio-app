@@ -7,20 +7,26 @@ authoritative inputs. The historical local PostgreSQL database is out of scope a
 must not be queried, exported, or migrated for this workflow. No Neon, Render, or
 Vercel changes are part of this preparation.
 
-The manifest `validate` command checks metadata. This PR adds `verify-inputs`,
-which compares frozen source and mapping files with their manifest SHA-256 values.
-Both commands are read-only and do not connect to PostgreSQL or providers or write
-canonical state. A target-verified bootstrap orchestrator and full domain
-reconciliation remain future work. Keep importer `--apply` disabled for this
-baseline until the shared write guard and a disposable PostgreSQL 18 rehearsal are
-in the reviewed execution path.
+The manifest `validate` and `verify-inputs` commands check metadata and frozen
+source bytes without connecting to PostgreSQL or providers. The shared SQLAlchemy
+engine now checks mutating operations against the exact live database connection
+and, for Neon, verifies project, branch, and endpoint metadata through the control
+plane. Writes require an explicit target environment and authorization; production
+bootstrap additionally requires interactive confirmation of the verified target.
+See [`database-write-targets.md`](database-write-targets.md) for the policy.
 
-| State       | Current implementation status                                                                                                                                                                              |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implemented | Closed metadata manifest contract and private input hash verification; dependency, identity-map, timestamp, history, exact-decimal, and missing-versus-zero checks; CI checkout excludes source artifacts. |
-| Tested      | Synthetic manifest and artifact verification plus synthetic financial model fixtures; database integration tests use disposable PostgreSQL only.                                                           |
-| Staged      | Operator-populated source manifest and artifacts, exact identity mapping, recovery decisions, target authorization, domain import phases, and full orchestration.                                          |
-| Executed    | Manifest and artifact checks against synthetic temporary files only. No portfolio source data, canonical database, or cloud resource was accessed or changed.                                              |
+A target-identity-bound bootstrap orchestrator and full domain reconciliation are
+still future work. Existing importers are not yet coordinated by one resumable
+bootstrap command, and several require a database even for dry-run. Do not use
+their `--apply` switches to initialize this baseline until a later reviewed change
+provides the bounded orchestrator and a disposable PostgreSQL 18 rehearsal.
+
+| State       | Current implementation status                                                                                                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implemented | Closed metadata manifest contract; frozen-input SHA-256 verification; SQLAlchemy write-target guard; dependency, identity-map, timestamp, history, exact-decimal, and missing-versus-zero validation; CI excludes source artifacts.       |
+| Tested      | Synthetic manifest/artifact tests and write-target policy tests; PostgreSQL 18 write-guard integration tests use a disposable local database.                                                                                            |
+| Staged      | Operator-populated source manifest and artifacts, exact identity mappings, recovery decisions, orchestration, domain import phases, target authorization, and full reconciliation.                                                        |
+| Executed    | Artifact checks against synthetic temporary files and write-guard integration tests on disposable PostgreSQL only. No portfolio source data, canonical database, or cloud resource was accessed or changed.                              |
 
 The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
 `test_model_input_migration.py`, `test_model_input_parity.py`,

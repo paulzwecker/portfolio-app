@@ -184,7 +184,11 @@ def run_startup_refresh(
     ready_wait_seconds: int = DEFAULT_READY_WAIT_SECONDS,
     ready_poll_seconds: int = DEFAULT_READY_POLL_SECONDS,
 ) -> dict[str, object]:
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation="market_data_startup_ingestion",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         return {"status": "BLOCKED", "reason": "DATABASE_URL is not configured."}
     started = datetime.now(UTC)

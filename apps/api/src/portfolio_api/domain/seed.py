@@ -295,7 +295,9 @@ def seed_rankings(session: Session) -> None:
 
 
 def main() -> None:
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(
+        Settings(), write_operation="demo_seed", write_operation_kind="seed"
+    )
     if engine is None:
         raise SystemExit("Configure DATABASE_URL and migrate before seeding")
     try:
