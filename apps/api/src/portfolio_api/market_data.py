@@ -658,7 +658,11 @@ def run_cli(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(
+        Settings(),
+        write_operation="market_data_workbook_import",
+        write_operation_kind="import",
+    )
     if engine is None:
         parser.error("DATABASE_URL is required to resolve exact listing identities")
     try:

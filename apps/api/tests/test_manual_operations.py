@@ -185,7 +185,8 @@ def test_company_scoped_request_api_is_local_domain_contract(
         company = _company_in_state(session, "WATCHLIST")
         company_id = company.id
     monkeypatch.setattr(
-        "portfolio_api.main.create_database_engine", lambda _settings: postgres_engine
+        "portfolio_api.main.create_database_engine",
+        lambda _settings, **_kwargs: postgres_engine,
     )
     with TestClient(create_app(Settings(database_url=None))) as client:
         response = client.post(
@@ -218,7 +219,8 @@ def test_api_rejects_refresh_when_background_worker_is_disabled(
     from portfolio_api.main import create_app
 
     monkeypatch.setattr(
-        "portfolio_api.main.create_database_engine", lambda _settings: postgres_engine
+        "portfolio_api.main.create_database_engine",
+        lambda _settings, **_kwargs: postgres_engine,
     )
     with TestClient(
         create_app(Settings(database_url=None, recurring_operations_enabled=False))

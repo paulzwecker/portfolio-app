@@ -947,7 +947,11 @@ def main() -> None:
     sync.add_argument("--company-id", type=UUID)
     args = parser.parse_args()
     settings = Settings()
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation=f"consensus_estimates_{args.command}",
+        write_operation_kind="import" if args.command != "sync-fmp" else "ingestion",
+    )
     if engine is None:
         raise SystemExit("Set DATABASE_URL before using consensus estimate commands")
     try:

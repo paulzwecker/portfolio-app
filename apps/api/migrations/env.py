@@ -40,7 +40,11 @@ def run_migrations_online() -> None:
         migrate_connection(supplied_connection)
         return
 
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(
+        Settings(),
+        write_operation="alembic_schema_migration",
+        write_operation_kind="schema_migration",
+    )
     if engine is None:
         raise RuntimeError(
             "Set DATABASE_URL in the environment or repository .env before migrating"

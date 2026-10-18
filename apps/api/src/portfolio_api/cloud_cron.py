@@ -27,7 +27,11 @@ def main() -> int:
     except Exception as error:
         reports["market_data"] = {"status": "FAILED", "error_type": type(error).__name__}
 
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation="cloud_cron_ingestion",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         reports["recurring_operations"] = {
             "status": "BLOCKED",

@@ -68,6 +68,9 @@ jobs:
 
     env:
       TEST_DATABASE_URL: postgresql+psycopg://portfolio_app:ci-password@127.0.0.1:5432/portfolio_app_test
+      DATABASE_TARGET_ENVIRONMENT: development
+      DATABASE_TARGET_DATABASE: portfolio_app_test
+      DATABASE_LOCAL_TEST_WRITES_AUTHORIZED: "true"
 
     steps:
       - name: Check out repository

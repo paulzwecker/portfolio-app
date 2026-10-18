@@ -35,13 +35,16 @@ retry, and acceptance rules. Adding one now would make partial completion harder
 to interpret. The supported importers already provide bounded transactions or
 domain-specific run ledgers; a later orchestrator should be built only after the
 operator resolves the recovery decision and the required inputs are assembled.
-The current importer CLIs also select their write database through
-`DATABASE_URL`; they do not prove the Neon project/branch identity before an
-`--apply`. A future bootstrap must bind the Neon control-plane verified target to
-the exact `DATABASE_URL` it will write, check the clean schema and Alembic head,
-and require an explicit environment confirmation. Until that guard exists, the
-apply commands below are rehearsal guidance only and must not be run against
-Neon production.
+The current importer CLIs still select their database through `DATABASE_URL`, but
+the shared SQLAlchemy engine now installs the verified database write-target guard.
+Remote writes require Neon control-plane project/branch/endpoint identity checks and
+environment-specific authorization; production bootstrap also requires an exact
+interactive target confirmation. This guard does not make a general bootstrap
+orchestrator or approve a production run. Any future bootstrap must use the shared
+engine factory, call its explicit preflight before source/provider work, and retain
+the clean-schema, Alembic, domain reconciliation, and operator review gates. See
+[`database-write-targets.md`](database-write-targets.md) for the integration
+contract and operator procedure.
 
 ## Recovery classes
 

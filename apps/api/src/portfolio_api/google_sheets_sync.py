@@ -962,7 +962,11 @@ def _run_check_once(settings: Settings) -> dict[str, object]:
     from portfolio_api.research_sheet_sync import run_research_sync_check
     from portfolio_api.risk_assessments import run_risk_sync_check
 
-    engine = create_database_engine(settings)
+    engine = create_database_engine(
+        settings,
+        write_operation="google_sheets_sync",
+        write_operation_kind="ingestion",
+    )
     if engine is None:
         raise SystemExit("Set DATABASE_URL before running Google Sheets sync")
     try:

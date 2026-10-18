@@ -237,7 +237,11 @@ def run_cli(argv: list[str] | None = None) -> int:
     observed_at = args.observed_at or now()
     if observed_at.tzinfo is None or observed_at.utcoffset() is None:
         parser.error("--observed-at must include a timezone")
-    engine = create_database_engine(Settings())
+    engine = create_database_engine(
+        Settings(),
+        write_operation="research_priority_import",
+        write_operation_kind="import",
+    )
     if engine is None:
         parser.error("Configure DATABASE_URL and run database migrations before importing.")
     try:

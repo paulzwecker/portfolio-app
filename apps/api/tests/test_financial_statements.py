@@ -114,7 +114,8 @@ def test_filing_context_does_not_duplicate_period_or_relabel_comparatives(
         assert any(row.metric == "FREE_CASH_FLOW" and not row.cells for row in view.rows)
         assert session.scalar(select(func.count()).select_from(ReportedFundamentalObservation)) == 2
     monkeypatch.setattr(
-        "portfolio_api.main.create_database_engine", lambda _settings: postgres_engine
+        "portfolio_api.main.create_database_engine",
+        lambda _settings, **_kwargs: postgres_engine,
     )
     with TestClient(create_app(Settings.model_construct())) as client:
         response = client.get(f"/v1/companies/{company_id}/financial-statements?period_limit=5")
