@@ -1,5 +1,12 @@
 # Canonical PostgreSQL migration preparation
 
+> **Current direction:** Milestone 14B-R evaluates a cloud-native, domain-by-domain
+> bootstrap for initial population. This earlier full-restore preparation is not an
+> instruction to restore or overwrite a database. Use
+> [cloud-native-bootstrap-readiness.md](cloud-native-bootstrap-readiness.md) for the
+> current recovery recommendation and stop conditions. No backup or restore is
+> authorized by that assessment.
+
 This runbook prepares a local PostgreSQL 18 database for an operator-run migration into an isolated Neon database. It does not connect to Neon production, modify a database, perform a cutover, or copy portfolio data to Codex Cloud. The migration command is deliberately separate from application startup and Alembic; no background migration was added.
 
 ## Findings and restore design
