@@ -7,20 +7,20 @@ authoritative inputs. The historical local PostgreSQL database is out of scope a
 must not be queried, exported, or migrated for this workflow. No Neon, Render, or
 Vercel changes are part of this preparation.
 
-The implemented command validates only manifest metadata. It does not open input
-artifacts, connect to PostgreSQL, call Google Sheets or market-data providers, or
-write canonical state. A target-identity-bound bootstrap orchestrator and full
-domain reconciliation are still blocked. Existing importer CLIs do not all verify
-Neon branch identity, and some importers need a database even for their dry-run.
-Do not use their `--apply` switches for this baseline until a later reviewed PR
-provides the target guard and a disposable PostgreSQL 18 rehearsal.
+The manifest `validate` command checks metadata. This PR adds `verify-inputs`,
+which compares frozen source and mapping files with their manifest SHA-256 values.
+Both commands are read-only and do not connect to PostgreSQL or providers or write
+canonical state. A target-verified bootstrap orchestrator and full domain
+reconciliation remain future work. Keep importer `--apply` disabled for this
+baseline until the shared write guard and a disposable PostgreSQL 18 rehearsal are
+in the reviewed execution path.
 
-| State       | What exists in this PR                                                                                                                                                                           |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Implemented | Closed metadata manifest contract; dependency, source hash, identity map, timestamp, history decision, exact decimal, and missing-versus-zero validation; CI checkout excludes source artifacts. |
-| Tested      | Synthetic manifest validation and synthetic financial model fixtures; existing database integration tests run against disposable PostgreSQL only.                                                |
-| Staged      | Operator-populated source manifest, source artifact hashes, exact input mapping, recovery decisions, rehearsal target, and future orchestrator.                                                  |
-| Executed    | Manifest validator and synthetic tests only. No source data was opened, no source database was queried, and no cloud resource was changed.                                                       |
+| State       | Current implementation status                                                                                                                                                                              |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implemented | Closed metadata manifest contract and private input hash verification; dependency, identity-map, timestamp, history, exact-decimal, and missing-versus-zero checks; CI checkout excludes source artifacts. |
+| Tested      | Synthetic manifest and artifact verification plus synthetic financial model fixtures; database integration tests use disposable PostgreSQL only.                                                           |
+| Staged      | Operator-populated source manifest and artifacts, exact identity mapping, recovery decisions, target authorization, domain import phases, and full orchestration.                                          |
+| Executed    | Manifest and artifact checks against synthetic temporary files only. No portfolio source data, canonical database, or cloud resource was accessed or changed.                                              |
 
 The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
 `test_model_input_migration.py`, `test_model_input_parity.py`,
@@ -58,7 +58,8 @@ In the private input directory, keep the frozen bytes under the manifest's stabl
 `<source_id>.identity-map.artifact`. Keep original exports unchanged; do not
 normalize or rewrite them after hashing. The eventual orchestrator can resolve
 these names under an operator-selected private input root without putting personal
-file paths in the manifest.
+file paths in the manifest. The `verify-inputs` command uses the same fixed naming
+contract before any future import phase.
 
 For financial domains, use decimal strings and set
 `decimal_semantics` to `exact_decimal_strings` and
@@ -111,6 +112,31 @@ This is a metadata check, not a readiness approval or an import. A successful
 result means only that the input inventory is structurally reviewable. It does not
 prove that a workbook/API response is authoritative, that a hash matches a file,
 that source identities reconcile, or that a cloud database is isolated.
+
+## Verify frozen input bytes
+
+After the metadata check, compare the private files against the manifest hashes.
+Keep the input directory outside the repository and do not pass it to CI:
+
+```powershell
+$inputRoot = Join-Path $env:USERPROFILE 'Documents\portfolio-baseline-inputs'
+npm run db:bootstrap-inputs-check -- verify-inputs --manifest $manifest --input-root $inputRoot
+```
+
+Expected success output is limited to counts and the safe dependency order:
+
+```text
+Bootstrap input artifacts verified: verified=N; not_required=M; sources=K; no database or provider accessed.
+Dependency order: <source-id> -> <source-id> -> ...
+```
+
+The verifier streams each source artifact and identity map and compares its SHA-256
+to the manifest. Missing, unreadable, non-regular, symlinked, or changed files fail
+with exit code 2 and identify only the source ID and artifact kind. Approved
+operator-decision entries with null artifact hashes are reported as
+`not_required`. The verifier never prints a private path, hash, file content, or
+row value. A successful result proves byte integrity only; it does not approve the
+source, validate mappings or imported records, or authorize a database write.
 
 ## Dependencies and pipeline readiness
 
