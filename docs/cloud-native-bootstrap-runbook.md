@@ -22,14 +22,15 @@ provides the target guard and a disposable PostgreSQL 18 rehearsal.
 | Staged      | Operator-populated source manifest, source artifact hashes, exact input mapping, recovery decisions, rehearsal target, and future orchestrator.                                                  |
 | Executed    | Manifest validator and synthetic tests only. No source data was opened, no source database was queried, and no cloud resource was changed.                                                       |
 
-The source-data suites (`test_legacy_import.py`, `test_model_input_migration.py`,
-`test_model_input_parity.py`, `test_model_migration_inventory.py`, and one workbook
-comparison in `test_research_rank.py`) remain available for a trusted operator
-checkout but are excluded from CI because they read personal workbook inputs or
-source-specific model values. CI instead runs synthetic calculation and API/domain
-PostgreSQL integration coverage. This leaves direct source-workbook parity
-unverified by CI until equivalent synthetic workbook contracts replace those
-source-bound cases.
+The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
+`test_model_input_migration.py`, `test_model_input_parity.py`,
+`test_model_migration_inventory.py`, `test_research_rank_source_data.py`, and
+`test_yahoo_finance_source_data.py`) remain available for a trusted operator
+checkout but are excluded from CI because they read personal workbook inputs,
+source-specific model values, or reviewed portfolio listing mappings. CI instead
+runs synthetic calculation and API/domain PostgreSQL integration coverage. This
+leaves direct source-workbook and crosswalk parity unverified by CI until
+equivalent synthetic contracts replace those source-bound cases.
 
 ## Prepare the manifest on the trusted operator workstation
 

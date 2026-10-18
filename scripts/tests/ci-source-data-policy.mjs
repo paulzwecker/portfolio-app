@@ -5,9 +5,12 @@ import { fileURLToPath } from "node:url";
 const checkoutDirectories = ["apps", "packages", "scripts", "tools", ".github"];
 const excludedSourcePaths = [
   "apps/api/tests/test_legacy_import.py",
+  "apps/api/tests/test_consensus_source_data.py",
   "apps/api/tests/test_model_input_migration.py",
   "apps/api/tests/test_model_input_parity.py",
   "apps/api/tests/test_model_migration_inventory.py",
+  "apps/api/tests/test_research_rank_source_data.py",
+  "apps/api/tests/test_yahoo_finance_source_data.py",
   "apps/api/tests/fixtures/p_googl_ufcf_dcf_v1.json",
   "apps/api/tests/fixtures/w_hdfc_residual_income_v1.json",
   "apps/api/tests/fixtures/w_tost_owner_cash_flow_v1.json",
