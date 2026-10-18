@@ -44,4 +44,7 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
-markers = ["integration: requires an explicit, dedicated TEST_DATABASE_URL"]
+markers = [
+    "integration: requires an explicit, dedicated TEST_DATABASE_URL",
+    "source_data: requires operator-provided portfolio source files and is excluded from CI",
+]

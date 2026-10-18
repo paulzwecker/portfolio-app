@@ -5,7 +5,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 from unittest.mock import patch
 from uuid import UUID
 
@@ -14,6 +14,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from synthetic_financial_fixtures import (
+    dcf_fixture,
+    owner_cash_flow_fixture,
+    residual_income_fixture,
+)
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
@@ -52,8 +57,6 @@ from portfolio_api.research_sheet_sync import (
 from portfolio_api.research_triggers import refresh_research_triggers
 from portfolio_api.settings import Settings
 
-FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
-ADDITIONAL_FIXTURES = Path(__file__).parent / "fixtures"
 SPREADSHEET_ID = "fictional-test-spreadsheet-id-0000000000000000000000"
 
 
@@ -253,7 +256,7 @@ def test_unsupported_portable_contract_version_is_rejected() -> None:
 def test_candidate_replay_preview_acceptance_and_stale_base_conflict(
     postgres_engine: Engine,
 ) -> None:
-    fixture = cast(dict[str, object], json.loads(FIXTURE.read_text(encoding="utf-8")))
+    fixture = cast(dict[str, object], dcf_fixture())
     now = datetime.now(UTC)
     with (
         patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
@@ -667,12 +670,12 @@ def test_candidate_replay_preview_acceptance_and_stale_base_conflict(
     ("fixture_name", "method", "currency"),
     [
         (
-            "w_tost_owner_cash_flow_v1.json",
+            "owner_cash_flow",
             "owner-cash-flow",
             "USD",
         ),
         (
-            "w_hdfc_residual_income_v1.json",
+            "residual_income",
             "residual-income",
             "INR",
         ),
@@ -684,8 +687,10 @@ def test_additional_method_contract_is_reviewed_into_its_native_revision_table(
     method: str,
     currency: str,
 ) -> None:
-    fixture = cast(
-        dict[str, Any], json.loads((ADDITIONAL_FIXTURES / fixture_name).read_text(encoding="utf-8"))
+    fixture = (
+        owner_cash_flow_fixture()
+        if fixture_name == "owner_cash_flow"
+        else residual_income_fixture()
     )
     now = datetime.now(UTC)
     with (
@@ -702,7 +707,7 @@ def test_additional_method_contract_is_reviewed_into_its_native_revision_table(
         ).json()
         listing = client.post(
             f"/v1/securities/{security['id']}/listings",
-            json={"venue": "SYNC-TEST", "ticker": fixture["model_key"], "currency": currency},
+            json={"venue": "SYNC-TEST", "ticker": fixture["ticker"], "currency": currency},
         ).json()
         research_revision_id, _ = _publish_research_evidence(
             client,

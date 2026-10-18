@@ -25,12 +25,36 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !/*/
+            /apps/
+            /packages/
+            /scripts/
+            /tools/
+            /.github/
+            !/apps/api/tests/test_legacy_import.py
+            !/apps/api/tests/test_consensus_source_data.py
+            !/apps/api/tests/test_model_input_migration.py
+            !/apps/api/tests/test_model_input_parity.py
+            !/apps/api/tests/test_model_migration_inventory.py
+            !/apps/api/tests/test_research_rank_source_data.py
+            !/apps/api/tests/test_yahoo_finance_source_data.py
+            !/apps/api/tests/fixtures/p_googl_ufcf_dcf_v1.json
+            !/apps/api/tests/fixtures/w_hdfc_residual_income_v1.json
+            !/apps/api/tests/fixtures/w_tost_owner_cash_flow_v1.json
+          sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
+
+      - name: Verify CI checkout excludes portfolio source data
+        run: node scripts/tests/ci-source-data-policy.mjs
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,8 +69,26 @@ jobs:
           npm ci
           npm run setup
 
-      - name: Run database-independent checks
-        run: npm run check
+      - name: Run lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Verify repository source-data policy
+        run: npm run test:repo-policy
+
+      - name: Check contracts
+        run: npm run contracts:check
+
+      - name: Build frontend
+        run: npm run build
 
   integration:
     name: PostgreSQL integration tests
@@ -72,12 +114,36 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !/*/
+            /apps/
+            /packages/
+            /scripts/
+            /tools/
+            /.github/
+            !/apps/api/tests/test_legacy_import.py
+            !/apps/api/tests/test_consensus_source_data.py
+            !/apps/api/tests/test_model_input_migration.py
+            !/apps/api/tests/test_model_input_parity.py
+            !/apps/api/tests/test_model_migration_inventory.py
+            !/apps/api/tests/test_research_rank_source_data.py
+            !/apps/api/tests/test_yahoo_finance_source_data.py
+            !/apps/api/tests/fixtures/p_googl_ufcf_dcf_v1.json
+            !/apps/api/tests/fixtures/w_hdfc_residual_income_v1.json
+            !/apps/api/tests/fixtures/w_tost_owner_cash_flow_v1.json
+          sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
+
+      - name: Verify CI checkout excludes portfolio source data
+        run: node scripts/tests/ci-source-data-policy.mjs
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -110,6 +176,36 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !/*/
+            /apps/
+            /packages/
+            /scripts/
+            /tools/
+            /.github/
+            !/apps/api/tests/test_legacy_import.py
+            !/apps/api/tests/test_consensus_source_data.py
+            !/apps/api/tests/test_model_input_migration.py
+            !/apps/api/tests/test_model_input_parity.py
+            !/apps/api/tests/test_model_migration_inventory.py
+            !/apps/api/tests/test_research_rank_source_data.py
+            !/apps/api/tests/test_yahoo_finance_source_data.py
+            !/apps/api/tests/fixtures/p_googl_ufcf_dcf_v1.json
+            !/apps/api/tests/fixtures/w_hdfc_residual_income_v1.json
+            !/apps/api/tests/fixtures/w_tost_owner_cash_flow_v1.json
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Verify CI checkout excludes portfolio source data
+        shell: pwsh
+        run: node scripts/tests/ci-source-data-policy.mjs
 
       - name: Test Windows PowerShell 5.1 wrapper
         shell: powershell

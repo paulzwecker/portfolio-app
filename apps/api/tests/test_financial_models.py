@@ -1,21 +1,19 @@
-"""Regression checks for the one accepted native valuation methodology."""
+"""Regression checks for a native valuation methodology using fictional inputs."""
 
 import json
 from decimal import Decimal, localcontext
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+from synthetic_financial_fixtures import dcf_fixture
 
 from portfolio_api.domain.schemas import FinancialModelRevisionCreate
 from portfolio_api.financial_models import MarketPriceInput, _irr, calculate_ufcf_dcf
 
-FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
-
 
 @pytest.fixture
 def parity_case() -> tuple[dict[str, object], FinancialModelRevisionCreate]:
-    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    fixture = dcf_fixture()
     revision = FinancialModelRevisionCreate.model_validate(fixture["input"])
     return fixture, revision
 
@@ -32,7 +30,7 @@ def reference_price(fixture: dict[str, object]) -> MarketPriceInput:
     )
 
 
-def test_p_googl_ufcf_dcf_reconciles_cached_scenarios_and_normalized_outputs(
+def test_synthetic_ufcf_dcf_reconciles_cached_scenarios_and_normalized_outputs(
     parity_case: tuple[dict[str, object], FinancialModelRevisionCreate],
 ) -> None:
     fixture, revision = parity_case

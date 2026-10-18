@@ -1,15 +1,14 @@
 """Persistence and revision-history integration for additional model methods."""
 
 import copy
-import json
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from synthetic_financial_fixtures import owner_cash_flow_fixture, residual_income_fixture
 
 from portfolio_api.domain.models import (
     FinancialModelRevision,
@@ -19,12 +18,15 @@ from portfolio_api.domain.models import (
 from portfolio_api.main import create_app
 from portfolio_api.settings import Settings
 
-FIXTURES = Path(__file__).parent / "fixtures"
 pytestmark = pytest.mark.integration
 
 
-def fixture_data(filename: str) -> dict[str, Any]:
-    return cast(dict[str, Any], json.loads((FIXTURES / filename).read_text(encoding="utf-8")))
+def fixture_data(name: str) -> dict[str, Any]:
+    if name == "owner_cash_flow":
+        return owner_cash_flow_fixture()
+    if name == "residual_income":
+        return residual_income_fixture()
+    raise ValueError("Unknown synthetic financial model fixture.")
 
 
 def now_iso() -> str:
@@ -35,13 +37,13 @@ def now_iso() -> str:
     ("fixture_name", "method", "currency", "projection_model"),
     [
         (
-            "w_tost_owner_cash_flow_v1.json",
+            "owner_cash_flow",
             "owner-cash-flow",
             "USD",
             OwnerCashFlowProjection,
         ),
         (
-            "w_hdfc_residual_income_v1.json",
+            "residual_income",
             "residual-income",
             "INR",
             ResidualIncomeProjection,
@@ -71,15 +73,15 @@ def test_additional_archetype_models_create_append_and_read_immutable_history(
         ).json()
         listing = client.post(
             f"/v1/securities/{security['id']}/listings",
-            json={"venue": "PARITY", "ticker": fixture["model_key"], "currency": currency},
+            json={"venue": "XNAS", "ticker": fixture["ticker"], "currency": currency},
         ).json()
         initial_revision = {
             **copy.deepcopy(fixture["input"]),
             "base_revision_id": None,
             "source_revision_id": None,
             "actor": "LOCAL_USER",
-            "source": "Workbook parity fixture",
-            "rationale": "Initial representative workbook methodology fixture.",
+            "source": "Synthetic test fixture",
+            "rationale": "Initial fictional model-method fixture.",
             "effective_at": now_iso(),
         }
         response = client.post(
@@ -164,30 +166,31 @@ def test_owner_cash_flow_portable_contract_round_trip_and_stale_base_conflict(
         patch_engine(postgres_engine),
         TestClient(create_app(Settings(database_url=None))) as client,
     ):
-        fixture = fixture_data("w_tost_owner_cash_flow_v1.json")
+        fixture = fixture_data("owner_cash_flow")
         company = client.post(
-            "/v1/companies", json={"name": "TOST contract fixture", "reporting_currency": "USD"}
+            "/v1/companies",
+            json={"name": "Synthetic owner issuer", "reporting_currency": "USD"},
         ).json()
         security = client.post(
             f"/v1/companies/{company['id']}/securities",
-            json={"name": "Toast common", "security_type": "COMMON_STOCK"},
+            json={"name": "Synthetic common stock", "security_type": "COMMON_STOCK"},
         ).json()
         listing = client.post(
             f"/v1/securities/{security['id']}/listings",
-            json={"venue": "NYSE", "ticker": "TOST", "currency": "USD"},
+            json={"venue": "XNAS", "ticker": "SYNTHOCF", "currency": "USD"},
         ).json()
         payload = {
-            "model_name": "Toast owner cash flow",
+            "model_name": "Synthetic owner cash flow",
             "valuation_listing_id": listing["id"],
             "model_currency": "USD",
-            "source_model_key": "W-TOST",
+            "source_model_key": "SYNTHETIC_OWNER_CASH_FLOW",
             "initial_revision": {
                 **fixture["input"],
                 "base_revision_id": None,
                 "source_revision_id": None,
                 "actor": "LOCAL_USER",
-                "source": "W-TOST parity fixture",
-                "rationale": "Initial owner cash-flow model.",
+                "source": "Synthetic test fixture",
+                "rationale": "Initial fictional owner cash-flow model.",
                 "effective_at": now_iso(),
             },
         }

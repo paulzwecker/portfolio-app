@@ -54,18 +54,17 @@ def test_expected_irr_positions_use_descending_value_and_ticker_tie_break() -> N
     assert all(position > 0 for position in positions.values())
 
 
-def test_documented_formula_matches_representative_legacy_cached_positions() -> None:
-    # Captured from the first nine numeric Watchlist rows of the source workbook.
+def test_documented_formula_matches_synthetic_cached_positions() -> None:
     expected = [
-        ("ATAT", Decimal("0.19"), 1),
-        ("RELY", Decimal("0.1827"), 2),
-        ("NU", Decimal("0.1718274344"), 3),
-        ("MNDY", Decimal("0.1577"), 4),
-        ("GRAB", Decimal("0.1463"), 5),
-        ("TOST", Decimal("0.146"), 6),
-        ("APP", Decimal("0.1454689327"), 7),
-        ("KVYO", Decimal("0.142"), 8),
-        ("MEDI", Decimal("0.14"), 9),
+        ("SYNTH01", Decimal("0.21"), 1),
+        ("SYNTH02", Decimal("0.18"), 2),
+        ("SYNTH03", Decimal("0.165"), 3),
+        ("SYNTH04", Decimal("0.14"), 4),
+        ("SYNTH05", Decimal("0.125"), 5),
+        ("SYNTH06", Decimal("0.11"), 6),
+        ("SYNTH07", Decimal("0.095"), 7),
+        ("SYNTH08", Decimal("0.08"), 8),
+        ("SYNTH09", Decimal("0.065"), 9),
     ]
     company_ids = {ticker: uuid4() for ticker, _value, _rank in expected}
     positions = expected_irr_positions(

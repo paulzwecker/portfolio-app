@@ -1,12 +1,11 @@
-"""Parity fixtures for heterogeneous workbook-native valuation methods."""
+"""Synthetic parity fixtures for heterogeneous native valuation methods."""
 
-import json
 from decimal import Decimal
-from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
+from synthetic_financial_fixtures import owner_cash_flow_fixture, residual_income_fixture
 
 from portfolio_api.domain.schemas import OwnerCashFlowInput, ResidualIncomeInput
 from portfolio_api.financial_model_archetypes import (
@@ -15,22 +14,25 @@ from portfolio_api.financial_model_archetypes import (
 )
 from portfolio_api.financial_models import MarketPriceInput
 
-FIXTURES = Path(__file__).parent / "fixtures"
 TOLERANCE = Decimal("0.0000001")
 
 
 def load_case(name: str) -> dict[str, Any]:
-    return cast(dict[str, Any], json.loads((FIXTURES / name).read_text(encoding="utf-8")))
+    if name == "owner_cash_flow":
+        return owner_cash_flow_fixture()
+    if name == "residual_income":
+        return residual_income_fixture()
+    raise ValueError("Unknown synthetic financial model fixture.")
 
 
 @pytest.mark.parametrize(
     ("filename", "schema", "calculator", "currency"),
     [
-        ("w_tost_owner_cash_flow_v1.json", OwnerCashFlowInput, calculate_owner_cash_flow, "USD"),
-        ("w_hdfc_residual_income_v1.json", ResidualIncomeInput, calculate_residual_income, "INR"),
+        ("owner_cash_flow", OwnerCashFlowInput, calculate_owner_cash_flow, "USD"),
+        ("residual_income", ResidualIncomeInput, calculate_residual_income, "INR"),
     ],
 )
-def test_workbook_archetype_outputs_reconcile(
+def test_synthetic_archetype_outputs_reconcile(
     filename: str,
     schema: Any,
     calculator: Any,
@@ -62,11 +64,11 @@ def test_workbook_archetype_outputs_reconcile(
 
 
 def test_owner_cash_flow_and_residual_income_leave_price_dependent_outputs_missing() -> None:
-    tost = load_case("w_tost_owner_cash_flow_v1.json")
-    hdfc = load_case("w_hdfc_residual_income_v1.json")
+    owner = load_case("owner_cash_flow")
+    residual = load_case("residual_income")
     cases: list[tuple[dict[str, Any], Any, Any, str]] = [
-        (tost, OwnerCashFlowInput, calculate_owner_cash_flow, "USD"),
-        (hdfc, ResidualIncomeInput, calculate_residual_income, "INR"),
+        (owner, OwnerCashFlowInput, calculate_owner_cash_flow, "USD"),
+        (residual, ResidualIncomeInput, calculate_residual_income, "INR"),
     ]
     for fixture, schema, calculate, currency in cases:
         result = calculate(
@@ -83,7 +85,7 @@ def test_owner_cash_flow_and_residual_income_leave_price_dependent_outputs_missi
 
 
 def test_residual_income_uses_explicit_equity_method_and_rejects_invalid_terminal_spread() -> None:
-    fixture = load_case("w_hdfc_residual_income_v1.json")
+    fixture = load_case("residual_income")
     raw = fixture["input"]
     raw["scenarios"][1]["terminal_growth"] = "0.12"
     with pytest.raises(ValidationError, match="below cost of equity"):
@@ -91,7 +93,7 @@ def test_residual_income_uses_explicit_equity_method_and_rejects_invalid_termina
 
 
 def test_owner_cash_flow_requires_all_ten_method_specific_margin_and_growth_years() -> None:
-    fixture = load_case("w_tost_owner_cash_flow_v1.json")
+    fixture = load_case("owner_cash_flow")
     raw = fixture["input"]
     raw["scenarios"][0]["years"].pop()
     with pytest.raises(ValidationError):

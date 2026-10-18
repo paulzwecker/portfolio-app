@@ -1,8 +1,6 @@
 import copy
-import json
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from pathlib import Path
 from typing import cast
 from unittest.mock import patch
 from uuid import UUID, uuid4
@@ -11,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from synthetic_financial_fixtures import dcf_fixture
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import PriceObservation
@@ -26,7 +25,6 @@ from portfolio_api.return_semantics import (
 )
 from portfolio_api.settings import Settings
 
-FIXTURE = Path(__file__).parent / "fixtures" / "p_googl_ufcf_dcf_v1.json"
 ATTRIBUTION_LISTING_ID = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
 
 
@@ -252,7 +250,7 @@ def test_native_dcf_attribution_recalculates_price_probability_rates_and_model_i
                 )
             )
 
-        payload = cast(dict[str, object], json.loads(FIXTURE.read_text(encoding="utf-8")))
+        payload = cast(dict[str, object], dcf_fixture())
         initial = copy.deepcopy(cast(dict[str, object], payload["input"]))
         initial["source_revision_id"] = None
         initial["effective_at"] = prior_effective.isoformat()

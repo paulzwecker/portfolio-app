@@ -41,6 +41,8 @@ from portfolio_api.market_data import build_import as build_market_data_import
 from portfolio_api.model_outputs import apply_import as apply_model_output_import
 from portfolio_api.model_outputs import build_import as build_model_output_import
 
+pytestmark = pytest.mark.source_data
+
 ROOT = Path(__file__).resolve().parents[3]
 WORKBOOKS = ROOT / "reference" / "workbook"
 
