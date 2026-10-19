@@ -1,5 +1,9 @@
 ﻿# Controlled workbook import
 
+For private, versioned acquisition of a source snapshot before using an importer, see
+[workbook-source-acquisition.md](workbook-source-acquisition.md). Acquisition does not
+invoke the importer or alter this import workflow.
+
 The application provides a local, repeatable importer for the already implemented
 identity, portfolio, score, and ranking domains. It reads the committed workbook
 snapshots as migration evidence; it does not connect to Google Sheets or run during

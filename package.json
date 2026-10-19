@@ -32,6 +32,7 @@
     "db:bootstrap-inputs-check": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.bootstrap_manifest",
     "db:bootstrap-preflight": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.bootstrap_preflight",
     "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",
+    "source:workbook": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.workbook_sources",
     "db:sync-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_ingestion",
     "db:sync-google-sheets": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.google_sheets_sync",
     "db:ingest-external-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.external_ingestion",
