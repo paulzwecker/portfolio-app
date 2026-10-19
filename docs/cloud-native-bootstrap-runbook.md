@@ -11,24 +11,27 @@ The manifest `validate` and `verify-inputs` commands check metadata and frozen
 source bytes without connecting to PostgreSQL or providers. The `preflight`
 command also verifies the explicitly selected target through the shared database
 write guard and checks that the database is at the exact Alembic head. It is
-read-only; it does not import data or call providers. The guard verifies Neon
-project, branch, and endpoint metadata through the control plane. Writes require an
-explicit target environment and authorization; production bootstrap additionally
-requires interactive confirmation of the verified target. See
+read-only; it does not import data or call providers. Task 4 adds a first-stage
+canonical workbook import command with `preview`, `apply`, `resume`, and
+`reconcile` operations. That command consumes only approved Task 3 workbook
+snapshots and reviewed SEC CIK mappings. The guard verifies Neon project, branch,
+and endpoint metadata through the control plane. Writes require an explicit
+target environment and authorization; production bootstrap additionally requires
+interactive confirmation of the verified target. See
 [`database-write-targets.md`](database-write-targets.md) for the policy.
 
-A bounded domain-import orchestrator and full reconciliation remain future work.
-Existing importers are not yet coordinated by one resumable bootstrap command,
-and several require a database even for dry-run. Do not use their `--apply`
-switches to initialize this baseline until later reviewed changes provide the
-domain stages and a disposable PostgreSQL 18 rehearsal.
+The Task 4 command is a bounded first stage, not a complete cloud-baseline
+orchestrator. Later market, fundamentals, model/analytics, and end-to-end
+rehearsal stages remain future work. Do not run this first-stage apply against a
+real source snapshot or cloud target until that exact rehearsal has been
+separately authorized and its preview reviewed.
 
-| State       | Current implementation status                                                                                                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implemented | Closed metadata manifest contract; frozen-input SHA-256 verification; target-authorized, Alembic-aware read-only preflight; shared SQLAlchemy write-target guard; exact-decimal and missing-versus-zero validation. |
-| Tested      | Synthetic manifest/artifact/preflight checks; PostgreSQL 18 target-preflight and write-guard integration tests use only a disposable local database.                                                                |
-| Staged      | Operator-populated source manifest and artifacts, exact identity mappings, recovery decisions, resumable domain imports, and full data reconciliation.                                                              |
-| Executed    | Artifact checks on synthetic temporary files and target/write-guard checks on disposable PostgreSQL only. No portfolio source data, canonical database, or cloud resource was accessed or changed.                  |
+| State       | Current implementation status                                                                                                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implemented | Closed metadata manifest contract; frozen-input SHA-256 verification; target-authorized, Alembic-aware preflight; Task 4 first-stage canonical workbook bootstrap; private run reports and immutable receipts. |
+| Tested      | Synthetic manifest/artifact/preflight checks; generated Task 4 workbook fixtures; PostgreSQL 18 guard, interruption, exact reconciliation, and rerun idempotency tests on disposable local databases.          |
+| Staged      | Operator-populated Task 3 snapshots and reviewed SEC mappings, followed by preview on a separately verified isolated development or rehearsal target. Later bootstrap stages remain unimplemented.             |
+| Executed    | Synthetic artifact checks, target/write-guard checks, and synthetic Task 4 import only. No real portfolio source data, Neon branch, or cloud resource was accessed or changed.                                 |
 
 The source-data suites (`test_legacy_import.py`, `test_consensus_source_data.py`,
 `test_model_input_migration.py`, `test_model_input_parity.py`,
@@ -182,8 +185,9 @@ The guard emits a redacted target-authorization audit record. A failed target,
 authorization, privilege, or migration check exits nonzero and reports a safe
 reason. No import starts. A passing preflight proves target and schema readiness
 at that moment only; every later writer is checked again by the shared guard.
-This command does not establish that the database is empty, reconcile domain data,
-create a resumable run ledger, or import source records.
+This preflight does not establish that the database is empty or reconcile domain
+data. The Task 4 canonical command performs its own empty-target/resume checks and
+writes its run receipt in the same transaction as its domain imports.
 
 ## Dependencies and pipeline readiness
 
@@ -218,15 +222,12 @@ each approved omission separately in the eventual recovery-gap report.
 
 ## Rehearsal, cutover, and rollback
 
-No rehearsal or production action is authorized by this PR. A later reviewed PR
-must first add a bounded orchestrator that verifies the Neon control-plane project,
-branch, endpoint, and primary-production identity against the exact resolved
-database connection; verifies PostgreSQL 18, expected Alembic head, allowed
-extensions, and target emptiness; and checks the manifest plus source hashes before
-any writes. It must use one-domain transactions and persistent idempotency records,
-resume by completed source entry, and emit sanitized reconciliation and gap reports.
-Test it twice and across an interrupted run on disposable PostgreSQL 18 before any
-operator rehearsal.
+No real-source rehearsal or production action is authorized by this PR. Task 4's
+synthetic PostgreSQL 18 rehearsal covers only the current workbook-backed stage.
+Later reviewed changes must add the market, fundamentals, and model/analytics
+stages, then exercise a complete clean rebuild with frozen inputs and full domain
+reconciliation before any real-source rehearsal. Production activation remains a
+separate, explicitly authorized operation.
 
 For a future rehearsal, use a separately verified disposable Neon branch, keep
 workers and ingestion disabled, and save detailed reports locally. A rehearsal

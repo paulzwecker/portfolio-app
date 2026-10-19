@@ -76,9 +76,12 @@ class Workbook:
     path: Path
     sha256: str
     sheets: dict[str, dict[str, Cell]]
+    source_name: str | None = None
 
     @classmethod
-    def read(cls, path: Path, include: Callable[[str], bool]) -> Workbook:
+    def read(
+        cls, path: Path, include: Callable[[str], bool], *, source_name: str | None = None
+    ) -> Workbook:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         try:
             archive = ZipFile(path)
@@ -128,7 +131,7 @@ class Workbook:
                         formula=(formula.text or "") if formula is not None else None,
                     )
                 sheets[name] = cells
-        return cls(path=path, sha256=digest, sheets=sheets)
+        return cls(path=path, sha256=digest, sheets=sheets, source_name=source_name)
 
     def cell(self, sheet: str, address: str) -> Cell:
         return self.sheets.get(sheet, {}).get(address, Cell())
@@ -258,7 +261,8 @@ class ImportPlan:
         self.issues.append(Issue(code, severity, source, message))
 
     def source_ref(self, workbook: Workbook, sheet: str, cell: str) -> str:
-        return f"{workbook.path.name}:{sheet}!{cell}#sha256:{workbook.sha256}"
+        name = workbook.source_name or workbook.path.name
+        return f"{name}:{sheet}!{cell}#sha256:{workbook.sha256}"
 
     def report(self, applied: bool = False) -> dict[str, Any]:
         return {
@@ -371,6 +375,18 @@ def _decimal(value: str | None, source: str, plan: ImportPlan) -> Decimal | None
     return result
 
 
+def _fits_numeric(value: Decimal, precision: int, scale: int) -> bool:
+    """Return whether PostgreSQL Numeric can store a value without rounding."""
+    try:
+        stored = value.quantize(Decimal(1).scaleb(-scale))
+    except InvalidOperation:
+        return False
+    if stored != value:
+        return False
+    integer_digits = max(stored.adjusted() + 1, 0) if stored else 0
+    return integer_digits <= precision - scale
+
+
 def _ticker_key(value: str) -> str:
     return value.strip().upper()
 
@@ -383,6 +399,14 @@ def _lifecycle(
     source: str,
     plan: ImportPlan,
 ) -> Lifecycle | None:
+    if current is None or target is None:
+        plan.issue(
+            "LIFECYCLE_SOURCE_INCOMPLETE",
+            "ERROR",
+            source,
+            f"{ticker} has a blank cached current/target weight; its lifecycle was not inferred.",
+        )
+        return None
     active = (current is not None and current > 0) or (target is not None and target > 0)
     normalized = (bucket or "").strip().casefold()
     if active:
@@ -396,15 +420,6 @@ def _lifecycle(
                 "Universe Registry lifecycle formula.",
             )
         return Lifecycle.PORTFOLIO
-    if current is None or target is None:
-        plan.issue(
-            "LIFECYCLE_SOURCE_INCOMPLETE",
-            "ERROR",
-            source,
-            f"{ticker} has a blank cached current/target weight; its non-portfolio "
-            "lifecycle was not inferred.",
-        )
-        return None
     if normalized == "watchlist":
         return Lifecycle.WATCHLIST
     if normalized in {"candidate - high", "candidate - low"}:
@@ -438,6 +453,11 @@ def _load_companies(plan: ImportPlan) -> dict[str, CompanyRow]:
             continue
         ticker = _ticker_key(ticker_value)
         source = plan.source_ref(workbook, "Universe Registry", f"A{row_number}:I{row_number}")
+        if not re.fullmatch(r"[A-Z0-9][A-Z0-9.-]{0,39}", ticker):
+            plan.issue(
+                "COMPANY_TICKER_UNSUPPORTED", "ERROR", source, "Ticker format is unsupported."
+            )
+            continue
         name = _value(row, "B")
         if name is None:
             compounder_name = next(
@@ -566,6 +586,14 @@ def _load_listings(plan: ImportPlan, companies: dict[str, CompanyRow]) -> dict[s
                 source,
                 f"{key} lacks a supported exact symbol, venue, quote currency, company name, or "
                 "instrument basis.",
+            )
+            continue
+        if kind == "ADR":
+            plan.issue(
+                "ADR_IDENTITY_UNSUPPORTED",
+                "ERROR",
+                source,
+                f"{key} is an ADR without the supported explicit underlying-security mapping.",
             )
             continue
         market_venue, listing_ticker = match.groups()
@@ -748,6 +776,23 @@ def _load_holdings(
             quantity = _decimal(_value(row, "E"), source, plan)
             if quantity is None:
                 plan.holdings_partial = True
+                plan.issue(
+                    "HOLDING_QUANTITY_MISSING",
+                    "ERROR",
+                    source,
+                    f"{ticker} has no exact quantity; no position was inferred.",
+                )
+                continue
+            if quantity < 0 or not _fits_numeric(quantity, 28, 10):
+                plan.holdings_partial = True
+                plan.issue(
+                    "HOLDING_QUANTITY_UNSUPPORTED",
+                    "ERROR",
+                    source,
+                    f"{ticker} quantity is negative or exceeds canonical exact storage precision; "
+                    "no rounding was applied.",
+                )
+                continue
             listing = holding_listing(ticker, _value(row, "D"))
             if ticker not in companies or listing is None:
                 plan.holdings_partial = True
@@ -782,6 +827,23 @@ def _load_holdings(
             quantity = _decimal(_value(row, "E"), source, plan)
             if quantity is None:
                 plan.holdings_partial = True
+                plan.issue(
+                    "HOLDING_QUANTITY_MISSING",
+                    "ERROR",
+                    source,
+                    f"{canonical or 'ETF'} has no exact quantity; no position was inferred.",
+                )
+                continue
+            if quantity < 0 or not _fits_numeric(quantity, 28, 10):
+                plan.holdings_partial = True
+                plan.issue(
+                    "HOLDING_QUANTITY_UNSUPPORTED",
+                    "ERROR",
+                    source,
+                    f"{canonical or 'ETF'} quantity is negative or exceeds canonical exact "
+                    "storage precision; no rounding was applied.",
+                )
+                continue
             positions.append(
                 PositionRow(
                     ticker, listing.listing_key, listing.ticker, listing.venue, quantity, source
@@ -802,6 +864,23 @@ def _load_holdings(
             balance = _decimal(_value(row, "E"), source, plan)
             if balance is None:
                 plan.holdings_partial = True
+                plan.issue(
+                    "CASH_BALANCE_MISSING",
+                    "ERROR",
+                    source,
+                    f"{currency} cash has no exact balance; no amount was inferred.",
+                )
+                continue
+            if balance < 0 or not _fits_numeric(balance, 28, 10):
+                plan.holdings_partial = True
+                plan.issue(
+                    "CASH_BALANCE_UNSUPPORTED",
+                    "ERROR",
+                    source,
+                    f"{currency} cash is negative or exceeds canonical exact storage precision; "
+                    "no rounding was applied.",
+                )
+                continue
             cash.append(CashRow(currency, balance, source))
     plan.source_position_count += sum(
         (_value(row, "A") or "").strip().casefold() == "stock"
@@ -858,6 +937,16 @@ def _load_targets(plan: ImportPlan, companies: dict[str, CompanyRow]) -> None:
                 "ERROR",
                 f"Target Architecture!D{row_number}",
                 f"{raw_ticker} target is outside [0,1].",
+            )
+            plan.target_importable = False
+            continue
+        if not _fits_numeric(weight, 18, 12):
+            plan.issue(
+                "TARGET_PRECISION_UNSUPPORTED",
+                "ERROR",
+                f"Target Architecture!D{row_number}",
+                f"{raw_ticker} target exceeds canonical exact storage precision; "
+                "no rounding was applied.",
             )
             plan.target_importable = False
             continue
@@ -965,6 +1054,22 @@ def _score_value(
             f"{minimum}–{maximum}; value was not clamped."
         )
         plan.issue("SCORE_RANGE_INVALID", "ERROR", source, message)
+        return ScoreRow(
+            ticker,
+            dimension,
+            None,
+            ScoreAssessmentStatus.INVALID,
+            rationale,
+            source,
+            message,
+            source_priority,
+        )
+    if not _fits_numeric(value, 12, 4):
+        message = (
+            f"Source score {cell.value!r} exceeds canonical exact storage precision; "
+            "value was not rounded."
+        )
+        plan.issue("SCORE_PRECISION_UNSUPPORTED", "ERROR", source, message)
         return ScoreRow(
             ticker,
             dimension,
@@ -1268,6 +1373,9 @@ def build_plan(
     portfolio_path: Path,
     market_path: Path,
     observed_at: datetime | None = None,
+    *,
+    portfolio_source_name: str | None = None,
+    market_source_name: str | None = None,
 ) -> ImportPlan:
     timestamp = (observed_at or now()).astimezone(UTC)
     if timestamp > now():
@@ -1282,12 +1390,16 @@ def build_plan(
                 "Target Architecture",
                 "10Y Durability",
                 "Compounder Quality",
+                "Candidate Ranking",
             }
             or name == "Price Feed"
             or name.startswith(("P-", "W-", "C-"))
         ),
+        source_name=portfolio_source_name,
     )
-    market_book = Workbook.read(market_path, lambda name: name == "Listings")
+    market_book = Workbook.read(
+        market_path, lambda name: name == "Listings", source_name=market_source_name
+    )
     digest = hashlib.sha256(
         f"{portfolio_book.sha256}:{market_book.sha256}".encode("ascii")
     ).hexdigest()

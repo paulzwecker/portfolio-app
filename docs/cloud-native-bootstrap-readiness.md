@@ -30,24 +30,24 @@ The planned route is a **gated, domain-by-domain cloud bootstrap**:
    history class explicitly in the input manifest and recovery report.
 
 There is no general restore, data reset, automatic scheduler, or complete bootstrap
-orchestrator in this change. The metadata-only manifest validator is an
-independently testable first interface; it validates source metadata, exact-value
-policies, history decisions, and dependency order without opening source files or
-connecting to a database. It does not apply inputs. A full orchestrator would
-currently wrap multiple
-independent transactions and provider operations that have different review,
-retry, and acceptance rules. Adding one now would make partial completion harder
-to interpret. The supported importers already provide bounded transactions or
-domain-specific run ledgers; a later orchestrator should be built only after the
-operator resolves the recovery decision and the required inputs are assembled.
+orchestrator in this change. Task 4 adds a bounded first-stage canonical workbook
+bootstrap over Task 3's approved snapshots. It reuses the validated identity,
+portfolio, assessment, ranking, and research-priority import logic; requires the
+shared target guard; and commits all stage rows and a content-keyed receipt in one
+transaction. Later market, fundamentals, and model/analytics stages, plus a full
+clean-rebuild rehearsal, remain separate work. The metadata-only manifest
+validator remains available for source metadata, exact-value policies, history
+decisions, and dependency order. The complete pipeline must coordinate later
+provider operations with their distinct review, retry, and acceptance rules.
 The current importer CLIs still select their database through `DATABASE_URL`, but
 the shared SQLAlchemy engine now installs the verified database write-target guard.
 Remote writes require Neon control-plane project/branch/endpoint identity checks and
 environment-specific authorization; production bootstrap also requires an exact
 interactive target confirmation. This guard does not make a general bootstrap
-orchestrator or approve a production run. Any future bootstrap must use the shared
-engine factory, call its explicit preflight before source/provider work, and retain
-the clean-schema, Alembic, domain reconciliation, and operator review gates. See
+complete orchestrator or approve a production run. Every bootstrap stage must use
+the shared engine factory, call its explicit preflight before source/provider work,
+and retain the clean-schema, Alembic, domain reconciliation, and operator review
+gates. See
 [`database-write-targets.md`](database-write-targets.md) for the integration
 contract and operator procedure. The metadata-only authoritative-input manifest
 is validated separately through the procedure in
@@ -287,10 +287,12 @@ decisions are assembled in the metadata manifest on the trusted operator machine
 2. Validate the metadata manifest with the no-database command in that runbook.
    This checks dependency order and blocks ambiguous history, identity, decimal,
    missing-value, or approval metadata.
-3. Stop. This PR does not provide a safe end-to-end import command. Do not run
-   importer `--apply` commands or provider jobs against Neon. A later PR must add
-   and test a target-identity-bound orchestrator on a disposable PostgreSQL 18
-   target before any operator rehearsal.
+3. Use Task 4 `preview` only after the exact source snapshots and isolated target
+   are separately authorized. Task 4's apply/resume path is tested only against
+   synthetic inputs and a disposable PostgreSQL 18 target. Do not apply real
+   portfolio snapshots or run provider jobs against Neon until a real-source
+   rehearsal has been separately authorized and reviewed. Later tasks must add
+   and test the remaining domains before claiming end-to-end readiness.
 4. Do not enable Cron, Sheets polling, `CLOUD_INGESTION_ENABLED`, Render jobs, or
    Vercel/Render configuration changes as part of this baseline preparation.
 5. A separate future milestone must define recovery reports and financial/domain
