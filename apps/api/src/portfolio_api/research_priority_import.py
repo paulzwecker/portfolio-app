@@ -20,7 +20,8 @@ from portfolio_api.settings import Settings
 
 
 def _source_ref(workbook: Workbook, sheet: str, cell: str) -> str:
-    return f"{workbook.path.name}:{sheet}!{cell}#sha256:{workbook.sha256}"
+    name = workbook.source_name or workbook.path.name
+    return f"{name}:{sheet}!{cell}#sha256:{workbook.sha256}"
 
 
 def _cell_value(row: dict[str, Cell], column: str) -> str | None:
@@ -46,6 +47,18 @@ def research_priority_rows(workbook: Workbook) -> list[dict[str, Any]]:
             value = Decimal(raw_seed)
         except (InvalidOperation, TypeError):
             seed_rows[ticker].append((None, seed_row_source, "Priority seed is not numeric."))
+            continue
+        if not value.is_finite():
+            seed_rows[ticker].append((None, seed_row_source, "Priority seed is not finite."))
+            continue
+        try:
+            exact_storage_value = value.quantize(Decimal("0.0001"))
+        except InvalidOperation:
+            exact_storage_value = Decimal("NaN")
+        if exact_storage_value != value or (value and value.adjusted() + 1 > 8):
+            seed_rows[ticker].append(
+                (None, seed_row_source, "Priority seed exceeds canonical exact storage precision.")
+            )
             continue
         reason = "Priority seed cannot be negative." if value < 0 else None
         seed_rows[ticker].append((value, seed_row_source, reason))
@@ -190,7 +203,7 @@ def import_research_priority_inputs(
         session.flush()
     return {
         "status": "APPLIED" if apply else "DRY_RUN",
-        "workbook": workbook.path.name,
+        "workbook": workbook.source_name or workbook.path.name,
         "workbook_sha256": workbook.sha256,
         "observed_at": observed_at.isoformat(),
         "effective_time_policy": (

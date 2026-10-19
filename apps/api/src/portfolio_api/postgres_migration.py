@@ -151,6 +151,7 @@ TABLE_GROUPS: dict[str, tuple[str, ...]] = {
         "external_ingestion_runs",
         "external_ingestion_attempts",
         "legacy_import_batches",
+        "canonical_bootstrap_runs",
         "recurring_operation_runs",
         "recurring_operations_worker_state",
         "operational_job_requests",

@@ -1955,6 +1955,37 @@ class LegacyImportBatch(Base):
     report: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
+class CanonicalBootstrapRun(Base):
+    """Immutable receipt for one canonical workbook snapshot bootstrap execution."""
+
+    __tablename__ = "canonical_bootstrap_runs"
+    __table_args__ = (
+        UniqueConstraint("input_digest"),
+        CheckConstraint("length(input_digest) = 64", name="input_digest"),
+        CheckConstraint("length(source_digest) = 64", name="source_digest"),
+        CheckConstraint(
+            "portfolio_snapshot_run_id ~ '^[0-9a-f]{32}$'", name="portfolio_snapshot_run_id"
+        ),
+        CheckConstraint("market_snapshot_run_id ~ '^[0-9a-f]{32}$'", name="market_snapshot_run_id"),
+        CheckConstraint(
+            "provider_identifiers_sha256 IS NULL OR length(provider_identifiers_sha256) = 64",
+            name="provider_identifiers_sha256",
+        ),
+        CheckConstraint("status IN ('APPLIED','APPLIED_WITH_GAPS')", name="status"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    input_digest: Mapped[str] = mapped_column(String(64))
+    source_digest: Mapped[str] = mapped_column(String(64))
+    portfolio_snapshot_run_id: Mapped[str] = mapped_column(String(32))
+    market_snapshot_run_id: Mapped[str] = mapped_column(String(32))
+    provider_identifiers_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    import_version: Mapped[str] = mapped_column(String(80))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    status: Mapped[str] = mapped_column(String(24), default="APPLIED")
+    report: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
 class MarketDataBatch(Base):
     """Immutable receipt for one workbook snapshot or provider ingestion batch."""
 
