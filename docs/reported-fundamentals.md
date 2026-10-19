@@ -67,6 +67,13 @@ provider tier is 50. These are implementation policy values (recorded with the
 normalizer version), not provider fields or a guarantee that every SEC fact is
 complete or correct.
 
+For the new cloud baseline, use the bounded, resumable Task 6 procedure in
+[`fundamentals-source-bootstrap.md`](fundamentals-source-bootstrap.md). It freezes
+the reviewed CIK set, runs filing metadata before facts, and reconciles immutable
+receipts on an explicitly verified development/rehearsal target. The existing
+single-command `sync` workflow remains available for scoped operator use; the
+bootstrap command does not enable consensus ingestion or production writes.
+
 ## Period, as-of and correction rules
 
 The normalizer classifies durations only when the reported start/end span matches

@@ -68,6 +68,13 @@ The command prints a batch receipt with imported/reused documents, unsupported
 forms, malformed rows, unlinked amendments and metadata conflicts. An unmapped
 company is reported as `UNMAPPED_SEC_IDENTITY`; there is no inferred fallback.
 
+For the reproducible cloud baseline, use the bounded Task 6 run ledger and
+PowerShell procedure in
+[`fundamentals-source-bootstrap.md`](fundamentals-source-bootstrap.md). That stage
+captures the exact SEC submissions payload and retrieval time, limits history-file
+pages, and resumes from immutable batch/checkpoint receipts. It stores filing
+metadata and links only; it never fetches the filing body.
+
 Issuer annual reports and earnings releases can be registered through
 `POST /v1/companies/{company_id}/source-documents`. For example:
 

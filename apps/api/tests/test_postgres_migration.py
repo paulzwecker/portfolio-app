@@ -876,7 +876,7 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     assert empty_schema_check["status"] == "EMPTY_TARGET_COMPATIBLE_FOR_FULL_RESTORE"
     assert empty_schema_check["data_only_restore_compatible"] is False
     assert empty_schema_check["source"]["foreign_key_cycles"]
-    assert empty_schema_check["source"]["alembic_heads"] == ["3f7c9d12b6a4"]
+    assert empty_schema_check["source"]["alembic_heads"] == ["6c2eaf0b8147"]
 
     backup_result = backup(archive, source)
     assert backup_result["status"] == "BACKUP_CREATED"
@@ -944,7 +944,7 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     )
     assert restore_result["status"] == "RESTORED_AND_RECONCILED"
     assert restore_result["target_use"] == "isolated_rehearsal_only"
-    assert restore_result["target"]["alembic_heads"] == ["3f7c9d12b6a4"]
+    assert restore_result["target"]["alembic_heads"] == ["6c2eaf0b8147"]
     target_engine = create_engine(target_url, hide_parameters=True)
     try:
         with target_engine.connect() as connection:

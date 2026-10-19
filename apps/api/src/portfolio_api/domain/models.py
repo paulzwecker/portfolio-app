@@ -2365,6 +2365,84 @@ class MarketDataBootstrapCheckpoint(Base):
     report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
 
 
+class FundamentalsBootstrapRun(Base):
+    """Target-bound operator run for SEC facts and filing metadata bootstrap."""
+
+    __tablename__ = "fundamentals_bootstrap_runs"
+    __table_args__ = (
+        CheckConstraint("length(input_digest) = 64", name="input_digest"),
+        CheckConstraint("length(mapping_sha256) = 64", name="mapping_sha256"),
+        CheckConstraint(
+            "target_environment IN ('development','rehearsal')", name="target_environment"
+        ),
+        CheckConstraint(
+            "status IN ('PREPARED','RUNNING','PARTIAL','COMPLETE','FAILED','BLOCKED')",
+            name="status",
+        ),
+        Index("ix_fundamentals_bootstrap_run_status", "status", "prepared_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    input_digest: Mapped[str] = mapped_column(String(64))
+    mapping_sha256: Mapped[str] = mapped_column(String(64))
+    bootstrap_version: Mapped[str] = mapped_column(String(80))
+    target_environment: Mapped[str] = mapped_column(String(20))
+    scope: Mapped[dict[str, object]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16), default="PREPARED")
+    prepared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_provider_request_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
+class FundamentalsBootstrapCheckpoint(Base):
+    """Resumable outcome for one mapped issuer and SEC bootstrap stage."""
+
+    __tablename__ = "fundamentals_bootstrap_checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id", "stage", "company_id", name="uq_fundamentals_bootstrap_checkpoint"
+        ),
+        UniqueConstraint("run_id", "sequence_number", name="uq_fundamentals_bootstrap_sequence"),
+        CheckConstraint("stage IN ('SOURCE_DOCUMENTS','REPORTED_FUNDAMENTALS')", name="stage"),
+        CheckConstraint(
+            "status IN ('PENDING','RUNNING','COMPLETE','UNAVAILABLE','FAILED','BLOCKED')",
+            name="status",
+        ),
+        CheckConstraint("attempt_count BETWEEN 0 AND 3", name="attempt_count"),
+        CheckConstraint("sequence_number >= 0", name="sequence_number"),
+        CheckConstraint("page_count >= 0", name="page_count"),
+        CheckConstraint("provider_request_count >= 0", name="provider_request_count"),
+        CheckConstraint("cik ~ '^[0-9]{10}$'", name="cik"),
+        Index("ix_fundamentals_bootstrap_checkpoint_run_status", "run_id", "status"),
+        Index("ix_fundamentals_bootstrap_checkpoint_retry", "status", "next_attempt_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("fundamentals_bootstrap_runs.id", ondelete="RESTRICT"), index=True
+    )
+    sequence_number: Mapped[int] = mapped_column(Integer)
+    stage: Mapped[str] = mapped_column(String(32))
+    company_id: Mapped[UUID] = mapped_column(ForeignKey("companies.id", ondelete="RESTRICT"))
+    mapping_identifier_id: Mapped[UUID] = mapped_column(
+        ForeignKey("company_provider_identifiers.id", ondelete="RESTRICT")
+    )
+    cik: Mapped[str] = mapped_column(String(10))
+    status: Mapped[str] = mapped_column(String(16), default="PENDING")
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    page_count: Mapped[int] = mapped_column(Integer, default=0)
+    provider_request_count: Mapped[int] = mapped_column(Integer, default=0)
+    retryable: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
 class ExternalIngestionRun(Base):
     """Operational state for one idempotent provider/domain execution."""
 
