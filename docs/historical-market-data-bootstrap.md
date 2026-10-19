@@ -197,8 +197,7 @@ Remove the non-secret target selector when finished:
 Remove-Item Env:DATABASE_TARGET_ENVIRONMENT -ErrorAction SilentlyContinue
 ```
 
-The commands above use syntax supported by Windows PowerShell 5.1 and PowerShell
-7. They check `$LASTEXITCODE` after each npm process instead of relying on the
+The commands above use syntax supported by Windows PowerShell 5.1 and PowerShell 7. They check `$LASTEXITCODE` after each npm process instead of relying on the
 different native-command error handling defaults in PowerShell 7.3+.
 
 ## Reconciliation and recovery

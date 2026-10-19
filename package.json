@@ -34,6 +34,7 @@
     "db:bootstrap-canonical": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.canonical_bootstrap",
     "db:import-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data",
     "db:bootstrap-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_bootstrap",
+    "db:bootstrap-fundamentals": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.fundamentals_bootstrap",
     "source:workbook": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.workbook_sources",
     "db:sync-market-data": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_ingestion",
     "db:sync-google-sheets": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.google_sheets_sync",

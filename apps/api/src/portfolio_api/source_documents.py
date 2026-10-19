@@ -117,13 +117,20 @@ class SecSubmissionsProvider:
         identifiers: dict[UUID, str],
         user_agent: str,
         known_source_record_ids: set[str] | None = None,
+        max_new_history_files: int | None = None,
     ) -> None:
         if not user_agent.strip() or "@" not in user_agent:
             raise ValueError("SEC_USER_AGENT must identify the application and a contact email")
+        if max_new_history_files is not None and max_new_history_files < 1:
+            raise ValueError("max_new_history_files must be positive when provided")
         self.identifiers = identifiers
         self.user_agent = user_agent.strip()
         self.known_source_record_ids = known_source_record_ids or set()
+        self.max_new_history_files = max_new_history_files
+        self.request_count = 0
         self.skipped_history_files = 0
+        self.deferred_history_files = 0
+        self.deferred_history_file_ids: list[str] = []
 
     async def fetch(self, query: ProviderQuery) -> Sequence[RawProviderRecord]:
         if query.domain != ExternalDataDomain.SOURCE_DOCUMENTS:
@@ -141,8 +148,10 @@ class SecSubmissionsProvider:
 
         records: list[RawProviderRecord] = []
         request_count = 0
+        fetched_history_files = 0
         for _company_id, cik in requested:
             base_url = f"{SEC_SUBMISSIONS_BASE}/CIK{cik}.json"
+            self.request_count += 1
             payload, retrieved_at = await self._fetch_json(base_url, request_count)
             request_count += 1
             records.append(
@@ -170,9 +179,18 @@ class SecSubmissionsProvider:
                 if history_record_id in self.known_source_record_ids:
                     self.skipped_history_files += 1
                     continue
+                if (
+                    self.max_new_history_files is not None
+                    and fetched_history_files >= self.max_new_history_files
+                ):
+                    self.deferred_history_files += 1
+                    self.deferred_history_file_ids.append(history_record_id)
+                    continue
                 history_url = f"{SEC_SUBMISSIONS_BASE}/{quote(name, safe='-.')}"
+                self.request_count += 1
                 payload, retrieved_at = await self._fetch_json(history_url, request_count)
                 request_count += 1
+                fetched_history_files += 1
                 records.append(
                     _raw_record(
                         payload,

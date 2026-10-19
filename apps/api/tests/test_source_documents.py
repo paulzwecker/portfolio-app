@@ -193,6 +193,7 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
     records = asyncio.run(provider.fetch(query()))
 
     assert len(records) == 2
+    assert provider.request_count == 2
     assert requested == list(responses)
     assert delays == [0.15]
     assert records[1].source_record_id == f"CIK{CIK}:HISTORY:CIK{CIK}-submissions-001.json"
@@ -211,9 +212,65 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
     )
     incremental = asyncio.run(already_known.fetch(query()))
     assert len(incremental) == 1
+    assert already_known.request_count == 1
     assert incremental[0].source_record_id == f"CIK{CIK}"
     assert requested == [f"{SEC_SUBMISSIONS_BASE}/CIK{CIK}.json"]
     assert already_known.skipped_history_files == 1
+
+
+def test_sec_provider_bounds_new_history_files_for_resumable_pages(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    history_names = [f"CIK{CIK}-submissions-{index:03d}.json" for index in range(1, 4)]
+    main = {
+        "cik": 1,
+        "filings": {
+            "recent": {"form": [], "accessionNumber": [], "filingDate": [], "reportDate": []},
+            "files": [{"name": name} for name in history_names],
+        },
+    }
+    requested: list[str] = []
+
+    def download(url: str, _user_agent: str) -> bytes:
+        requested.append(url)
+        return json.dumps(main if url.endswith("CIK0000000001.json") else {}).encode()
+
+    async def sleep(_seconds: float) -> None:
+        return None
+
+    async def to_thread(function: Any, *args: Any, **kwargs: Any) -> Any:
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr("portfolio_api.source_documents._download_sec_json", download)
+    monkeypatch.setattr("portfolio_api.source_documents.asyncio.sleep", sleep)
+    monkeypatch.setattr("portfolio_api.source_documents.asyncio.to_thread", to_thread)
+
+    first = SecSubmissionsProvider(
+        {COMPANY_ID: CIK},
+        "Portfolio Research test@example.com",
+        max_new_history_files=1,
+    )
+    first_records = asyncio.run(first.fetch(query()))
+    assert len(first_records) == 2
+    assert first.deferred_history_files == 2
+    assert first.deferred_history_file_ids == [
+        f"CIK{CIK}:HISTORY:{history_names[1]}",
+        f"CIK{CIK}:HISTORY:{history_names[2]}",
+    ]
+
+    requested.clear()
+    second = SecSubmissionsProvider(
+        {COMPANY_ID: CIK},
+        "Portfolio Research test@example.com",
+        known_source_record_ids={first_records[1].source_record_id or ""},
+        max_new_history_files=1,
+    )
+    second_records = asyncio.run(second.fetch(query()))
+    assert len(second_records) == 2
+    assert second_records[1].source_record_id == f"CIK{CIK}:HISTORY:{history_names[1]}"
+    assert second.skipped_history_files == 1
+    assert second.deferred_history_files == 1
+    assert len(requested) == 2
 
 
 def test_sec_import_is_idempotent_links_amendments_and_respects_as_of(
