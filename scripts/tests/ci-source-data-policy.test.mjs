@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   findForbiddenSourcePaths,
   validateWorkflowCheckoutPolicy,
+  validateWorkflowWorkbookIsolation,
 } from "./ci-source-data-policy.mjs";
 
 const workflowPath = path.resolve(".github/workflows/ci.yml");
@@ -16,6 +17,45 @@ const workflow = await import("node:fs").then(({ readFileSync }) =>
 
 test("all GitHub CI checkouts use the restricted source tree", () => {
   assert.doesNotThrow(() => validateWorkflowCheckoutPolicy(workflow));
+});
+
+test("GitHub CI cannot access Google credentials, workbook IDs or source snapshots", () => {
+  assert.doesNotThrow(() => validateWorkflowWorkbookIsolation(workflow));
+  assert.throws(
+    () =>
+      validateWorkflowWorkbookIsolation(
+        `${workflow}\n  GOOGLE_DRIVE_PORTFOLIO_WORKBOOK_FILE_ID: fake-id`,
+      ),
+    /must not configure Google workbook credentials/,
+  );
+  assert.throws(
+    () =>
+      validateWorkflowWorkbookIsolation(
+        `${workflow}\n  GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: '\${{ secrets.GOOGLE_KEY }}'`,
+      ),
+    /must not configure Google workbook credentials/,
+  );
+  assert.throws(
+    () =>
+      validateWorkflowWorkbookIsolation(
+        `${workflow}\n  READER_KEY: '\${{ secrets.DRIVE_SERVICE_ACCOUNT }}'`,
+      ),
+    /must not reference Google credentials or workbook secrets/,
+  );
+  assert.throws(
+    () =>
+      validateWorkflowWorkbookIsolation(
+        `${workflow}\n      run: |\n        npm run source:workbook --\n        acquire portfolio`,
+      ),
+    /must not acquire real workbook snapshots/,
+  );
+  assert.throws(
+    () =>
+      validateWorkflowWorkbookIsolation(
+        `${workflow}\n      run: node -m portfolio_api.workbook_sources`,
+      ),
+    /must not acquire real workbook snapshots/,
+  );
 });
 
 test("the CI source-data guard detects excluded operator input paths", () => {

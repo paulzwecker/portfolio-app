@@ -49,6 +49,57 @@ export function validateWorkflowCheckoutPolicy(workflow) {
   }
 }
 
+export function validateWorkflowWorkbookIsolation(workflow) {
+  const allowedEmptyGoogleVariables = new Set([
+    "GOOGLE_SHEETS_SPREADSHEET_ID",
+    "GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE",
+  ]);
+  for (const line of workflow.split("\n")) {
+    const configured = line.match(/^\s*(GOOGLE_[A-Z0-9_]+)\s*:\s*(.*?)\s*$/);
+    const sourceVariable = line.match(
+      /^\s*(PORTFOLIO_(?:WORKBOOK|SOURCE)_[A-Z0-9_]+)\s*:\s*(.*?)\s*$/,
+    );
+    if (sourceVariable) {
+      throw new Error(
+        "CI must not configure Google workbook credentials or source IDs.",
+      );
+    }
+    if (
+      configured &&
+      (!allowedEmptyGoogleVariables.has(configured[1]) ||
+        !/^['"]{2}$/.test(configured[2].trim()))
+    ) {
+      throw new Error(
+        "CI must not configure Google workbook credentials or source IDs.",
+      );
+    }
+  }
+  if (
+    /\$\{\{\s*secrets\.(?:GOOGLE|DRIVE|WORKBOOK|PORTFOLIO_(?:WORKBOOK|SOURCE))/i.test(
+      workflow,
+    )
+  ) {
+    throw new Error(
+      "CI must not reference Google credentials or workbook secrets.",
+    );
+  }
+  if (/portfolio_api\.workbook_sources|source:workbook/i.test(workflow)) {
+    throw new Error("CI must not acquire real workbook snapshots.");
+  }
+  const artifactSteps = workflow
+    .split(/\n\s*- name:/)
+    .filter((step) => step.includes("uses: actions/upload-artifact@"));
+  if (
+    artifactSteps.some((step) =>
+      /workbook|snapshot store|source workbook|portfolio source data/i.test(
+        step,
+      ),
+    )
+  ) {
+    throw new Error("CI must not upload workbook or acquisition artifacts.");
+  }
+}
+
 export function findForbiddenSourcePaths(root) {
   return forbiddenPaths.filter((relativePath) =>
     containsFiles(path.join(root, relativePath)),
@@ -69,7 +120,9 @@ function containsFiles(directory) {
 
 export function assertCiSourceDataExcluded(root) {
   const workflowPath = path.join(root, ".github", "workflows", "ci.yml");
-  validateWorkflowCheckoutPolicy(readFileSync(workflowPath, "utf8"));
+  const workflow = readFileSync(workflowPath, "utf8");
+  validateWorkflowCheckoutPolicy(workflow);
+  validateWorkflowWorkbookIsolation(workflow);
   const present = findForbiddenSourcePaths(root);
   if (present.length > 0) {
     throw new Error("CI checkout contains excluded source data paths.");
