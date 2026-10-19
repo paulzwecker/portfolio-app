@@ -2268,6 +2268,103 @@ class ExternalRawPayload(Base):
     payload_bytes: Mapped[bytes] = mapped_column(LargeBinary)
 
 
+class MarketDataBootstrapRun(Base):
+    """Operator-run, resumable historical price/FX bootstrap scope."""
+
+    __tablename__ = "market_data_bootstrap_runs"
+    __table_args__ = (
+        CheckConstraint("length(input_digest) = 64", name="input_digest"),
+        CheckConstraint("length(crosswalk_sha256) = 64", name="crosswalk_sha256"),
+        CheckConstraint("start_date <= end_date", name="date_window"),
+        CheckConstraint(
+            "target_environment IN ('development','rehearsal')", name="target_environment"
+        ),
+        CheckConstraint(
+            "status IN ('PREPARED','RUNNING','PARTIAL','COMPLETE','FAILED','BLOCKED')",
+            name="status",
+        ),
+        Index("ix_market_data_bootstrap_runs_status_prepared", "status", "prepared_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    input_digest: Mapped[str] = mapped_column(String(64))
+    provider_id: Mapped[str] = mapped_column(String(120))
+    provider_schema_version: Mapped[str] = mapped_column(String(120))
+    crosswalk_sha256: Mapped[str] = mapped_column(String(64))
+    target_environment: Mapped[str] = mapped_column(String(20))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    scope: Mapped[dict[str, object]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(20), default="PREPARED")
+    prepared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_provider_request_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
+class MarketDataBootstrapCheckpoint(Base):
+    """Durable outcome for one exact listing or allowlisted FX pair request."""
+
+    __tablename__ = "market_data_bootstrap_checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id", "subject_kind", "subject_key", name="uq_market_data_bootstrap_checkpoint"
+        ),
+        CheckConstraint("subject_kind IN ('LISTING','FX_PAIR')", name="subject_kind"),
+        CheckConstraint(
+            "status IN ('PENDING','RUNNING','COMPLETE','UNAVAILABLE','FAILED','BLOCKED')",
+            name="status",
+        ),
+        CheckConstraint("attempt_count BETWEEN 0 AND 3", name="attempt_count"),
+        CheckConstraint(
+            "(subject_kind = 'LISTING' AND listing_id IS NOT NULL "
+            "AND base_currency IS NULL AND quote_currency IS NULL) OR "
+            "(subject_kind = 'FX_PAIR' AND listing_id IS NULL "
+            "AND company_id IS NULL AND base_currency IS NOT NULL AND quote_currency IS NOT NULL)",
+            name="subject_identity",
+        ),
+        CheckConstraint(
+            "base_currency IS NULL OR base_currency ~ '^[A-Z]{3}$'", name="base_currency"
+        ),
+        CheckConstraint(
+            "quote_currency IS NULL OR quote_currency ~ '^[A-Z]{3}$'", name="quote_currency"
+        ),
+        Index("ix_market_data_bootstrap_checkpoint_run_status", "run_id", "status"),
+        Index("ix_market_data_bootstrap_checkpoint_retry", "status", "next_attempt_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("market_data_bootstrap_runs.id", ondelete="RESTRICT"), index=True
+    )
+    subject_kind: Mapped[str] = mapped_column(String(16))
+    subject_key: Mapped[str] = mapped_column(String(200))
+    company_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True
+    )
+    listing_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("listings.id", ondelete="RESTRICT"), nullable=True
+    )
+    base_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    quote_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(16), default="PENDING")
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    retryable: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    source_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    batch_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("market_data_batches.id", ondelete="RESTRICT"), nullable=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
 class ExternalIngestionRun(Base):
     """Operational state for one idempotent provider/domain execution."""
 

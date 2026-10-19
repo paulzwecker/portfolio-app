@@ -200,7 +200,7 @@ def _raw_payload_row(batch_id: UUID, record: RawProviderRecord) -> dict[str, obj
     }
 
 
-def _market_batch_plan(
+def market_provider_batch_plan(
     query: ProviderQuery,
     records: list[RawProviderRecord],
     normalizer: YahooChartNormalizer,
@@ -369,7 +369,7 @@ def _action_row(
     }
 
 
-def _fx_batch_plan(
+def fx_provider_batch_plan(
     query: ProviderQuery,
     records: list[RawProviderRecord],
     normalizer: YahooFxNormalizer,
@@ -381,6 +381,7 @@ def _fx_batch_plan(
     fx_rows: list[dict[str, object]] = []
     accepted: list[dict[str, object]] = []
     rejected: list[dict[str, str]] = []
+    current_quote_source_refs: list[str] = []
     for record in records:
         result = normalizer.normalize(record)
         if result.disposition == NormalizationDisposition.REJECTED:
@@ -395,11 +396,21 @@ def _fx_batch_plan(
         facts = result.observation
         if facts is None:
             raise RuntimeError("Accepted Yahoo FX normalization returned no rate observations")
+        current_quote_source_refs.extend(
+            item.source_ref for item in facts.observations if item.is_current_quote
+        )
         accepted.append(
             {
                 "pair": f"{facts.base_currency}/{facts.quote_currency}",
                 "provider_symbol": facts.provider_symbol,
                 "rows": len(facts.observations),
+                "daily_observation_rows": sum(
+                    not item.is_current_quote for item in facts.observations
+                ),
+                "current_quote_rows": sum(item.is_current_quote for item in facts.observations),
+                "earliest_effective_at": min(
+                    item.effective_at for item in facts.observations
+                ).isoformat(),
                 "latest_effective_at": max(
                     item.effective_at for item in facts.observations
                 ).isoformat(),
@@ -446,6 +457,7 @@ def _fx_batch_plan(
         "accepted_pairs": accepted,
         "rejected_pairs": rejected,
         "fx_observation_rows": len(fx_rows),
+        "current_quote_source_refs": current_quote_source_refs,
     }
     batch_values = {
         "id": batch_id,
@@ -641,7 +653,7 @@ async def build_provider_import(
         normalizer = YahooChartNormalizer(
             mapping_by_record, requested_start=start, requested_end=end_date
         )
-        plan = _market_batch_plan(query, records, normalizer)
+        plan = market_provider_batch_plan(query, records, normalizer)
         if plan:
             market_plans.append(plan)
 
@@ -693,7 +705,7 @@ async def build_provider_import(
             }
             for failure in provider.failures
         )
-        plan = _fx_batch_plan(query, records, fx_normalizer)
+        plan = fx_provider_batch_plan(query, records, fx_normalizer)
         if plan:
             fx_plans.append(plan)
     return {

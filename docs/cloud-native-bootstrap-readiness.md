@@ -34,8 +34,14 @@ orchestrator in this change. Task 4 adds a bounded first-stage canonical workboo
 bootstrap over Task 3's approved snapshots. It reuses the validated identity,
 portfolio, assessment, ranking, and research-priority import logic; requires the
 shared target guard; and commits all stage rows and a content-keyed receipt in one
-transaction. Later market, fundamentals, and model/analytics stages, plus a full
-clean-rebuild rehearsal, remain separate work. The metadata-only manifest
+transaction. Task 5 adds a separate bounded historical market-data bootstrap. It
+freezes exact reviewed listing and allowlisted FX scope, records resumable
+per-subject checkpoints, excludes current quotes from historical writes, retains
+raw provider receipts, and reconciles persisted canonical fingerprints. Yahoo split
+and dividend events remain explicitly unverified source facts. The stage has been
+tested with synthetic provider fixtures on disposable PostgreSQL 18; no live
+provider retrieval or Neon rehearsal has been performed. Fundamentals,
+model/analytics, plus a full clean-rebuild rehearsal, remain separate work. The metadata-only manifest
 validator remains available for source metadata, exact-value policies, history
 decisions, and dependency order. The complete pipeline must coordinate later
 provider operations with their distinct review, retry, and acceptance rules.
@@ -98,16 +104,21 @@ The counts-only baseline is in [`recovery-gap/known-local-inventory.json`](recov
 
 The existing tools are domain importers, not one end-to-end bootstrap:
 
-1. Apply and verify Alembic head `12a6f0d9c3e1` on a newly created, isolated
-   PostgreSQL 18 database. Migration-seeded score/ranking/return definitions are
-   schema bootstrap data. Do not run `npm run db:seed`; it adds fictional demo
-   portfolio data and is not a production bootstrap.
+1. Apply and verify the exact Alembic head from the current checkout on a newly
+   created, isolated PostgreSQL 18 database. This Task 5 branch adds revision
+   `3f7c9d12b6a4`. Migration-seeded score/ranking/return definitions are schema
+   bootstrap data. Do not run `npm run db:seed`; it adds fictional demo portfolio
+   data and is not a production bootstrap.
 2. Dry-run the workbook identity/state import. Review unresolved identities,
    lifecycle decisions, weights, scores, and rank rows. Only a clean empty
    universe/portfolio may be applied without the narrowly scoped demo replacement
    option. The apply is one transaction; do not use demo replacement for real data.
 3. Apply the exact listing-aware market workbook import after identities exist.
-   It does not populate FX and does not prove current provider coverage.
+   It does not populate FX and does not prove current provider coverage. For a
+   separately approved historical provider backfill, use the bounded procedure in
+   [historical market-data bootstrap](historical-market-data-bootstrap.md). Its
+   target must be explicitly configured as development or rehearsal; do not run
+   it against production.
 4. Dry-run and reconcile published output snapshots. Import native model inputs
    only after source-hash, company/listing identity, return semantics, and parity
    checks pass. Run `--parity-only` before an apply; inspect the per-model result.
@@ -121,9 +132,10 @@ The existing tools are domain importers, not one end-to-end bootstrap:
    proposal during bootstrap.
 
 The principal existing commands are `db:import-workbook`, `db:import-market-data`,
-`db:import-model-outputs`, `db:import-native-models`, `db:import-research-priority`,
-`db:sync-market-data`, `db:sync-reported-fundamentals`, `db:sync-source-documents`,
-and the explicit consensus commands. They require separate dry-run/reconcile
+`db:bootstrap-market-data`, `db:import-model-outputs`, `db:import-native-models`,
+`db:import-research-priority`, `db:sync-market-data`,
+`db:sync-reported-fundamentals`, `db:sync-source-documents`, and the explicit
+consensus commands. They require separate dry-run/reconcile
 reviews. See the [workbook import](workbook-import.md),
 [market data](market-data.md), [model-output import](model-output-ingestion.md),
 [native model migration](native-model-input-migration.md),
