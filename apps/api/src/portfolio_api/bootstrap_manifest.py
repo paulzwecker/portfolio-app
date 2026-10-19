@@ -7,12 +7,15 @@ application settings, contacts a database, or contacts an external provider.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import stat
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NoReturn, cast
+from typing import Any, Literal, NoReturn, cast
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
@@ -84,6 +87,15 @@ _REQUIRED_KEYS = {
 
 class BootstrapManifestError(ValueError):
     """The manifest does not satisfy the metadata-only bootstrap contract."""
+
+
+@dataclass(frozen=True)
+class ArtifactCheck:
+    """A sanitized result for one source artifact or identity map."""
+
+    source_id: str
+    artifact_kind: Literal["source", "identity_map"]
+    status: Literal["verified", "not_required"]
 
 
 def _fail(field: str, reason: str) -> NoReturn:
@@ -261,6 +273,88 @@ def validate_manifest(value: object) -> list[str]:
     return _topological_order(sources)
 
 
+def _artifact_digest(
+    root: Path,
+    filename: str,
+    source_id: str,
+    kind: Literal["source", "identity_map"],
+) -> str:
+    candidate = root / filename
+    try:
+        if candidate.is_symlink():
+            raise OSError
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root)
+        if not stat.S_ISREG(resolved.stat().st_mode):
+            raise OSError
+        digest = hashlib.sha256()
+        with resolved.open("rb") as source_file:
+            for chunk in iter(lambda: source_file.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except (OSError, RuntimeError, ValueError):
+        raise BootstrapManifestError(
+            f"Input verification failed for source '{source_id}' ({kind}): "
+            "the expected file is missing, unsafe, or unreadable."
+        ) from None
+
+
+def verify_source_artifacts(value: object, input_root: Path) -> list[ArtifactCheck]:
+    """Verify frozen input bytes against the manifest without opening a DB/provider.
+
+    Artifact paths are derived only from validated source IDs. The input root is an
+    explicit operator-selected directory; path names and file contents are never
+    included in verification results or errors.
+    """
+    dependency_order = validate_manifest(value)
+    try:
+        root = input_root.resolve(strict=True)
+        if not root.is_dir():
+            raise OSError
+    except (OSError, RuntimeError):
+        raise BootstrapManifestError(
+            "Input verification failed: select an existing input directory."
+        ) from None
+
+    manifest = cast(dict[str, Any], value)
+    source_by_id = {
+        cast(dict[str, Any], source)["source_id"]: cast(dict[str, Any], source)
+        for source in cast(list[object], manifest["sources"])
+    }
+    checks: list[ArtifactCheck] = []
+    for source_id in dependency_order:
+        source = source_by_id[source_id]
+        for field, kind, suffix in (
+            ("artifact_sha256", "source", ".artifact"),
+            ("identity_map_sha256", "identity_map", ".identity-map.artifact"),
+        ):
+            artifact_kind = cast(Literal["source", "identity_map"], kind)
+            expected = source[field]
+            if expected is None:
+                checks.append(
+                    ArtifactCheck(
+                        source_id=source_id,
+                        artifact_kind=artifact_kind,
+                        status="not_required",
+                    )
+                )
+                continue
+            actual = _artifact_digest(root, f"{source_id}{suffix}", source_id, artifact_kind)
+            if actual != expected:
+                raise BootstrapManifestError(
+                    f"Input verification failed for source '{source_id}' ({artifact_kind}): "
+                    "SHA-256 does not match the manifest."
+                )
+            checks.append(
+                ArtifactCheck(
+                    source_id=source_id,
+                    artifact_kind=artifact_kind,
+                    status="verified",
+                )
+            )
+    return checks
+
+
 def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -284,13 +378,33 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     validate_parser = subparsers.add_parser("validate", help="validate metadata without DB access")
     validate_parser.add_argument("--manifest", type=Path, required=True)
+    verify_parser = subparsers.add_parser(
+        "verify-inputs", help="verify frozen input bytes without DB or provider access"
+    )
+    verify_parser.add_argument("--manifest", type=Path, required=True)
+    verify_parser.add_argument("--input-root", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        order = validate_manifest(load_manifest(args.manifest))
+        manifest = load_manifest(args.manifest)
+        if args.command == "validate":
+            order = validate_manifest(manifest)
+            checks: list[ArtifactCheck] = []
+        else:
+            checks = verify_source_artifacts(manifest, args.input_root)
+            order = validate_manifest(manifest)
     except BootstrapManifestError as error:
         print(str(error), file=sys.stderr)
         return 2
-    print(f"Bootstrap input manifest valid: sources={len(order)}; no database accessed.")
+    if args.command == "verify-inputs":
+        verified = sum(check.status == "verified" for check in checks)
+        not_required = sum(check.status == "not_required" for check in checks)
+        print(
+            "Bootstrap input artifacts verified: "
+            f"verified={verified}; not_required={not_required}; "
+            f"sources={len(order)}; no database or provider accessed."
+        )
+    else:
+        print(f"Bootstrap input manifest valid: sources={len(order)}; no database accessed.")
     print(f"Dependency order: {' -> '.join(order)}")
     return 0
 
