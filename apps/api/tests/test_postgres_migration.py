@@ -22,7 +22,7 @@ from sqlalchemy.engine import URL, make_url
 
 from portfolio_api.database import Base
 from portfolio_api.domain import models
-from portfolio_api.migrations import alembic_config
+from portfolio_api.migrations import alembic_config, expected_heads
 from portfolio_api.postgres_migration import (
     TABLE_GROUP_BY_NAME,
     TABLE_GROUPS,
@@ -904,7 +904,8 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     assert empty_schema_check["status"] == "EMPTY_TARGET_COMPATIBLE_FOR_FULL_RESTORE"
     assert empty_schema_check["data_only_restore_compatible"] is False
     assert empty_schema_check["source"]["foreign_key_cycles"]
-    assert empty_schema_check["source"]["alembic_heads"] == ["6c2eaf0b8147"]
+    expected_schema_heads = sorted(expected_heads())
+    assert empty_schema_check["source"]["alembic_heads"] == expected_schema_heads
 
     backup_result = backup(archive, source)
     assert backup_result["status"] == "BACKUP_CREATED"
@@ -972,7 +973,7 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     )
     assert restore_result["status"] == "RESTORED_AND_RECONCILED"
     assert restore_result["target_use"] == "isolated_rehearsal_only"
-    assert restore_result["target"]["alembic_heads"] == ["6c2eaf0b8147"]
+    assert restore_result["target"]["alembic_heads"] == expected_schema_heads
     target_engine = create_engine(target_url, hide_parameters=True)
     try:
         with target_engine.connect() as connection:
