@@ -12,7 +12,7 @@
 | Active milestone        | `M0` — Reconcile repository and establish loop                                                                          |
 | Next task               | `M0.6` — Independent milestone review, PR preparation and roadmap reassessment                                          |
 | Status                  | `IN_PROGRESS / M0.6_PUBLICATION_REVIEW`                                                                                 |
-| Current branch / commit | `codex/m0-integrated-release-candidate` / `origin/main` + staged integration diff; release commit pending               |
+| Current branch / commit | `codex/m0-integrated-release-candidate` / `f0405f5` (sanitized integration commit; M0 review continues)                 |
 | Last verified tests     | Desktop/mobile Playwright: 55 passed, 11 skipped; `npm run check`: pass; API integration: 133 passed, 4 skipped         |
 | Latest PR               | `NONE_RECORDED`                                                                                                         |
 | Primary blocker         | Production remains at `6c2eaf0b8147`; pending migration, identity/model acceptance and deployment gates remain separate |
@@ -46,7 +46,11 @@
 - [x] **M0.5** Verify model workspace in browser desktop/mobile (including proposal preview and explicit reviewer confirmation); distinguish fixture browser evidence from live database verification.
   - Evidence (2026-11-01): `npm run test:e2e -- --project=desktop --project=mobile` completed with 55 passed, 11 conditionally skipped and 0 failed. The model workspace preview/accept flow verifies proposed-vs-current input/output differences, disabled acceptance before review, required decision note, explicit confirmation, one acceptance request and immutable revision ID. The broader run covers Company Explorer, Portfolio, Decisions, Universe, Research review, Operations states, navigation and responsive behavior in Chromium desktop/iPhone-sized mobile contexts. Initial failures were stale E2E assertions for content behind existing disclosures and an updated missing-estimate message; tests were aligned with current accessible UI semantics. No product behavior was changed. `npx prettier --check apps/web/e2e/research.spec.ts` and `git diff --check` pass. Eleven live-database or project-conditional checks remain skipped; this is fixture-based UI evidence, not live Neon/deployed verification.
 - [ ] **M0.6** Milestone quality review; open PR, capture check results and owner decision; reassess M1–M9 against Product Vision.
-  - Review evidence in progress (2026-11-01): GitHub reports the repository as public. The branch adds no workbook snapshots, and a high-confidence credential scan found no token, service-account credential, or database URL patterns. Private source-run IDs and the P-GOOGL package hash were replaced with local-manifest placeholders in public-facing docs. The PR branch is based on `origin/main` and carries only the sanitized final tree diff; the original task branch and its history remain local.
+  - Review evidence (2026-11-01): GitHub reports this repository as public. The integration diff adds no workbook snapshots; a high-confidence scan found no token, service-account credential, or database URL patterns. Private source-run IDs and the package hash are omitted from public-facing docs. The PR branch is based on `origin/main`, excluding the identifier-bearing local task history. However, `origin/main` already tracks two XLSX files under `reference/workbook`; their contents were not inspected and their public-safety status is unresolved (B-003).
+
+### M0.6 Product-vision reassessment
+
+The M1→M2→M3 order matches the product vision and Portfolio architecture: verify target, recovery and private access first; prove one reviewed real-model lifecycle; then establish useful canonical holdings, cash and targets without requiring a whole-workbook import. M4/M5 complete company research and human-reviewed proposals; M6 broadens only proven paths; M7 provides operational reliability; M8/M9 remain deferred until Portfolio is secure and stable. Add an explicit dependency: complete the private hosted identity/session boundary (M1.4/M7.1) before hosted access or any production model/portfolio write in M2.5/M3.4. No investment-policy or methodology changes are proposed.
 
 **Done when:** critical work is version-controlled and integrated for review, local test baseline is honest, no sensitive artifacts tracked, migration head unique; PR URL captured. An unresolved browser gate remains explicitly blocked if not executed.
 
@@ -161,16 +165,17 @@
 
 ## Decision and blocker log
 
-| ID    | Status           | Item                                                             | Resolution/owner                                                                                       |
-| ----- | ---------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| D-001 | AGREED_DIRECTION | Small reviewed per-model packages, not full workbook import      | Product architecture; method-specific contracts                                                        |
-| D-002 | AGREED_DIRECTION | Shared Personal Universe modular monolith; Portfolio first       | Existing platform architecture; phase after stable Portfolio                                           |
-| D-003 | OPEN             | Accept or reject current P-GOOGL source-input drift              | Owner; needs exact proposal evidence                                                                   |
-| D-004 | OPEN             | Production schema/identity preview, migration and recovery point | Read-only operator verification then approval                                                          |
-| D-005 | OPEN             | Auth provider and trusted Vercel–Render session boundary         | Security review                                                                                        |
-| D-006 | MITIGATED_LOCAL  | Public-repository privacy review                                 | Source run IDs/hash redacted; clean PR branch is based on `origin/main` and excludes old local history |
-| B-001 | RESOLVED_LOCAL   | Uncommitted/inconsistent M2, M5–M8 implementation state          | M0.3 confirmed integrated local code, tests, contracts and migration graph                             |
-| B-002 | RESOLVED_LOCAL   | Browser E2E was not verified in the earlier sandbox              | M0.5 Playwright desktop/mobile fixture run passed; live DB scenarios remain separate                   |
+| ID    | Status           | Item                                                             | Resolution/owner                                                                                                  |
+| ----- | ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| D-001 | AGREED_DIRECTION | Small reviewed per-model packages, not full workbook import      | Product architecture; method-specific contracts                                                                   |
+| D-002 | AGREED_DIRECTION | Shared Personal Universe modular monolith; Portfolio first       | Existing platform architecture; phase after stable Portfolio                                                      |
+| D-003 | OPEN             | Accept or reject current P-GOOGL source-input drift              | Owner; needs exact proposal evidence                                                                              |
+| D-004 | OPEN             | Production schema/identity preview, migration and recovery point | Read-only operator verification then approval                                                                     |
+| D-005 | OPEN             | Auth provider and trusted Vercel–Render session boundary         | Security review                                                                                                   |
+| D-006 | MITIGATED_LOCAL  | Public-repository privacy review                                 | Source IDs/hash omitted from final tree; clean PR branch is based on `origin/main` and excludes old local history |
+| B-001 | RESOLVED_LOCAL   | Uncommitted/inconsistent M2, M5–M8 implementation state          | M0.3 confirmed integrated local code, tests, contracts and migration graph                                        |
+| B-002 | RESOLVED_LOCAL   | Browser E2E was not verified in the earlier sandbox              | M0.5 Playwright desktop/mobile fixture run passed; live DB scenarios remain separate                              |
+| B-003 | OPEN             | Existing workbook XLSX files are tracked on public `origin/main` | Owner must confirm public safety or approve a separate remediation plan; files were not changed or opened here    |
 
 ## Milestone PR template (copy into each PR)
 
@@ -186,8 +191,8 @@
 
 _Add one short row per completed subtask: date | task ID | commit | tests/evidence | decision/blocker | next cursor. Do not paste secrets, source values or huge logs here._
 
-| 2026-11-01 | M0.1 | `a179433` | Git inventory; one Alembic head; CI source-data policy PASS | Protected docs, branches and stash preserved; production migrations pending | M0.2 |
-| 2026-11-01 | M0.2 | `1275f7e` | Formatting, diff whitespace and doc targets PASS | Historical architecture scope clarified; no semantic or financial changes | M0.3 |
-| 2026-11-01 | M0.3 | `d82535f`, `1be9a85`, `2cde719` | Package parity validation; contracts current; focused 71-pass suite; single migration head | Source inputs remain proposed; production schema is behind local head | M0.4 |
-| 2026-11-01 | M0.4 | `6c163d2` | Full local quality checks PASS; PostgreSQL integration 133 passed, 4 skipped | Browser workflow is the remaining local M0 gate; production schema remains behind local head | M0.5 |
-| 2026-11-01 | M0.5 | `1c9c72b` | Desktop/mobile Playwright: 55 passed, 11 skipped, 0 failed; focused browser regression corrected; formatting and diff checks pass | Live database/deployed checks remain unverified; no application behavior changed | M0.6 |
+| 2026-11-01 | M0.1 | `f0405f5` (consolidated)| Git inventory; one Alembic head; CI source-data policy PASS | Protected docs, branches and stash preserved; production migrations pending | M0.2 |
+| 2026-11-01 | M0.2 | `f0405f5` (consolidated)| Formatting, diff whitespace and doc targets PASS | Historical architecture scope clarified; no semantic or financial changes | M0.3 |
+| 2026-11-01 | M0.3 | `f0405f5` (consolidated)| Package parity validation; contracts current; focused 71-pass suite; single migration head | Source inputs remain proposed; production schema is behind local head | M0.4 |
+| 2026-11-01 | M0.4 | `f0405f5` (consolidated)| Full local quality checks PASS; PostgreSQL integration 133 passed, 4 skipped | Browser workflow is the remaining local M0 gate; production schema remains behind local head | M0.5 |
+| 2026-11-01 | M0.5 | `f0405f5` (consolidated)| Desktop/mobile Playwright: 55 passed, 11 skipped, 0 failed; focused browser regression corrected; formatting and diff checks pass | Live database/deployed checks remain unverified; no application behavior changed | M0.6 |
