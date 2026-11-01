@@ -7,16 +7,16 @@
 
 ## Execution cursor — edit after EVERY subtask
 
-| Field                   | Current value                                                                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `M0` — Reconcile repository and establish loop                                                                                   |
-| Next task               | `M0.6` — Owner review of public-baseline workbook artifacts; then close the M0 gate                                              |
-| Status                  | `PR_OPEN / M0_EXIT_BLOCKED_B003`                                                                                                 |
-| Current branch / commit | `codex/m0-integrated-release-candidate` / `b82f53b` (PR head before status-only roadmap update)                                  |
-| Last verified tests     | Desktop/mobile Playwright: 55 passed, 11 skipped; `npm run check`: pass; API integration: 133 passed, 4 skipped                  |
-| Latest PR               | [Draft PR #13](https://github.com/paulzwecker/portfolio-app/pull/13)                                                             |
-| Primary blocker         | B-003: two workbook XLSX files are already tracked in public `origin/main`; their safety is unverified                           |
-| Next approval gate      | Owner must confirm workbook files are public-safe or authorize a separate remediation plan; production approvals remain separate |
+| Field                   | Current value                                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Active milestone        | `M0` — Reconcile repository and establish loop                                                                  |
+| Next task               | `M0.6` — Verify GitHub Actions reruns; then finalize the M0 PR state                                            |
+| Status                  | `IN_PROGRESS / GITHUB_ACTIONS_FIX`                                                                              |
+| Current branch / commit | `codex/m0-integrated-release-candidate` / `b82f53b` (PR head before status-only roadmap update)                 |
+| Last verified tests     | Desktop/mobile Playwright: 55 passed, 11 skipped; `npm run check`: pass; API integration: 133 passed, 4 skipped |
+| Latest PR               | [Draft PR #13](https://github.com/paulzwecker/portfolio-app/pull/13)                                            |
+| Primary blocker         | GitHub Linux Actions failed before tests: Python 3.12.3 unavailable on the Ubuntu 26.04 `ubuntu-latest` image   |
+| Next approval gate      | No production migration, write, deployment or model acceptance without its separate explicit approval           |
 
 **Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
 
@@ -46,7 +46,7 @@
 - [x] **M0.5** Verify model workspace in browser desktop/mobile (including proposal preview and explicit reviewer confirmation); distinguish fixture browser evidence from live database verification.
   - Evidence (2026-11-01): `npm run test:e2e -- --project=desktop --project=mobile` completed with 55 passed, 11 conditionally skipped and 0 failed. The model workspace preview/accept flow verifies proposed-vs-current input/output differences, disabled acceptance before review, required decision note, explicit confirmation, one acceptance request and immutable revision ID. The broader run covers Company Explorer, Portfolio, Decisions, Universe, Research review, Operations states, navigation and responsive behavior in Chromium desktop/iPhone-sized mobile contexts. Initial failures were stale E2E assertions for content behind existing disclosures and an updated missing-estimate message; tests were aligned with current accessible UI semantics. No product behavior was changed. `npx prettier --check apps/web/e2e/research.spec.ts` and `git diff --check` pass. Eleven live-database or project-conditional checks remain skipped; this is fixture-based UI evidence, not live Neon/deployed verification.
 - [ ] **M0.6** Milestone quality review; open PR, capture check results and owner decision; reassess M1–M9 against Product Vision.
-  - Review evidence (2026-11-01): GitHub reports this repository as public. The integration diff adds no workbook snapshots; a high-confidence scan found no token, service-account credential, or database URL patterns. Private source-run IDs and the package hash are omitted from public-facing docs. The PR branch is based on `origin/main`, excluding the identifier-bearing local task history. However, `origin/main` already tracks two XLSX files under `reference/workbook`; their contents were not inspected and their public-safety status is unresolved (B-003). Draft PR #13 is open for code review; M0 remains incomplete until B-003 is resolved. No merge, deployment, migration, production write, Sheets edit, or model acceptance occurred. GitHub reports PR #13 open, draft and mergeable; its Vercel status check is pending. No deployment command was run, and whether the pending integration check creates a preview is unverified.
+  - Review evidence (2026-11-01): owner confirmed the two XLSX files already tracked on public `origin/main` are safe to publish; they remain unchanged. The PR diff adds no workbook snapshots, and the credential-pattern scan found no token, service-account credential, or database URL patterns. Private source identifiers are omitted from public docs and the PR branch excludes old local history. GitHub Actions diagnosed the two failed Linux jobs: `ubuntu-latest` migrated to Ubuntu 26.04, where the repository-pinned Python 3.12.3 is unavailable. Workflow runner pins are updated to `ubuntu-24.04`; verify the rerun before closing M0.
   - Product alignment is recorded below; the dependency ordering remains consistent with the approved vision and architecture.
 
 ### M0.6 Product-vision reassessment
@@ -166,17 +166,17 @@ The M1→M2→M3 order matches the product vision and Portfolio architecture: ve
 
 ## Decision and blocker log
 
-| ID    | Status           | Item                                                             | Resolution/owner                                                                                                  |
-| ----- | ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| D-001 | AGREED_DIRECTION | Small reviewed per-model packages, not full workbook import      | Product architecture; method-specific contracts                                                                   |
-| D-002 | AGREED_DIRECTION | Shared Personal Universe modular monolith; Portfolio first       | Existing platform architecture; phase after stable Portfolio                                                      |
-| D-003 | OPEN             | Accept or reject current P-GOOGL source-input drift              | Owner; needs exact proposal evidence                                                                              |
-| D-004 | OPEN             | Production schema/identity preview, migration and recovery point | Read-only operator verification then approval                                                                     |
-| D-005 | OPEN             | Auth provider and trusted Vercel–Render session boundary         | Security review                                                                                                   |
-| D-006 | MITIGATED_LOCAL  | Public-repository privacy review                                 | Source IDs/hash omitted from final tree; clean PR branch is based on `origin/main` and excludes old local history |
-| B-001 | RESOLVED_LOCAL   | Uncommitted/inconsistent M2, M5–M8 implementation state          | M0.3 confirmed integrated local code, tests, contracts and migration graph                                        |
-| B-002 | RESOLVED_LOCAL   | Browser E2E was not verified in the earlier sandbox              | M0.5 Playwright desktop/mobile fixture run passed; live DB scenarios remain separate                              |
-| B-003 | OPEN             | Existing workbook XLSX files are tracked on public `origin/main` | Owner must confirm public safety or approve a separate remediation plan; files were not changed or opened here    |
+| ID    | Status                   | Item                                                             | Resolution/owner                                                                             |
+| ----- | ------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| D-001 | AGREED_DIRECTION         | Small reviewed per-model packages, not full workbook import      | Product architecture; method-specific contracts                                              |
+| D-002 | AGREED_DIRECTION         | Shared Personal Universe modular monolith; Portfolio first       | Existing platform architecture; phase after stable Portfolio                                 |
+| D-003 | OPEN                     | Accept or reject current P-GOOGL source-input drift              | Owner; needs exact proposal evidence                                                         |
+| D-004 | OPEN                     | Production schema/identity preview, migration and recovery point | Read-only operator verification then approval                                                |
+| D-005 | OPEN                     | Auth provider and trusted Vercel–Render session boundary         | Security review                                                                              |
+| D-006 | RESOLVED_OWNER_CONFIRMED | Public-repository privacy review                                 | Owner confirmed reference workbooks are safe for publishing; no workbook content was changed |
+| B-001 | RESOLVED_LOCAL           | Uncommitted/inconsistent M2, M5–M8 implementation state          | M0.3 confirmed integrated local code, tests, contracts and migration graph                   |
+| B-002 | RESOLVED_LOCAL           | Browser E2E was not verified in the earlier sandbox              | M0.5 Playwright desktop/mobile fixture run passed; live DB scenarios remain separate         |
+| B-003 | RESOLVED_OWNER_CONFIRMED | Existing workbook XLSX files on public `origin/main`             | Owner confirmed both are safe for publishing; no content was opened or changed here          |
 
 ## Milestone PR template (copy into each PR)
 
@@ -197,4 +197,4 @@ _Add one short row per completed subtask: date | task ID | commit | tests/eviden
 | 2026-11-01 | M0.3 | `f0405f5` (consolidated)| Package parity validation; contracts current; focused 71-pass suite; single migration head | Source inputs remain proposed; production schema is behind local head | M0.4 |
 | 2026-11-01 | M0.4 | `f0405f5` (consolidated)| Full local quality checks PASS; PostgreSQL integration 133 passed, 4 skipped | Browser workflow is the remaining local M0 gate; production schema remains behind local head | M0.5 |
 | 2026-11-01 | M0.5 | `f0405f5` (consolidated)| Desktop/mobile Playwright: 55 passed, 11 skipped, 0 failed; focused browser regression corrected; formatting and diff checks pass | Live database/deployed checks remain unverified; no application behavior changed | M0.6 |
-| 2026-11-01 | M0.6 (PARTIAL) | `a351377` (opened; PR head advanced to `b82f53b`) | Independent release review; sanitized two-commit branch; public draft PR #13 | B-003 prevents M0 exit; production and live-source readiness remain unverified | Owner review of `reference/workbook` files |
+| 2026-11-01 | M0.6 (IN_PROGRESS) | pending | Owner resolved B-003; Actions failure traced to Ubuntu 26/Python 3.12.3 and runner pin prepared | GitHub Actions rerun pending; no merge or production action | Verify checks on PR #13 |
