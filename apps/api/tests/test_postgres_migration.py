@@ -20,9 +20,12 @@ from alembic import command
 from sqlalchemy import Table, create_engine, text
 from sqlalchemy.engine import URL, make_url
 
+from portfolio_api.database import Base
 from portfolio_api.domain import models
 from portfolio_api.migrations import alembic_config
 from portfolio_api.postgres_migration import (
+    TABLE_GROUP_BY_NAME,
+    TABLE_GROUPS,
     DatabaseEndpoint,
     MigrationToolError,
     _cancel_restore_backend,
@@ -42,6 +45,13 @@ from portfolio_api.postgres_migration import (
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_every_mapped_application_table_has_a_migration_group() -> None:
+    assert set(Base.metadata.tables) <= set(TABLE_GROUP_BY_NAME)
+    assert len(TABLE_GROUP_BY_NAME) == sum(len(group) for group in TABLE_GROUPS.values())
+
+
 MIGRATION_ENVIRONMENT_NAMES = (
     "MIGRATION_SOURCE_URL",
     "MIGRATION_SOURCE_SCHEMA",

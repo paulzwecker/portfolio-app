@@ -167,6 +167,7 @@ def test_additional_model_adapters_keep_method_inputs_and_outputs_distinct(model
     )
 
 
+@pytest.mark.source_data
 def test_dcf_adapter_separates_published_reference_from_native_replay() -> None:
     source_package, source_hash = _fixture_package("P-GOOGL")
     # The pre-existing v2 contract remains independently valid and unchanged.
@@ -302,6 +303,7 @@ def test_v3_rejects_unsupported_package_version_and_missing_rationale() -> None:
         )
 
 
+@pytest.mark.source_data
 def test_dcf_package_rejects_listing_model_currency_mismatch() -> None:
     package, _ = _fixture_package("P-GOOGL")
     identity = package.identity.model_copy(update={"listing_currency": "EUR"})
