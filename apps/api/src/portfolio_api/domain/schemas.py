@@ -859,6 +859,10 @@ class RecurringOperationJobRead(Contract):
 
 class RecurringOperationsStatusRead(Contract):
     enabled: bool
+    manual_operations_enabled: bool
+    workbook_sync_enabled: bool
+    portfolio_workbook_source_configured: bool
+    portfolio_workbook_credentials_available: bool
     worker_state: RecurringOperationsWorkerStatus
     worker_started_at: datetime | None
     worker_last_seen_at: datetime | None
@@ -878,7 +882,9 @@ OperationalJobName = Literal[
     "SEC_FUNDAMENTALS",
     "SEC_FILINGS",
     "SHEETS_DISCOVERY",
+    "WORKBOOK_SYNC",
     "RESEARCH_REFRESH",
+    "DECISION_RECOMPUTE",
     "AGENT_WORK_FEED",
     "COMPANY_REFRESH",
     "REFRESH_ALL",
@@ -3371,6 +3377,133 @@ class FinancialModelProposalProvenance(Contract):
         if value > datetime.now(UTC):
             raise ValueError("Future model proposal timestamps are not supported")
         return value
+
+
+class AgentUfcfDcfProposalMethod(Contract):
+    methodology: Literal["UFCF_DCF_10Y_FADE"]
+    inputs: DcfCalculationInput
+
+
+class AgentOwnerCashFlowProposalMethod(Contract):
+    methodology: Literal["OWNER_CASH_FLOW_10Y"]
+    inputs: OwnerCashFlowInput
+
+
+class AgentResidualIncomeProposalMethod(Contract):
+    methodology: Literal["RESIDUAL_INCOME_10Y_FADE"]
+    inputs: ResidualIncomeInput
+
+
+AgentModelProposalMethod = Annotated[
+    AgentUfcfDcfProposalMethod
+    | AgentOwnerCashFlowProposalMethod
+    | AgentResidualIncomeProposalMethod,
+    Field(discriminator="methodology"),
+]
+
+
+class FinancialModelRevisionProposalV1(Contract):
+    """Producer-neutral, inputs-only proposal envelope; outputs are always server-calculated."""
+
+    contract_type: Literal["FinancialModelRevisionProposalV1"]
+    contract_version: Literal["1.0.0"]
+    model_id: UUID
+    company_id: UUID
+    valuation_listing_id: UUID
+    model_currency: Currency
+    methodology_version: Annotated[str, Field(min_length=1, max_length=40)]
+    base_revision_id: UUID
+    base_revision_number: int = Field(ge=1)
+    external_revision_id: Annotated[str, Field(min_length=1, max_length=160)]
+    authored_at: datetime
+    effective_at: datetime
+    source_reference: Annotated[str, Field(min_length=1, max_length=1000, pattern=r"^https://")]
+    rationale: Annotated[str, Field(min_length=1, max_length=4000)]
+    supporting_evidence: list[FinancialModelEvidenceReference] = Field(min_length=1, max_length=40)
+    method: AgentModelProposalMethod
+
+    @field_validator("authored_at", "effective_at")
+    @classmethod
+    def proposal_times_are_observed(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Proposal timestamps must include a timezone offset")
+        value = value.astimezone(UTC)
+        if value > datetime.now(UTC):
+            raise ValueError("Future model proposal timestamps are not supported")
+        return value
+
+    @field_validator("supporting_evidence")
+    @classmethod
+    def proposal_evidence_is_unique(
+        cls, value: list[FinancialModelEvidenceReference]
+    ) -> list[FinancialModelEvidenceReference]:
+        return _validate_unique_model_evidence(value)
+
+
+class ModelRevisionProposalDiff(Contract):
+    field: str
+    before: str | None
+    after: str | None
+
+
+ModelRevisionProposalStatus = Literal[
+    "PENDING", "READY", "CONFLICT", "INVALID", "ACCEPTED", "REJECTED"
+]
+
+
+class ModelRevisionProposalRead(Contract):
+    id: UUID
+    producer_id: str
+    proposal: FinancialModelRevisionProposalV1
+    content_fingerprint: str
+    status: ModelRevisionProposalStatus
+    issue: str | None
+    conflicting_proposal_ids: list[UUID] = Field(default_factory=list)
+    accepted_revision_id: UUID | None
+    reviewer_id: str | None
+    decision_note: str | None
+    submitted_at: datetime
+    reviewed_at: datetime | None
+
+
+class ModelRevisionProposalSubmissionRead(Contract):
+    proposal: ModelRevisionProposalRead
+    replayed: bool
+
+
+class ModelRevisionProposalPreviewRead(Contract):
+    proposal_id: UUID
+    status: Literal["READY", "CONFLICT", "INVALID"]
+    reason: str | None
+    current_revision_id: UUID | None
+    current_revision_number: int | None
+    input_changes: list[ModelRevisionProposalDiff] = Field(default_factory=list)
+    output_changes: list[ModelRevisionProposalDiff] = Field(default_factory=list)
+    current_inputs: dict[str, object] | None
+    proposed_inputs: dict[str, object]
+    current_outputs: dict[str, object] | None
+    proposed_outputs: dict[str, object] | None
+    proposed_projections: list[dict[str, object]] = Field(default_factory=list)
+    preview_fingerprint: str | None
+    previewed_at: datetime
+
+
+class ModelRevisionProposalDecisionRequest(Contract):
+    preview_fingerprint: Annotated[
+        str, Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+    ]
+    decision_note: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+class ModelRevisionProposalRejectRequest(Contract):
+    decision_note: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+class ModelRevisionProposalDecisionRead(Contract):
+    status: Literal["ACCEPTED", "REJECTED", "PREVIEW_CHANGED", "CONFLICT", "INVALID"]
+    proposal: ModelRevisionProposalRead
+    preview: ModelRevisionProposalPreviewRead | None = None
+    accepted_revision_id: UUID | None = None
 
 
 def _validate_unique_model_evidence(

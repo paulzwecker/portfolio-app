@@ -105,7 +105,7 @@ def _cell_value(cells: dict[str, Any], address: str) -> str | None:
 
 
 def _source_ref(workbook: Workbook, sheet: str, cells: str) -> str:
-    return f"{workbook.path.name}:{sheet}!{cells}#sha256:{workbook.sha256}"
+    return f"{workbook.source_name or workbook.path.name}:{sheet}!{cells}#sha256:{workbook.sha256}"
 
 
 def _decimal(raw_value: str | None) -> Decimal | None:
@@ -227,6 +227,17 @@ def _read_output_values(
         raw_value = cell.value if cell else None
         value = _decimal(raw_value)
         if raw_value is None or not raw_value.strip():
+            if cell is not None and cell.formula is not None:
+                issues.append(
+                    {
+                        "field": field_name,
+                        "reason": (
+                            "Formula cache is empty; the output remains null and unavailable."
+                        ),
+                        "raw_value": "",
+                        "source": f"{source}!{address}",
+                    }
+                )
             continue
         if value is None:
             issues.append(
@@ -345,7 +356,11 @@ class ImportPlan:
 
 
 def build_import(
-    session: Session, path: Path = DEFAULT_WORKBOOK, observed_at: datetime | None = None
+    session: Session,
+    path: Path = DEFAULT_WORKBOOK,
+    observed_at: datetime | None = None,
+    *,
+    source_name: str | None = None,
 ) -> ImportPlan:
     observed = observed_at or now()
     if observed.tzinfo is None or observed.utcoffset() is None:
@@ -356,6 +371,7 @@ def build_import(
             name in {"Universe Registry", "Model Contract", "Model Revision History"}
             or name.startswith(("P-", "W-"))
         ),
+        source_name=source_name,
     )
     digest = hashlib.sha256(
         f"model-output-contract-v1:{workbook.sha256}".encode("ascii")
@@ -565,11 +581,28 @@ def build_import(
             )
             continue
         output_raw = {name: values.get(column) for name, column in HISTORY_COLUMNS.items()}
-        if not any(value is not None and value.strip() for value in output_raw.values()):
+        empty_formula_outputs = [
+            (name, column)
+            for name, column in HISTORY_COLUMNS.items()
+            if workbook.cell("Model Revision History", f"{column}{row_number}").formula is not None
+            and not (output_raw.get(name) or "").strip()
+        ]
+        if (
+            not any(value is not None and value.strip() for value in output_raw.values())
+            and not empty_formula_outputs
+        ):
             history_without_outputs += 1
             continue
         outputs = _empty_outputs()
         history_field_issues: list[dict[str, str]] = []
+        for field_name, column in empty_formula_outputs:
+            history_field_issues.append(
+                {
+                    "field": field_name,
+                    "reason": "Formula cache is empty; the historical output remains null.",
+                    "source": f"Model Revision History!{column}{row_number}",
+                }
+            )
         for field_name, raw_value in output_raw.items():
             if raw_value is None or not raw_value.strip():
                 continue

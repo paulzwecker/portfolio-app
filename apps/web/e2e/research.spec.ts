@@ -932,10 +932,22 @@ test("model outputs keep missing values visible across responsive universe and c
   await expect(
     page.getByText("No target", { exact: true }).first(),
   ).toBeVisible();
+  await page
+    .locator("summary")
+    .filter({ hasText: "Identity, lifecycle & holding evidence" })
+    .click();
   await expect(
     page.getByText("No holding observed; data may be incomplete."),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Valuation" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Valuation workspace" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Accepted revisions, imported outputs & migration diagnostics",
+    })
+    .click();
   await expect(
     page.getByText("No legacy model tab is mapped to this company."),
   ).toBeVisible();
@@ -946,7 +958,7 @@ test("model outputs keep missing values visible across responsive universe and c
   ).toBeVisible();
   await expect(
     page.getByText(
-      "No usable forward annual Revenue/EPS estimate periods are available.",
+      "The selected source has no future annual Revenue/EPS estimates with resolved fiscal-period ends.",
     ),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Investment Thesis" }).click();
@@ -957,8 +969,13 @@ test("model outputs keep missing values visible across responsive universe and c
   await expect(page.getByLabel("Score dimension")).toBeVisible();
   await page.getByRole("tab", { name: "Valuation" }).click();
   await expect(
-    page.getByRole("heading", { name: "Canonical financial models" }),
+    page.getByText("Canonical financial models", { exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Accepted revisions, imported outputs & migration diagnostics",
+    })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Imported model-output history" }),
   ).toBeVisible();
@@ -3015,7 +3032,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       page.getByRole("heading", { name: "Model family" }),
     ).toBeVisible();
     await page
-      .getByRole("button", { name: "Revision history & migration diagnostics" })
+      .getByRole("button", {
+        name: "Accepted revisions, imported outputs & migration diagnostics",
+      })
       .click();
     await expect(
       page.getByRole("heading", { name: "Model migration status" }),

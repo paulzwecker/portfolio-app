@@ -21,7 +21,8 @@ env:
 jobs:
   quality:
     name: Quality, contracts and build
-    runs-on: ubuntu-latest
+    # Keep the pinned Python 3.12.3 available while ubuntu-latest moves releases.
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -92,7 +93,8 @@ jobs:
 
   integration:
     name: PostgreSQL integration tests
-    runs-on: ubuntu-latest
+    # Match the quality job and preserve the tested Python 3.12.3 environment.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:18

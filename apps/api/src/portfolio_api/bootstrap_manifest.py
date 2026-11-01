@@ -83,6 +83,7 @@ _REQUIRED_KEYS = {
     "approval_ref",
     "depends_on",
 }
+_OPTIONAL_ENTRY_KEYS = {"semantic_fingerprint_version", "semantic_sha256"}
 
 
 class BootstrapManifestError(ValueError):
@@ -143,8 +144,25 @@ def _validate_entry(value: object, index: int) -> dict[str, Any]:
     if not isinstance(value, dict):
         _fail(field, "expected an object")
     entry = cast(dict[str, Any], value)
-    if set(entry) != _REQUIRED_KEYS:
+    if not set(entry) >= _REQUIRED_KEYS or set(entry) - _REQUIRED_KEYS - _OPTIONAL_ENTRY_KEYS:
         _fail(field, "required metadata fields must be present and unknown fields are forbidden")
+
+    semantic_fields = _OPTIONAL_ENTRY_KEYS & set(entry)
+    if semantic_fields and semantic_fields != _OPTIONAL_ENTRY_KEYS:
+        _fail(
+            field,
+            "semantic fingerprint version and digest must be provided together",
+        )
+    if semantic_fields:
+        fingerprint_version = entry["semantic_fingerprint_version"]
+        fingerprint_digest = entry["semantic_sha256"]
+        if fingerprint_version is None and fingerprint_digest is None:
+            pass
+        elif fingerprint_version is None or fingerprint_digest is None:
+            _fail(field, "semantic fingerprint version and digest must both be null or populated")
+        else:
+            _validate_version(fingerprint_version, f"{field}.semantic_fingerprint_version")
+            _validate_hash(fingerprint_digest, f"{field}.semantic_sha256")
 
     source_id = _validate_identifier(entry["source_id"], f"{field}.source_id")
     domain = entry["domain"]

@@ -1,0 +1,84 @@
+{
+  "assessment_date": "2026-10-31",
+  "milestone": "Recovery A",
+  "integration_branch": "codex/recovery-a-bootstrap-freeze-2026-10-31",
+  "integration_merge_commit": "b71ddf00a0fd907f595a3977ee88bdec384b7ab3",
+  "reviewed_baseline": "b02f6c3b1aa9693bfc12d4be2f5750d1f5c8cdcc",
+  "preservation_commit": "9529d40158f507bed6ddd958b7af624dc24f21dc",
+  "preservation_stash": "9bdd3ea6c97fa80950df070fc06443891bb10307",
+  "task7_commit": "d6fd1b57d560306684c4d48ae573f446886654bc",
+  "step_5a1_commit": "6a671e07b35e7b76c07672101578b6371ff92e1a",
+  "task8_value_fidelity_commit": "4931b185e091c519ded3555bc99ac2f081e50a92",
+  "production_writes_performed": false,
+  "production_migrations_performed": false,
+  "google_sheets_modified": false,
+  "remote_operations_performed": false,
+  "current_local_alembic_head": "c17a0b9d4e62",
+  "reviewed_baseline_alembic_head": "6c2eaf0b8147",
+  "migration_graph": [
+    {
+      "revision": "14b4c1a0a001",
+      "down_revision": "12a6f0d9c3e1",
+      "purpose": "canonical bootstrap receipts"
+    },
+    {
+      "revision": "3f7c9d12b6a4",
+      "down_revision": "14b4c1a0a001",
+      "purpose": "historical market bootstrap runs"
+    },
+    {
+      "revision": "6c2eaf0b8147",
+      "down_revision": "3f7c9d12b6a4",
+      "purpose": "fundamentals bootstrap runs; last verified production head"
+    },
+    {
+      "revision": "b16d4f8a2c91",
+      "down_revision": "6c2eaf0b8147",
+      "purpose": "workbook sync artifacts, approvals, runs and previews"
+    },
+    {
+      "revision": "c17a0b9d4e62",
+      "down_revision": "b16d4f8a2c91",
+      "purpose": "allow production target label in market/fundamental run ledgers"
+    }
+  ],
+  "heads": {
+    "integration_branch": ["c17a0b9d4e62"],
+    "b02_baseline": ["6c2eaf0b8147"]
+  },
+  "r7_compatibility": {
+    "decision": "SCHEMA_COMPATIBLE_ON_B02_CHECKOUT",
+    "evidence": "Synthetic PostgreSQL canonical bootstrap passed in an isolated schema downgraded to 6c2eaf0b8147.",
+    "checkout": "codex/r3-integration-baseline at b02f6c3b1aa9693bfc12d4be2f5750d1f5c8cdcc",
+    "not_authorization": true,
+    "current_integration_branch_at_6c": "FAILS_CLOSED_ON_EXACT_ALEMBIC_HEAD_MISMATCH"
+  },
+  "test_results": {
+    "web_unit_passed": 163,
+    "api_unit_passed": 470,
+    "api_unit_skipped": 2,
+    "api_unit_deselected": 147,
+    "source_policy_direct_passed": 3,
+    "focused_postgres_integration_passed": 11,
+    "contract_check": "PASS",
+    "lint_format_typecheck_build": "PASS",
+    "npm_check_status": "WINDOWS_NODE_TEST_WORKER_SPAWN_EPERM",
+    "broader_integration_limitations": [
+      "two role-boundary tests require CREATEROLE on the disposable local test role",
+      "two backup/restore tests require pg_dump/pg_restore or the configured migration tools container"
+    ]
+  },
+  "data_privacy": {
+    "new_private_workbook_data_added": false,
+    "preexisting_tracked_workbooks_found": true,
+    "preexisting_data_bearing_reconciliation_reports_found": true,
+    "full_history_purge_possible_without_history_rewrite": false,
+    "status": "BLOCKER_REQUIRES_SEPARATE_REPOSITORY_DATA_SANITIZATION_DECISION"
+  },
+  "next_steps": [
+    "Use b02 checkout for any separately authorized R7 bootstrap while production remains at 6c.",
+    "After R7 reconciliation, separately review/authorize b16 and c17 before Task 9 sync or R8 production ingestion.",
+    "Resolve local PostgreSQL CREATEROLE and pg_dump/pg_restore test prerequisites without changing production privileges.",
+    "Resolve already tracked source/data history before publishing additional copies of the repository."
+  ]
+}

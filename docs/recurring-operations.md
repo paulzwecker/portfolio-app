@@ -5,10 +5,11 @@
 `npm run dev` starts the existing bounded market-data worker and a separate
 `portfolio_api.recurring_operations` process beside FastAPI and Next.js. The
 operations worker performs no network work during API import or request
-startup. It waits until PostgreSQL and all Alembic heads are ready, checks due
-times in PostgreSQL, and acquires a PostgreSQL advisory lock before running a
-cycle. Repeated development-server starts and multiple worker processes cannot
-run the same cycle concurrently.
+startup. Recurring execution is fail-closed by default; the process waits until
+PostgreSQL and all Alembic heads are ready, then checks the explicit enable flag,
+due times and a PostgreSQL advisory lock before running a cycle. Repeated
+development-server starts and multiple worker processes cannot run the same
+cycle concurrently.
 
 The worker checks due jobs every 60 seconds. It records attempts, completion,
 failure, retry time and result summaries in `recurring_operation_runs`; the
@@ -16,7 +17,10 @@ singleton worker heartbeat is in `recurring_operations_worker_state`. Existing
 provider ingestion runs, Sheets poll records and agent delivery receipts remain
 the detailed domain histories.
 
-User-initiated refreshes use this same worker. The API stores an allowlisted
+User-initiated refreshes can use this worker when recurring operations are
+enabled. With recurring operations disabled, use the separate exact-request
+one-shot runner described in [Workbook Sync Operations](workbook-sync-operations.md).
+The API stores an allowlisted
 request in `operational_job_requests`; the worker claims at most one queued
 request per cycle and records each dependency step in
 `operational_job_attempts`. HTTP requests only enqueue or inspect work; they do
@@ -30,6 +34,10 @@ proxy configurations are untouched. This keeps worker routing local to its
 process and avoids changing machine-wide proxy settings.
 
 ## Jobs and cadence
+
+The table lists cadences used when recurring operations are explicitly enabled.
+The default configuration sets `RECURRING_OPERATIONS_ENABLED=false` and does not
+poll Sheets (`GOOGLE_SHEETS_POLL_SECONDS=0`).
 
 | Job                         | Default cadence  | Behavior                                                                                                                                                                                        |
 | --------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -51,7 +59,9 @@ The recurring worker claims at most one eligible manual request before its
 scheduled work, so user-initiated jobs do not wait behind a full scheduled
 cycle. It then runs SEC facts and filing metadata, optional licensed consensus,
 Sheets discovery, trigger/queue refresh, agent work-feed publication, and
-decision recomputation. Sheets proposal discovery captures
+decision recomputation. A portfolio `WORKBOOK_SYNC` is never part of scheduled
+work or `REFRESH_ALL`; it requires a separately queued operator request and
+explicit schema, preview, and apply review. Sheets proposal discovery captures
 and validates candidate revisions only. No proposal is accepted automatically;
 no target, holding, lifecycle, model assumption or trade is changed by the
 worker.
@@ -65,18 +75,20 @@ The Operations workspace queues fixed operations through
 `POST /v1/operations/job-requests/{request_id}/retry`; it creates a linked
 request and preserves the first attempt.
 
-| Request            | Scope                                                      | Existing service                                                                           |
-| ------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `MARKET_DATA`      | Active universe or one current Portfolio/Watchlist company | Yahoo market ingestion and corporate actions from the same chart response                  |
-| `FX`               | Active universe or one current Portfolio/Watchlist company | Existing Yahoo FX ingestion and required canonical currency pairs                          |
-| `MARKET_AND_FX`    | Active universe or one current Portfolio/Watchlist company | Market and FX ingestion under the startup market worker's advisory lock                    |
-| `SEC_FUNDAMENTALS` | Active universe or one current Portfolio/Watchlist company | Reviewed SEC CIK mappings and Company Facts normalization                                  |
-| `SEC_FILINGS`      | Active universe or one current Portfolio/Watchlist company | Reviewed SEC CIK mappings and EDGAR filing metadata                                        |
-| `SHEETS_DISCOVERY` | Active universe only                                       | Model, research and risk inbox checks plus acknowledgment reconciliation                   |
-| `RESEARCH_REFRESH` | Active universe or one current Portfolio/Watchlist company | Deterministic trigger scan and current queue derivation                                    |
-| `AGENT_WORK_FEED`  | Active universe only                                       | Existing fixed-tab work-feed publication with read-back verification                       |
-| `COMPANY_REFRESH`  | One current Portfolio/Watchlist company                    | Market/FX, SEC facts/filings and company-scoped research refresh                           |
-| `REFRESH_ALL`      | Active universe only                                       | Market/FX, SEC facts/filings, Sheets discovery, research refresh and work-feed publication |
+| Request              | Scope                                                      | Existing service                                                                                                      |
+| -------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `MARKET_DATA`        | Active universe or one current Portfolio/Watchlist company | Yahoo market ingestion and corporate actions from the same chart response                                             |
+| `FX`                 | Active universe or one current Portfolio/Watchlist company | Existing Yahoo FX ingestion and required canonical currency pairs                                                     |
+| `MARKET_AND_FX`      | Active universe or one current Portfolio/Watchlist company | Market and FX ingestion under the startup market worker's advisory lock                                               |
+| `SEC_FUNDAMENTALS`   | Active universe or one current Portfolio/Watchlist company | Reviewed SEC CIK mappings and Company Facts normalization                                                             |
+| `SEC_FILINGS`        | Active universe or one current Portfolio/Watchlist company | Reviewed SEC CIK mappings and EDGAR filing metadata                                                                   |
+| `SHEETS_DISCOVERY`   | Active universe only                                       | Model, research and risk inbox checks plus acknowledgment reconciliation                                              |
+| `WORKBOOK_SYNC`      | Active universe only                                       | Freeze and preview one exact portfolio workbook revision; apply is a separately reviewed command                      |
+| `RESEARCH_REFRESH`   | Active universe or one current Portfolio/Watchlist company | Deterministic trigger scan and current queue derivation                                                               |
+| `DECISION_RECOMPUTE` | Active universe only                                       | Append current Portfolio/Watchlist/Research Rank and Execution Pace snapshots through existing deterministic services |
+| `AGENT_WORK_FEED`    | Active universe only                                       | Existing fixed-tab work-feed publication with read-back verification                                                  |
+| `COMPANY_REFRESH`    | One current Portfolio/Watchlist company                    | Market/FX, SEC facts/filings and company-scoped research refresh                                                      |
+| `REFRESH_ALL`        | Active universe only                                       | Market/FX, SEC facts/filings, Sheets discovery and research refresh                                                   |
 
 Company scope resolves through canonical company identity and its active exact
 listings; the provider still validates its reviewed venue, ticker and currency
@@ -88,12 +100,14 @@ coverage; an unrelated active company with an unresolved listing does not make a
 single-company refresh appear partial.
 
 `REFRESH_ALL` follows the dependency order and excludes licensed FMP consensus,
-ranking/execution recomputation, proposal acceptance and all portfolio-state
-actions. It checks proposal and acknowledgment inboxes and publishes current
-agent work items to the configured workbook; this is stated beside the UI
-action. Company refresh does not write to Sheets. Refreshed facts become
-available to normal analytics, while decision snapshots remain governed by the
-separate decision workflow.
+ranking/execution recomputation, proposal acceptance, portfolio workbook sync,
+work-feed publication and all portfolio-state actions. It checks proposal and
+acknowledgment inboxes. Company refresh does not write to Sheets. Refreshed facts become
+available to normal analytics. Decision snapshots are never part of Refresh All;
+an operator can request `DECISION_RECOMPUTE` as a distinct, explicit operation.
+It reuses the existing services, appends new run history when inputs changed, and
+does not update targets, holdings, models or accept proposals. The recurring
+decision snapshot job remains disabled with recurring operations.
 
 Requests use per-operation cooldowns of three to fifteen minutes and a
 transaction-scoped PostgreSQL lock for identical scopes. Repeated clicks return
@@ -149,8 +163,12 @@ Company Explorer offers only its relevant company-scoped refresh. A successful
 or partial company request signals open frontend data hooks to refetch; provider
 outages do not erase previously stored observations.
 When `RECURRING_OPERATIONS_ENABLED=false`, Operations displays the disabled
-worker state, refresh controls are disabled and the API rejects new requests
-with `503` instead of persisting work that cannot run.
+recurring-worker state. New requests remain disabled unless
+`MANUAL_OPERATIONS_ENABLED=true` is explicitly configured; then they are
+visibly queued for an operator-invoked one-shot process rather than a schedule.
+`WORKBOOK_SYNC_ENABLED=true` is an additional independent gate for the portfolio
+workbook stage job. These flags now default to false and
+`GOOGLE_SHEETS_POLL_SECONDS` defaults to 0.
 
 The development API and web server bind to loopback by default. Operational
 request endpoints follow the application's local-only trust boundary and do
@@ -180,7 +198,11 @@ existing `portfolio_api.market_data_startup` as separate supervised worker
 processes, each with the same migrated PostgreSQL database and secret-backed
 environment. Do not also install an overlapping cron for the same domains.
 The external-data one-shot CLI remains available for operator-requested runs
-and replay; its provider/domain idempotency and run ledger are unchanged.
+and replay; its provider/domain idempotency and run ledger are unchanged. The
+separate `portfolio_api.manual_job_runner <request-id> --confirm-run` processes
+only one previously queued allowlisted request and exits. It does not poll or
+schedule future work. See [Workbook Sync Operations](workbook-sync-operations.md)
+for its environment gates and Render one-off execution guidance.
 
 The user-managed ChatGPT schedules are not created, edited or activated by the
 application. Feed publication is a delivery receipt, not proof an agent

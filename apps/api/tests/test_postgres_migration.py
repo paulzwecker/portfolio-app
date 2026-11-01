@@ -20,9 +20,12 @@ from alembic import command
 from sqlalchemy import Table, create_engine, text
 from sqlalchemy.engine import URL, make_url
 
+from portfolio_api.database import Base
 from portfolio_api.domain import models
-from portfolio_api.migrations import alembic_config
+from portfolio_api.migrations import alembic_config, expected_heads
 from portfolio_api.postgres_migration import (
+    TABLE_GROUP_BY_NAME,
+    TABLE_GROUPS,
     DatabaseEndpoint,
     MigrationToolError,
     _cancel_restore_backend,
@@ -42,6 +45,13 @@ from portfolio_api.postgres_migration import (
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_every_mapped_application_table_has_a_migration_group() -> None:
+    assert set(Base.metadata.tables) <= set(TABLE_GROUP_BY_NAME)
+    assert len(TABLE_GROUP_BY_NAME) == sum(len(group) for group in TABLE_GROUPS.values())
+
+
 MIGRATION_ENVIRONMENT_NAMES = (
     "MIGRATION_SOURCE_URL",
     "MIGRATION_SOURCE_SCHEMA",
@@ -544,8 +554,13 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
         or admin_url.host not in {"127.0.0.1", "localhost", "::1"}
     ):
         pytest.fail("Migration tests only create databases on a loopback _test PostgreSQL endpoint")
-    if not os.environ.get("MIGRATION_PG_TOOLS_CONTAINER") and not shutil.which("pg_dump"):
-        pytest.fail("Set MIGRATION_PG_TOOLS_CONTAINER or install PostgreSQL 18 client tools")
+    if not tools_container:
+        missing_tools = [tool for tool in ("pg_dump", "pg_restore") if not shutil.which(tool)]
+        if missing_tools:
+            pytest.skip(
+                "PostgreSQL migration integration requires PostgreSQL 18 client tools "
+                "(pg_dump and pg_restore) or MIGRATION_PG_TOOLS_CONTAINER"
+            )
 
     names = [f"m14b1_{uuid4().hex[:12]}_{suffix}_test" for suffix in ("source", "target", "abort")]
     restore_role = f"m14b1_restore_{uuid4().hex[:10]}"
@@ -555,6 +570,19 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
         isolation_level="AUTOCOMMIT",
         hide_parameters=True,
     )
+    with admin_engine.connect() as connection:
+        privileges = connection.execute(
+            text(
+                "SELECT rolcreatedb OR rolsuper, rolcreaterole OR rolsuper "
+                "FROM pg_roles WHERE rolname = current_user"
+            )
+        ).one()
+    if not all(privileges):
+        admin_engine.dispose()
+        pytest.skip(
+            "PostgreSQL migration integration requires CREATEDB and CREATEROLE "
+            "on the isolated test server"
+        )
     created: list[str] = []
     database_urls: dict[str, URL] = {}
     try:
@@ -876,7 +904,8 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     assert empty_schema_check["status"] == "EMPTY_TARGET_COMPATIBLE_FOR_FULL_RESTORE"
     assert empty_schema_check["data_only_restore_compatible"] is False
     assert empty_schema_check["source"]["foreign_key_cycles"]
-    assert empty_schema_check["source"]["alembic_heads"] == ["6c2eaf0b8147"]
+    expected_schema_heads = sorted(expected_heads())
+    assert empty_schema_check["source"]["alembic_heads"] == expected_schema_heads
 
     backup_result = backup(archive, source)
     assert backup_result["status"] == "BACKUP_CREATED"
@@ -944,7 +973,7 @@ def test_postgres18_backup_restore_reconcile_and_atomic_failure(
     )
     assert restore_result["status"] == "RESTORED_AND_RECONCILED"
     assert restore_result["target_use"] == "isolated_rehearsal_only"
-    assert restore_result["target"]["alembic_heads"] == ["6c2eaf0b8147"]
+    assert restore_result["target"]["alembic_heads"] == expected_schema_heads
     target_engine = create_engine(target_url, hide_parameters=True)
     try:
         with target_engine.connect() as connection:

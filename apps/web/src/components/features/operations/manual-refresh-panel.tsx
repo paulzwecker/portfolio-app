@@ -19,15 +19,28 @@ const refreshActions: { name: OperationalJobName; label: string }[] = [
   { name: "MARKET_AND_FX", label: "Market prices and FX" },
   { name: "SEC_FUNDAMENTALS", label: "SEC reported fundamentals" },
   { name: "SEC_FILINGS", label: "SEC filing metadata" },
+  { name: "WORKBOOK_SYNC", label: "Stage portfolio workbook sync" },
   { name: "SHEETS_DISCOVERY", label: "Sheets proposals and acknowledgments" },
   { name: "RESEARCH_REFRESH", label: "Research triggers and queue" },
+  {
+    name: "DECISION_RECOMPUTE",
+    label: "Recompute rankings and Execution Pace",
+  },
   { name: "AGENT_WORK_FEED", label: "Publish agent work feed" },
 ];
 
 export function ManualRefreshPanel({
   workerEnabled = true,
+  manualRunnerEnabled = false,
+  workbookSyncEnabled = false,
+  workbookSourceConfigured = false,
+  workbookCredentialsAvailable = false,
 }: {
   workerEnabled?: boolean;
+  manualRunnerEnabled?: boolean;
+  workbookSyncEnabled?: boolean;
+  workbookSourceConfigured?: boolean;
+  workbookCredentialsAvailable?: boolean;
 }) {
   const [requests, setRequests] = useState<OperationalJobRequest[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -114,7 +127,9 @@ export function ManualRefreshPanel({
       setNotice(
         data.deduplicated
           ? "A matching request is already queued or within its cooldown; its status is shown below."
-          : "Refresh request queued for the background operations worker.",
+          : manualRunnerEnabled && !workerEnabled
+            ? "Request queued for an explicitly invoked one-shot operator process."
+            : "Refresh request queued for the background operations worker.",
       );
       await load();
     } catch (error) {
@@ -170,7 +185,7 @@ export function ManualRefreshPanel({
   return (
     <PageSection
       title="Manual refresh"
-      description="Queue bounded work in the existing background workers. Requests are deduplicated during a cooldown and retain step-level outcomes."
+      description="Queue bounded, idempotent work in the existing operations pipeline. Requests are deduplicated during a cooldown and retain step-level outcomes."
       id="manual-refresh"
     >
       <div className="space-y-4">
@@ -181,19 +196,26 @@ export function ManualRefreshPanel({
               recent && Date.parse(recent.cooldown_until) > clockNow;
             const running =
               recent && ["QUEUED", "RUNNING"].includes(recent.status);
-            const disabledReason = !workerEnabled
-              ? "The background operations worker is disabled."
-              : running
-                ? "A matching refresh is already queued or running."
-                : cooling && recent
-                  ? `Available again after ${dateTime(recent.cooldown_until)}.`
-                  : undefined;
+            const disabledReason = !(workerEnabled || manualRunnerEnabled)
+              ? "Manual operations are disabled in this environment."
+              : action.name === "WORKBOOK_SYNC" && !workbookSyncEnabled
+                ? "Workbook synchronization is disabled in this environment."
+                : action.name === "WORKBOOK_SYNC" && !workbookSourceConfigured
+                  ? "Configure the approved portfolio workbook ID and read-only Google service account."
+                  : action.name === "WORKBOOK_SYNC" &&
+                      !workbookCredentialsAvailable
+                    ? "Configure the external read-only Google service-account file."
+                    : running
+                      ? "A matching refresh is already queued or running."
+                      : cooling && recent
+                        ? `Available again after ${dateTime(recent.cooldown_until)}.`
+                        : undefined;
             return (
               <div key={action.name} className="min-w-0">
                 <RefreshAction
                   onClick={() => void queue(action.name)}
                   pending={queueing === action.name}
-                  disabled={!workerEnabled || Boolean(cooling || running)}
+                  disabled={Boolean(disabledReason)}
                   disabledReason={disabledReason}
                 >
                   {action.label}
@@ -202,15 +224,24 @@ export function ManualRefreshPanel({
             );
           })}
         </div>
-        {!workerEnabled && (
+        {!workerEnabled && !manualRunnerEnabled && (
           <p
             role="status"
             className="rounded-md border border-warning/40 p-3 text-sm"
           >
-            Manual refresh is paused because the background operations worker is
-            disabled. Enable it with{" "}
-            <code>RECURRING_OPERATIONS_ENABLED=true</code>
-            and restart the worker.
+            Manual refresh is paused because both the recurring worker and the
+            one-shot operator runner are disabled. Keep recurring work off
+            unless a schedule is approved; an authorized operator can instead
+            enable <code>MANUAL_OPERATIONS_ENABLED=true</code> and run one
+            queued request with the documented one-shot command.
+          </p>
+        )}
+        {!workerEnabled && manualRunnerEnabled && (
+          <p role="status" className="rounded-md border p-3 text-sm">
+            Requests are queued for an explicitly invoked one-shot operator
+            runner. They are not processed on a schedule. Workbook sync only
+            freezes and previews a source revision; applying workbook-owned
+            state is a separate reviewed operation.
           </p>
         )}
         <Card className="border-primary/20 bg-primary/[0.025] shadow-none">
@@ -219,10 +250,10 @@ export function ManualRefreshPanel({
               <p className="font-medium">Refresh All · active universe</p>
               <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 Updates prices, FX, SEC facts and filings; checks proposal and
-                acknowledgment inboxes; refreshes research work; then publishes
-                the current agent work feed to the configured workbook. It does
-                not accept proposals, change models, holdings or targets,
-                recompute decisions or execute trades.
+                acknowledgment inboxes; and refreshes research work. It does not
+                synchronize portfolio workbook data, publish to Sheets, accept
+                proposals, recalculate decisions, change holdings or targets, or
+                execute trades.
               </p>
             </div>
             <RefreshAction
@@ -230,11 +261,13 @@ export function ManualRefreshPanel({
               onClick={() => void queue("REFRESH_ALL")}
               pending={queueing === "REFRESH_ALL"}
               disabled={
-                !workerEnabled || refreshAllRunning || refreshAllCooling
+                !(workerEnabled || manualRunnerEnabled) ||
+                refreshAllRunning ||
+                refreshAllCooling
               }
               disabledReason={
-                !workerEnabled
-                  ? "The background operations worker is disabled."
+                !(workerEnabled || manualRunnerEnabled)
+                  ? "Manual operations are disabled in this environment."
                   : refreshAllDisabledReason
               }
             >
@@ -280,18 +313,22 @@ export function ManualRefreshPanel({
           <ol className="grid gap-3 lg:grid-cols-2">
             {requests.slice(0, 8).map((request) => (
               <li key={request.id} className="min-w-0">
-                <JobStatus job={request} />
-                {request.retry_available && (
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void retry(request)}
-                    >
-                      Retry {statusLabel(request.job_name)}
-                    </Button>
-                  </div>
-                )}
+                <JobStatus
+                  job={request}
+                  manualRunnerEnabled={manualRunnerEnabled}
+                />
+                {request.retry_available &&
+                  (workerEnabled || manualRunnerEnabled) && (
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void retry(request)}
+                      >
+                        Retry {statusLabel(request.job_name)}
+                      </Button>
+                    </div>
+                  )}
               </li>
             ))}
           </ol>

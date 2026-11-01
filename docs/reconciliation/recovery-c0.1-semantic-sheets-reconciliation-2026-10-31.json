@@ -1,0 +1,91 @@
+{
+  "report_version": 1,
+  "comparison_report_version_reviewed": 2,
+  "comparison_contract_version_reviewed": "unavailable_in_supplied_report",
+  "scope": "canonical-bootstrap",
+  "comparison_execution_status": "COMPARED",
+  "consistency_fence": {
+    "source_metadata_matches_snapshot": true,
+    "complete_live_reads": 2,
+    "live_reads_stable": true,
+    "drive_revision_id_available": false,
+    "transaction_atomicity_proven": false
+  },
+  "coverage": {
+    "required_cells": 7861,
+    "ranges": 2257,
+    "chunks_per_sweep": 38,
+    "api_requests": 78,
+    "mismatch_records": 1340,
+    "distinct_affected_cells": 1340,
+    "duplicate_observations": 0
+  },
+  "mismatch_cells_by_importer_domain": {
+    "identity_lifecycle_and_cached_ranks": 633,
+    "quality_assessments": 580,
+    "listing_identity_crosswalk": 112,
+    "investment_scores": 14,
+    "strategic_targets": 1
+  },
+  "source_formula_presence": {
+    "formula_bearing_cells": 1062,
+    "source_literals": 278,
+    "literal_workbook_inputs": 276,
+    "literal_legacy_listing_crosswalk": 1,
+    "literal_workbook_score_assessment": 1
+  },
+  "supplied_report_mismatch_classes": {
+    "FORMULA_DEFINITION_MISMATCH": 1018,
+    "OTHER_VALUE_MISMATCH": 214,
+    "VALUE_TYPE_MISMATCH": 63,
+    "STALE_XLSX_CACHE_CANDIDATE": 33,
+    "CURRENCY_FORMATTING_MISMATCH": 11,
+    "PERCENT_FORMATTING_MISMATCH": 1
+  },
+  "formula_analysis": {
+    "formula_hashes_different": 1018,
+    "equal_normalized_value_hashes": 946,
+    "different_normalized_value_hashes": 72,
+    "equal_hashes_with_empty_formula_cache_on_both_sides": 422,
+    "equal_hashes_with_populated_equal_values": 524,
+    "different_value_fields": {
+      "ScoreAssessment.COMPOUNDER_QUALITY.score": 36,
+      "ScoreAssessment.DURABILITY_10Y.score": 36
+    },
+    "syntax_cause_classification": "UNAVAILABLE_FORMULA_TEXT_NOT_RETAINED"
+  },
+  "formula_definition_mismatch_fields": {
+    "ListingMapping.row_class": 111,
+    "RankingEntry.legacy_portfolio_position": 177,
+    "RankingEntry.legacy_research_position": 200,
+    "RankingEntry.legacy_watchlist_position": 219,
+    "ScoreAssessment.COMPOUNDER_QUALITY.score": 157,
+    "ScoreAssessment.DURABILITY_10Y.score": 154
+  },
+  "stale_xlsx_cache_candidates": {
+    "same_formula_hash_different_value_hash": 33,
+    "legacy_rank_population.current_weight_input": 21,
+    "ScoreAssessment.COMPOUNDER_QUALITY.score": 4,
+    "ScoreAssessment.DURABILITY_10Y.score": 5,
+    "ScoreAssessment.EXECUTION.score": 2,
+    "ScoreAssessment.RISK.score": 1
+  },
+  "non_value_or_importer_equivalent_findings": {
+    "company_name_cross_checks_not_consumed_due_registry_name": 24,
+    "score_evidence_fields_presence_only": 190,
+    "blank_vs_missing_absence_representations": 63,
+    "price_feed_listing_identity_difference_on_excluded_row": 1,
+    "format_only_differences": 12
+  },
+  "canonical_value_differences_requiring_reconciliation": {
+    "score_value_differences": 84,
+    "lifecycle_membership_current_weight_inputs": 21
+  },
+  "source_fidelity_decision": "NO_GO",
+  "blocking_reasons": [
+    "Unreconciled score values include 72 formula-output differences and 12 same-formula cache candidates.",
+    "21 current-weight membership inputs differ and can affect legacy lifecycle classification.",
+    "All 1,018 formula definitions differ; formula text is needed to classify syntax versus logic changes without assuming equivalence."
+  ],
+  "next_action": "Run comparator contract v3 in authorized Windows PowerShell and reconcile exact private evidence before source approval."
+}

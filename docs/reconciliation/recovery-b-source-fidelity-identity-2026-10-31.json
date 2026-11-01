@@ -1,0 +1,69 @@
+{
+  "report_version": 1,
+  "milestone": "Recovery B — Source Fidelity and Identity Resolution",
+  "assessment": "NO_GO",
+  "execution_bounds": {
+    "live_google_accessed": false,
+    "database_accessed": false,
+    "schema_accepted": false,
+    "database_written": false,
+    "provider_ingestion_run": false
+  },
+  "verification": {
+    "workbook_tests_passed": 52,
+    "workbook_tests_skipped": 1,
+    "canonical_bootstrap_unit_tests_passed": 9,
+    "legacy_import_unit_tests_passed": 2,
+    "ruff_check": "PASS",
+    "ruff_format": "PASS",
+    "diff_check": "PASS",
+    "legacy_import_postgres_integration": "BLOCKED_LOCAL_ADVISORY_LOCK_TIMEOUT_BEFORE_IMPORT_WRITE_PATH"
+  },
+  "portfolio_source": {
+    "latest_local_status": "ACQUIRED_REVIEW_REQUIRED",
+    "schema_baseline_accepted": false,
+    "source_revision_available": false,
+    "artifact_integrity_verified": true,
+    "importer_formula_cache_empty_cells": 470,
+    "importer_formula_error_cells": 0,
+    "importer_invalid_values": 61,
+    "live_formula_mismatch_classification": "PENDING_READ_ONLY_LIVE_COMPARISON",
+    "source_projection_counts": {
+      "companies": 219,
+      "listing_mappings": 100,
+      "held_positions": 22,
+      "cash_rows": 2,
+      "target_rows": 16,
+      "score_assessments": 293,
+      "ranking_entries": 657,
+      "ranked_entries": 164
+    },
+    "blocking_source_errors": {
+      "LISTING_FIELDS_INCOMPLETE": 11,
+      "LISTING_MAPPING_UNRESOLVED": 3,
+      "LIFECYCLE_SOURCE_INCOMPLETE": 5
+    },
+    "allocation_membership_warnings": 5,
+    "held_rows_mapped": 22,
+    "held_rows_using_auxiliary_cross_workbook_mapping": 2
+  },
+  "market_data_source": {
+    "schema_baseline_accepted": true,
+    "artifact_integrity_verified": true,
+    "listing_source_rows": 112,
+    "historical_provider_crosswalk_rows_reviewed": 20,
+    "provider_symbol_disagreements": 18,
+    "crosswalk_exact_identities_missing_from_market_source": 2,
+    "corporate_action_rows": 2,
+    "corporate_action_valid_dates": 2,
+    "corporate_action_rows_with_source_url": 2,
+    "corporate_action_rows_flagged_verified": 2,
+    "independent_primary_source_revalidation": false
+  },
+  "overall": {
+    "portfolio_schema_acceptance": "NO_GO",
+    "market_data_schema_acceptance": "EXISTING_BASELINE_REMAINS_ACCEPTED",
+    "source_pair_import_readiness": "NO_GO",
+    "next_required_action": "RUN_BOUNDED_READ_ONLY_LIVE_PORTFOLIO_COMPARE_FROM_AUTHORIZED_WINDOWS_NETWORK_AND_RESOLVE_SOURCE_EXCEPTIONS"
+  }
+}

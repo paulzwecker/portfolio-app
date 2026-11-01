@@ -126,7 +126,12 @@ def test_verify_inputs_rejects_symlinked_artifact(tmp_path: Path) -> None:
     _write_artifacts(input_root, manifest)
     artifact = input_root / "company-identities.artifact"
     artifact.unlink()
-    artifact.symlink_to(outside_artifact)
+    try:
+        artifact.symlink_to(outside_artifact)
+    except OSError as error:
+        if getattr(error, "winerror", None) == 1314:
+            pytest.skip("Creating symlinks requires Windows Developer Mode or elevation.")
+        raise
 
     with pytest.raises(BootstrapManifestError, match="missing, unsafe, or unreadable"):
         verify_source_artifacts(manifest, input_root)

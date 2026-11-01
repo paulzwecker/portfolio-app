@@ -4,7 +4,9 @@
 
 The `portfolio_api.canonical_bootstrap` command imports one explicitly selected,
 schema-approved Task 3 snapshot pair. It requires the current Alembic head and
-the shared database write-target guard. It does not acquire sources, call Google,
+the shared database write-target guard for `apply`, `resume`, and `reconcile`.
+`preview` uses a separate read-only target verifier and does not require write
+authorization. It does not acquire sources, call Google,
 call financial-data providers, migrate the historical local database, or run any
 Task 5–7 ingestion or calculation stage.
 
@@ -19,6 +21,12 @@ source rehearsal and every production write remain separately authorized actions
 | Tested      | Generated workbook fixtures, invalid and stale snapshot rejection, exact decimal and zero-target behavior, target guard, interrupted transaction recovery, rerun idempotency, and PostgreSQL 18 reconciliation. |
 | Staged      | Operator may prepare private source snapshots and a reviewed identifier file, then run preview on an independently verified isolated target.                                                                    |
 | Executed    | Synthetic fixture imports only. No canonical portfolio source import was executed.                                                                                                                              |
+
+For the recovery path that needs only canonical company identity, held security/listing
+identity, holdings/cash, and target allocations, use the direct native Sheets vertical
+slice documented in [`minimal-sheets-portfolio-bootstrap.md`](minimal-sheets-portfolio-bootstrap.md).
+It preserves this full workbook/XLSX bootstrap unchanged, but does not depend on its
+optional model, ranking, score, research, or cached formula outputs.
 
 ## Import scope and exact source mappings
 
@@ -52,6 +60,77 @@ The canonical columns have fixed PostgreSQL numeric scales. Targets must fit
 `Numeric(18,12)`, holdings and cash `Numeric(28,10)`, and scores and research
 priority seeds `Numeric(12,4)`. Values that do not fit exactly are rejected or
 retained as an explicit data-quality gap; they are never silently rounded.
+
+## Importer source fidelity gate
+
+The portfolio acquisition manifest retains the exact XLSX `artifact_sha256` and a
+separate versioned `semantic_sha256` (`portfolio-import-values-v2`) over normalized
+importer-owned cells, including canonical target-field/transformation mappings, source
+roles, and formula-presence state. A byte-different export with the same importer values
+may keep the same semantic fingerprint; it remains a separate raw artifact with its own
+source revision and content hash. Pre-R1 or v1 snapshots must be reacquired before the
+current bootstrap can preview or apply them.
+
+The execution source ledger carries `semantic_fingerprint_version` and
+`semantic_sha256` as an optional pair. Both may be explicitly null for a source without a
+semantic projection; otherwise both must be populated with a valid version token and
+SHA-256 digest. These fields extend, but do not replace, the required source metadata in
+the version-1 bootstrap manifest. The external manifest template may omit this optional
+pair.
+
+Schema approval remains structural. It does not approve source values or make unrelated
+workbook formulas a blocker. The bootstrap preview must still report the affected domain
+as unavailable or blocked when an importer-owned formula cache is empty/invalid or a
+source value cannot be reconciled. In particular:
+
+- Lifecycle still requires the explicit cached source weights and documented research
+  bucket; the importer does not infer membership from holdings or other rows.
+- Missing `Target Architecture!P3` blocks target import because the source target control
+  total cannot be reconciled. Company targets are never rescaled.
+- Missing or erroneous score formulas remain INVALID/null assessments, never zero or
+  neutral assessments.
+- Published model-output formula errors/empty caches remain null `DATA_CHECK` values with
+  their source cells. A live Sheets API result is diagnostic only and must never be
+  substituted into the frozen XLSX import.
+- Formula health is counted only for importer-owned cells. Unrelated dashboard and research
+  formula errors do not prevent schema approval or make an otherwise valid import domain
+  unavailable.
+
+For a native Google spreadsheet, use the bounded read-only comparison command in
+[`workbook-source-acquisition.md`](workbook-source-acquisition.md#read-only-live-sheets-comparison)
+to verify that a frozen snapshot's Drive revision stayed stable while importer values were
+compared with live effective values. A changed source revision requires a new frozen
+snapshot. A same-revision formula-result mismatch is evidence for review, not automatic
+proof that either value is authoritative. The command does not connect to PostgreSQL.
+
+**GO for importer-value fidelity** is domain-specific and requires an exact frozen artifact
+hash, a valid current semantic fingerprint, verified source identity and source-version
+consistency evidence (Drive revision equality when available; otherwise the bounded
+metadata-plus-two-read semantic fence documented in
+[`workbook-source-acquisition.md`](workbook-source-acquisition.md#read-only-live-sheets-comparison)),
+exact decimal/type reconciliation for the relied-upon import fields, and no unresolved
+importer-scoped source blockers. **NO-GO for an affected domain** applies when its inputs
+are missing, invalid, ambiguous, or unreconciled; this does not make unrelated formulas a
+global schema blocker. Live-value comparison never changes the approved source snapshot or
+its values.
+
+The live comparator's default `canonical-bootstrap` scope covers the inputs consumed by
+this initial import. Published model outputs, output history/currency metadata, and legacy
+estimate history are checked separately with `--scope optional-model-research`; use
+`--scope all-importers` when validating both stages. The complete selected scope is planned
+before live requests and must fit the documented per-run range/cell/chunk ceilings. A
+budget-exceeded result is a blocker with no sampling and no live value requests.
+
+For a native Google Sheets portfolio workbook, a source-value comparison must also produce
+an explicitly reviewed, immutable `native-google-sheets-source-values-v1` bundle. Pass its
+exact hash and the separate source-value approval receipt hash to both `preview` and any
+later authorized `apply`. The bootstrap verifies that the bundle matches the same frozen
+artifact, schema, semantic/source identity, and acquisition metadata, then applies its live
+typed values in memory before building the plan. XLSX caches are not an implicit fallback.
+The source-value approval does not accept the workbook schema, assign missing lifecycle,
+resolve listing identity, or authorize a production write. See
+[`native-google-sheets-source-value-bundle.md`](native-google-sheets-source-value-bundle.md)
+for consistency limits, review gates and the Windows operator procedure.
 
 ## Private reviewed CIK input
 
@@ -142,11 +221,15 @@ $providerMapHash = (Get-FileHash -LiteralPath $providerMap -Algorithm SHA256).Ha
 npm run db:bootstrap-canonical -- preview --store $snapshotStore --portfolio-run $portfolioRun --market-run $marketRun --provider-identifiers $providerMap --provider-identifiers-sha256 $providerMapHash --target-environment rehearsal
 ```
 
-Preview checks the current Alembic head, target identity, write privileges,
-source approval and hashes, source mappings, exact numeric scales, current
+Preview checks the current Alembic head, exact live target identity and required
+read privileges, source approval and hashes, source mappings, exact numeric scales, current
 database state, and an in-memory Task 2 manifest contract. It writes no database
-rows. It stores a mode-restricted report under `bootstrap-runs` inside the private
-snapshot store. An ambiguous mapping, unresolved lifecycle, unsupported target,
+rows and requires no production-write authorization. For a remote target it also
+requires the configured Neon API identity and a direct `sslmode=verify-full` endpoint.
+PostgreSQL session read-only mode and a SQLAlchemy mutation guard protect the preview;
+the normal write guard remains required for `apply` and `resume`. Preview stores a
+mode-restricted report under `bootstrap-runs` inside the private snapshot store. An
+ambiguous mapping, unresolved lifecycle, unsupported target,
 or non-empty target without a matching receipt returns exit code 2. Review the
 private report locally; it can contain tickers and source-cell references.
 

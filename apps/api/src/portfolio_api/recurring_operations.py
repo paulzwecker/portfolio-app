@@ -576,7 +576,6 @@ def _manual_job_steps(request: OperationalJobRequest) -> list[tuple[str, list[st
             ("SEC_FILINGS", ["SOURCE_DOCUMENTS"]),
             ("SHEETS_DISCOVERY", ["MODEL_SYNC", "RESEARCH_SYNC", "RISK_SYNC", "ACKNOWLEDGMENTS"]),
             ("RESEARCH_REFRESH", ["RESEARCH_TRIGGERS", "RESEARCH_QUEUE"]),
-            ("AGENT_WORK_FEED", ["AGENT_WORK_FEED"]),
         ]
     if job_name == "COMPANY_REFRESH":
         return [
@@ -585,6 +584,8 @@ def _manual_job_steps(request: OperationalJobRequest) -> list[tuple[str, list[st
             ("SEC_FILINGS", ["SOURCE_DOCUMENTS"]),
             ("RESEARCH_REFRESH", ["RESEARCH_TRIGGERS", "RESEARCH_QUEUE"]),
         ]
+    if job_name == "DECISION_RECOMPUTE":
+        return [("DECISION_RECOMPUTE", JOB_DOMAINS[job_name])]
     if job_name == "MARKET_AND_FX":
         return [("MARKET_AND_FX", JOB_DOMAINS[job_name])]
     if job_name in {
@@ -593,6 +594,7 @@ def _manual_job_steps(request: OperationalJobRequest) -> list[tuple[str, list[st
         "SEC_FUNDAMENTALS",
         "SEC_FILINGS",
         "SHEETS_DISCOVERY",
+        "WORKBOOK_SYNC",
         "RESEARCH_REFRESH",
         "AGENT_WORK_FEED",
     }:
@@ -728,6 +730,32 @@ def _run_manual_step(
         return {"status": report.get("status", "FAILED"), "report": report}
     if step_name == "SHEETS_DISCOVERY":
         return _run_sheets_discovery(engine, settings, manual=True)
+    if step_name == "WORKBOOK_SYNC":
+        from portfolio_api.workbook_sync import stage_current_workbook
+
+        if not settings.workbook_sync_enabled:
+            return {
+                "status": "BLOCKED",
+                "failure_code": "WORKBOOK_SYNC_DISABLED",
+                "failure_message": "Set WORKBOOK_SYNC_ENABLED=true for an operator-requested sync.",
+            }
+        with Session(engine) as session, session.begin():
+            run = stage_current_workbook(session, settings, request_id=request.id)
+            return {
+                "status": "SUCCEEDED"
+                if run.status in {"PREVIEWED", "NO_CHANGES"}
+                else "BLOCKED"
+                if run.status in {"BLOCKED", "SCHEMA_REVIEW_REQUIRED"}
+                else "FAILED",
+                "workbook_sync_run_id": str(run.id),
+                "sync_status": run.status,
+                "artifact_sha256": run.artifact_sha256,
+                "projection_sha256": run.projection_sha256,
+                "summary": run.preview_report.get("summary", {}),
+                "error_code": run.error_code,
+            }
+    if step_name == "DECISION_RECOMPUTE":
+        return _run_decision_recompute(engine)
     if step_name == "RESEARCH_REFRESH":
         return _run_trigger_scan(engine, now_at, company_id=request.company_id)
     if step_name == "AGENT_WORK_FEED":
@@ -744,33 +772,39 @@ def process_manual_job_requests(
     settings: Settings,
     *,
     now_at: datetime | None = None,
+    request_id: UUID | None = None,
 ) -> dict[str, object]:
-    """Claim and execute at most one durable manual request using existing services."""
+    """Claim at most one request, optionally restricting a one-shot run to an exact ID."""
 
     current = _utc(now_at)
-    request_id: UUID | None = None
+    claimed_request_id: UUID | None = None
     with Session(engine) as session:
-        request = session.scalar(
-            select(OperationalJobRequest)
-            .where(
-                (
-                    (OperationalJobRequest.status == "QUEUED")
-                    & (
-                        OperationalJobRequest.next_attempt_at.is_(None)
-                        | (OperationalJobRequest.next_attempt_at <= current)
-                    )
-                )
-                | (
-                    (OperationalJobRequest.status == "RUNNING")
-                    & (OperationalJobRequest.started_at <= current - JOB_STALE_AFTER)
-                )
+        eligible = (
+            (OperationalJobRequest.status == "QUEUED")
+            & (
+                OperationalJobRequest.next_attempt_at.is_(None)
+                | (OperationalJobRequest.next_attempt_at <= current)
             )
+        ) | (
+            (OperationalJobRequest.status == "RUNNING")
+            & (OperationalJobRequest.started_at <= current - JOB_STALE_AFTER)
+        )
+        statement = (
+            select(OperationalJobRequest)
+            .where(eligible)
             .order_by(OperationalJobRequest.requested_at, OperationalJobRequest.id)
             .with_for_update(skip_locked=True)
             .limit(1)
         )
+        if request_id is not None:
+            statement = statement.where(OperationalJobRequest.id == request_id)
+        request = session.scalar(statement)
         if request is None:
-            return {"status": "IDLE", "processed": 0}
+            return {
+                "status": "IDLE" if request_id is None else "REQUEST_NOT_READY",
+                "processed": 0,
+                **({"request_id": str(request_id)} if request_id is not None else {}),
+            }
         if request.status == "RUNNING":
             stale_attempts = list(
                 session.scalars(
@@ -791,14 +825,14 @@ def process_manual_job_requests(
         request.finished_at = None
         request.next_attempt_at = None
         request.attempt_count += 1
-        request_id = request.id
+        claimed_request_id = request.id
         session.commit()
 
-    if request_id is None:
+    if claimed_request_id is None:
         return {"status": "IDLE", "processed": 0}
     step_results: list[dict[str, object]] = []
     with Session(engine) as session:
-        request = session.get(OperationalJobRequest, request_id)
+        request = session.get(OperationalJobRequest, claimed_request_id)
         if request is None:
             return {"status": "FAILED", "reason": "Request disappeared after claim."}
         steps = _manual_job_steps(request)
@@ -1316,6 +1350,16 @@ def recurring_operations_status(
 
     return s.RecurringOperationsStatusRead(
         enabled=settings.recurring_operations_enabled,
+        manual_operations_enabled=settings.manual_operations_enabled,
+        workbook_sync_enabled=settings.workbook_sync_enabled,
+        portfolio_workbook_source_configured=bool(
+            settings.google_drive_portfolio_workbook_file_id
+            or settings.google_sheets_spreadsheet_id
+        ),
+        portfolio_workbook_credentials_available=bool(
+            settings.google_sheets_service_account_file
+            and settings.google_sheets_service_account_file.exists()
+        ),
         worker_state=cast(s.RecurringOperationsWorkerStatus, worker_state),
         worker_started_at=worker.process_started_at if worker else None,
         worker_last_seen_at=worker.last_heartbeat_at if worker else None,

@@ -62,6 +62,51 @@ def test_manifest_validates_dependencies_and_exact_financial_semantics() -> None
     assert validate_manifest(_manifest()) == ["company-identities", "portfolio-state"]
 
 
+def test_manifest_accepts_optional_semantic_fingerprint_pair() -> None:
+    entry = _entry(
+        "portfolio-state",
+        "portfolio_state",
+        decimal_semantics="exact_decimal_strings",
+        missing_value_semantics="null_absent_distinct_from_zero",
+    )
+    entry["semantic_fingerprint_version"] = "portfolio-import-values-v2"
+    entry["semantic_sha256"] = "c" * 64
+
+    assert validate_manifest({"format_version": 1, "baseline_id": "synthetic", "sources": [entry]})
+
+
+def test_manifest_accepts_explicitly_unavailable_semantic_fingerprint_pair() -> None:
+    entry = _entry(
+        "market-source",
+        "market_observations",
+        decimal_semantics="exact_decimal_strings",
+        missing_value_semantics="null_absent_distinct_from_zero",
+    )
+    entry["semantic_fingerprint_version"] = None
+    entry["semantic_sha256"] = None
+
+    assert validate_manifest({"format_version": 1, "baseline_id": "synthetic", "sources": [entry]})
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"semantic_fingerprint_version": "portfolio-import-values-v2"},
+        {"semantic_sha256": "c" * 64},
+        {"semantic_fingerprint_version": None, "semantic_sha256": "c" * 64},
+        {"semantic_fingerprint_version": "portfolio-import-values-v2", "semantic_sha256": "bad"},
+    ],
+)
+def test_manifest_rejects_incomplete_or_invalid_semantic_fingerprint_pair(
+    metadata: dict[str, object],
+) -> None:
+    entry = _entry("portfolio-state", "portfolio_state")
+    entry.update(metadata)
+
+    with pytest.raises(BootstrapManifestError):
+        validate_manifest({"format_version": 1, "baseline_id": "synthetic", "sources": [entry]})
+
+
 def test_manifest_rejects_missing_versus_zero_collapse() -> None:
     manifest = _manifest()
     sources = manifest["sources"]

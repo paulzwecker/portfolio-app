@@ -75,6 +75,26 @@ def test_postgresql_migration_roundtrip() -> None:
             )
             try:
                 assert check_readiness(health_engine, expected_heads()).status == "ok"
+                # Production's last verified schema predates workbook sync and the
+                # model identity/proposal tables. Rehearse the exact pending upgrade
+                # path against this disposable schema before the broader rollback
+                # and clean re-upgrade assertions below.
+                command.downgrade(config, "6c2eaf0b8147")
+                connection.commit()
+                assert MigrationContext.configure(connection).get_current_heads() == (
+                    "6c2eaf0b8147",
+                )
+                assert check_readiness(health_engine, expected_heads()).schema_status == "outdated"
+                command.upgrade(config, "head")
+                connection.commit()
+                assert (
+                    set(MigrationContext.configure(connection).get_current_heads())
+                    == expected_heads()
+                )
+                assert set(inspect(connection).get_table_names(schema=schema)) == set(
+                    Base.metadata.tables
+                ) | {"alembic_version"}
+                assert check_readiness(health_engine, expected_heads()).status == "ok"
                 command.downgrade(config, "base")
                 assert MigrationContext.configure(connection).get_current_heads() == ()
                 connection.commit()

@@ -20,6 +20,19 @@ The cloud-native bootstrap readiness plan remains a reviewed set of existing
 domain-specific commands; a future bootstrap command must integrate the guard as
 described below.
 
+The `canonical_bootstrap preview` command uses a separate read-only database engine
+and target verifier. The engine sets PostgreSQL `default_transaction_read_only=on`
+for each session, rejects known mutating SQL before it reaches the driver, and
+verifies the live database identity, schema access, SELECT privileges, complete
+application schema, Neon control-plane project/branch/endpoint (for remote targets),
+and current Alembic head. This path does not consult production write authorization,
+request interactive bootstrap confirmation, or emit a write-approval audit receipt.
+PostgreSQL read-only transaction mode is the backstop if a mutation bypasses the
+SQLAlchemy statement hook. This path is limited to `preview`; `apply` and `resume`
+continue to use the normal write-target guard and retain all authorization and
+confirmation gates. Preview may write its private report to the selected local
+snapshot store, but it does not write to PostgreSQL.
+
 ## Environment policy
 
 | Target                       | Permitted identity                                                                                                | Additional authorization                                                                                                               |
@@ -167,6 +180,14 @@ and insufficient table privileges are rejected before a write. They do not conne
 to Neon or use portfolio data.
 
 The control-plane key and Neon target have not been exercised against an actual Neon
-branch in CI. The application has no production bootstrap orchestrator. Each future
-command must use the shared factory, add its own bounded/idempotent transaction and
-reconciliation behavior, and keep production disabled until separately authorized.
+branch in CI. The market-data and SEC bootstrap CLIs use the shared factory and
+guard for explicit production-target operation; their production path is manual,
+bounded, and still requires a separate operation-specific authorization. Their
+read-only preview/status/reconciliation commands use the separate read-only verifier.
+No recurring production bootstrap orchestrator is enabled. Other future commands
+must use the shared factory, add bounded/idempotent transaction and reconciliation
+behavior, and keep production disabled until separately authorized.
+The read-only preview integration tests use only a dedicated `_test` PostgreSQL URL
+and temporary schema. They verify Alembic-head reads and bootstrap preview with write
+authorization disabled, reject DML/DDL/sequence mutation attempts, and verify that
+canonical rows and bootstrap receipts remain unchanged.

@@ -34,6 +34,7 @@ from zipfile import BadZipFile, ZipFile
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 DRIVE_FILES_API = "https://www.googleapis.com/drive/v3/files"
 DRIVE_READONLY_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
+SHEETS_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 GOOGLE_SHEET_MIME = "application/vnd.google-apps.spreadsheet"
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 MAX_WORKBOOK_BYTES = 32 * 1024 * 1024
@@ -173,6 +174,52 @@ def _utc_timestamp(value: datetime | None = None) -> str:
 
 def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def _portfolio_semantic_manifest(data: bytes) -> dict[str, Any]:
+    """Fingerprint only current importer-owned portfolio source values."""
+    from portfolio_api.legacy_import import Workbook
+    from portfolio_api.workbook_semantics import semantic_fingerprint
+
+    include_names = {
+        "Universe Registry",
+        "Current Holdings",
+        "Target Architecture",
+        "10Y Durability",
+        "Compounder Quality",
+        "Price Feed",
+        "Model Contract",
+        "Model Revision History",
+        "Estimate History",
+        "Candidate Ranking",
+    }
+    workbook = Workbook.read_bytes(
+        data,
+        lambda name: name in include_names or name.startswith(("P-", "W-", "C-")),
+        source_name=PORTFOLIO_PROFILE.expected_filename,
+        filename=PORTFOLIO_PROFILE.expected_filename,
+    )
+    digest, diagnostics = semantic_fingerprint(workbook)
+    issue_counts = {
+        domain: {
+            "formula_cache_empty": counts.get("FORMULA_CACHE_EMPTY", 0),
+            "formula_errors": counts.get("FORMULA_ERROR", 0),
+            "invalid_values": sum(
+                count for state, count in counts.items() if state.startswith("INVALID")
+            ),
+            "formula_cells": counts.get("FORMULA", 0),
+        }
+        for domain, counts in diagnostics["by_domain"].items()
+    }
+    return {
+        "fingerprint_version": diagnostics["fingerprint_version"],
+        "sha256": digest,
+        "cell_count": diagnostics["cell_count"],
+        "date_system": diagnostics["date_system"],
+        "by_domain": issue_counts,
+        "formula_cache_issues": diagnostics["formula_cache_issues"],
+        "unrelated_formula_cells_excluded": True,
+    }
 
 
 def _canonical_digest(value: object) -> str:
@@ -821,6 +868,32 @@ def load_google_drive_reader(
     return GoogleDriveWorkbookReader(session)
 
 
+def load_google_sheets_readonly_session(credential_path: Path) -> Any:
+    """Load the configured service account with read-only Drive and Sheets scopes."""
+    resolved_path = _assert_private_location(credential_path, label="Google credential")
+    if not resolved_path.is_file():
+        raise WorkbookSourceError(
+            "CREDENTIAL_FILE_MISSING", "The configured Google credential file is missing."
+        )
+    if os.name != "nt" and stat.S_IMODE(resolved_path.stat().st_mode) & 0o077:
+        raise WorkbookSourceError(
+            "CREDENTIAL_FILE_PERMISSIONS",
+            "Restrict the Google credential file to its owner before comparison.",
+        )
+    try:
+        from google.auth.transport.requests import AuthorizedSession
+        from google.oauth2 import service_account
+
+        credentials = service_account.Credentials.from_service_account_file(
+            str(resolved_path), scopes=[DRIVE_READONLY_SCOPE, SHEETS_READONLY_SCOPE]
+        )  # type: ignore[no-untyped-call]
+        return AuthorizedSession(credentials)  # type: ignore[no-untyped-call]
+    except Exception as error:
+        raise WorkbookSourceError(
+            "CREDENTIAL_INVALID", "The Google service-account credential could not be loaded."
+        ) from error
+
+
 class SnapshotStore:
     """Private, append-only manifests and content-addressed workbook blobs."""
 
@@ -847,8 +920,10 @@ class SnapshotStore:
         descriptor, temporary_name = tempfile.mkstemp(prefix=".manifest-", dir=self.run_root)
         temporary = Path(temporary_name)
         try:
-            with suppress(AttributeError, OSError):
-                os.fchmod(descriptor, 0o600)
+            fchmod = getattr(os, "fchmod", None)
+            if fchmod is not None:
+                with suppress(OSError):
+                    fchmod(descriptor, 0o600)
             with os.fdopen(descriptor, "wb") as stream:
                 stream.write(payload)
                 stream.flush()
@@ -1071,6 +1146,10 @@ class SnapshotStore:
             "artifact_sha256": artifact_digest,
             "artifact_bytes": source_manifest.get("artifact_bytes"),
             "blob_path": blob_path,
+            "semantic_fingerprint_version": source_manifest.get("semantic_fingerprint_version"),
+            "semantic_sha256": source_manifest.get("semantic_sha256"),
+            "semantic_summary": source_manifest.get("semantic_summary"),
+            "semantic_state": source_manifest.get("semantic_state"),
             "schema_fingerprint": source_manifest.get("schema_fingerprint"),
             "header_fingerprint": source_manifest.get("header_fingerprint"),
             "schema_state": source_manifest.get("schema_state"),
@@ -1108,7 +1187,9 @@ def acquire_snapshot(
     fetched: AcquiredBytes | None = None
     acquired_at: str | None = None
     artifact_digest: str | None = None
+    blob_path: str | None = None
     inventory: WorkbookInventory | None = None
+    semantic_summary: dict[str, Any] | None = None
     previous: dict[str, Any] | None = None
     try:
         fetched = fetch()
@@ -1124,7 +1205,12 @@ def acquire_snapshot(
                 "EXPECTED_SHA256_MISMATCH",
                 "The acquired workbook does not match the operator-reviewed SHA-256.",
             )
+        # Freeze the exact artifact before inspecting or parsing it. Cloud callers copy
+        # this content-addressed file into durable database storage after acquisition.
+        blob_path = store._store_blob(fetched.data, artifact_digest)
         inventory = inspect_workbook(fetched.data, profile)
+        if profile.key == PORTFOLIO_PROFILE.key:
+            semantic_summary = _portfolio_semantic_manifest(fetched.data)
         previous = store._latest_accepted_manifest(profile.key, identity_digest)
         schema_state = (
             "UNBASELINED"
@@ -1141,7 +1227,15 @@ def acquire_snapshot(
             else "CHANGED"
         )
         schema_accepted = schema_state == "UNCHANGED"
-        blob_path = store._store_blob(fetched.data, artifact_digest)
+        semantic_state = (
+            "NOT_APPLICABLE"
+            if semantic_summary is None
+            else "FIRST_ACQUISITION"
+            if previous is None or not previous.get("semantic_sha256")
+            else "UNCHANGED"
+            if previous.get("semantic_sha256") == semantic_summary.get("sha256")
+            else "CHANGED"
+        )
         manifest: dict[str, Any] = {
             "manifest_version": 1,
             "run_id": run_id,
@@ -1160,6 +1254,12 @@ def acquire_snapshot(
             "artifact_sha256": artifact_digest,
             "artifact_bytes": len(fetched.data),
             "blob_path": blob_path,
+            "semantic_fingerprint_version": (
+                semantic_summary.get("fingerprint_version") if semantic_summary else None
+            ),
+            "semantic_sha256": semantic_summary.get("sha256") if semantic_summary else None,
+            "semantic_state": semantic_state,
+            "semantic_summary": semantic_summary,
             "schema_fingerprint": inventory.schema_fingerprint,
             "header_fingerprint": inventory.header_fingerprint,
             "schema_state": schema_state,
@@ -1201,6 +1301,12 @@ def acquire_snapshot(
             "source_checksum": fetched.source_checksum if fetched else None,
             "source_mime_type": fetched.source_mime_type if fetched else None,
             "schema_fingerprint": inventory.schema_fingerprint if inventory else None,
+            "semantic_fingerprint_version": (
+                semantic_summary.get("fingerprint_version") if semantic_summary else None
+            ),
+            "semantic_sha256": semantic_summary.get("sha256") if semantic_summary else None,
+            "semantic_summary": semantic_summary,
+            "blob_path": blob_path,
             "schema_baseline_accepted": False,
             "review_required": True,
             "import_triggered": False,
@@ -1227,6 +1333,12 @@ def acquire_snapshot(
             "source_modified_at": fetched.source_modified_at if fetched else None,
             "source_checksum": fetched.source_checksum if fetched else None,
             "source_mime_type": fetched.source_mime_type if fetched else None,
+            "schema_fingerprint": inventory.schema_fingerprint if inventory else None,
+            "semantic_fingerprint_version": (
+                semantic_summary.get("fingerprint_version") if semantic_summary else None
+            ),
+            "semantic_sha256": semantic_summary.get("sha256") if semantic_summary else None,
+            "semantic_summary": semantic_summary,
             "schema_baseline_accepted": False,
             "review_required": True,
             "import_triggered": False,
@@ -1304,14 +1416,35 @@ def _read_operator_file(path: Path) -> AcquiredBytes:
     )
 
 
-def _google_source(profile: WorkbookProfile) -> tuple[GoogleDriveWorkbookReader, str]:
+def _google_source(
+    profile: WorkbookProfile, settings: Any | None = None
+) -> tuple[GoogleDriveWorkbookReader, str]:
     id_env = DRIVE_ID_ENVIRONMENT[profile.key]
-    file_id = os.environ.get(id_env, "").strip()
+    configured_file_id = (
+        getattr(settings, "google_drive_portfolio_workbook_file_id", None)
+        if profile.key == "portfolio"
+        else getattr(settings, "google_drive_market_data_workbook_file_id", None)
+    )
+    file_id = str(configured_file_id or os.environ.get(id_env, "")).strip()
+    if not file_id and profile.key == "portfolio":
+        # The application already configures this exact workbook for reviewed Sheets
+        # interoperability. Reuse that explicit identity only for the portfolio profile;
+        # Drive metadata and the full XLSX contract are still validated during acquisition.
+        file_id = str(
+            getattr(settings, "google_sheets_spreadsheet_id", None)
+            or os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", "")
+        ).strip()
     if not file_id:
-        raise WorkbookSourceError(
-            "DRIVE_SOURCE_NOT_CONFIGURED", f"Set {id_env} for the selected source."
+        source_setting = (
+            f"{id_env} or GOOGLE_SHEETS_SPREADSHEET_ID" if profile.key == "portfolio" else id_env
         )
-    credential = os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE", "").strip()
+        raise WorkbookSourceError(
+            "DRIVE_SOURCE_NOT_CONFIGURED", f"Set {source_setting} for the selected source."
+        )
+    credential = str(
+        getattr(settings, "google_sheets_service_account_file", None)
+        or os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE", "")
+    ).strip()
     if not credential:
         raise WorkbookSourceError(
             "CREDENTIAL_FILE_NOT_CONFIGURED",

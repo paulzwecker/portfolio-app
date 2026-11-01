@@ -1534,6 +1534,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/model-revision-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Model Revision Proposals */
+        get: operations["get_model_revision_proposals_v1_model_revision_proposals_get"];
+        put?: never;
+        /** Post Model Revision Proposal */
+        post: operations["post_model_revision_proposal_v1_model_revision_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/model-revision-proposals/{proposal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Model Revision Proposal */
+        get: operations["get_model_revision_proposal_v1_model_revision_proposals__proposal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/model-revision-proposals/{proposal_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Model Revision Proposal Accept */
+        post: operations["post_model_revision_proposal_accept_v1_model_revision_proposals__proposal_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/model-revision-proposals/{proposal_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Model Revision Proposal Preview */
+        post: operations["post_model_revision_proposal_preview_v1_model_revision_proposals__proposal_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/model-revision-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Model Revision Proposal Reject */
+        post: operations["post_model_revision_proposal_reject_v1_model_revision_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/operations/job-requests": {
         parameters: {
             query?: never;
@@ -2362,6 +2448,60 @@ export interface components {
              * Format: uuid
              */
             valuation_listing_id: string;
+        };
+        /** AgentOwnerCashFlowProposalMethod */
+        "AgentOwnerCashFlowProposalMethod-Input": {
+            inputs: components["schemas"]["OwnerCashFlowInput-Input"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            methodology: "OWNER_CASH_FLOW_10Y";
+        };
+        /** AgentOwnerCashFlowProposalMethod */
+        "AgentOwnerCashFlowProposalMethod-Output": {
+            inputs: components["schemas"]["OwnerCashFlowInput-Output"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            methodology: "OWNER_CASH_FLOW_10Y";
+        };
+        /** AgentResidualIncomeProposalMethod */
+        "AgentResidualIncomeProposalMethod-Input": {
+            inputs: components["schemas"]["ResidualIncomeInput-Input"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            methodology: "RESIDUAL_INCOME_10Y_FADE";
+        };
+        /** AgentResidualIncomeProposalMethod */
+        "AgentResidualIncomeProposalMethod-Output": {
+            inputs: components["schemas"]["ResidualIncomeInput-Output"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            methodology: "RESIDUAL_INCOME_10Y_FADE";
+        };
+        /** AgentUfcfDcfProposalMethod */
+        "AgentUfcfDcfProposalMethod-Input": {
+            inputs: components["schemas"]["DcfCalculationInput-Input"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            methodology: "UFCF_DCF_10Y_FADE";
+        };
+        /** AgentUfcfDcfProposalMethod */
+        "AgentUfcfDcfProposalMethod-Output": {
+            inputs: components["schemas"]["DcfCalculationInput-Output"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            methodology: "UFCF_DCF_10Y_FADE";
         };
         /** AllocationInput */
         "AllocationInput-Input": {
@@ -3511,6 +3651,18 @@ export interface components {
             revision_id: string;
             /** Revision Number */
             revision_number: number;
+        };
+        /** DcfCalculationInput */
+        "DcfCalculationInput-Input": {
+            base: components["schemas"]["DcfOperatingBase-Input"];
+            /** Scenarios */
+            scenarios: components["schemas"]["DcfScenarioInput-Input"][];
+        };
+        /** DcfCalculationInput */
+        "DcfCalculationInput-Output": {
+            base: components["schemas"]["DcfOperatingBase-Output"];
+            /** Scenarios */
+            scenarios: components["schemas"]["DcfScenarioInput-Output"][];
         };
         /** DcfOperatingBase */
         "DcfOperatingBase-Input": {
@@ -5355,6 +5507,130 @@ export interface components {
             /** Source Revision Id */
             source_revision_id?: string | null;
         };
+        /**
+         * FinancialModelRevisionProposalV1
+         * @description Producer-neutral, inputs-only proposal envelope; outputs are always server-calculated.
+         */
+        "FinancialModelRevisionProposalV1-Input": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Base Revision Id
+             * Format: uuid
+             */
+            base_revision_id: string;
+            /** Base Revision Number */
+            base_revision_number: number;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * Contract Type
+             * @constant
+             */
+            contract_type: "FinancialModelRevisionProposalV1";
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /** External Revision Id */
+            external_revision_id: string;
+            /** Method */
+            method: components["schemas"]["AgentUfcfDcfProposalMethod-Input"] | components["schemas"]["AgentOwnerCashFlowProposalMethod-Input"] | components["schemas"]["AgentResidualIncomeProposalMethod-Input"];
+            /** Methodology Version */
+            methodology_version: string;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Rationale */
+            rationale: string;
+            /** Source Reference */
+            source_reference: string;
+            /** Supporting Evidence */
+            supporting_evidence: components["schemas"]["FinancialModelEvidenceReference"][];
+            /**
+             * Valuation Listing Id
+             * Format: uuid
+             */
+            valuation_listing_id: string;
+        };
+        /**
+         * FinancialModelRevisionProposalV1
+         * @description Producer-neutral, inputs-only proposal envelope; outputs are always server-calculated.
+         */
+        "FinancialModelRevisionProposalV1-Output": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Base Revision Id
+             * Format: uuid
+             */
+            base_revision_id: string;
+            /** Base Revision Number */
+            base_revision_number: number;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * Contract Type
+             * @constant
+             */
+            contract_type: "FinancialModelRevisionProposalV1";
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /** External Revision Id */
+            external_revision_id: string;
+            /** Method */
+            method: components["schemas"]["AgentUfcfDcfProposalMethod-Output"] | components["schemas"]["AgentOwnerCashFlowProposalMethod-Output"] | components["schemas"]["AgentResidualIncomeProposalMethod-Output"];
+            /** Methodology Version */
+            methodology_version: string;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Rationale */
+            rationale: string;
+            /** Source Reference */
+            source_reference: string;
+            /** Supporting Evidence */
+            supporting_evidence: components["schemas"]["FinancialModelEvidenceReference"][];
+            /**
+             * Valuation Listing Id
+             * Format: uuid
+             */
+            valuation_listing_id: string;
+        };
         /** FinancialModelRevisionRead */
         FinancialModelRevisionRead: {
             actor: components["schemas"]["Actor"];
@@ -7052,6 +7328,130 @@ export interface components {
             /** Weighted Upside */
             weighted_upside: string | null;
         };
+        /** ModelRevisionProposalDecisionRead */
+        ModelRevisionProposalDecisionRead: {
+            /** Accepted Revision Id */
+            accepted_revision_id?: string | null;
+            preview?: components["schemas"]["ModelRevisionProposalPreviewRead"] | null;
+            proposal: components["schemas"]["ModelRevisionProposalRead"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACCEPTED" | "REJECTED" | "PREVIEW_CHANGED" | "CONFLICT" | "INVALID";
+        };
+        /** ModelRevisionProposalDecisionRequest */
+        ModelRevisionProposalDecisionRequest: {
+            /** Decision Note */
+            decision_note: string;
+            /** Preview Fingerprint */
+            preview_fingerprint: string;
+        };
+        /** ModelRevisionProposalDiff */
+        ModelRevisionProposalDiff: {
+            /** After */
+            after: string | null;
+            /** Before */
+            before: string | null;
+            /** Field */
+            field: string;
+        };
+        /** ModelRevisionProposalPreviewRead */
+        ModelRevisionProposalPreviewRead: {
+            /** Current Inputs */
+            current_inputs: {
+                [key: string]: unknown;
+            } | null;
+            /** Current Outputs */
+            current_outputs: {
+                [key: string]: unknown;
+            } | null;
+            /** Current Revision Id */
+            current_revision_id: string | null;
+            /** Current Revision Number */
+            current_revision_number: number | null;
+            /** Input Changes */
+            input_changes?: components["schemas"]["ModelRevisionProposalDiff"][];
+            /** Output Changes */
+            output_changes?: components["schemas"]["ModelRevisionProposalDiff"][];
+            /** Preview Fingerprint */
+            preview_fingerprint: string | null;
+            /**
+             * Previewed At
+             * Format: date-time
+             */
+            previewed_at: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Proposed Inputs */
+            proposed_inputs: {
+                [key: string]: unknown;
+            };
+            /** Proposed Outputs */
+            proposed_outputs: {
+                [key: string]: unknown;
+            } | null;
+            /** Proposed Projections */
+            proposed_projections?: {
+                [key: string]: unknown;
+            }[];
+            /** Reason */
+            reason: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "READY" | "CONFLICT" | "INVALID";
+        };
+        /** ModelRevisionProposalRead */
+        ModelRevisionProposalRead: {
+            /** Accepted Revision Id */
+            accepted_revision_id: string | null;
+            /** Conflicting Proposal Ids */
+            conflicting_proposal_ids?: string[];
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Decision Note */
+            decision_note: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue */
+            issue: string | null;
+            /** Producer Id */
+            producer_id: string;
+            proposal: components["schemas"]["FinancialModelRevisionProposalV1-Output"];
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewer Id */
+            reviewer_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "READY" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED";
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
+        /** ModelRevisionProposalRejectRequest */
+        ModelRevisionProposalRejectRequest: {
+            /** Decision Note */
+            decision_note: string;
+        };
+        /** ModelRevisionProposalSubmissionRead */
+        ModelRevisionProposalSubmissionRead: {
+            proposal: components["schemas"]["ModelRevisionProposalRead"];
+            /** Replayed */
+            replayed: boolean;
+        };
         /** OperationalJobAttemptRead */
         OperationalJobAttemptRead: {
             /** Affected Domains */
@@ -7094,7 +7494,7 @@ export interface components {
              * Job Name
              * @enum {string}
              */
-            job_name: "MARKET_DATA" | "FX" | "MARKET_AND_FX" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "SHEETS_DISCOVERY" | "RESEARCH_REFRESH" | "AGENT_WORK_FEED" | "COMPANY_REFRESH" | "REFRESH_ALL";
+            job_name: "MARKET_DATA" | "FX" | "MARKET_AND_FX" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "SHEETS_DISCOVERY" | "WORKBOOK_SYNC" | "RESEARCH_REFRESH" | "DECISION_RECOMPUTE" | "AGENT_WORK_FEED" | "COMPANY_REFRESH" | "REFRESH_ALL";
             /**
              * Scope Kind
              * @default ACTIVE_UNIVERSE
@@ -7139,7 +7539,7 @@ export interface components {
              * Job Name
              * @enum {string}
              */
-            job_name: "MARKET_DATA" | "FX" | "MARKET_AND_FX" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "SHEETS_DISCOVERY" | "RESEARCH_REFRESH" | "AGENT_WORK_FEED" | "COMPANY_REFRESH" | "REFRESH_ALL";
+            job_name: "MARKET_DATA" | "FX" | "MARKET_AND_FX" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "SHEETS_DISCOVERY" | "WORKBOOK_SYNC" | "RESEARCH_REFRESH" | "DECISION_RECOMPUTE" | "AGENT_WORK_FEED" | "COMPANY_REFRESH" | "REFRESH_ALL";
             lifecycle: components["schemas"]["Lifecycle"] | null;
             /** Next Attempt At */
             next_attempt_at: string | null;
@@ -8036,9 +8436,17 @@ export interface components {
             google_sheets_poll_seconds: number;
             /** Jobs */
             jobs: components["schemas"]["RecurringOperationJobRead"][];
+            /** Manual Operations Enabled */
+            manual_operations_enabled: boolean;
             market_data: components["schemas"]["MarketRefreshStatusRead"];
+            /** Portfolio Workbook Credentials Available */
+            portfolio_workbook_credentials_available: boolean;
+            /** Portfolio Workbook Source Configured */
+            portfolio_workbook_source_configured: boolean;
             /** Sec User Agent Configured */
             sec_user_agent_configured: boolean;
+            /** Workbook Sync Enabled */
+            workbook_sync_enabled: boolean;
             /** Worker Last Seen At */
             worker_last_seen_at: string | null;
             /** Worker Started At */
@@ -13568,6 +13976,216 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketRefreshStatusRead"];
+                };
+            };
+        };
+    };
+    get_model_revision_proposals_v1_model_revision_proposals_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                status?: ("PENDING" | "READY" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED") | null;
+                limit?: number;
+            };
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelRevisionProposalRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_model_revision_proposal_v1_model_revision_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancialModelRevisionProposalV1-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelRevisionProposalSubmissionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_model_revision_proposal_v1_model_revision_proposals__proposal_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelRevisionProposalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_model_revision_proposal_accept_v1_model_revision_proposals__proposal_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelRevisionProposalDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelRevisionProposalDecisionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_model_revision_proposal_preview_v1_model_revision_proposals__proposal_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelRevisionProposalPreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_model_revision_proposal_reject_v1_model_revision_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelRevisionProposalRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelRevisionProposalDecisionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

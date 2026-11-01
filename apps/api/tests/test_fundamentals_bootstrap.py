@@ -7,7 +7,7 @@ import json
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.error import URLError
 from uuid import UUID
 
@@ -18,10 +18,13 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain.models import (
+    CanonicalBootstrapRun,
     Company,
     ConsensusEstimateBatch,
+    CurrentLifecycle,
     FundamentalsBootstrapCheckpoint,
     FundamentalsBootstrapRun,
+    LifecycleEvent,
     ReportedFundamentalObservation,
     SourceDocument,
     SourceDocumentBatch,
@@ -32,7 +35,9 @@ from portfolio_api.fundamentals_bootstrap import (
     FundamentalsBootstrapError,
     ProviderFetchResult,
     SecBootstrapProvider,
+    _parser,
     _report_exit_code,
+    _verify_target,
     execute_fundamentals_bootstrap,
     prepare_fundamentals_bootstrap,
     preview_fundamentals_bootstrap,
@@ -276,9 +281,216 @@ def _execute(
     )
 
 
-def test_bootstrap_preview_is_read_only_and_production_is_rejected() -> None:
-    with pytest.raises(FundamentalsBootstrapError, match="development or rehearsal"):
-        preview_fundamentals_bootstrap(None, target_environment="production")  # type: ignore[arg-type]
+def test_fundamentals_cli_accepts_explicit_production_target() -> None:
+    args = _parser().parse_args(["preview", "--target-environment", "production"])
+    assert args.target_environment == "production"
+
+
+@pytest.mark.integration
+def test_fundamentals_production_scope_is_frozen_for_reviewed_cik_mapping(
+    postgres_engine: Engine,
+) -> None:
+    watch_company_id = UUID("fdd8d17e-5cd7-4b88-8236-dd46ab5d44cc")
+    with Session(postgres_engine) as session:
+        session.add(
+            Company(
+                id=COMPANY_ID,
+                name="Synthetic canonical company",
+                reporting_currency="USD",
+            )
+        )
+        session.flush()
+        portfolio_event = LifecycleEvent(
+            id=UUID("bd72df06-46a9-4f33-8e26-1d4637810f72"),
+            company_id=COMPANY_ID,
+            sequence=1,
+            previous_state=None,
+            new_state="PORTFOLIO",
+            effective_at=RETRIEVED_AT,
+            actor="IMPORT",
+            reason="Synthetic portfolio scope",
+            source="synthetic-test",
+        )
+        watch_company = Company(
+            id=watch_company_id,
+            name="Synthetic Watchlist company",
+            reporting_currency="USD",
+        )
+        session.add(watch_company)
+        session.flush()
+        watch_event = LifecycleEvent(
+            id=UUID("b20ddbc7-f12a-4359-9f4f-03f315be7de3"),
+            company_id=watch_company_id,
+            sequence=1,
+            previous_state=None,
+            new_state="WATCHLIST",
+            effective_at=RETRIEVED_AT,
+            actor="IMPORT",
+            reason="Synthetic watchlist scope",
+            source="synthetic-test",
+        )
+        session.add_all([portfolio_event, watch_event])
+        session.flush()
+        session.add_all(
+            [
+                CurrentLifecycle(company_id=COMPANY_ID, event_id=portfolio_event.id),
+                CurrentLifecycle(company_id=watch_company_id, event_id=watch_event.id),
+            ]
+        )
+        session.flush()
+        session.add(
+            CanonicalBootstrapRun(
+                id=UUID("00000000-0000-0000-0000-000000000088"),
+                input_digest="a" * 64,
+                source_digest="b" * 64,
+                portfolio_snapshot_run_id="1" * 32,
+                market_snapshot_run_id="2" * 32,
+                import_version="synthetic-test",
+                observed_at=RETRIEVED_AT,
+                recorded_at=RETRIEVED_AT,
+                status="APPLIED",
+                report={"reconciliation": {"status": "MATCHED"}, "source_gaps": []},
+            )
+        )
+        session.flush()
+        record_cik_mapping(
+            session,
+            COMPANY_ID,
+            CIK,
+            "Synthetic Holdings Inc.",
+            "https://www.sec.gov/edgar/browse/?CIK=1",
+        )
+        record_cik_mapping(
+            session,
+            watch_company_id,
+            "0000000002",
+            "Synthetic Watchlist Inc.",
+            "https://www.sec.gov/edgar/browse/?CIK=2",
+        )
+        run = prepare_fundamentals_bootstrap(session, target_environment="production")
+        run_id = run.id
+        session.commit()
+
+    with Session(postgres_engine) as session:
+        persisted = session.get(FundamentalsBootstrapRun, run_id)
+        assert persisted is not None
+        assert persisted.target_environment == "production"
+        assert persisted.status == "PREPARED"
+        assert persisted.scope["stage_order"] == [
+            "SOURCE_DOCUMENTS",
+            "REPORTED_FUNDAMENTALS",
+        ]
+        checkpoints = list(
+            session.scalars(
+                select(FundamentalsBootstrapCheckpoint)
+                .where(FundamentalsBootstrapCheckpoint.run_id == run_id)
+                .order_by(FundamentalsBootstrapCheckpoint.sequence_number)
+            )
+        )
+        assert [(checkpoint.company_id, checkpoint.stage) for checkpoint in checkpoints] == [
+            (COMPANY_ID, "SOURCE_DOCUMENTS"),
+            (COMPANY_ID, "REPORTED_FUNDAMENTALS"),
+            (watch_company_id, "SOURCE_DOCUMENTS"),
+            (watch_company_id, "REPORTED_FUNDAMENTALS"),
+        ]
+
+
+def test_fundamentals_preview_supports_read_only_production_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "portfolio_api.fundamentals_bootstrap._load_reviewed_cik_mappings", lambda *_: []
+    )
+    monkeypatch.setattr(
+        "portfolio_api.fundamentals_bootstrap._unmapped_active_companies", lambda *_: []
+    )
+    monkeypatch.setattr(
+        "portfolio_api.fundamentals_bootstrap.canonical_import_readiness",
+        lambda *_: {"ready": False, "status": "MISSING"},
+    )
+    report = preview_fundamentals_bootstrap(
+        cast(Session, object()),
+        target_environment="production",
+    )
+    assert report["target_environment"] == "production"
+    assert report["status"] == "BLOCKED_CANONICAL_IMPORT"
+    assert report["source_limits"]["consensus_estimates"] == "EXCLUDED_LICENSED_SOURCE_DISABLED"
+
+
+@pytest.mark.parametrize(
+    ("read_only", "expected"),
+    ((False, "write"), (True, "read_only")),
+)
+def test_fundamentals_commands_use_target_preflight_for_operation_kind(
+    monkeypatch: pytest.MonkeyPatch,
+    read_only: bool,
+    expected: str,
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "portfolio_api.fundamentals_bootstrap.verify_database_read_only_preflight",
+        lambda *_args, **_kwargs: calls.append("read_only"),
+    )
+    monkeypatch.setattr(
+        "portfolio_api.fundamentals_bootstrap.verify_database_preflight",
+        lambda *_args, **_kwargs: calls.append("write"),
+    )
+    _verify_target(
+        None,  # type: ignore[arg-type]
+        Settings(database_target_environment="production"),
+        "production",
+        read_only=read_only,
+    )
+    assert calls == [expected]
+
+
+@pytest.mark.integration
+def test_production_sec_ingestion_stops_before_provider_without_reconciled_import(
+    postgres_engine: Engine,
+) -> None:
+    run_id = UUID("00000000-0000-0000-0000-000000000099")
+    with Session(postgres_engine) as session:
+        session.add(
+            FundamentalsBootstrapRun(
+                id=run_id,
+                input_digest="c" * 64,
+                mapping_sha256="d" * 64,
+                bootstrap_version="synthetic-test",
+                target_environment="production",
+                scope={"mappings": []},
+                status="PREPARED",
+                prepared_at=RETRIEVED_AT,
+                report={},
+            )
+        )
+        session.commit()
+    provider = SyntheticSecProvider()
+    with pytest.raises(
+        FundamentalsBootstrapError,
+        match="requested target environment does not match",
+    ):
+        execute_fundamentals_bootstrap(
+            postgres_engine,
+            run_id,
+            target_environment="rehearsal",
+            provider=provider,
+            user_agent="Synthetic Portfolio Research test@example.test",
+            max_checkpoints=1,
+        )
+    assert provider.calls == []
+    with pytest.raises(
+        FundamentalsBootstrapError,
+        match="requires a reconciled canonical portfolio import",
+    ):
+        execute_fundamentals_bootstrap(
+            postgres_engine,
+            run_id,
+            target_environment="production",
+            provider=provider,
+            user_agent="Synthetic Portfolio Research test@example.test",
+            max_checkpoints=1,
+        )
+    assert provider.calls == []
 
 
 def test_sec_provider_requires_contact_bearing_user_agent() -> None:

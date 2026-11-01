@@ -1,8 +1,8 @@
 """Bounded, resumable bootstrap of historical prices, FX and corporate actions.
 
 The command reuses the reviewed Yahoo crosswalk and existing provider normalizers.
-It does not run as a worker and deliberately accepts only development or rehearsal
-database targets.
+It does not run as a worker. Production writes use the same verified-target,
+authorization, and interactive confirmation guard as the canonical bootstrap.
 """
 
 from __future__ import annotations
@@ -25,7 +25,12 @@ from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from portfolio_api.bootstrap_preflight import BootstrapPreflightError, verify_database_preflight
+from portfolio_api.bootstrap_preflight import (
+    BootstrapPreflightError,
+    verify_database_preflight,
+    verify_database_read_only_preflight,
+)
+from portfolio_api.canonical_import_readiness import canonical_import_readiness
 from portfolio_api.database import create_database_engine
 from portfolio_api.database_write_target import DatabaseWriteTargetError
 from portfolio_api.domain.models import (
@@ -39,6 +44,7 @@ from portfolio_api.domain.models import (
     MarketDataBatch,
     MarketDataBootstrapCheckpoint,
     MarketDataBootstrapRun,
+    Portfolio,
     PriceObservation,
     Security,
 )
@@ -141,6 +147,52 @@ def _lifecycle_by_company(session: Session) -> dict[UUID, str]:
     }
 
 
+def _priority_ordered_listings(
+    selected: Sequence[tuple[Listing, Security, Company | None]],
+    held_ids: set[UUID],
+    lifecycle: dict[UUID, str],
+) -> list[tuple[Listing, Security, Company | None]]:
+    """Place held listings first, then other Portfolio and Watchlist listings."""
+
+    def priority(item: tuple[Listing, Security, Company | None]) -> tuple[int, str, str, str, str]:
+        listing, _security, company = item
+        state = lifecycle.get(company.id) if company else None
+        tier = (
+            0
+            if listing.id in held_ids
+            else 1
+            if state == "PORTFOLIO"
+            else 2
+            if state == "WATCHLIST"
+            else 3
+        )
+        return (
+            tier,
+            (company.name if company else "").casefold(),
+            listing.venue,
+            listing.ticker,
+            str(listing.id),
+        )
+
+    return sorted(selected, key=priority)
+
+
+def _listing_priority_tier(
+    listing: Listing,
+    company: Company | None,
+    held_ids: set[UUID],
+    lifecycle: dict[UUID, str],
+) -> str:
+    if listing.id in held_ids:
+        return "HELD"
+    state = lifecycle.get(company.id) if company else None
+    if state == "PORTFOLIO":
+        return "PORTFOLIO"
+    if state == "WATCHLIST":
+        return "WATCHLIST"
+    return "OTHER"
+
+
 def _listing_identity(
     listing: Listing,
     security: Security,
@@ -178,9 +230,17 @@ def _mapping_matches_canonical_identity(
 
 
 def _fx_scope(
-    session: Session, listings: Sequence[tuple[Listing, Security, Company | None]]
+    session: Session,
+    listings: Sequence[tuple[Listing, Security, Company | None]],
+    *,
+    company_id: UUID | None = None,
 ) -> tuple[str | None, set[tuple[str, str]]]:
-    base_currency, required = portfolio_fx_requirements(session)
+    if company_id is None:
+        base_currency, required = portfolio_fx_requirements(session)
+    else:
+        portfolio = session.scalar(select(Portfolio).order_by(Portfolio.created_at).limit(1))
+        base_currency = portfolio.base_currency if portfolio is not None else None
+        required = set()
     if base_currency is not None:
         required.update(
             (listing.currency, base_currency)
@@ -198,13 +258,16 @@ def preview_market_data_bootstrap(
     start_date: date,
     end_date: date,
     target_environment: str,
+    company_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Build a data-free request inventory without calling the provider or writing rows."""
     _validate_date_window(start_date, end_date)
-    if target_environment not in {"development", "rehearsal"}:
-        raise MarketDataBootstrapError("Historical market bootstrap is disabled for production.")
-    selected, _held_ids = active_market_listings(session)
+    if target_environment not in {"development", "rehearsal", "production"}:
+        raise MarketDataBootstrapError("The requested market bootstrap target is unsupported.")
+    company_scope = {company_id} if company_id is not None else None
+    selected_rows, held_ids = active_market_listings(session, company_scope)
     lifecycle = _lifecycle_by_company(session)
+    selected = _priority_ordered_listings(selected_rows, held_ids, lifecycle)
     mapped = 0
     blocked: list[dict[str, str]] = []
     listing_rows: list[tuple[Listing, Security, Company | None]] = []
@@ -229,11 +292,16 @@ def preview_market_data_bootstrap(
             )
         else:
             mapped += 1
-    base_currency, required_fx_pairs = _fx_scope(session, listing_rows)
+    base_currency, required_fx_pairs = _fx_scope(session, listing_rows, company_id=company_id)
+    canonical_import = (
+        canonical_import_readiness(session) if target_environment == "production" else None
+    )
     fx_unmapped = sorted(pair for pair in required_fx_pairs if pair not in FX_SYMBOLS)
     return {
         "status": (
-            "READY"
+            "BLOCKED_CANONICAL_IMPORT"
+            if canonical_import is not None and not canonical_import["ready"]
+            else "READY"
             if (selected or required_fx_pairs) and not blocked and not fx_unmapped
             else "BLOCKED"
         ),
@@ -243,6 +311,15 @@ def preview_market_data_bootstrap(
         "target_environment": target_environment,
         "date_window": {"start": start_date.isoformat(), "end": end_date.isoformat()},
         "listing_scope": "canonical PORTFOLIO/WATCHLIST listings plus exact held listings",
+        "company_scope": str(company_id) if company_id is not None else None,
+        "canonical_import_readiness": canonical_import,
+        "listing_priority_counts": {
+            tier: sum(
+                _listing_priority_tier(listing, company, held_ids, lifecycle) == tier
+                for listing, _security, company in selected
+            )
+            for tier in ("HELD", "PORTFOLIO", "WATCHLIST", "OTHER")
+        },
         "selected_listing_count": len(selected),
         "verified_listing_mapping_count": mapped,
         "unresolved_listings": blocked,
@@ -272,6 +349,7 @@ def prepare_market_data_bootstrap(
     start_date: date,
     end_date: date,
     target_environment: str,
+    company_id: UUID | None = None,
 ) -> MarketDataBootstrapRun:
     """Freeze the exact identity and currency-pair scope for later bounded invocations."""
     preview = preview_market_data_bootstrap(
@@ -281,9 +359,12 @@ def prepare_market_data_bootstrap(
         start_date=start_date,
         end_date=end_date,
         target_environment=target_environment,
+        company_id=company_id,
     )
-    selected, _held_ids = active_market_listings(session)
+    company_scope = {company_id} if company_id is not None else None
+    selected_rows, held_ids = active_market_listings(session, company_scope)
     lifecycle = _lifecycle_by_company(session)
+    selected = _priority_ordered_listings(selected_rows, held_ids, lifecycle)
     run_id = uuid4()
     checkpoints: list[MarketDataBootstrapCheckpoint] = []
     listing_manifest: list[dict[str, Any]] = []
@@ -307,7 +388,11 @@ def prepare_market_data_bootstrap(
         mapping_data = mapping.model_dump(mode="json") if valid_mapping and mapping else None
         status = "PENDING" if valid_mapping else "BLOCKED"
         code = None if valid_mapping else "VERIFIED_PROVIDER_MAPPING_MISSING_OR_AMBIGUOUS"
-        details = {"identity": identity, "mapping": mapping_data}
+        details = {
+            "identity": identity,
+            "mapping": mapping_data,
+            "priority_tier": _listing_priority_tier(listing, company, held_ids, lifecycle),
+        }
         listing_manifest.append(details)
         checkpoints.append(
             MarketDataBootstrapCheckpoint(
@@ -331,7 +416,7 @@ def prepare_market_data_bootstrap(
                 report=details,
             )
         )
-    base_currency, required_fx_pairs = _fx_scope(session, selected)
+    base_currency, required_fx_pairs = _fx_scope(session, selected, company_id=company_id)
     fx_manifest: list[dict[str, Any]] = []
     for base, quote in sorted(required_fx_pairs):
         supported = (base, quote) in FX_SYMBOLS
@@ -376,6 +461,7 @@ def prepare_market_data_bootstrap(
         "fx_normalizer_version": YahooFxNormalizer.version,
         "date_window": {"start": start_date.isoformat(), "end": end_date.isoformat()},
         "listing_scope": "canonical PORTFOLIO/WATCHLIST listings plus exact held listings",
+        "company_scope": str(company_id) if company_id is not None else None,
         "base_currency": base_currency,
         "listings": listing_manifest,
         "fx_pairs": fx_manifest,
@@ -1014,6 +1100,11 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         "crosswalk_sha256": run.crosswalk_sha256,
         "date_window": {"start": run.start_date.isoformat(), "end": run.end_date.isoformat()},
         "target_environment": run.target_environment,
+        "canonical_import_readiness": (
+            canonical_import_readiness(session, run_prepared_at=run.prepared_at)
+            if run.target_environment == "production"
+            else None
+        ),
         "checkpoint_counts": dict(sorted(statuses.items())),
         "pending_checkpoints": pending_count,
         "retryable_checkpoints": retryable_count,
@@ -1043,13 +1134,13 @@ def _checkpoint_is_eligible(checkpoint: MarketDataBootstrapCheckpoint, at: datet
 
 
 def _next_checkpoint(
-    session: Session, run_id: UUID, at: datetime
+    session: Session, run: MarketDataBootstrapRun, at: datetime
 ) -> MarketDataBootstrapCheckpoint | None:
     candidates = list(
         session.scalars(
             select(MarketDataBootstrapCheckpoint)
             .where(
-                MarketDataBootstrapCheckpoint.run_id == run_id,
+                MarketDataBootstrapCheckpoint.run_id == run.id,
                 MarketDataBootstrapCheckpoint.status.in_(("PENDING", "FAILED")),
             )
             .order_by(
@@ -1057,6 +1148,23 @@ def _next_checkpoint(
                 MarketDataBootstrapCheckpoint.subject_key,
             )
             .with_for_update(skip_locked=True)
+        )
+    )
+    listing_order: dict[str, int] = {}
+    frozen_listings = run.scope.get("listings", [])
+    if isinstance(frozen_listings, list):
+        for index, item in enumerate(frozen_listings):
+            if not isinstance(item, dict):
+                continue
+            identity = item.get("identity")
+            if isinstance(identity, dict) and isinstance(identity.get("listing_id"), str):
+                listing_order[identity["listing_id"]] = index
+    candidates.sort(
+        key=lambda item: (
+            0 if item.subject_kind == "LISTING" else 1,
+            listing_order.get(item.subject_key, len(listing_order))
+            if item.subject_kind == "LISTING"
+            else item.subject_key,
         )
     )
     return next((item for item in candidates if _checkpoint_is_eligible(item, at)), None)
@@ -1285,6 +1393,7 @@ def execute_market_data_bootstrap(
     engine: Engine,
     run_id: UUID,
     *,
+    target_environment: str,
     crosswalk: YahooListingCrosswalk,
     crosswalk_sha256: str,
     provider: ProviderAdapter,
@@ -1300,6 +1409,17 @@ def execute_market_data_bootstrap(
         run = session.get(MarketDataBootstrapRun, run_id)
         if run is None:
             raise MarketDataBootstrapError("The market-data bootstrap run does not exist.")
+        if run.target_environment != target_environment:
+            raise MarketDataBootstrapError(
+                "The requested target environment does not match the prepared run."
+            )
+        if (
+            target_environment == "production"
+            and not canonical_import_readiness(session, run_prepared_at=run.prepared_at)["ready"]
+        ):
+            raise MarketDataBootstrapError(
+                "Production market ingestion requires a reconciled canonical portfolio import."
+            )
         if run.crosswalk_sha256 != crosswalk_sha256:
             run.status = "BLOCKED"
             run.finished_at = _now()
@@ -1317,7 +1437,7 @@ def execute_market_data_bootstrap(
         _recover_interrupted_checkpoints(session, run.id)
         processed = 0
         while processed < max_checkpoints:
-            checkpoint = _next_checkpoint(session, run.id, _now())
+            checkpoint = _next_checkpoint(session, run, _now())
             if checkpoint is None:
                 break
             _process_checkpoint(
@@ -1339,10 +1459,16 @@ def execute_market_data_bootstrap(
         return report
 
 
-def reconcile_market_data_bootstrap(session: Session, run_id: UUID) -> dict[str, Any]:
+def reconcile_market_data_bootstrap(
+    session: Session, run_id: UUID, *, target_environment: str
+) -> dict[str, Any]:
     run = session.get(MarketDataBootstrapRun, run_id)
     if run is None:
         raise MarketDataBootstrapError("The market-data bootstrap run does not exist.")
+    if run.target_environment != target_environment:
+        raise MarketDataBootstrapError(
+            "The requested target environment does not match the prepared run."
+        )
     checkpoint_reports: list[dict[str, Any]] = []
     differences: list[dict[str, str]] = []
     for checkpoint in session.scalars(
@@ -1481,14 +1607,20 @@ def _parser() -> argparse.ArgumentParser:
         subparser.add_argument("--start-date", type=date.fromisoformat, required=True)
         subparser.add_argument("--end-date", type=date.fromisoformat, required=True)
         subparser.add_argument(
-            "--target-environment", choices=("development", "rehearsal"), required=True
+            "--target-environment",
+            choices=("development", "rehearsal", "production"),
+            required=True,
         )
+        if command in {"preview", "prepare"}:
+            subparser.add_argument("--company-id", type=UUID)
         subparser.add_argument("--report", type=Path)
     for command in ("run", "resume", "status", "reconcile"):
         subparser = commands.add_parser(command)
         subparser.add_argument("--run-id", type=UUID, required=True)
         subparser.add_argument(
-            "--target-environment", choices=("development", "rehearsal"), required=True
+            "--target-environment",
+            choices=("development", "rehearsal", "production"),
+            required=True,
         )
         subparser.add_argument("--report", type=Path)
         if command in {"run", "resume"}:
@@ -1500,8 +1632,15 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _verify_target(engine: Engine, settings: Settings, requested_environment: str) -> None:
-    verify_database_preflight(
+def _verify_target(
+    engine: Engine,
+    settings: Settings,
+    requested_environment: str,
+    *,
+    read_only: bool = False,
+) -> None:
+    verifier = verify_database_read_only_preflight if read_only else verify_database_preflight
+    verifier(
         engine,
         configured_target_environment=settings.database_target_environment,
         requested_target_environment=requested_environment,
@@ -1518,14 +1657,16 @@ def main(argv: list[str] | None = None) -> int:
         settings = Settings()
         if settings.database_url is None:
             raise MarketDataBootstrapError("DATABASE_URL is required for target verification.")
+        read_only = args.command in {"preview", "status", "reconcile"}
         engine = create_database_engine(
             settings,
             write_operation=f"market_data_bootstrap.{args.command}",
-            write_operation_kind="ingestion",
+            write_operation_kind="bootstrap",
+            read_only=read_only,
         )
         if engine is None:
             raise MarketDataBootstrapError("DATABASE_URL is required for target verification.")
-        _verify_target(engine, settings, args.target_environment)
+        _verify_target(engine, settings, args.target_environment, read_only=read_only)
         crosswalk, crosswalk_sha256 = _load_crosswalk(CROSSWALK_PATH)
         with Session(engine) as session:
             if args.command == "preview":
@@ -1536,6 +1677,7 @@ def main(argv: list[str] | None = None) -> int:
                     start_date=args.start_date,
                     end_date=args.end_date,
                     target_environment=args.target_environment,
+                    company_id=args.company_id,
                 )
             elif args.command == "prepare":
                 with session.begin():
@@ -1546,6 +1688,7 @@ def main(argv: list[str] | None = None) -> int:
                         start_date=args.start_date,
                         end_date=args.end_date,
                         target_environment=args.target_environment,
+                        company_id=args.company_id,
                     )
                 report = _run_report(session, prepared_run)
                 report["status"] = prepared_run.status
@@ -1553,6 +1696,7 @@ def main(argv: list[str] | None = None) -> int:
                 report = execute_market_data_bootstrap(
                     engine,
                     args.run_id,
+                    target_environment=args.target_environment,
                     crosswalk=crosswalk,
                     crosswalk_sha256=crosswalk_sha256,
                     provider=YahooFinanceProvider(crosswalk, concurrency=1, retries=3),
@@ -1562,9 +1706,15 @@ def main(argv: list[str] | None = None) -> int:
                 status_run = session.get(MarketDataBootstrapRun, args.run_id)
                 if status_run is None:
                     raise MarketDataBootstrapError("The market-data bootstrap run does not exist.")
+                if status_run.target_environment != args.target_environment:
+                    raise MarketDataBootstrapError(
+                        "The requested target environment does not match the prepared run."
+                    )
                 report = _run_report(session, status_run)
             else:
-                report = reconcile_market_data_bootstrap(session, args.run_id)
+                report = reconcile_market_data_bootstrap(
+                    session, args.run_id, target_environment=args.target_environment
+                )
         if args.report:
             _write_private_report(args.report, report)
         print(
@@ -1573,6 +1723,7 @@ def main(argv: list[str] | None = None) -> int:
                     "status": report.get("status", "FAILED"),
                     "run_id": report.get("run_id"),
                     "checkpoint_counts": report.get("checkpoint_counts", {}),
+                    "canonical_import_readiness": report.get("canonical_import_readiness"),
                     "report_saved": bool(args.report),
                 },
                 sort_keys=True,

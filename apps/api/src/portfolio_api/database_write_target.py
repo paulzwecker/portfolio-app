@@ -89,6 +89,10 @@ class DatabaseWriteTargetError(RuntimeError):
         super().__init__(f"[{code}] {message}")
 
 
+class DatabaseReadOnlyError(DatabaseWriteTargetError):
+    """A sanitized error for an attempted mutation on a read-only database engine."""
+
+
 @dataclass(frozen=True)
 class NeonTargetMetadata:
     project_id: str
@@ -128,6 +132,8 @@ class LiveDatabaseIdentity:
     missing_tables: tuple[str, ...] = ()
     missing_privileges: tuple[str, ...] = ()
     missing_owned_objects: tuple[str, ...] = ()
+    transaction_read_only: bool = False
+    default_transaction_read_only: bool = False
 
 
 class NeonControlPlaneClient:
@@ -615,6 +621,185 @@ def validate_database_write_target(
     )
 
 
+def validate_database_read_target(
+    *,
+    settings: Settings,
+    url: URL,
+    identity: LiveDatabaseIdentity,
+    neon_target: NeonTargetMetadata | None,
+) -> None:
+    """Verify an exact database target without authorizing or auditing writes."""
+    if settings.app_env not in {"development", "preview", "production"}:
+        raise DatabaseWriteTargetError("application_environment_invalid", "APP_ENV is invalid.")
+    if url.host is None or url.database is None:
+        raise DatabaseWriteTargetError(
+            "connection_target_incomplete", "DATABASE_URL must identify a host and database."
+        )
+    environment = _target_environment(settings)
+    target_database = _target_database(settings, url, environment)
+    if settings.app_env == "production" and environment != "production":
+        raise DatabaseWriteTargetError(
+            "application_target_environment_mismatch",
+            "A production application must target the verified production branch.",
+        )
+    if settings.app_env == "preview" and environment != "rehearsal":
+        raise DatabaseWriteTargetError(
+            "application_target_environment_mismatch",
+            "A preview application must target an explicitly designated rehearsal branch.",
+        )
+
+    expected_host = _normalize_host(url.host)
+    if (
+        _normalize_host(identity.url_host) != expected_host
+        or _normalize_host(identity.driver_host) != expected_host
+        or identity.url_port != identity.driver_port
+        or identity.url_database != url.database
+        or identity.driver_database != url.database
+        or identity.server_database != target_database
+    ):
+        raise DatabaseWriteTargetError(
+            "live_connection_target_mismatch",
+            "The live PostgreSQL connection does not match DATABASE_URL and the expected database.",
+        )
+    if not identity.can_connect or not identity.can_use_schema:
+        raise DatabaseWriteTargetError(
+            "insufficient_database_privileges",
+            "The connected role lacks database CONNECT or current-schema USAGE privilege.",
+        )
+    if identity.missing_tables:
+        raise DatabaseWriteTargetError(
+            "application_schema_incomplete",
+            "One or more mapped application tables are absent from the selected schema.",
+        )
+    if identity.missing_privileges:
+        raise DatabaseWriteTargetError(
+            "insufficient_read_privileges",
+            "The connected role lacks SELECT privileges required for a read-only preview.",
+        )
+    if not identity.transaction_read_only or not identity.default_transaction_read_only:
+        raise DatabaseWriteTargetError(
+            "read_only_database_required",
+            "Read-only verification requires a database session configured read-only by default.",
+        )
+
+    if _is_loopback(url.host):
+        if environment != "development" or settings.app_env != "development":
+            raise DatabaseWriteTargetError(
+                "local_target_environment_mismatch",
+                "Loopback PostgreSQL is only allowed for isolated development targets.",
+            )
+        if neon_target is not None:
+            raise DatabaseWriteTargetError(
+                "unexpected_neon_metadata", "A local database cannot use Neon target metadata."
+            )
+        return
+
+    if _is_pooler(url.host, identity.url_port):
+        raise DatabaseWriteTargetError(
+            "pooled_endpoint_not_supported",
+            "Read-only target verification requires a direct PostgreSQL endpoint, not a pooler.",
+        )
+    if url.query.get("sslmode") != "verify-full":
+        raise DatabaseWriteTargetError(
+            "tls_hostname_verification_required",
+            "Remote target verification requires sslmode=verify-full.",
+        )
+    if identity.role_is_superuser:
+        raise DatabaseWriteTargetError(
+            "superuser_write_role_rejected",
+            "Remote application connections must use a non-superuser database role.",
+        )
+    if identity.driver_hostaddr is None:
+        raise DatabaseWriteTargetError(
+            "resolved_endpoint_unavailable",
+            "The active PostgreSQL connection did not expose its resolved endpoint address.",
+        )
+    try:
+        resolved_addresses = {
+            str(item[4][0]).split("%", maxsplit=1)[0]
+            for item in socket.getaddrinfo(url.host, identity.url_port, type=socket.SOCK_STREAM)
+        }
+    except OSError:
+        raise DatabaseWriteTargetError(
+            "endpoint_resolution_failed", "The configured database endpoint did not resolve."
+        ) from None
+    resolved_address = identity.driver_hostaddr.split("%", maxsplit=1)[0]
+    if resolved_address not in resolved_addresses:
+        raise DatabaseWriteTargetError(
+            "resolved_endpoint_mismatch",
+            "The active PostgreSQL connection address is not a current resolution of DATABASE_URL.",
+        )
+    if neon_target is None:
+        raise DatabaseWriteTargetError(
+            "neon_target_metadata_required",
+            "Remote target verification requires Neon project, branch, and endpoint metadata.",
+        )
+    if not all((settings.neon_project_id, settings.neon_branch_id, settings.neon_endpoint_id)):
+        raise DatabaseWriteTargetError(
+            "neon_target_configuration_incomplete",
+            "Set NEON_PROJECT_ID, NEON_BRANCH_ID, and NEON_ENDPOINT_ID explicitly.",
+        )
+    if (
+        neon_target.project_id != settings.neon_project_id
+        or neon_target.branch_id != settings.neon_branch_id
+        or neon_target.endpoint_id != settings.neon_endpoint_id
+    ):
+        raise DatabaseWriteTargetError(
+            "neon_configured_identity_mismatch",
+            "Neon control-plane IDs do not match the configured project, branch, and endpoint.",
+        )
+    if neon_target.branch_project_id not in {None, neon_target.project_id} or (
+        neon_target.endpoint_project_id not in {None, neon_target.project_id}
+    ):
+        raise DatabaseWriteTargetError(
+            "neon_project_mismatch", "The Neon branch or endpoint belongs to another project."
+        )
+    if _normalize_host(neon_target.endpoint_host) != expected_host:
+        raise DatabaseWriteTargetError(
+            "endpoint_host_mismatch",
+            "DATABASE_URL host does not match the configured Neon endpoint metadata.",
+        )
+    if neon_target.endpoint_branch_id != neon_target.branch_id:
+        raise DatabaseWriteTargetError(
+            "endpoint_branch_mismatch", "The configured endpoint is attached to another branch."
+        )
+    if neon_target.endpoint_type not in {"read_only", "read_write"} or (
+        neon_target.endpoint_state not in {"active", "idle"}
+    ):
+        raise DatabaseWriteTargetError(
+            "endpoint_not_ready", "The verified Neon endpoint is not ready for reads."
+        )
+    if neon_target.branch_state != "ready":
+        raise DatabaseWriteTargetError(
+            "branch_not_ready", "The verified Neon branch is not in the ready state."
+        )
+    primary_by_id = neon_target.branch_id == neon_target.primary_branch_id
+    if neon_target.branch_is_primary != primary_by_id:
+        raise DatabaseWriteTargetError(
+            "neon_primary_branch_ambiguous",
+            "Neon branch primary metadata is inconsistent with the project branch list.",
+        )
+    if environment == "production":
+        if not primary_by_id:
+            raise DatabaseWriteTargetError(
+                "production_requires_primary_branch",
+                "Production reads must target the verified Neon primary branch.",
+            )
+    else:
+        if primary_by_id:
+            raise DatabaseWriteTargetError(
+                "nonproduction_primary_branch_rejected",
+                "Development and rehearsal reads cannot target the Neon primary branch.",
+            )
+        if environment == "rehearsal" and (
+            neon_target.branch_parent_id != neon_target.primary_branch_id
+        ):
+            raise DatabaseWriteTargetError(
+                "rehearsal_branch_not_isolated",
+                "A rehearsal branch must be a direct child of the verified primary branch.",
+            )
+
+
 def _audit_record(
     operation: str,
     operation_kind: WriteOperationKind,
@@ -655,16 +840,29 @@ def _audit_record(
     }
 
 
-def _application_table_names() -> tuple[str, ...]:
+def _application_table_names(required_tables: tuple[str, ...] | None = None) -> tuple[str, ...]:
     # Late imports avoid a database.py -> guard -> database.py import cycle.
     from portfolio_api.database import Base
     from portfolio_api.domain import models as _models  # noqa: F401
 
-    return tuple(sorted(Base.metadata.tables))
+    available = set(Base.metadata.tables)
+    if required_tables is None:
+        return tuple(sorted(available))
+    requested = set(required_tables)
+    if not requested or len(requested) != len(required_tables) or not requested <= available:
+        raise DatabaseWriteTargetError(
+            "read_table_scope_invalid",
+            "The read-only target check requested an unsupported application table scope.",
+        )
+    return tuple(sorted(requested))
 
 
 def _read_live_identity(
-    connection: Connection, operation_kind: WriteOperationKind
+    connection: Connection,
+    operation_kind: WriteOperationKind,
+    *,
+    read_only: bool = False,
+    required_application_tables: tuple[str, ...] | None = None,
 ) -> LiveDatabaseIdentity:
     url = connection.engine.url
     if url.host is None or url.database is None:
@@ -695,10 +893,12 @@ def _read_live_identity(
                       (SELECT rolsuper FROM pg_roles WHERE rolname = current_user),
                       has_database_privilege(current_user, current_database(), 'CONNECT'),
                       has_schema_privilege(current_user, current_schema(), 'USAGE'),
-                      has_schema_privilege(current_user, current_schema(), 'CREATE')"""
+                      has_schema_privilege(current_user, current_schema(), 'CREATE'),
+                      current_setting('transaction_read_only')::boolean,
+                      current_setting('default_transaction_read_only')::boolean"""
         )
         row = cursor.fetchone()
-        if row is None or len(row) != 10:
+        if row is None or len(row) != 12:
             raise DatabaseWriteTargetError(
                 "live_connection_identity_unavailable",
                 "PostgreSQL did not return complete live database identity metadata.",
@@ -714,6 +914,8 @@ def _read_live_identity(
             can_connect,
             can_use_schema,
             can_create_schema,
+            transaction_read_only,
+            default_transaction_read_only,
         ) = row
         missing_tables: tuple[str, ...] = ()
         missing_privileges: tuple[str, ...] = ()
@@ -730,7 +932,7 @@ def _read_live_identity(
             )
             missing_owned_objects = tuple(str(row[0]) for row in cursor.fetchall())
         else:
-            table_names = _application_table_names()
+            table_names = _application_table_names(required_application_tables)
             cursor.execute(
                 """WITH expected(table_name) AS (
                        SELECT unnest(%s::text[])
@@ -768,12 +970,12 @@ def _read_live_identity(
                 if not exists:
                     absent.append(str(table_name))
                     continue
-                for privilege, allowed in (
-                    ("SELECT", can_select),
-                    ("INSERT", can_insert),
-                    ("UPDATE", can_update),
-                    ("DELETE", can_delete),
-                ):
+                required_privileges = [("SELECT", can_select)]
+                if not read_only:
+                    required_privileges.extend(
+                        (("INSERT", can_insert), ("UPDATE", can_update), ("DELETE", can_delete))
+                    )
+                for privilege, allowed in required_privileges:
                     if not allowed:
                         denied.append(f"{table_name}:{privilege}")
             missing_tables = tuple(absent)
@@ -808,6 +1010,8 @@ def _read_live_identity(
         missing_tables=missing_tables,
         missing_privileges=missing_privileges,
         missing_owned_objects=missing_owned_objects,
+        transaction_read_only=bool(transaction_read_only),
+        default_transaction_read_only=bool(default_transaction_read_only),
     )
 
 
@@ -954,6 +1158,49 @@ def _statement_may_write(statement: str, context: Any) -> bool:
     return False
 
 
+class DatabaseReadOnlyGuard:
+    """Reject mutating SQL before it can reach a preview database connection."""
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    def before_cursor_execute(
+        self,
+        _connection: Connection,
+        _cursor: Any,
+        statement: str,
+        _parameters: Any,
+        context: Any,
+        _executemany: bool,
+    ) -> None:
+        if _statement_may_write(statement, context):
+            raise DatabaseReadOnlyError(
+                "read_only_database_mutation_rejected",
+                "A read-only operation attempted a database mutation.",
+            )
+
+
+def install_database_read_only_guard(engine: Engine, settings: Settings) -> DatabaseReadOnlyGuard:
+    """Install a mutation-rejecting guard with no write authorization or audit path."""
+    existing = getattr(engine, "_portfolio_database_read_only_guard", None)
+    if existing is not None:
+        if not isinstance(existing, DatabaseReadOnlyGuard):
+            raise DatabaseReadOnlyError(
+                "read_only_guard_already_configured",
+                "The SQLAlchemy engine already has an incompatible read-only guard.",
+            )
+        return existing
+    if getattr(engine, "_portfolio_database_write_target_guard", None) is not None:
+        raise DatabaseReadOnlyError(
+            "read_only_guard_already_configured",
+            "A database engine cannot combine read-only and write-target guards.",
+        )
+    guard = DatabaseReadOnlyGuard(settings)
+    event.listen(engine, "before_cursor_execute", guard.before_cursor_execute)
+    engine._portfolio_database_read_only_guard = guard  # type: ignore[attr-defined]
+    return guard
+
+
 def install_database_write_target_guard(
     engine: Engine,
     settings: Settings,
@@ -977,6 +1224,11 @@ def install_database_write_target_guard(
                 "A SQLAlchemy engine cannot be reused for a different write operation.",
             )
         return existing
+    if getattr(engine, "_portfolio_database_read_only_guard", None) is not None:
+        raise DatabaseWriteTargetError(
+            "write_guard_already_configured",
+            "A database engine cannot combine read-only and write-target guards.",
+        )
     guard = DatabaseWriteTargetGuard(
         settings,
         operation=operation,
@@ -1009,4 +1261,55 @@ def verify_database_write_target(engine: Engine) -> None:
     except Exception:
         raise DatabaseWriteTargetError(
             "target_preflight_failed", "The database write-target preflight failed."
+        ) from None
+
+
+def verify_database_read_target(
+    engine: Engine, *, required_tables: tuple[str, ...] | None = None
+) -> None:
+    """Verify exact read target identity, optionally scoping checks to required app tables.
+
+    The default checks the complete mapped schema. Narrow scopes are intended only
+    for documented read-only previews that query a strict subset of domain tables.
+    """
+    guard = getattr(engine, "_portfolio_database_read_only_guard", None)
+    if not isinstance(guard, DatabaseReadOnlyGuard):
+        raise DatabaseWriteTargetError(
+            "read_only_guard_not_installed", "Install the read-only database guard first."
+        )
+    try:
+        with engine.connect() as connection:
+            identity = _read_live_identity(
+                connection,
+                "application",
+                read_only=True,
+                required_application_tables=required_tables,
+            )
+            url = connection.engine.url
+            neon_target: NeonTargetMetadata | None = None
+            if url.host is not None and not _is_loopback(url.host):
+                api_key = guard.settings.neon_api_key
+                project_id = guard.settings.neon_project_id
+                branch_id = guard.settings.neon_branch_id
+                endpoint_id = guard.settings.neon_endpoint_id
+                if api_key is None or not all((project_id, branch_id, endpoint_id)):
+                    raise DatabaseWriteTargetError(
+                        "neon_target_configuration_incomplete",
+                        "Read-only remote verification requires the Neon API key and exact IDs.",
+                    )
+                neon_target = NeonControlPlaneClient(api_key.get_secret_value()).read_target(
+                    str(project_id), str(branch_id), str(endpoint_id)
+                )
+            validate_database_read_target(
+                settings=guard.settings,
+                url=url,
+                identity=identity,
+                neon_target=neon_target,
+            )
+            connection.rollback()
+    except DatabaseWriteTargetError:
+        raise
+    except Exception:
+        raise DatabaseWriteTargetError(
+            "read_target_preflight_failed", "The read-only database target could not be verified."
         ) from None

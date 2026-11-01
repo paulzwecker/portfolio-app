@@ -55,6 +55,7 @@ from portfolio_api.external_data import (
 )
 from portfolio_api.legacy_import import Workbook
 from portfolio_api.settings import Settings
+from portfolio_api.workbook_semantics import _excel_serial_date
 
 FMP_PROVIDER_ID = "fmp_estimates"
 LEGACY_PROVIDER_ID = "legacy_workbook_estimates"
@@ -634,7 +635,43 @@ def legacy_estimate_import_plan(
                     }
                 )
                 continue
-            snapshot = _excel_date(_cell_value(cells, "A"))
+            snapshot_cell = cells.get("A")
+            if (
+                snapshot_cell is not None
+                and snapshot_cell.formula is not None
+                and (snapshot_cell.value is None or not snapshot_cell.value.strip())
+            ):
+                rows.append(
+                    {
+                        "row": row_number,
+                        "ticker": ticker,
+                        "metric": metric,
+                        "horizon": horizon,
+                        "status": "INVALID_SOURCE_DATE",
+                        "quality_reason": "The source date formula has no cached value.",
+                        "source_ref": (
+                            f"{_workbook_label(workbook_path)}#Estimate History!A{row_number}"
+                        ),
+                    }
+                )
+                continue
+            try:
+                snapshot = _excel_date(_cell_value(cells, "A"), workbook.date_system)
+            except (InvalidOperation, ValueError, OverflowError):
+                rows.append(
+                    {
+                        "row": row_number,
+                        "ticker": ticker,
+                        "metric": metric,
+                        "horizon": horizon,
+                        "status": "INVALID_SOURCE_DATE",
+                        "quality_reason": "The source date is not a valid Excel date serial.",
+                        "source_ref": (
+                            f"{_workbook_label(workbook_path)}#Estimate History!A{row_number}"
+                        ),
+                    }
+                )
+                continue
             rows.append(
                 {
                     "row": row_number,
@@ -663,6 +700,7 @@ def legacy_estimate_import_plan(
         "company_rows": len(source_tickers),
         "resolved_company_count": len(resolved_tickers),
         "observation_count": len([row for row in rows if "value" in row]),
+        "invalid_source_date_count": sum(row["status"] == "INVALID_SOURCE_DATE" for row in rows),
         "unresolved_identity_rows": [row for row in rows if row["status"] == "UNRESOLVED_IDENTITY"],
         "limitations": [
             "Provider/vendor identity is absent",
@@ -915,12 +953,14 @@ def _workbook_label(path: Path) -> str:
         return path.as_posix()
 
 
-def _excel_date(value: str | None) -> date:
+def _excel_date(value: str | None, date_system: str = "1900") -> date:
     if value is None:
         return LEGACY_SNAPSHOT_DATE
-    # Excel's 1900 date system; the observed workbook serial is deliberately validated.
-    days = int(Decimal(value))
-    return date(1899, 12, 30).fromordinal(date(1899, 12, 30).toordinal() + days)
+    # This workbook field is a date-only serial; it has no intraday estimate timestamp.
+    parsed = _excel_serial_date(value, date_system)
+    if parsed is None:
+        raise ValueError("The source date is not an integral, valid Excel date serial.")
+    return date.fromisoformat(parsed)
 
 
 def main() -> None:

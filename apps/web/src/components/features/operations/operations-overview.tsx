@@ -277,7 +277,15 @@ export function OperationsOverview() {
     <div className="space-y-8">
       {header}
 
-      <ManualRefreshPanel workerEnabled={data.enabled} />
+      <ManualRefreshPanel
+        workerEnabled={data.enabled}
+        manualRunnerEnabled={data.manual_operations_enabled}
+        workbookSyncEnabled={data.workbook_sync_enabled}
+        workbookSourceConfigured={data.portfolio_workbook_source_configured}
+        workbookCredentialsAvailable={
+          data.portfolio_workbook_credentials_available
+        }
+      />
 
       <section
         aria-label="Operational summary"

@@ -35,15 +35,23 @@ class Settings(BaseSettings):
     neon_branch_id: str | None = None
     neon_endpoint_id: str | None = None
     api_access_token: SecretStr | None = None
+    model_proposal_agent_token: SecretStr | None = None
+    model_proposal_agent_id: str | None = None
+    model_proposal_reviewer_token: SecretStr | None = None
+    model_proposal_reviewer_id: str | None = None
     cloud_ingestion_enabled: bool = False
     sec_user_agent: str | None = None
     fmp_api_key: SecretStr | None = None
     google_sheets_spreadsheet_id: str | None = None
+    google_drive_portfolio_workbook_file_id: str | None = None
+    google_drive_market_data_workbook_file_id: str | None = None
     google_sheets_service_account_file: Path | None = None
     google_sheets_sync_tab: str = "Application Model Sync Inbox"
-    google_sheets_poll_seconds: int = 3600
+    google_sheets_poll_seconds: int = 0
     google_sheets_request_timeout_seconds: int = 20
-    recurring_operations_enabled: bool = True
+    recurring_operations_enabled: bool = False
+    manual_operations_enabled: bool = False
+    workbook_sync_enabled: bool = False
     fmp_consensus_ingestion_enabled: bool = False
 
     @field_validator("google_sheets_spreadsheet_id")
@@ -51,6 +59,15 @@ class Settings(BaseSettings):
     def validate_google_spreadsheet_id(cls, value: str | None) -> str | None:
         if value is not None and not re.fullmatch(r"[A-Za-z0-9_-]{20,}", value):
             raise ValueError("GOOGLE_SHEETS_SPREADSHEET_ID must be a spreadsheet ID, not a URL")
+        return value
+
+    @field_validator(
+        "google_drive_portfolio_workbook_file_id", "google_drive_market_data_workbook_file_id"
+    )
+    @classmethod
+    def validate_drive_file_id(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Za-z0-9_-]{20,}", value):
+            raise ValueError("Google Drive workbook settings must contain a file ID, not a URL")
         return value
 
     @field_validator("google_sheets_sync_tab")
@@ -66,6 +83,16 @@ class Settings(BaseSettings):
         if value != 0 and value < 60:
             raise ValueError("GOOGLE_SHEETS_POLL_SECONDS must be 0 or at least 60")
         return value
+
+    @field_validator("model_proposal_agent_id", "model_proposal_reviewer_id")
+    @classmethod
+    def validate_model_proposal_identity(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized or len(normalized) > 160:
+            raise ValueError("Model proposal identities must contain 1 to 160 characters")
+        return normalized
 
     @field_validator("database_url")
     @classmethod
@@ -85,6 +112,31 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_runtime_configuration(self) -> "Settings":
+        proposal_roles = (
+            (self.model_proposal_agent_token, self.model_proposal_agent_id, "agent"),
+            (self.model_proposal_reviewer_token, self.model_proposal_reviewer_id, "reviewer"),
+        )
+        for token, identity, role in proposal_roles:
+            if (token is None) != (identity is None):
+                raise ValueError(
+                    f"MODEL_PROPOSAL_{role.upper()}_TOKEN and _ID must be configured together"
+                )
+            if token is not None and len(token.get_secret_value()) < 32:
+                raise ValueError(
+                    f"MODEL_PROPOSAL_{role.upper()}_TOKEN must contain at least 32 characters"
+                )
+        if (
+            self.model_proposal_agent_token is not None
+            and self.model_proposal_reviewer_token is not None
+            and self.model_proposal_agent_token.get_secret_value()
+            == self.model_proposal_reviewer_token.get_secret_value()
+        ):
+            raise ValueError("Agent and reviewer proposal tokens must be distinct")
+        if (
+            self.model_proposal_agent_id is not None
+            and self.model_proposal_agent_id == self.model_proposal_reviewer_id
+        ):
+            raise ValueError("Agent and reviewer proposal identities must be distinct")
         if self.app_env in {"preview", "production"}:
             if self.database_url is None:
                 raise ValueError("DATABASE_URL is required for remote deployments")

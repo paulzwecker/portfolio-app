@@ -52,10 +52,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def require_server_proxy_token(
         request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        if configured_settings.app_env == "development" or request.url.path in {
-            "/health/live",
-            "/health/ready",
-        }:
+        # Proposal routes have their own mandatory role credentials, including in
+        # development. They must not require the broader web/API proxy credential.
+        proposal_api = (
+            request.url.path == "/v1/model-revision-proposals"
+            or request.url.path.startswith("/v1/model-revision-proposals/")
+        )
+        if (
+            configured_settings.app_env == "development"
+            or request.url.path
+            in {
+                "/health/live",
+                "/health/ready",
+            }
+            or proposal_api
+        ):
             return await call_next(request)
         expected = configured_settings.api_access_token
         supplied = request.headers.get("x-api-access-token", "")

@@ -6,6 +6,8 @@ mappings. It composes the existing importers; it does not discover companies or
 identities, download filing bodies, read workbooks, import consensus, run models, or
 schedule ingestion. No SEC source or production database was accessed while this
 stage was implemented.
+See [the shared production ingestion runbook](production-data-ingestion-operations.md)
+for target gating, bounded execution and historical coverage caveats.
 
 ## Scope and guarantees
 
@@ -52,18 +54,24 @@ integrity only.
 
 Use a private local directory for reports. Do not put SEC contact details, database
 URLs, Neon keys, source payloads, or reports in GitHub, CI, PR attachments, or the
-repository. This procedure is for a verified isolated development/rehearsal target;
-the command has no production mode. Every subcommand verifies the configured target
-and authorization. `preview`, `status`, and `reconcile` do not write data;
-`prepare` writes the run ledger, and `run`/`resume` import source data.
+repository. Development, rehearsal, and explicitly guarded production targets are
+supported. `preview`, `status`, and `reconcile` use a read-only engine and exact
+target verification without production-write authorization. `prepare` writes the
+run ledger, while `run`/`resume` import data through the shared writer guard. A
+production writer requires the verified Neon primary branch, exact
+project/branch/endpoint/database, direct `sslmode=verify-full`, a non-superuser
+role, `DATABASE_PRODUCTION_WRITES_AUTHORIZED=true`, and interactive exact-target
+bootstrap confirmation. Production provider requests also require the latest
+canonical bootstrap receipt to be `APPLIED`/`APPLIED_WITH_GAPS` with reconciliation
+`MATCHED`. No recurring operation is enabled.
 
 1. Review and apply the checked-in Alembic migration to the explicitly selected
    isolated target using the normal database-write-target procedure. The bootstrap
-   command does not run migrations. Set the exact rehearsal target and authorization
-   in the operator's secure process environment, following
+   command does not run migrations. For local or rehearsal work, set the exact
+   target and authorization in the operator's secure process environment, following
    [database-write-targets.md](database-write-targets.md). For Neon, use the direct
    endpoint, exact project/branch/endpoint/database identifiers, TLS verification,
-   and rehearsal authorization. Never use the primary branch.
+   and rehearsal authorization. Never use the primary branch for rehearsal.
 2. Set the SEC contact. The value is shown here as a placeholder; use a monitored
    email address through the local environment, not a script edit:
 
@@ -164,6 +172,62 @@ and authorization. `preview`, `status`, and `reconcile` do not write data;
 The PowerShell syntax above uses features available in Windows PowerShell 5.1 and
 PowerShell 7. It has not been executed on Windows in this development environment.
 Never copy environment values or report contents into issue comments or chat.
+
+## Guarded production procedure
+
+This is an operator runbook, not authorization to run it. Production source
+requests must wait until the R7 canonical portfolio import has been reconciled,
+the SEC mappings have been reviewed, the production schema is at the current
+Alembic head, and the request has separate explicit approval. The app checks the
+latest canonical bootstrap receipt immediately before the first production
+provider request. A missing or non-matching receipt stops before SEC access.
+
+First preview from a read-only connection. It verifies the exact production target
+and current schema without requiring production-write authorization or calling SEC:
+
+```powershell
+$env:DATABASE_TARGET_ENVIRONMENT = 'production'
+$reportDir = Join-Path $env:USERPROFILE 'Documents\portfolio-fundamentals-bootstrap'
+New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+$preview = Join-Path $reportDir ('preview-' + [guid]::NewGuid().ToString('N') + '.json')
+npm run db:bootstrap-fundamentals -- preview `
+  --target-environment production `
+  --report $preview
+if ($LASTEXITCODE -ne 0) { throw 'Production SEC preview is blocked.' }
+```
+
+Review `canonical_import_readiness`, all mapped CIK/company identities, and
+unmapped active companies. Resolve identity concerns through the existing reviewed
+mapping process; do not infer CIKs. After separate approval, provide `SEC_USER_AGENT`
+through the secure local environment and temporarily enable the production writer
+in this PowerShell process. `prepare` records the immutable mapping scope; `run`
+and `resume` import only bounded checkpoints:
+
+```powershell
+$env:SEC_USER_AGENT = 'Portfolio Research Platform <monitored-contact-email>'
+$env:DATABASE_PRODUCTION_WRITES_AUTHORIZED = 'true'
+$prepared = Join-Path $reportDir ('prepared-' + [guid]::NewGuid().ToString('N') + '.json')
+npm run db:bootstrap-fundamentals -- prepare `
+  --target-environment production `
+  --report $prepared
+if ($LASTEXITCODE -ne 0) { throw 'Production SEC preparation is blocked.' }
+$run = Get-Content -Raw $prepared | ConvertFrom-Json
+$runId = $run.run_id
+$runReport = Join-Path $reportDir ('run-' + [guid]::NewGuid().ToString('N') + '.json')
+npm run db:bootstrap-fundamentals -- run `
+  --run-id $runId `
+  --target-environment production `
+  --max-checkpoints 1 `
+  --report $runReport
+```
+
+Each production writer invocation requires the exact interactive target
+confirmation. Review status and errors after each bounded run, then resume only the
+same run as approved. Reconcile after completion; `MATCHED` verifies persisted
+integrity but does not imply coverage completeness. Remove `SEC_USER_AGENT`,
+`DATABASE_PRODUCTION_WRITES_AUTHORIZED`, and `DATABASE_TARGET_ENVIRONMENT` when
+finished. This procedure does not authorize production ingestion or enable a
+recurring job.
 
 ## Recovery and known limits
 
