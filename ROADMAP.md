@@ -7,16 +7,16 @@
 
 ## Execution cursor — edit after EVERY subtask
 
-| Field                   | Current value                                                                                                           |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `M0` — Reconcile repository and establish loop                                                                          |
-| Next task               | `M0.6` — Independent milestone review, PR preparation and roadmap reassessment                                          |
-| Status                  | `IN_PROGRESS / M0.6_PUBLICATION_REVIEW`                                                                                 |
-| Current branch / commit | `codex/m0-integrated-release-candidate` / `f0405f5` (sanitized integration commit; M0 review continues)                 |
-| Last verified tests     | Desktop/mobile Playwright: 55 passed, 11 skipped; `npm run check`: pass; API integration: 133 passed, 4 skipped         |
-| Latest PR               | `NONE_RECORDED`                                                                                                         |
-| Primary blocker         | Production remains at `6c2eaf0b8147`; pending migration, identity/model acceptance and deployment gates remain separate |
-| Next approval gate      | Before any production migration, write, model acceptance or deployment                                                  |
+| Field                   | Current value                                                                                                                    |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Active milestone        | `M0` — Reconcile repository and establish loop                                                                                   |
+| Next task               | `M0.6` — Owner review of public-baseline workbook artifacts; then close the M0 gate                                              |
+| Status                  | `PR_OPEN / M0_EXIT_BLOCKED_B003`                                                                                                 |
+| Current branch / commit | `codex/m0-integrated-release-candidate` / `a351377` (draft PR head; roadmap finalization follows)                                |
+| Last verified tests     | Desktop/mobile Playwright: 55 passed, 11 skipped; `npm run check`: pass; API integration: 133 passed, 4 skipped                  |
+| Latest PR               | [Draft PR #13](https://github.com/paulzwecker/portfolio-app/pull/13)                                                             |
+| Primary blocker         | B-003: two workbook XLSX files are already tracked in public `origin/main`; their safety is unverified                           |
+| Next approval gate      | Owner must confirm workbook files are public-safe or authorize a separate remediation plan; production approvals remain separate |
 
 **Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
 
@@ -46,7 +46,8 @@
 - [x] **M0.5** Verify model workspace in browser desktop/mobile (including proposal preview and explicit reviewer confirmation); distinguish fixture browser evidence from live database verification.
   - Evidence (2026-11-01): `npm run test:e2e -- --project=desktop --project=mobile` completed with 55 passed, 11 conditionally skipped and 0 failed. The model workspace preview/accept flow verifies proposed-vs-current input/output differences, disabled acceptance before review, required decision note, explicit confirmation, one acceptance request and immutable revision ID. The broader run covers Company Explorer, Portfolio, Decisions, Universe, Research review, Operations states, navigation and responsive behavior in Chromium desktop/iPhone-sized mobile contexts. Initial failures were stale E2E assertions for content behind existing disclosures and an updated missing-estimate message; tests were aligned with current accessible UI semantics. No product behavior was changed. `npx prettier --check apps/web/e2e/research.spec.ts` and `git diff --check` pass. Eleven live-database or project-conditional checks remain skipped; this is fixture-based UI evidence, not live Neon/deployed verification.
 - [ ] **M0.6** Milestone quality review; open PR, capture check results and owner decision; reassess M1–M9 against Product Vision.
-  - Review evidence (2026-11-01): GitHub reports this repository as public. The integration diff adds no workbook snapshots; a high-confidence scan found no token, service-account credential, or database URL patterns. Private source-run IDs and the package hash are omitted from public-facing docs. The PR branch is based on `origin/main`, excluding the identifier-bearing local task history. However, `origin/main` already tracks two XLSX files under `reference/workbook`; their contents were not inspected and their public-safety status is unresolved (B-003).
+  - Review evidence (2026-11-01): GitHub reports this repository as public. The integration diff adds no workbook snapshots; a high-confidence scan found no token, service-account credential, or database URL patterns. Private source-run IDs and the package hash are omitted from public-facing docs. The PR branch is based on `origin/main`, excluding the identifier-bearing local task history. However, `origin/main` already tracks two XLSX files under `reference/workbook`; their contents were not inspected and their public-safety status is unresolved (B-003). Draft PR #13 is open for code review; M0 remains incomplete until B-003 is resolved. No merge, deployment, migration, production write, Sheets edit, or model acceptance occurred.
+  - Product alignment is recorded below; the dependency ordering remains consistent with the approved vision and architecture.
 
 ### M0.6 Product-vision reassessment
 
@@ -196,3 +197,4 @@ _Add one short row per completed subtask: date | task ID | commit | tests/eviden
 | 2026-11-01 | M0.3 | `f0405f5` (consolidated)| Package parity validation; contracts current; focused 71-pass suite; single migration head | Source inputs remain proposed; production schema is behind local head | M0.4 |
 | 2026-11-01 | M0.4 | `f0405f5` (consolidated)| Full local quality checks PASS; PostgreSQL integration 133 passed, 4 skipped | Browser workflow is the remaining local M0 gate; production schema remains behind local head | M0.5 |
 | 2026-11-01 | M0.5 | `f0405f5` (consolidated)| Desktop/mobile Playwright: 55 passed, 11 skipped, 0 failed; focused browser regression corrected; formatting and diff checks pass | Live database/deployed checks remain unverified; no application behavior changed | M0.6 |
+| 2026-11-01 | M0.6 (PARTIAL) | `a351377` | Independent release review; sanitized two-commit branch; public draft PR #13 | B-003 prevents M0 exit; production and live-source readiness remain unverified | Owner review of `reference/workbook` files |
