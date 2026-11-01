@@ -4,9 +4,56 @@ This document carries forward the Milestone 13A deployment foundation and a
 Milestone 13B status snapshot dated 2026-10-17. That snapshot records Neon as
 connected to the existing `portfolio-research` project and `production` branch,
 with Render and Vercel then unprovisioned and scheduled ingestion inactive. The
-Milestone 14B-R task context says Render and Vercel have since been deployed; no
-live cloud check was made during this review, so confirm the present service
-settings in their consoles before relying on deployment steps below.
+historical snapshot below does not describe the current production schema or
+deployment status. The live read-only checks recorded in the M1 addendum below
+supersede it where they differ.
+
+## M1 live verification — 2026-11-01
+
+- GitHub deployment metadata records a successful Render `main - portfolio-api`
+  deployment for commit `6bd9fa0`. A read-only request to the configured Render
+  service returned `200` from `/health/live`; `/health/ready` returned `503`
+  with `database=connected` and `schema=outdated`. The deployed application is
+  therefore running but not ready against the live database. The unauthenticated
+  `/v1/companies` request returned `401`, consistent with the API access gate.
+- Neon was independently verified at Alembic head `6c2eaf0b8147`; this checkout
+  expects `9f2a6d4c81b7`. No migration, production write, ingestion or deployment
+  was performed during M1.
+- The Render control-plane API rejected the locally configured read token with
+  HTTP `401`. The Render service's live environment-variable names and deployed
+  worker flags could not be inspected. The checked-in `render.yaml` defaults
+  ingestion and recurring operations off, but it does not prove that dashboard
+  overrides are absent.
+- GitHub records a successful Vercel status for the merged M0 commit, and the
+  existing PR preview was discoverable from PR metadata. Unauthenticated requests
+  to its page and `/api/health` returned `401`, but the response did not identify
+  whether Vercel Deployment Protection or the application's Basic Auth gate
+  produced it. No Vercel CLI, project link, API token or production domain is
+  configured locally, so authenticated behavior and production environment
+  settings remain unverified.
+- The existing Neon recovery branch is ready and is a child of the primary
+  branch, but its snapshot has Alembic head `12a6f0d9c3e1`, while current
+  production is at `6c2eaf0b8147`. It expires on 2026-11-24. It is not a current
+  pre-migration recovery point for an upgrade from the live production schema.
+
+### M1 release and recovery gates
+
+The API startup intentionally does not migrate the database. Render's liveness
+probe can remain green while readiness is red, so operational checks must include
+`/health/ready` and the `/api/health` proxy rather than relying on `/health/live`.
+Render's Blueprint is configured to deploy commits from `main`; Vercel branch
+previews may be created by the Git integration. Do not point a preview at the
+production API or database. The current API shares one Neon database across its
+instances, and the configured shared Basic Auth is not per-user authorization.
+
+Before a production migration is considered ready, create a fresh recovery
+branch from the verified current primary, then independently verify its parent,
+expiry, endpoint, database, schema head and data inventory. Rehearse backup and
+restore using PostgreSQL 18 client tools and a disposable PostgreSQL role with
+the required isolated-test privileges. Do not use the stale recovery branch or
+downgrade the production schema as an application rollback strategy. Keep
+production write authorization, ingestion, recurring jobs and Sheets polling
+disabled until their separate review gates pass.
 
 ## Milestone 13B activation status — 2026-10-17
 
@@ -239,17 +286,13 @@ Vercel Hobby is limited to personal, non-commercial use. Use the plan allowed by
 
 ## Verification and known limits
 
-Local verification for this milestone is recorded above. The Neon project and
-production branch were verified live, including migrations, readiness and a
-temporary FastAPI connection. Render and Vercel have not been connected or
-deployed. Before enabling a remote write flow, verify:
-
-1. An unauthenticated Vercel page and `/api/research/*` request return `401`.
-2. Authenticated Vercel requests use the server-side token; browser source and responses do not contain it.
-3. A direct Render `/v1/*` request without `X-API-Access-Token` returns `401`; direct health checks remain available.
-4. `/api/health` reports database connection and current Alembic schema.
-5. Preview uses an isolated Neon branch/API before enabling its API token.
-6. An optional cron is absent until approved; when later created, its disabled gate is tested before setting `CLOUD_INGESTION_ENABLED=true`.
+The 2026-10-17 activation results below are historical. The M1 live status above
+is the current observed baseline. Authenticated Vercel page/API behavior,
+Vercel production settings, Render dashboard overrides, `/api/health` with
+credentials, and the absence of a remotely configured Cron service still need
+verification through authorized provider access. A `401` from an unauthenticated
+preview does not by itself prove which of the platform or application gates
+handled the request.
 
 The local database sizing check is recorded above. The root `.env` remains a local-development configuration and must not be replaced with a Neon URL during normal local work.
 
