@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import posixpath
 import re
@@ -64,11 +65,102 @@ PKG_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 NS = {"m": SHEET_NS, "r": REL_NS, "p": PKG_REL_NS}
 
 
+def _classify_number_format(format_code: str) -> str:
+    """Classify display formatting without converting the stored numeric value."""
+    bracket_currency = bool(re.search(r"\[\$[^\]]+\]", format_code))
+    quoted_currency = bool(re.search(r'"[^"\\]*[$€£¥¤][^"\\]*"', format_code))
+    unquoted = re.sub(r'"(?:[^"\\]|\\.)*"', "", format_code)
+    unquoted = re.sub(r"\\.", "", unquoted)
+    unquoted = re.sub(r"\[[^\]]*\]", "", unquoted)
+    lowered = unquoted.casefold()
+    if "%" in lowered:
+        return "PERCENT"
+    if (
+        bracket_currency
+        or quoted_currency
+        or any(symbol in unquoted for symbol in ("$", "€", "£", "¥", "¤"))
+    ):
+        return "CURRENCY"
+    if "@" in lowered:
+        return "TEXT"
+    if re.search(r"[ydhs]", lowered) or re.search(r"m[/.-]", lowered):
+        return "DATE_TIME"
+    if any(symbol in lowered for symbol in ("0", "#", "?")):
+        return "NUMBER"
+    return "GENERAL"
+
+
+def _number_formats(archive: ZipFile) -> dict[int, tuple[str | None, str | None]]:
+    """Resolve a worksheet style index to its number format code and broad type."""
+    custom_formats: dict[int, str] = {}
+    if "xl/styles.xml" in archive.namelist():
+        styles = ET.fromstring(archive.read("xl/styles.xml"))
+        custom = styles.find("m:numFmts", NS)
+        if custom is not None:
+            for item in custom.findall("m:numFmt", NS):
+                try:
+                    identifier = int(item.attrib["numFmtId"])
+                except (KeyError, ValueError):
+                    continue
+                custom_formats[identifier] = item.attrib.get("formatCode", "")
+        xfs = styles.find("m:cellXfs", NS)
+        style_ids = [] if xfs is None else list(xfs.findall("m:xf", NS))
+    else:
+        style_ids = []
+
+    builtins: dict[int, tuple[str, str]] = {
+        0: ("General", "GENERAL"),
+        1: ("0", "NUMBER"),
+        2: ("0.00", "NUMBER"),
+        3: ("#,##0", "NUMBER"),
+        4: ("#,##0.00", "NUMBER"),
+        9: ("0%", "PERCENT"),
+        10: ("0.00%", "PERCENT"),
+        14: ("mm-dd-yy", "DATE_TIME"),
+        15: ("d-mmm-yy", "DATE_TIME"),
+        16: ("d-mmm", "DATE_TIME"),
+        17: ("mmm-yy", "DATE_TIME"),
+        18: ("h:mm AM/PM", "DATE_TIME"),
+        19: ("h:mm:ss AM/PM", "DATE_TIME"),
+        20: ("h:mm", "DATE_TIME"),
+        21: ("h:mm:ss", "DATE_TIME"),
+        22: ("m/d/yy h:mm", "DATE_TIME"),
+        37: ("#,##0 ;(#,##0)", "NUMBER"),
+        38: ("#,##0 ;[Red](#,##0)", "NUMBER"),
+        39: ("#,##0.00;(#,##0.00)", "NUMBER"),
+        40: ("#,##0.00;[Red](#,##0.00)", "NUMBER"),
+        45: ("mm:ss", "DATE_TIME"),
+        46: ("[h]:mm:ss", "DATE_TIME"),
+        47: ("mmss.0", "DATE_TIME"),
+        49: ("@", "TEXT"),
+    }
+    resolved: dict[int, tuple[str | None, str | None]] = {}
+    for style_index, xf in enumerate(style_ids):
+        try:
+            identifier = int(xf.attrib.get("numFmtId", "0"))
+        except ValueError:
+            identifier = 0
+        if identifier in custom_formats:
+            code = custom_formats[identifier]
+            resolved[style_index] = (code, _classify_number_format(code))
+        elif identifier in builtins:
+            resolved[style_index] = builtins[identifier]
+        else:
+            resolved[style_index] = (None, None)
+    return resolved
+
+
 @dataclass(frozen=True)
 class Cell:
     value: str | None = None
     kind: str | None = None
     formula: str | None = None
+    number_format_code: str | None = None
+    number_format_type: str | None = None
+    formula_type: str | None = None
+    formula_shared_index: str | None = None
+    formula_shared_ref: str | None = None
+    value_before_overlay: str | None = None
 
 
 @dataclass
@@ -77,19 +169,43 @@ class Workbook:
     sha256: str
     sheets: dict[str, dict[str, Cell]]
     source_name: str | None = None
+    date_system: str = "1900"
+    value_overlay_sha256: str | None = None
+    value_overlay_candidate_sha256: str | None = None
+    value_overlay_reviewed_by: str | None = None
+    value_overlay_reviewed_at: str | None = None
+    value_overlay_comparison_completed_at: str | None = None
+    source_value_bundle_sha256: str | None = None
+    source_value_bundle_approval_sha256: str | None = None
+    source_value_bundle_observed_at: str | None = None
+    source_value_bundle_contract: str | None = None
 
     @classmethod
     def read(
         cls, path: Path, include: Callable[[str], bool], *, source_name: str | None = None
     ) -> Workbook:
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return cls.read_bytes(
+            path.read_bytes(), include, source_name=source_name, filename=path.name
+        )
+
+    @classmethod
+    def read_bytes(
+        cls,
+        data: bytes,
+        include: Callable[[str], bool],
+        *,
+        source_name: str | None = None,
+        filename: str = "Portfolio_Watchlist.xlsx",
+    ) -> Workbook:
+        """Read cached OOXML values from already-frozen bytes without evaluating formulas."""
+        digest = hashlib.sha256(data).hexdigest()
         try:
-            archive = ZipFile(path)
+            archive = ZipFile(io.BytesIO(data))
         except (BadZipFile, OSError) as error:
-            raise ValueError(f"Cannot read workbook {path}: {error}") from error
+            raise ValueError("Cannot read the frozen OOXML workbook.") from error
         with archive:
             if "xl/workbook.xml" not in archive.namelist():
-                raise ValueError(f"Not an OOXML workbook: {path}")
+                raise ValueError("The frozen file is not an OOXML workbook.")
             strings: list[str] = []
             if "xl/sharedStrings.xml" in archive.namelist():
                 root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
@@ -100,6 +216,14 @@ class Workbook:
             workbook = ET.fromstring(archive.read("xl/workbook.xml"))
             rels = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
             targets = {item.attrib["Id"]: item.attrib["Target"] for item in rels}
+            workbook_properties = workbook.find("m:workbookPr", NS)
+            date_system = (
+                "1904"
+                if workbook_properties is not None
+                and workbook_properties.attrib.get("date1904", "0").casefold() in {"1", "true"}
+                else "1900"
+            )
+            formats = _number_formats(archive)
             sheets: dict[str, dict[str, Cell]] = {}
             sheet_nodes = workbook.find("m:sheets", NS)
             for sheet in sheet_nodes if sheet_nodes is not None else []:
@@ -125,13 +249,33 @@ class Workbook:
                         value = "".join(
                             text_node.text or "" for text_node in inline.findall(".//m:t", NS)
                         )
+                    try:
+                        style_id = int(node.attrib.get("s", "0"))
+                    except ValueError:
+                        style_id = 0
+                    number_format_code, number_format_type = formats.get(style_id, (None, None))
                     cells[node.attrib["r"]] = Cell(
                         value=value,
                         kind=kind,
                         formula=(formula.text or "") if formula is not None else None,
+                        number_format_code=number_format_code,
+                        number_format_type=number_format_type,
+                        formula_type=formula.attrib.get("t") if formula is not None else None,
+                        formula_shared_index=formula.attrib.get("si")
+                        if formula is not None
+                        else None,
+                        formula_shared_ref=formula.attrib.get("ref")
+                        if formula is not None
+                        else None,
                     )
                 sheets[name] = cells
-        return cls(path=path, sha256=digest, sheets=sheets, source_name=source_name)
+        return cls(
+            path=Path(filename),
+            sha256=digest,
+            sheets=sheets,
+            source_name=source_name,
+            date_system=date_system,
+        )
 
     def cell(self, sheet: str, address: str) -> Cell:
         return self.sheets.get(sheet, {}).get(address, Cell())
@@ -262,7 +406,15 @@ class ImportPlan:
 
     def source_ref(self, workbook: Workbook, sheet: str, cell: str) -> str:
         name = workbook.source_name or workbook.path.name
-        return f"{name}:{sheet}!{cell}#sha256:{workbook.sha256}"
+        source = f"{name}:{sheet}!{cell}#sha256:{workbook.sha256}"
+        if workbook.value_overlay_sha256 is not None:
+            source += f"#value-overlay-sha256:{workbook.value_overlay_sha256}"
+        if workbook.source_value_bundle_sha256 is not None:
+            source += f"#source-value-bundle-sha256:{workbook.source_value_bundle_sha256}"
+            source += (
+                f"#source-value-approval-sha256:{workbook.source_value_bundle_approval_sha256}"
+            )
+        return source
 
     def report(self, applied: bool = False) -> dict[str, Any]:
         return {
@@ -278,6 +430,33 @@ class ImportPlan:
                 self.portfolio_workbook.path.name: self.portfolio_workbook.sha256,
                 self.market_workbook.path.name: self.market_workbook.sha256,
             },
+            "portfolio_value_overlay": (
+                {
+                    "status": "APPROVED",
+                    "sha256": self.portfolio_workbook.value_overlay_sha256,
+                    "candidate_sha256": self.portfolio_workbook.value_overlay_candidate_sha256,
+                    "reviewed_by": self.portfolio_workbook.value_overlay_reviewed_by,
+                    "reviewed_at": self.portfolio_workbook.value_overlay_reviewed_at,
+                    "comparison_completed_at": (
+                        self.portfolio_workbook.value_overlay_comparison_completed_at
+                    ),
+                }
+                if self.portfolio_workbook.value_overlay_sha256 is not None
+                else {"status": "NOT_APPLIED"}
+            ),
+            "portfolio_source_value_bundle": (
+                {
+                    "status": "APPROVED_FOR_CANONICAL_IMPORT",
+                    "contract_version": self.portfolio_workbook.source_value_bundle_contract,
+                    "sha256": self.portfolio_workbook.source_value_bundle_sha256,
+                    "approval_sha256": (
+                        self.portfolio_workbook.source_value_bundle_approval_sha256
+                    ),
+                    "captured_at": self.portfolio_workbook.source_value_bundle_observed_at,
+                }
+                if self.portfolio_workbook.source_value_bundle_sha256 is not None
+                else {"status": "NOT_APPLIED"}
+            ),
             "counts": {
                 "company_rows": len(self.companies),
                 "listing_mappings": len(self.listings),
@@ -914,6 +1093,15 @@ def _load_targets(plan: ImportPlan, companies: dict[str, CompanyRow]) -> None:
         plan,
     )
     plan.target_snapshot_total = reported
+    if reported is None:
+        plan.issue(
+            "TARGET_TOTAL_MISSING",
+            "ERROR",
+            "Target Architecture!P3",
+            "The workbook target control total is missing or invalid; target reconciliation "
+            "cannot be verified and target import remains blocked.",
+        )
+        plan.target_importable = False
     targets: dict[str, Decimal] = {}
     reserve: Decimal | None = None
     for row_number, row in workbook.rows("Target Architecture", 5):
@@ -1019,6 +1207,19 @@ def _score_value(
     source_priority: int = 0,
 ) -> ScoreRow | None:
     if cell.value is None or not cell.value.strip():
+        if cell.formula is not None:
+            message = "Formula cache is empty; the score remains null and unavailable."
+            plan.issue("SCORE_FORMULA_CACHE_EMPTY", "ERROR", source, message)
+            return ScoreRow(
+                ticker,
+                dimension,
+                None,
+                ScoreAssessmentStatus.INVALID,
+                rationale,
+                source,
+                message,
+                source_priority,
+            )
         if cell.kind == "e":
             message = f"Workbook error value {cell.value!r} was retained as INVALID/null."
             plan.issue("SCORE_CELL_ERROR", "ERROR", source, message)
@@ -1400,9 +1601,40 @@ def build_plan(
     market_book = Workbook.read(
         market_path, lambda name: name == "Listings", source_name=market_source_name
     )
-    digest = hashlib.sha256(
-        f"{portfolio_book.sha256}:{market_book.sha256}".encode("ascii")
-    ).hexdigest()
+    return build_plan_from_workbooks(
+        portfolio_book,
+        market_book,
+        timestamp,
+        portfolio_source_name=portfolio_source_name,
+        market_source_name=market_source_name,
+    )
+
+
+def build_plan_from_workbooks(
+    portfolio_book: Workbook,
+    market_book: Workbook,
+    observed_at: datetime | None = None,
+    *,
+    portfolio_source_name: str | None = None,
+    market_source_name: str | None = None,
+) -> ImportPlan:
+    """Build the usual import projection from already-frozen OOXML workbooks."""
+    timestamp = observed_at or now()
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+        raise ValueError("The import observation timestamp must include a timezone offset.")
+    timestamp = timestamp.astimezone(UTC)
+    if timestamp > now():
+        raise ValueError("The import observation timestamp cannot be in the future.")
+    if portfolio_source_name is not None:
+        portfolio_book.source_name = portfolio_source_name
+    if market_source_name is not None:
+        market_book.source_name = market_source_name
+    digest_input = f"{portfolio_book.sha256}:{market_book.sha256}"
+    if portfolio_book.value_overlay_sha256 is not None:
+        digest_input += f":value-overlay:{portfolio_book.value_overlay_sha256}"
+    if portfolio_book.source_value_bundle_sha256 is not None:
+        digest_input += f":source-value-bundle:{portfolio_book.source_value_bundle_sha256}"
+    digest = hashlib.sha256(digest_input.encode("ascii")).hexdigest()
     plan = ImportPlan(portfolio_book, market_book, timestamp, digest)
     companies = _load_companies(plan)
     listings = _load_listings(plan, companies)
@@ -1454,7 +1686,13 @@ def _delete_demo_data(session: Session) -> None:
     session.execute(delete(Portfolio).where(Portfolio.is_demo.is_(True)))
 
 
-def _assert_safe_database(session: Session, plan: ImportPlan, replace_demo: bool) -> None:
+def _assert_safe_database(
+    session: Session,
+    plan: ImportPlan,
+    replace_demo: bool,
+    *,
+    incremental_sync: bool = False,
+) -> None:
     existing_batch = session.scalar(
         select(LegacyImportBatch).where(LegacyImportBatch.source_digest == plan.source_digest)
     )
@@ -1561,6 +1799,12 @@ def _assert_safe_database(session: Session, plan: ImportPlan, replace_demo: bool
                 "--replace-demo found an earlier workbook import batch; refusing to "
                 "remove imported history."
             )
+    elif incremental_sync:
+        portfolio = session.get(Portfolio, _stable_id("portfolio", "legacy-default"))
+        if portfolio is None or portfolio.is_demo:
+            raise ValueError(
+                "Incremental workbook sync requires the existing non-demo canonical portfolio."
+            )
     elif (
         session.scalar(select(Portfolio.id).limit(1)) is not None
         or session.scalar(select(Company.id).limit(1)) is not None
@@ -1582,16 +1826,18 @@ def _latest_lifecycle(session: Session, company_id: UUID) -> LifecycleEvent | No
     return session.get(LifecycleEvent, current.event_id) if current else None
 
 
-def _import_identity(session: Session, plan: ImportPlan) -> dict[str, UUID]:
+def _import_identity(
+    session: Session, plan: ImportPlan, *, incremental_sync: bool = False
+) -> dict[str, UUID]:
     company_ids: dict[str, UUID] = {}
     for company_row in plan.companies:
         identifier = _stable_id("company", company_row.ticker)
         existing = session.get(Company, identifier)
         if existing is not None:
-            if existing.is_demo or (existing.name, existing.reporting_currency) != (
-                company_row.name,
-                None,
-            ):
+            identity_matches = existing.name == company_row.name and (
+                incremental_sync or existing.reporting_currency is None
+            )
+            if existing.is_demo or not identity_matches:
                 raise ValueError(
                     f"Company mapping conflict for {company_row.ticker}; refusing to "
                     "overwrite identity."
@@ -2420,11 +2666,18 @@ def _reconcile(
     }
 
 
-def apply_plan(session: Session, plan: ImportPlan, replace_demo: bool = False) -> dict[str, Any]:
-    _assert_safe_database(session, plan, replace_demo)
+def apply_plan(
+    session: Session,
+    plan: ImportPlan,
+    replace_demo: bool = False,
+    *,
+    incremental_sync: bool = False,
+) -> dict[str, Any]:
+    """Apply a source projection; incremental mode is reserved for reviewed sync runs."""
+    _assert_safe_database(session, plan, replace_demo, incremental_sync=incremental_sync)
     if replace_demo:
         _delete_demo_data(session)
-    ids = _import_identity(session, plan)
+    ids = _import_identity(session, plan, incremental_sync=incremental_sync)
     company_ids = {
         key.removeprefix("company:"): value
         for key, value in ids.items()

@@ -1,0 +1,110 @@
+{
+  "report_version": 1,
+  "milestone": "Recovery C0.3",
+  "as_of_date": "2026-10-31",
+  "decision": "NO_GO",
+  "schema_acceptance": "NOT_APPROVED",
+  "canonical_bootstrap_preview": "NOT_READY",
+  "database_mutation": "NOT_PERFORMED",
+  "source_comparison": {
+    "contract": "portfolio-live-value-comparison-v5",
+    "scope": "canonical-bootstrap",
+    "completed_report_scope_field_present": false,
+    "scope_verified_via": "matching_durable_attempt_start_record",
+    "new_completed_reports_persist_scope": true,
+    "manifest_semantic_fingerprint_scope": "full_imported_workbook_domain",
+    "comparison_semantic_fingerprint_scope": "canonical_bootstrap_fields",
+    "scoped_fingerprint_recomputed_from_frozen_snapshot": true,
+    "status": "COMPARED",
+    "cells_compared": 7861,
+    "source_metadata_stable": true,
+    "live_values_stable_across_two_reads": true,
+    "live_formula_definitions_stable_across_two_reads": true,
+    "drive_revision_id_available": false,
+    "reported_source_fidelity_observations": 108,
+    "importer_relevant_observations_after_consumer_review": 106
+  },
+  "value_differences": {
+    "status": "PENDING_OPERATOR_REVIEW",
+    "total": 105,
+    "changed_values_with_matching_expanded_formula_text": 105,
+    "formula_resolution_counts": {
+      "shared_formula_translations": 72,
+      "shared_formula_anchors": 5,
+      "direct_formulas": 28
+    },
+    "classification": "STALE_XLSX_CACHE_CANDIDATE",
+    "cause_proven": false,
+    "by_importer_target": {
+      "ScoreAssessment.DURABILITY_10Y.score": 41,
+      "ScoreAssessment.COMPOUNDER_QUALITY.score": 40,
+      "ScoreAssessment.EXECUTION.score": 2,
+      "ScoreAssessment.RISK.score": 1,
+      "legacy_rank_population.current_weight_input": 21
+    }
+  },
+  "formula_discrepancy": {
+    "count": 1,
+    "consumed_by_importer": true,
+    "role": "auxiliary_listing_row_class_gate",
+    "direct_persisted_destination": false,
+    "current_output_matches": true,
+    "reference_sets_match": true,
+    "frozen_formula_has_export_placeholder": true,
+    "classification": "XLSX_EXPORT_TRANSLATION_CANDIDATE_SEMANTICS_UNPROVEN",
+    "resolved": false,
+    "blocks_overlay_candidate": true
+  },
+  "unavailable_observations": {
+    "count": 2,
+    "canonical_company_key_present": false,
+    "consumed_by_current_importer": false,
+    "associated_with_unresolved_lifecycle_rows": 0,
+    "treatment": "NOT_CONSUMED_UNKEYED_ROW"
+  },
+  "lifecycle": {
+    "unresolved_keyed_rows": 5,
+    "operator_decisions_pending": 5,
+    "inference_performed": false
+  },
+  "source_only_reconciliation": {
+    "database_preview": false,
+    "companies": 219,
+    "securities": 100,
+    "listing_records": 100,
+    "held_positions": 22,
+    "cash_rows": 2,
+    "targets": 16,
+    "score_assessments": 506,
+    "cached_ranking_entries": 657,
+    "listing_fields_incomplete_errors": 11,
+    "listing_mapping_unresolved_errors": 3,
+    "duplicate_cached_rank_errors": 11,
+    "invalid_cached_rank_errors": 2
+  },
+  "overlay": {
+    "status": "BLOCKED_NOT_GENERATED",
+    "candidate_validation": "BLOCKED_ON_CONSUMED_FORMULA_DIFFERENCE",
+    "candidate_file_created": false,
+    "candidate_sha256": null,
+    "approved": false,
+    "private_decision_package_integrity": "VERIFIED"
+  },
+  "verification": {
+    "unit_and_offline_bootstrap_tests": "89 passed",
+    "isolated_local_postgresql_tests": "2 passed",
+    "private_candidate_builder_validation": "blocked_on_consumed_formula_difference; no file written",
+    "ruff": "passed",
+    "mypy": "passed",
+    "google_api_request": false,
+    "neon_connection": false,
+    "production_write": false
+  },
+  "operator_actions_required": [
+    "Review all 105 exact cached/live value pairs and record an evidence-backed choice or retain unresolved status.",
+    "Resolve the consumed auxiliary row-class formula discrepancy with source-owner evidence, corrected source and reacquisition, or a separately reviewed importer-contract change.",
+    "Review each of the five keyed lifecycle-unresolved rows; provide authoritative membership evidence or preserve unresolved status.",
+    "Resolve remaining listing and cached-ranking importer errors before canonical bootstrap review.",
+    "Rerun the bounded comparison and overlay workflow after any source or contract correction; do not accept schema or write to production in this step."
+  ]
+}

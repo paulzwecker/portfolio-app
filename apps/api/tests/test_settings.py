@@ -27,6 +27,16 @@ def test_missing_configuration_does_not_create_engine() -> None:
     assert create_database_engine(Settings(database_url=None)) is None
 
 
+def test_recurring_sheets_and_manual_workbook_operations_fail_closed_by_default() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.recurring_operations_enabled is False
+    assert settings.google_sheets_poll_seconds == 0
+    assert settings.manual_operations_enabled is False
+    assert settings.workbook_sync_enabled is False
+    assert settings.cloud_ingestion_enabled is False
+
+
 def test_invalid_google_spreadsheet_url_is_rejected() -> None:
     with pytest.raises(ValidationError, match="must be a spreadsheet ID"):
         Settings(

@@ -33,7 +33,11 @@ from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from portfolio_api.bootstrap_preflight import verify_database_preflight
+from portfolio_api.bootstrap_preflight import (
+    verify_database_preflight,
+    verify_database_read_only_preflight,
+)
+from portfolio_api.canonical_import_readiness import canonical_import_readiness
 from portfolio_api.database import create_database_engine
 from portfolio_api.database_write_target import DatabaseWriteTargetError
 from portfolio_api.domain.models import (
@@ -283,7 +287,15 @@ def _load_reviewed_cik_mappings(
                 recorded_at=mapping.recorded_at,
             )
         )
-    return sorted(mappings, key=lambda item: (item.company_name.casefold(), str(item.company_id)))
+    lifecycle_priority = {"PORTFOLIO": 0, "WATCHLIST": 1}
+    return sorted(
+        mappings,
+        key=lambda item: (
+            lifecycle_priority.get(item.lifecycle or "", 2),
+            item.company_name.casefold(),
+            str(item.company_id),
+        ),
+    )
 
 
 def _unmapped_active_companies(
@@ -319,15 +331,23 @@ def preview_fundamentals_bootstrap(
     company_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Return a request inventory from reviewed database mappings without network access."""
-    if target_environment not in {"development", "rehearsal"}:
-        raise FundamentalsBootstrapError(
-            "SEC fundamentals bootstrap accepts development or rehearsal targets only."
-        )
+    if target_environment not in {"development", "rehearsal", "production"}:
+        raise FundamentalsBootstrapError("The requested SEC bootstrap target is unsupported.")
     mappings = _load_reviewed_cik_mappings(session, company_id)
     unmapped = _unmapped_active_companies(session, mappings) if company_id is None else []
+    canonical_import = (
+        canonical_import_readiness(session) if target_environment == "production" else None
+    )
     return {
-        "status": "READY" if mappings else "BLOCKED",
+        "status": (
+            "BLOCKED_CANONICAL_IMPORT"
+            if canonical_import is not None and not canonical_import["ready"]
+            else "READY"
+            if mappings
+            else "BLOCKED"
+        ),
         "target_environment": target_environment,
+        "canonical_import_readiness": canonical_import,
         "bootstrap_version": BOOTSTRAP_VERSION,
         "mapping_sha256": _mapping_sha256(mappings),
         "provider": SEC_PROVIDER_ID,
@@ -391,8 +411,8 @@ def prepare_fundamentals_bootstrap(
     session.add(run)
     session.flush()
     sequence_number = 0
-    for stage in STAGE_ORDER:
-        for mapping in mappings:
+    for mapping in mappings:
+        for stage in STAGE_ORDER:
             session.add(
                 FundamentalsBootstrapCheckpoint(
                     id=uuid4(),
@@ -983,10 +1003,8 @@ def execute_fundamentals_bootstrap(
     max_checkpoints: int = DEFAULT_CHECKPOINTS_PER_INVOCATION,
 ) -> dict[str, Any]:
     """Execute at most N checkpoint pages; each receipt and checkpoint commits atomically."""
-    if target_environment not in {"development", "rehearsal"}:
-        raise FundamentalsBootstrapError(
-            "SEC fundamentals bootstrap accepts development or rehearsal targets only."
-        )
+    if target_environment not in {"development", "rehearsal", "production"}:
+        raise FundamentalsBootstrapError("The requested SEC bootstrap target is unsupported.")
     if not _has_contact_email(user_agent):
         raise FundamentalsBootstrapError(
             "SEC_USER_AGENT must identify the application and a monitored contact email."
@@ -1002,6 +1020,13 @@ def execute_fundamentals_bootstrap(
         if run.target_environment != target_environment:
             raise FundamentalsBootstrapError(
                 "The requested target environment does not match the prepared run."
+            )
+        if (
+            target_environment == "production"
+            and not canonical_import_readiness(session, run_prepared_at=run.prepared_at)["ready"]
+        ):
+            raise FundamentalsBootstrapError(
+                "Production SEC ingestion requires a reconciled canonical portfolio import."
             )
         if run.status in {"COMPLETE", "FAILED", "BLOCKED"}:
             report = _run_report(session, run)
@@ -1399,6 +1424,11 @@ def _run_report(
         "mapping_sha256": run.mapping_sha256,
         "bootstrap_version": run.bootstrap_version,
         "target_environment": run.target_environment,
+        "canonical_import_readiness": (
+            canonical_import_readiness(session, run_prepared_at=run.prepared_at)
+            if run.target_environment == "production"
+            else None
+        ),
         "status": status,
         "prepared_at": run.prepared_at.isoformat(),
         "started_at": run.started_at.isoformat() if run.started_at else None,
@@ -1555,7 +1585,9 @@ def _parser() -> argparse.ArgumentParser:
     for command in ("preview", "prepare"):
         subparser = commands.add_parser(command)
         subparser.add_argument(
-            "--target-environment", choices=("development", "rehearsal"), required=True
+            "--target-environment",
+            choices=("development", "rehearsal", "production"),
+            required=True,
         )
         subparser.add_argument("--company-id", type=UUID)
         subparser.add_argument("--report", type=Path)
@@ -1563,7 +1595,9 @@ def _parser() -> argparse.ArgumentParser:
         subparser = commands.add_parser(command)
         subparser.add_argument("--run-id", type=UUID, required=True)
         subparser.add_argument(
-            "--target-environment", choices=("development", "rehearsal"), required=True
+            "--target-environment",
+            choices=("development", "rehearsal", "production"),
+            required=True,
         )
         subparser.add_argument("--report", type=Path)
         if command in {"run", "resume"}:
@@ -1575,8 +1609,15 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _verify_target(engine: Engine, settings: Settings, requested_environment: str) -> None:
-    verify_database_preflight(
+def _verify_target(
+    engine: Engine,
+    settings: Settings,
+    requested_environment: str,
+    *,
+    read_only: bool = False,
+) -> None:
+    verifier = verify_database_read_only_preflight if read_only else verify_database_preflight
+    verifier(
         engine,
         configured_target_environment=settings.database_target_environment,
         requested_target_environment=requested_environment,
@@ -1608,14 +1649,16 @@ def main(argv: list[str] | None = None) -> int:
         user_agent = settings.sec_user_agent or ""
         if not settings.database_url:
             raise FundamentalsBootstrapError("DATABASE_URL is required for target verification.")
+        read_only = args.command in {"preview", "status", "reconcile"}
         engine = create_database_engine(
             settings,
             write_operation=f"fundamentals_bootstrap.{args.command}",
             write_operation_kind="bootstrap",
+            read_only=read_only,
         )
         if engine is None:
             raise FundamentalsBootstrapError("DATABASE_URL is required for target verification.")
-        _verify_target(engine, settings, args.target_environment)
+        _verify_target(engine, settings, args.target_environment, read_only=read_only)
         if args.command in {"run", "resume"} and not user_agent:
             raise FundamentalsBootstrapError(
                 "Set SEC_USER_AGENT to an application name and monitored contact email."

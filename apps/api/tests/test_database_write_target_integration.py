@@ -9,7 +9,9 @@ from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from portfolio_api.database import create_database_engine
 from portfolio_api.database_write_target import (
+    DatabaseReadOnlyError,
     DatabaseWriteTargetError,
     install_database_write_target_guard,
 )
@@ -27,6 +29,14 @@ def _settings(engine: Engine, **overrides: object) -> Settings:
             **overrides,
         }
     )
+
+
+def _require_create_role(connection: Any) -> None:
+    can_create_role = connection.execute(
+        text("SELECT rolsuper OR rolcreaterole FROM pg_roles WHERE rolname = current_user")
+    ).scalar_one()
+    if not can_create_role:
+        pytest.skip("This isolated PostgreSQL test requires CREATEROLE privileges")
 
 
 @pytest.mark.integration
@@ -97,6 +107,7 @@ def test_live_postgres_rejects_role_without_application_table_privileges(
     role = f"write_guard_no_priv_{uuid4().hex}"
     schema: str
     with postgres_engine.begin() as connection:
+        _require_create_role(connection)
         schema = connection.execute(text("SELECT current_schema()")).scalar_one()
         connection.exec_driver_sql(f'CREATE ROLE "{role}" NOLOGIN')
         connection.exec_driver_sql(f'GRANT USAGE ON SCHEMA "{schema}" TO "{role}"')
@@ -128,12 +139,99 @@ def test_live_postgres_rejects_role_without_application_table_privileges(
 
 
 @pytest.mark.integration
+def test_read_only_postgres_engine_blocks_mutations_and_sequence_updates(
+    postgres_engine: Engine,
+) -> None:
+    schema: str
+    with postgres_engine.connect() as connection:
+        schema = connection.execute(text("SELECT current_schema()")).scalar_one()
+    table = f"preview_guard_{uuid4().hex}"
+    sequence = f"preview_guard_{uuid4().hex}"
+    with postgres_engine.begin() as connection:
+        connection.exec_driver_sql(f'CREATE TABLE "{schema}"."{table}" (value integer NOT NULL)')
+        connection.exec_driver_sql(f'INSERT INTO "{schema}"."{table}" (value) VALUES (7)')
+        connection.exec_driver_sql(f'CREATE SEQUENCE "{schema}"."{sequence}" START WITH 1')
+
+    read_engine = create_database_engine(_settings(postgres_engine), read_only=True)
+    assert read_engine is not None
+    try:
+        with read_engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT current_setting('transaction_read_only')::boolean")
+            ).scalar_one()
+            assert connection.execute(
+                text("SELECT current_setting('default_transaction_read_only')::boolean")
+            ).scalar_one()
+            with pytest.raises(DatabaseReadOnlyError, match="read_only_database_mutation_rejected"):
+                connection.execute(text(f'UPDATE "{schema}"."{table}" SET value = 9'))
+            with pytest.raises(DatabaseReadOnlyError, match="read_only_database_mutation_rejected"):
+                connection.exec_driver_sql(
+                    f'CREATE TABLE "{schema}"."{table}_blocked" (value integer)'
+                )
+            with pytest.raises(DatabaseReadOnlyError, match="read_only_database_mutation_rejected"):
+                connection.execute(
+                    text("SELECT nextval(:sequence)"),
+                    {"sequence": f'"{schema}"."{sequence}"'},
+                )
+
+        # Even code that bypasses SQLAlchemy's event hook cannot DML through this connection.
+        raw = read_engine.raw_connection()
+        try:
+            cursor = raw.cursor()
+            with pytest.raises(Exception) as update_error:
+                cursor.execute(f'UPDATE "{schema}"."{table}" SET value = 11')
+            assert getattr(update_error.value, "sqlstate", None) == "25006"
+            raw.rollback()
+            with pytest.raises(Exception) as ddl_error:
+                cursor.execute(f'CREATE TABLE "{schema}"."{table}_raw_blocked" (value integer)')
+            assert getattr(ddl_error.value, "sqlstate", None) == "25006"
+            raw.rollback()
+            with pytest.raises(Exception) as sequence_error:
+                cursor.execute("SELECT nextval(%s::regclass)", (f'"{schema}"."{sequence}"',))
+            assert getattr(sequence_error.value, "sqlstate", None) == "25006"
+            raw.rollback()
+            cursor.close()
+        finally:
+            raw.close()
+
+        with postgres_engine.connect() as connection:
+            assert (
+                connection.execute(text(f'SELECT value FROM "{schema}"."{table}"')).scalar_one()
+                == 7
+            )
+            assert (
+                connection.execute(
+                    text("SELECT to_regclass(:name)"), {"name": f"{schema}.{table}_blocked"}
+                ).scalar_one()
+                is None
+            )
+            assert (
+                connection.execute(
+                    text("SELECT to_regclass(:name)"), {"name": f"{schema}.{table}_raw_blocked"}
+                ).scalar_one()
+                is None
+            )
+            sequence_state = connection.execute(
+                text(f'SELECT last_value, is_called FROM "{schema}"."{sequence}"')
+            ).one()
+            assert sequence_state == (1, False)
+    finally:
+        read_engine.dispose()
+        with postgres_engine.begin() as connection:
+            connection.exec_driver_sql(f'DROP TABLE IF EXISTS "{schema}"."{table}"')
+            connection.exec_driver_sql(f'DROP TABLE IF EXISTS "{schema}"."{table}_blocked"')
+            connection.exec_driver_sql(f'DROP TABLE IF EXISTS "{schema}"."{table}_raw_blocked"')
+            connection.exec_driver_sql(f'DROP SEQUENCE IF EXISTS "{schema}"."{sequence}"')
+
+
+@pytest.mark.integration
 def test_live_postgres_migration_rejects_role_that_does_not_own_existing_objects(
     postgres_engine: Engine,
 ) -> None:
     role = f"write_guard_no_owner_{uuid4().hex}"
     schema: str
     with postgres_engine.begin() as connection:
+        _require_create_role(connection)
         schema = connection.execute(text("SELECT current_schema()")).scalar_one()
         connection.exec_driver_sql(f'CREATE ROLE "{role}" NOLOGIN')
         connection.exec_driver_sql(f'GRANT USAGE, CREATE ON SCHEMA "{schema}" TO "{role}"')

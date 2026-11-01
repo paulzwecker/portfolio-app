@@ -23,6 +23,7 @@ from portfolio_api.bootstrap_manifest import (
 )
 from portfolio_api.database_write_target import (
     DatabaseWriteTargetError,
+    verify_database_read_target,
     verify_database_write_target,
 )
 from portfolio_api.migrations import expected_heads
@@ -84,6 +85,22 @@ def verify_database_preflight(
     # production bootstrap) interactive target confirmation.
     verify_database_write_target(engine)
 
+    return _verify_alembic_heads(engine)
+
+
+def verify_database_read_only_preflight(
+    engine: Engine,
+    *,
+    configured_target_environment: str | None,
+    requested_target_environment: str,
+) -> set[str]:
+    """Verify target identity and migrations using an engine that cannot mutate."""
+    validate_target_selection(configured_target_environment, requested_target_environment)
+    verify_database_read_target(engine)
+    return _verify_alembic_heads(engine)
+
+
+def _verify_alembic_heads(engine: Engine) -> set[str]:
     try:
         with engine.connect() as connection:
             current = set(MigrationContext.configure(connection).get_current_heads())

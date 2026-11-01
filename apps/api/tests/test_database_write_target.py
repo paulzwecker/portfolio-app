@@ -17,9 +17,11 @@ from portfolio_api.database_write_target import (
     NeonControlPlaneClient,
     NeonTargetMetadata,
     WriteOperationKind,
+    _application_table_names,
     _interactive_confirmation,
     _RejectRedirects,
     _statement_may_write,
+    validate_database_read_target,
     validate_database_write_target,
 )
 from portfolio_api.settings import Settings
@@ -73,6 +75,7 @@ def remote_identity(
     missing_tables: tuple[str, ...] = (),
     missing_privileges: tuple[str, ...] = (),
     missing_owned_objects: tuple[str, ...] = (),
+    read_only: bool = False,
 ) -> LiveDatabaseIdentity:
     parsed = make_url(url)
     resolved_host = host or str(parsed.host)
@@ -97,6 +100,8 @@ def remote_identity(
         missing_tables=missing_tables,
         missing_privileges=missing_privileges,
         missing_owned_objects=missing_owned_objects,
+        transaction_read_only=read_only,
+        default_transaction_read_only=read_only,
     )
 
 
@@ -182,9 +187,71 @@ def test_verified_production_identity_is_approved_and_audit_is_redacted(
     assert "synthetic-password" not in str(audit)
 
 
+def test_read_only_production_target_needs_no_production_write_authorization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_resolved_dns(monkeypatch)
+    settings = remote_settings(production_authorized=False)
+    assert settings.database_url is not None
+
+    validate_database_read_target(
+        settings=settings,
+        url=make_url(settings.database_url.get_secret_value()),
+        identity=remote_identity(read_only=True),
+        neon_target=neon_target(),
+    )
+
+
+def test_read_target_table_scope_is_a_subset_of_mapped_application_tables() -> None:
+    scoped = _application_table_names(("companies", "securities", "listings"))
+    assert scoped == ("companies", "listings", "securities")
+    assert "model_identity_bootstrap_receipts" in _application_table_names()
+    with pytest.raises(DatabaseWriteTargetError, match="unsupported application table scope"):
+        _application_table_names(("companies", "external_unrestricted_table"))
+    with pytest.raises(DatabaseWriteTargetError, match="unsupported application table scope"):
+        _application_table_names(("companies", "companies"))
+
+
+@pytest.mark.parametrize(
+    ("identity_changes", "target_changes", "code"),
+    [
+        ({"read_only": False}, {}, "read_only_database_required"),
+        (
+            {"missing_privileges": ("companies:SELECT",), "read_only": True},
+            {},
+            "insufficient_read_privileges",
+        ),
+        ({"read_only": True}, {"branch_id": "br_other"}, "production_requires_primary_branch"),
+        ({"read_only": True}, {"endpoint_branch_id": "br_other"}, "endpoint_branch_mismatch"),
+        ({"read_only": True}, {"endpoint_type": "unsupported"}, "endpoint_not_ready"),
+    ],
+)
+def test_read_only_target_verification_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    identity_changes: dict[str, Any],
+    target_changes: dict[str, Any],
+    code: str,
+) -> None:
+    install_resolved_dns(monkeypatch)
+    settings = remote_settings(production_authorized=False)
+    if "branch_id" in target_changes:
+        settings = settings.model_copy(update={"neon_branch_id": target_changes["branch_id"]})
+    assert settings.database_url is not None
+    with pytest.raises(DatabaseWriteTargetError, match=code):
+        validate_database_read_target(
+            settings=settings,
+            url=make_url(settings.database_url.get_secret_value()),
+            identity=remote_identity(**identity_changes),
+            neon_target=neon_target(**target_changes),
+        )
+
+
 def test_unconfigured_environment_is_rejected() -> None:
     settings = Settings(
-        database_url=SecretStr("postgresql+psycopg://writer:fake@db.example.test/portfolio")
+        database_url=SecretStr("postgresql+psycopg://writer:fake@db.example.test/portfolio"),
+        app_env="development",
+        database_target_environment=None,
+        database_target_database=None,
     )
     assert settings.database_url is not None
     identity = remote_identity(

@@ -119,7 +119,6 @@ def test_refresh_all_records_dependency_steps_and_never_recomputes_decisions(
         "SEC_FILINGS",
         "SHEETS_DISCOVERY",
         "RESEARCH_REFRESH",
-        "AGENT_WORK_FEED",
     ]
     assert "DECISION_RECOMPUTE" not in called
     with Session(postgres_engine) as session:
@@ -140,6 +139,49 @@ def test_refresh_all_records_dependency_steps_and_never_recomputes_decisions(
         )["status"]
         == "IDLE"
     )
+
+
+def test_one_shot_request_does_not_claim_another_queued_job(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        first, _ = create_job_request(
+            session, OperationalJobRequestCreate(job_name="RESEARCH_REFRESH")
+        )
+        second, _ = create_job_request(
+            session,
+            OperationalJobRequestCreate(job_name="WORKBOOK_SYNC"),
+            bypass_cooldown=True,
+        )
+        first_id, second_id = first.id, second.id
+
+    called: list[str] = []
+
+    def fake_step(
+        _engine: Engine,
+        _settings: Settings,
+        request: OperationalJobRequest,
+        step_name: str,
+        _now: datetime,
+    ) -> dict[str, object]:
+        called.append(f"{request.id}:{step_name}")
+        return {"status": "SUCCEEDED"}
+
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_manual_step", fake_step)
+    result = process_manual_job_requests(
+        postgres_engine,
+        Settings.model_construct(workbook_sync_enabled=True),
+        now_at=datetime.now(UTC),
+        request_id=second_id,
+    )
+
+    assert result["status"] == "SUCCEEDED"
+    assert called == [f"{second_id}:WORKBOOK_SYNC"]
+    with Session(postgres_engine) as session:
+        first_request = session.get(OperationalJobRequest, first_id)
+        second_request = session.get(OperationalJobRequest, second_id)
+        assert first_request is not None and first_request.status == "QUEUED"
+        assert second_request is not None and second_request.status == "SUCCEEDED"
 
 
 def test_partial_refresh_all_retains_step_errors_and_can_be_retried(
@@ -188,7 +230,12 @@ def test_company_scoped_request_api_is_local_domain_contract(
         "portfolio_api.main.create_database_engine",
         lambda _settings, **_kwargs: postgres_engine,
     )
-    with TestClient(create_app(Settings(database_url=None))) as client:
+    # This contract test exercises job-request creation. The operator's local
+    # .env intentionally disables the recurring worker, so opt into the enabled
+    # state explicitly rather than letting machine configuration change the test.
+    with TestClient(
+        create_app(Settings(database_url=None, recurring_operations_enabled=True))
+    ) as client:
         response = client.post(
             "/v1/operations/job-requests",
             json={
@@ -231,7 +278,7 @@ def test_api_rejects_refresh_when_background_worker_is_disabled(
         )
 
     assert response.status_code == 503
-    assert "worker is disabled" in response.json()["detail"]
+    assert "Manual operations are disabled" in response.json()["detail"]
 
 
 def test_second_worker_cannot_claim_a_request_while_first_is_processing(

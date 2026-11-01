@@ -335,8 +335,12 @@ Detailed implementation status belongs in `docs/verification.md` and the relevan
 
 Important documentation includes:
 
+- `docs/PRODUCT_VISION.md` — current product outcomes and non-goals.
+- `ROADMAP.md` — the single execution cursor, milestone status and verified evidence.
+- `docs/architecture/personal-universe.md` — target shared-platform architecture and phased migration strategy.
+- `docs/architecture/portfolio-application.md` — Portfolio application boundaries and model/data ownership.
 - `docs/domain-model.md`
-- `docs/architecture.md`
+- `docs/architecture.md` — historical implementation reference through Milestone 2C; see the notice at its start.
 - `docs/external-data-architecture.md`
 - `docs/source-documents.md`
 - `docs/financial-models.md`
@@ -529,6 +533,11 @@ npm run db:check
 Review generated migrations before applying them.
 
 Do not create schema automatically at application startup.
+
+The guarded model/output bootstrap workflow is documented in
+[Model and analytics bootstrap](docs/model-analytics-bootstrap.md). Its preview requires an
+approved frozen workbook snapshot and a verified database target; it does not create ranking or
+Execution Pace history.
 
 ---
 

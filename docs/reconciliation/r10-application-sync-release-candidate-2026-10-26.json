@@ -1,0 +1,106 @@
+{
+  "assessment_date": "2026-10-26",
+  "milestone": "R10",
+  "release_candidate_status": "CONDITIONALLY_READY_FOR_REVIEW",
+  "production_operating_status": "NOT_READY",
+  "implementation_status": "SYNTHETICALLY_VERIFIED_WITH_LOCAL_ENVIRONMENT_BLOCKERS",
+  "production_mutation_performed": false,
+  "google_drive_access_performed": false,
+  "deployment_changed": false,
+  "scheduling_enabled": false,
+  "task_8_report_found": false,
+  "task_9_report_found": false,
+  "local_branch": "codex/task-8-readiness-test-isolation",
+  "local_worktree_has_uncommitted_changes": true,
+  "local_alembic_head": "c17a0b9d4e62",
+  "last_recorded_production_alembic_head": "6c2eaf0b8147",
+  "sync_architecture": {
+    "provider": "Google Drive read-only acquisition",
+    "raw_artifact": "content-addressed immutable XLSX, SHA-256 keyed, 32 MiB limit",
+    "semantic_fingerprint": "portfolio-import-values-v2",
+    "revision_detection": "Drive revision metadata plus raw artifact and importer projection fingerprints",
+    "review": "Exact schema approval and append-only preview before apply",
+    "apply": "Explicit guarded transactional apply with advisory lock, target recheck, and reconciliation rollback",
+    "idempotence": "Exact replay returns existing/applied state; identical domain projection reports NO_CHANGES",
+    "ownership": "Workbook-owned current projections only; app-owned histories and decisions preserved",
+    "manual_execution": "Allowlisted durable request and one-shot operator runner; disabled by default",
+    "recurring_enabled": false
+  },
+  "verification": {
+    "lint": "PASS",
+    "format": "PASS",
+    "typecheck": "PASS",
+    "web_unit": { "status": "PASS", "passed": 163 },
+    "api_unit": {
+      "status": "PASS",
+      "passed": 464,
+      "skipped": 2,
+      "deselected": 146
+    },
+    "contracts": "PASS",
+    "production_build": "PASS",
+    "repo_policy_assertions": {
+      "status": "PASS",
+      "passed": 3,
+      "runner_status": "WINDOWS_SPAWN_EPERM"
+    },
+    "postgres_integration_full": {
+      "status": "PARTIAL",
+      "passed": 120,
+      "failed_environment": 2,
+      "errors_environment": 2,
+      "environment_blockers": [
+        "CREATEROLE privilege absent for role-boundary tests",
+        "pg_dump/pg_restore absent and no migration tools container configured"
+      ],
+      "workbook_sync_corrected_targeted": { "status": "PASS", "passed": 5 }
+    },
+    "live_cloud_or_browser_smoke": "NOT_RUN"
+  },
+  "scorecard": {
+    "portfolio": {
+      "synthetic": "TESTED",
+      "production_data": "UNVERIFIED",
+      "requires": ["R7", "R8", "R9"]
+    },
+    "universe": {
+      "synthetic": "TESTED",
+      "production_data": "UNVERIFIED",
+      "requires": ["R7", "R8", "R9"]
+    },
+    "company_explorer": {
+      "synthetic": "TESTED",
+      "production_data": "UNVERIFIED",
+      "requires": ["R7", "R8", "R9"]
+    },
+    "models": {
+      "engine_and_contracts": "TESTED",
+      "production_model_bootstrap": "UNVERIFIED",
+      "requires": ["R7", "R9"]
+    },
+    "decisions": {
+      "rules_and_fixtures": "TESTED",
+      "production_eligibility": "UNVERIFIED",
+      "requires": ["R7", "R8", "R9"]
+    },
+    "operations": {
+      "manual_pipeline": "SYNTHETICALLY_TESTED_DISABLED",
+      "live_sync": "NOT_RUN",
+      "requires": ["schema_upgrade", "R7", "explicit_operator_authorization"]
+    }
+  },
+  "known_limitations": [
+    "No current Neon record counts or coverage were inspected.",
+    "No live Google Drive acquisition, provider ingestion, deployment, or production import was run.",
+    "Reviewer identity is caller-provided audit text; shared API token is not per-person authorization.",
+    "Workbook artifact retention is append-only with no automated pruning; storage/archive policy is required before recurring use.",
+    "Production schema upgrade after recorded head 6c2eaf0b8147 remains separately authorized and unperformed.",
+    "Desktop/mobile browser walkthrough against real company data was not run."
+  ],
+  "required_next_real_data_checks": {
+    "R7": "Execute and reconcile canonical portfolio/company/listing baseline.",
+    "R8": "Execute separately authorized factual price/FX/fundamentals/filings ingestion and reconcile coverage.",
+    "R9": "Execute separately authorized model bootstrap/compute and parity reconciliation.",
+    "after_R7_R8_R9": "Read-only production API/UI, valuation, comparability, rank and execution verification."
+  }
+}

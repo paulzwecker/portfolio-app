@@ -28,7 +28,9 @@ JOB_DOMAINS: dict[str, list[str]] = {
     "SEC_FUNDAMENTALS": ["REPORTED_FUNDAMENTALS"],
     "SEC_FILINGS": ["SOURCE_DOCUMENTS"],
     "SHEETS_DISCOVERY": ["MODEL_SYNC", "RESEARCH_SYNC", "RISK_SYNC", "ACKNOWLEDGMENTS"],
+    "WORKBOOK_SYNC": ["WORKBOOK_SOURCE", "WORKBOOK_IMPORT_PREVIEW"],
     "RESEARCH_REFRESH": ["RESEARCH_TRIGGERS", "RESEARCH_QUEUE"],
+    "DECISION_RECOMPUTE": ["PORTFOLIO_RANK", "WATCHLIST_RANK", "RESEARCH_RANK", "EXECUTION_PACE"],
     "AGENT_WORK_FEED": ["AGENT_WORK_FEED"],
     "COMPANY_REFRESH": [
         "MARKET_DATA",
@@ -51,11 +53,16 @@ JOB_DOMAINS: dict[str, list[str]] = {
         "ACKNOWLEDGMENTS",
         "RESEARCH_TRIGGERS",
         "RESEARCH_QUEUE",
-        "AGENT_WORK_FEED",
     ],
 }
 
-GLOBAL_ONLY = {"SHEETS_DISCOVERY", "AGENT_WORK_FEED", "REFRESH_ALL"}
+GLOBAL_ONLY = {
+    "SHEETS_DISCOVERY",
+    "WORKBOOK_SYNC",
+    "DECISION_RECOMPUTE",
+    "AGENT_WORK_FEED",
+    "REFRESH_ALL",
+}
 COMPANY_ONLY = {"COMPANY_REFRESH"}
 MAX_ACTIVE_REQUESTS = 8
 MANUAL_QUEUE_LOCK_ID = int.from_bytes(
@@ -70,7 +77,9 @@ COOLDOWN = {
     "SEC_FUNDAMENTALS": timedelta(minutes=15),
     "SEC_FILINGS": timedelta(minutes=15),
     "SHEETS_DISCOVERY": timedelta(minutes=3),
+    "WORKBOOK_SYNC": timedelta(minutes=15),
     "RESEARCH_REFRESH": timedelta(minutes=3),
+    "DECISION_RECOMPUTE": timedelta(minutes=5),
     "AGENT_WORK_FEED": timedelta(minutes=5),
     "COMPANY_REFRESH": timedelta(minutes=10),
     "REFRESH_ALL": timedelta(minutes=10),

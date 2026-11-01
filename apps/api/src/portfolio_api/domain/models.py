@@ -1986,6 +1986,128 @@ class CanonicalBootstrapRun(Base):
     report: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
+class WorkbookSyncArtifact(Base):
+    """Private, content-addressed XLSX bytes retained for cloud replay and audit."""
+
+    __tablename__ = "workbook_sync_artifacts"
+    __table_args__ = (
+        CheckConstraint("length(sha256) = 64", name="sha256"),
+        CheckConstraint("byte_length > 0 AND byte_length <= 33554432", name="byte_length"),
+    )
+    sha256: Mapped[str] = mapped_column(String(64), primary_key=True)
+    byte_length: Mapped[int] = mapped_column(Integer)
+    payload: Mapped[bytes] = mapped_column(LargeBinary)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WorkbookSyncSchemaApproval(Base):
+    """Append-only human approval for one exact portfolio workbook schema fingerprint."""
+
+    __tablename__ = "workbook_sync_schema_approvals"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_identity_sha256",
+            "profile",
+            "contract_version",
+            "schema_fingerprint",
+            "header_fingerprint",
+            name="uq_workbook_sync_schema_approval_identity",
+        ),
+        CheckConstraint("length(source_identity_sha256) = 64", name="source_identity_sha256"),
+        CheckConstraint("length(artifact_sha256) = 64", name="artifact_sha256"),
+        CheckConstraint("profile = 'portfolio'", name="profile"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    source_identity_sha256: Mapped[str] = mapped_column(String(64))
+    profile: Mapped[str] = mapped_column(String(24))
+    contract_version: Mapped[str] = mapped_column(String(80))
+    schema_fingerprint: Mapped[str] = mapped_column(String(64))
+    header_fingerprint: Mapped[str] = mapped_column(String(64))
+    artifact_sha256: Mapped[str] = mapped_column(
+        ForeignKey("workbook_sync_artifacts.sha256", ondelete="RESTRICT")
+    )
+    reviewer: Mapped[str] = mapped_column(String(160))
+    rationale: Mapped[str] = mapped_column(String(1000))
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WorkbookSyncRun(Base):
+    """Durable acquisition, preview and explicit-apply ledger for a workbook version."""
+
+    __tablename__ = "workbook_sync_runs"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_workbook_sync_run_idempotency_key"),
+        CheckConstraint("length(idempotency_key) = 64", name="idempotency_key"),
+        CheckConstraint("length(source_identity_sha256) = 64", name="source_identity_sha256"),
+        CheckConstraint("length(source_revision_sha256) = 64", name="source_revision_sha256"),
+        CheckConstraint(
+            "artifact_sha256 IS NULL OR length(artifact_sha256) = 64", name="artifact_sha256"
+        ),
+        CheckConstraint("profile = 'portfolio'", name="profile"),
+        CheckConstraint(
+            "status IN ('SCHEMA_REVIEW_REQUIRED','PREVIEWED','NO_CHANGES','BLOCKED',"
+            "'APPLIED','FAILED')",
+            name="status",
+        ),
+        Index("ix_workbook_sync_runs_recorded", "recorded_at"),
+        Index("ix_workbook_sync_runs_status_recorded", "status", "recorded_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    idempotency_key: Mapped[str] = mapped_column(String(64))
+    request_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("operational_job_requests.id", ondelete="RESTRICT"), nullable=True
+    )
+    source_identity_sha256: Mapped[str] = mapped_column(String(64))
+    source_revision_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    source_revision_sha256: Mapped[str] = mapped_column(String(64))
+    source_modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source_checksum: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    source_mime_type: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    profile: Mapped[str] = mapped_column(String(24))
+    contract_version: Mapped[str] = mapped_column(String(80))
+    schema_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    header_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    artifact_sha256: Mapped[str | None] = mapped_column(
+        ForeignKey("workbook_sync_artifacts.sha256", ondelete="RESTRICT"), nullable=True
+    )
+    acquired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    status: Mapped[str] = mapped_column(String(32))
+    projection_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    import_plan_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    manifest: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    source_projection: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    preview_report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    reviewer: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WorkbookSyncPreview(Base):
+    """Append-only deterministic preview/reconciliation attempt for a frozen run."""
+
+    __tablename__ = "workbook_sync_previews"
+    __table_args__ = (
+        UniqueConstraint("run_id", "sequence", name="uq_workbook_sync_previews_run_sequence"),
+        CheckConstraint("sequence > 0", name="sequence"),
+        CheckConstraint("status IN ('PREVIEWED','NO_CHANGES','BLOCKED')", name="status"),
+        CheckConstraint("length(target_state_sha256) = 64", name="target_state_sha256"),
+        CheckConstraint("length(projection_sha256) = 64", name="projection_sha256"),
+        Index("ix_workbook_sync_previews_run_recorded", "run_id", "recorded_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("workbook_sync_runs.id", ondelete="RESTRICT"))
+    sequence: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(24))
+    target_state_sha256: Mapped[str] = mapped_column(String(64))
+    projection_sha256: Mapped[str] = mapped_column(String(64))
+    import_plan_sha256: Mapped[str] = mapped_column(String(64))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    report: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
 class MarketDataBatch(Base):
     """Immutable receipt for one workbook snapshot or provider ingestion batch."""
 
@@ -2277,7 +2399,8 @@ class MarketDataBootstrapRun(Base):
         CheckConstraint("length(crosswalk_sha256) = 64", name="crosswalk_sha256"),
         CheckConstraint("start_date <= end_date", name="date_window"),
         CheckConstraint(
-            "target_environment IN ('development','rehearsal')", name="target_environment"
+            "target_environment IN ('development','rehearsal','production')",
+            name="target_environment",
         ),
         CheckConstraint(
             "status IN ('PREPARED','RUNNING','PARTIAL','COMPLETE','FAILED','BLOCKED')",
@@ -2373,7 +2496,8 @@ class FundamentalsBootstrapRun(Base):
         CheckConstraint("length(input_digest) = 64", name="input_digest"),
         CheckConstraint("length(mapping_sha256) = 64", name="mapping_sha256"),
         CheckConstraint(
-            "target_environment IN ('development','rehearsal')", name="target_environment"
+            "target_environment IN ('development','rehearsal','production')",
+            name="target_environment",
         ),
         CheckConstraint(
             "status IN ('PREPARED','RUNNING','PARTIAL','COMPLETE','FAILED','BLOCKED')",
@@ -2571,7 +2695,8 @@ class OperationalJobRequest(Base):
     __table_args__ = (
         CheckConstraint(
             "job_name IN ('MARKET_DATA','FX','MARKET_AND_FX','SEC_FUNDAMENTALS','SEC_FILINGS',"
-            "'SHEETS_DISCOVERY','RESEARCH_REFRESH','AGENT_WORK_FEED','COMPANY_REFRESH','REFRESH_ALL')",
+            "'SHEETS_DISCOVERY','WORKBOOK_SYNC','RESEARCH_REFRESH','DECISION_RECOMPUTE',"
+            "'AGENT_WORK_FEED','COMPANY_REFRESH','REFRESH_ALL')",
             name="job_name",
         ),
         CheckConstraint("scope_kind IN ('ACTIVE_UNIVERSE','COMPANY')", name="scope_kind"),
@@ -3365,6 +3490,73 @@ class FinancialModelRevisionEvidence(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class AgentModelRevisionProposal(Base):
+    """Immutable agent-authored proposal payload with a mutable review state machine."""
+
+    __tablename__ = "agent_model_revision_proposals"
+    __table_args__ = (
+        UniqueConstraint(
+            "model_id",
+            "producer_id",
+            "external_revision_id",
+            name="uq_agent_model_proposal_external_revision",
+        ),
+        ForeignKeyConstraint(
+            ["model_id", "base_revision_id"],
+            ["financial_model_revisions.model_id", "financial_model_revisions.id"],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING','READY','CONFLICT','INVALID','ACCEPTED','REJECTED')",
+            name="status",
+        ),
+        CheckConstraint("length(content_fingerprint) = 64", name="content_fingerprint"),
+        CheckConstraint(
+            "model_type IN ('UFCF_DCF_10Y_FADE','OWNER_CASH_FLOW_10Y','RESIDUAL_INCOME_10Y_FADE')",
+            name="model_type",
+        ),
+        Index("ix_agent_model_proposals_status_submitted", "status", "submitted_at"),
+        Index("ix_agent_model_proposals_model_base", "model_id", "base_revision_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    model_id: Mapped[UUID] = mapped_column(
+        ForeignKey("financial_models.id", ondelete="RESTRICT"), index=True
+    )
+    company_id: Mapped[UUID] = mapped_column(ForeignKey("companies.id", ondelete="RESTRICT"))
+    producer_id: Mapped[str] = mapped_column(String(160))
+    author_id: Mapped[str] = mapped_column(String(160))
+    external_revision_id: Mapped[str] = mapped_column(String(160))
+    base_revision_id: Mapped[UUID] = mapped_column(nullable=False)
+    base_revision_number: Mapped[int] = mapped_column(Integer)
+    valuation_listing_id: Mapped[UUID] = mapped_column(
+        ForeignKey("listings.id", ondelete="RESTRICT")
+    )
+    model_type: Mapped[str] = mapped_column(String(60))
+    methodology_version: Mapped[str] = mapped_column(String(40))
+    model_currency: Mapped[str] = mapped_column(String(3))
+    authored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    source_reference: Mapped[str] = mapped_column(String(1000))
+    rationale: Mapped[str] = mapped_column(Text)
+    proposal_data: Mapped[dict[str, object]] = mapped_column(JSON)
+    supporting_evidence: Mapped[list[dict[str, object]]] = mapped_column(JSON)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24), default="PENDING")
+    issue: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preview_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    preview_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    previewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    conflicting_proposal_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    accepted_revision_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("financial_model_revisions.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewer_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class GoogleSheetsSyncRun(Base):
     """One explicit read-only poll of the configured model-contract inbox."""
 
@@ -3769,6 +3961,43 @@ class FinancialModelMigrationAssessment(Base):
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class ModelIdentityBootstrapReceipt(Base):
+    """Immutable receipt linking one verified model package to canonical identity."""
+
+    __tablename__ = "model_identity_bootstrap_receipts"
+    __table_args__ = (
+        UniqueConstraint("input_digest"),
+        CheckConstraint("length(input_digest) = 64", name="input_digest"),
+        CheckConstraint("length(mapping_sha256) = 64", name="mapping_sha256"),
+        CheckConstraint("length(package_sha256) = 64", name="package_sha256"),
+        CheckConstraint("length(source_identity_sha256) = 64", name="source_identity_sha256"),
+        CheckConstraint("source_model_key = 'P-GOOGL'", name="source_model_key"),
+        CheckConstraint("status = 'APPLIED'", name="status"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    input_digest: Mapped[str] = mapped_column(String(64))
+    mapping_sha256: Mapped[str] = mapped_column(String(64))
+    mapping_version: Mapped[str] = mapped_column(String(80))
+    source_model_key: Mapped[str] = mapped_column(String(120))
+    package_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    source_identity_sha256: Mapped[str] = mapped_column(String(64))
+    source_modified_at: Mapped[str] = mapped_column(String(80))
+    source_revision_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="RESTRICT"), index=True
+    )
+    security_id: Mapped[UUID] = mapped_column(
+        ForeignKey("securities.id", ondelete="RESTRICT"), index=True
+    )
+    listing_id: Mapped[UUID] = mapped_column(
+        ForeignKey("listings.id", ondelete="RESTRICT"), index=True
+    )
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    status: Mapped[str] = mapped_column(String(16), default="APPLIED")
+    report: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
 @event.listens_for(Session, "before_flush")
 def protect_ranking_history(session: Session, flush_context: object, instances: object) -> None:
     """Ranking definitions are versioned; run observations are append-only."""
@@ -3795,6 +4024,9 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         CashPosition,
         ScoreAssessment,
         LegacyImportBatch,
+        WorkbookSyncArtifact,
+        WorkbookSyncSchemaApproval,
+        WorkbookSyncPreview,
         ExternalIngestionAttempt,
         ReportedFundamentalBatch,
         ReportedFundamentalObservation,
@@ -3845,11 +4077,45 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         ResidualIncomeProjection,
         FinancialModelOutput,
         FinancialModelMigrationAssessment,
+        ModelIdentityBootstrapReceipt,
         ReturnMethodologyDefinition,
     )
     for item in session.dirty.union(session.deleted):
         if isinstance(item, immutable):
             raise ValueError("Historical observations are append-only")
+        if isinstance(item, AgentModelRevisionProposal):
+            if item in session.deleted:
+                raise ValueError("Agent model proposals are retained")
+            immutable_proposal_fields = (
+                "model_id",
+                "company_id",
+                "producer_id",
+                "author_id",
+                "external_revision_id",
+                "base_revision_id",
+                "base_revision_number",
+                "valuation_listing_id",
+                "model_type",
+                "methodology_version",
+                "model_currency",
+                "authored_at",
+                "effective_at",
+                "source_reference",
+                "rationale",
+                "proposal_data",
+                "supporting_evidence",
+                "content_fingerprint",
+                "submitted_at",
+            )
+            if any(
+                inspect(item).attrs[name].history.has_changes()
+                for name in immutable_proposal_fields
+            ):
+                raise ValueError("Submitted model proposal evidence is immutable")
+            status_history = inspect(item).attrs.status.history
+            prior_status = status_history.deleted[0] if status_history.deleted else item.status
+            if prior_status in {"ACCEPTED", "REJECTED"}:
+                raise ValueError("Final model proposal review decisions are immutable")
         if isinstance(item, GoogleSheetsSyncRun):
             if item in session.deleted:
                 raise ValueError("Google Sheets synchronization runs are retained")
@@ -3909,6 +4175,46 @@ def protect_history(session: Session, flush_context: object, instances: object) 
                 for name in model_final_decision_fields
             ):
                 raise ValueError("Final Google Sheets review decisions are immutable")
+        if isinstance(item, WorkbookSyncRun):
+            if item in session.deleted:
+                raise ValueError("Workbook synchronization runs are retained")
+            status_history = inspect(item).attrs.status.history
+            previous_status = status_history.deleted[0] if status_history.deleted else item.status
+            if previous_status in {"APPLIED", "NO_CHANGES"} and status_history.has_changes():
+                raise ValueError("Completed workbook synchronization outcomes are immutable")
+            if previous_status in {"APPLIED", "NO_CHANGES"}:
+                immutable_run_fields = (
+                    "idempotency_key",
+                    "request_id",
+                    "source_identity_sha256",
+                    "source_revision_id",
+                    "source_revision_sha256",
+                    "source_modified_at",
+                    "source_checksum",
+                    "source_mime_type",
+                    "profile",
+                    "contract_version",
+                    "schema_fingerprint",
+                    "header_fingerprint",
+                    "artifact_sha256",
+                    "acquired_at",
+                    "recorded_at",
+                    "status",
+                    "projection_sha256",
+                    "import_plan_sha256",
+                    "manifest",
+                    "source_projection",
+                    "preview_report",
+                    "error_code",
+                    "error_message",
+                    "reviewer",
+                    "reviewed_at",
+                    "applied_at",
+                )
+                if any(
+                    inspect(item).attrs[name].history.has_changes() for name in immutable_run_fields
+                ):
+                    raise ValueError("Completed workbook synchronization outcomes are immutable")
         if isinstance(item, GoogleSheetsRiskSyncRun):
             if item in session.deleted:
                 raise ValueError("Google Sheets risk synchronization runs are retained")

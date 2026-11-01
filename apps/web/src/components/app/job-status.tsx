@@ -5,9 +5,11 @@ import { dateTime, statusLabel } from "@/lib/display";
 export function JobStatus({
   job,
   compact = false,
+  manualRunnerEnabled = false,
 }: {
   job: OperationalJobRequest;
   compact?: boolean;
+  manualRunnerEnabled?: boolean;
 }) {
   const active = job.status === "QUEUED" || job.status === "RUNNING";
   return (
@@ -57,6 +59,26 @@ export function JobStatus({
           ))}
         </ol>
       )}
+      {job.job_name === "WORKBOOK_SYNC" && job.attempts.length > 0 && (
+        <details className="rounded-md border bg-muted/30 p-2 text-xs">
+          <summary className="cursor-pointer font-medium">
+            Frozen workbook and preview details
+          </summary>
+          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words">
+            {JSON.stringify(
+              job.attempts
+                .filter((attempt) => attempt.step_name === "WORKBOOK_SYNC")
+                .map((attempt) => attempt.result),
+              null,
+              2,
+            )}
+          </pre>
+          <p className="mt-2 text-muted-foreground">
+            This request stages and previews a frozen source only. It never
+            applies workbook changes.
+          </p>
+        </details>
+      )}
       {(job.error_message || job.error_code) && (
         <p className="break-words text-xs text-warning">
           {job.error_message ?? statusLabel(job.error_code)}
@@ -64,7 +86,9 @@ export function JobStatus({
       )}
       {!compact && job.attempts.length === 0 && active && (
         <p className="text-xs text-muted-foreground">
-          Waiting for the recurring operations worker to claim this request.
+          {manualRunnerEnabled
+            ? "Queued for an operator-run one-shot process; it will not run on a schedule."
+            : "Waiting for the recurring operations worker to claim this request."}
         </p>
       )}
     </div>

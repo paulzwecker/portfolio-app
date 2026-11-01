@@ -30,6 +30,7 @@ from portfolio_api.bootstrap_manifest import validate_manifest
 from portfolio_api.bootstrap_preflight import (
     BootstrapPreflightError,
     verify_database_preflight,
+    verify_database_read_only_preflight,
 )
 from portfolio_api.database import create_database_engine
 from portfolio_api.database_write_target import DatabaseWriteTargetError
@@ -49,13 +50,20 @@ from portfolio_api.research_priority_import import (
     research_priority_rows,
 )
 from portfolio_api.settings import REPOSITORY_PATH, Settings
+from portfolio_api.workbook_semantics import SEMANTIC_FINGERPRINT_VERSION, semantic_fingerprint
+from portfolio_api.workbook_source_bundle import (
+    SourceValueBundleError,
+    apply_approved_source_value_bundle,
+)
 from portfolio_api.workbook_sources import (
+    GOOGLE_SHEET_MIME,
     MARKET_DATA_PROFILE,
     PORTFOLIO_PROFILE,
     SnapshotStore,
     WorkbookSourceError,
     inspect_workbook,
 )
+from portfolio_api.workbook_value_overlay import ValueOverlayError, apply_approved_overlay
 
 IMPORT_VERSION = "canonical-workbook-import-v1"
 _RUN_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -96,6 +104,14 @@ class ApprovedWorkbookSnapshot:
     path: Path
     acquired_at: datetime
     schema_fingerprint: str
+    semantic_sha256: str | None = None
+    workbook: legacy_import.Workbook | None = None
+    acquisition_run_id: str | None = None
+    source_identity_sha256: str | None = None
+    source_modified_at: str | None = None
+    source_mime_type: str | None = None
+    source_revision: str | None = None
+    source_checksum: str | None = None
 
 
 @dataclass(frozen=True)
@@ -223,6 +239,9 @@ def resolve_approved_snapshot(
             or acquisition.get("contract_version") != expected_contract_version
             or acquisition.get("schema_fingerprint") != selected.get("schema_fingerprint")
             or acquisition.get("source_identity_sha256") != selected.get("source_identity_sha256")
+            or acquisition.get("semantic_fingerprint_version")
+            != selected.get("semantic_fingerprint_version")
+            or acquisition.get("semantic_sha256") != selected.get("semantic_sha256")
         ):
             raise CanonicalBootstrapError(
                 "The workbook schema review does not match its acquired snapshot."
@@ -266,11 +285,12 @@ def resolve_approved_snapshot(
         )
 
     path, digest = _snapshot_blob(store, selected)
+    payload = path.read_bytes()
     profile = (
         PORTFOLIO_PROFILE if expected_profile == PORTFOLIO_PROFILE.key else MARKET_DATA_PROFILE
     )
     try:
-        inventory = inspect_workbook(path.read_bytes(), profile)
+        inventory = inspect_workbook(payload, profile)
     except (OSError, WorkbookSourceError):
         raise CanonicalBootstrapError(
             "The workbook blob no longer passes its approved source contract."
@@ -279,6 +299,48 @@ def resolve_approved_snapshot(
         raise CanonicalBootstrapError(
             "The workbook's recomputed schema fingerprint differs from its approved manifest."
         )
+    semantic_sha256: str | None = None
+    portfolio_book: legacy_import.Workbook | None = None
+    if expected_profile == PORTFOLIO_PROFILE.key:
+        semantic_sha256 = acquisition.get("semantic_sha256")
+        if (
+            acquisition.get("semantic_fingerprint_version") != SEMANTIC_FINGERPRINT_VERSION
+            or not isinstance(semantic_sha256, str)
+            or not _SHA256.fullmatch(semantic_sha256)
+        ):
+            raise CanonicalBootstrapError(
+                "The portfolio snapshot predates importer-value fingerprints; reacquire it."
+            )
+        try:
+            portfolio_book = legacy_import.Workbook.read_bytes(
+                payload,
+                lambda name: (
+                    name
+                    in {
+                        "Universe Registry",
+                        "Current Holdings",
+                        "Target Architecture",
+                        "10Y Durability",
+                        "Compounder Quality",
+                        "Price Feed",
+                        "Model Contract",
+                        "Model Revision History",
+                        "Estimate History",
+                        "Candidate Ranking",
+                    }
+                    or name.startswith(("P-", "W-", "C-"))
+                ),
+                source_name=PORTFOLIO_PROFILE.expected_filename,
+            )
+            actual_semantic_sha256, _ = semantic_fingerprint(portfolio_book)
+        except (OSError, ValueError):
+            raise CanonicalBootstrapError(
+                "The portfolio snapshot importer-value projection could not be verified."
+            ) from None
+        if actual_semantic_sha256 != semantic_sha256:
+            raise CanonicalBootstrapError(
+                "The portfolio snapshot importer-value fingerprint differs from its manifest."
+            )
     return ApprovedWorkbookSnapshot(
         run_id=run_id,
         profile=expected_profile,
@@ -287,6 +349,14 @@ def resolve_approved_snapshot(
         path=path,
         acquired_at=acquired_at,
         schema_fingerprint=schema_fingerprint,
+        semantic_sha256=semantic_sha256,
+        workbook=portfolio_book,
+        acquisition_run_id=acquisition.get("run_id"),
+        source_identity_sha256=source_identity,
+        source_modified_at=acquisition.get("source_modified_at"),
+        source_mime_type=acquisition.get("source_mime_type"),
+        source_revision=acquisition.get("source_revision"),
+        source_checksum=acquisition.get("source_checksum"),
     )
 
 
@@ -441,7 +511,21 @@ def build_import_plan(
     market_run_id: str,
     *,
     observed_at: datetime | None = None,
+    portfolio_value_overlay: Path | None = None,
+    portfolio_value_overlay_sha256: str | None = None,
+    portfolio_source_value_bundle_sha256: str | None = None,
+    portfolio_source_value_approval_sha256: str | None = None,
 ) -> tuple[ApprovedWorkbookSnapshot, ApprovedWorkbookSnapshot, ImportPlan]:
+    if (portfolio_value_overlay is None) != (portfolio_value_overlay_sha256 is None):
+        raise CanonicalBootstrapError(
+            "The approved portfolio value overlay path and SHA-256 must be supplied together."
+        )
+    if (portfolio_source_value_bundle_sha256 is None) != (
+        portfolio_source_value_approval_sha256 is None
+    ):
+        raise CanonicalBootstrapError(
+            "The exact source-value bundle and its approval hash must be supplied together."
+        )
     portfolio_snapshot = resolve_approved_snapshot(
         store,
         portfolio_run_id,
@@ -456,14 +540,137 @@ def build_import_plan(
         expected_contract_version=MARKET_DATA_PROFILE.contract_version,
         expected_filename=MARKET_DATA_PROFILE.expected_filename,
     )
-    plan = legacy_import.build_plan(
-        portfolio_snapshot.path,
-        market_snapshot.path,
-        observed_at,
-        portfolio_source_name=portfolio_snapshot.expected_filename,
-        market_source_name=market_snapshot.expected_filename,
-    )
+    if portfolio_snapshot.workbook is None:
+        if portfolio_value_overlay is not None:
+            raise CanonicalBootstrapError(
+                "A portfolio value overlay requires the verified frozen portfolio workbook."
+            )
+        plan = legacy_import.build_plan(
+            portfolio_snapshot.path,
+            market_snapshot.path,
+            observed_at,
+            portfolio_source_name=portfolio_snapshot.expected_filename,
+            market_source_name=market_snapshot.expected_filename,
+        )
+    else:
+        if portfolio_snapshot.source_mime_type == GOOGLE_SHEET_MIME:
+            if portfolio_value_overlay is not None:
+                raise CanonicalBootstrapError(
+                    "Legacy value overlays cannot be combined with native Sheets source bundles. "
+                    "Capture and review one canonical source-value bundle instead."
+                )
+            if (
+                portfolio_source_value_bundle_sha256 is None
+                or portfolio_source_value_approval_sha256 is None
+            ):
+                raise CanonicalBootstrapError(
+                    "A native Google Sheets portfolio requires an explicitly approved "
+                    "canonical source-value bundle."
+                )
+            try:
+                bundle = apply_approved_source_value_bundle(
+                    store,
+                    run_id=portfolio_snapshot.acquisition_run_id or portfolio_snapshot.run_id,
+                    bundle_sha256=portfolio_source_value_bundle_sha256,
+                    approval_sha256=portfolio_source_value_approval_sha256,
+                    workbook=portfolio_snapshot.workbook,
+                    expected_artifact_sha256=portfolio_snapshot.sha256,
+                    expected_schema_fingerprint=portfolio_snapshot.schema_fingerprint,
+                    expected_semantic_sha256=portfolio_snapshot.semantic_sha256 or "",
+                    expected_source_identity_sha256=portfolio_snapshot.source_identity_sha256 or "",
+                    expected_source_revision=portfolio_snapshot.source_revision,
+                    expected_source_modified_at=portfolio_snapshot.source_modified_at,
+                    expected_source_checksum=portfolio_snapshot.source_checksum,
+                )
+            except SourceValueBundleError as error:
+                raise CanonicalBootstrapError(str(error)) from error
+            _validate_source_bundle_observation_cutoff(bundle.get("captured_at_utc"), observed_at)
+        elif portfolio_source_value_bundle_sha256 is not None:
+            raise CanonicalBootstrapError(
+                "A native Sheets source-value bundle cannot be applied to an XLSX source."
+            )
+        if portfolio_value_overlay is not None and portfolio_value_overlay_sha256 is not None:
+            try:
+                apply_approved_overlay(
+                    store,
+                    path=portfolio_value_overlay,
+                    expected_sha256=portfolio_value_overlay_sha256,
+                    acquisition_run_id=portfolio_snapshot.acquisition_run_id
+                    or portfolio_snapshot.run_id,
+                    artifact_sha256=portfolio_snapshot.sha256,
+                    semantic_sha256=portfolio_snapshot.semantic_sha256,
+                    workbook=portfolio_snapshot.workbook,
+                )
+            except ValueOverlayError as error:
+                raise CanonicalBootstrapError(str(error)) from error
+            _validate_overlay_observation_cutoff(
+                portfolio_snapshot.workbook.value_overlay_comparison_completed_at,
+                observed_at,
+            )
+        market_book = legacy_import.Workbook.read(
+            market_snapshot.path,
+            lambda name: name == "Listings",
+            source_name=market_snapshot.expected_filename,
+        )
+        plan = legacy_import.build_plan_from_workbooks(
+            portfolio_snapshot.workbook,
+            market_book,
+            observed_at,
+            portfolio_source_name=portfolio_snapshot.expected_filename,
+            market_source_name=market_snapshot.expected_filename,
+        )
     return portfolio_snapshot, market_snapshot, plan
+
+
+def _validate_source_bundle_observation_cutoff(
+    captured_at_utc: str | None,
+    observed_at: datetime | None,
+) -> None:
+    try:
+        captured = datetime.fromisoformat(str(captured_at_utc).replace("Z", "+00:00"))
+    except ValueError as error:
+        raise CanonicalBootstrapError(
+            "The canonical source bundle observation timestamp is invalid."
+        ) from error
+    cutoff = observed_at or now()
+    if (
+        captured.tzinfo is None
+        or captured.utcoffset() is None
+        or cutoff.tzinfo is None
+        or cutoff.utcoffset() is None
+        or captured > cutoff
+    ):
+        raise CanonicalBootstrapError(
+            "The source bundle was observed after the requested import cutoff."
+        )
+
+
+def _validate_overlay_observation_cutoff(
+    comparison_completed_at: str | None,
+    observed_at: datetime | None,
+) -> None:
+    if comparison_completed_at is None:
+        return
+    try:
+        comparison_time = datetime.fromisoformat(comparison_completed_at.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise CanonicalBootstrapError(
+            "The value overlay comparison timestamp is invalid."
+        ) from error
+    cutoff = observed_at or now()
+    if (
+        comparison_time.tzinfo is None
+        or comparison_time.utcoffset() is None
+        or cutoff.tzinfo is None
+        or cutoff.utcoffset() is None
+    ):
+        raise CanonicalBootstrapError(
+            "The value overlay cutoff must use timezone-aware timestamps."
+        )
+    if cutoff.astimezone(UTC) < comparison_time.astimezone(UTC):
+        raise CanonicalBootstrapError(
+            "The bootstrap observation time predates the live value comparison."
+        )
 
 
 def import_blocking_issues(plan: ImportPlan) -> list[dict[str, str]]:
@@ -487,6 +694,12 @@ def _input_digest(
         "market_sha256": market.sha256,
         "provider_identifiers_sha256": provider_plan.sha256 if provider_plan else None,
     }
+    if portfolio.workbook is not None and portfolio.workbook.value_overlay_sha256 is not None:
+        fingerprint["portfolio_value_overlay_sha256"] = portfolio.workbook.value_overlay_sha256
+    if portfolio.workbook is not None and portfolio.workbook.source_value_bundle_sha256 is not None:
+        fingerprint["portfolio_source_value_bundle_sha256"] = (
+            portfolio.workbook.source_value_bundle_sha256
+        )
     return hashlib.sha256(
         json.dumps(fingerprint, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -562,6 +775,10 @@ def _execution_manifest(
                 else MARKET_DATA_PROFILE.contract_version
             ),
             "artifact_sha256": snapshot.sha256,
+            "semantic_fingerprint_version": (
+                SEMANTIC_FINGERPRINT_VERSION if snapshot.profile == PORTFOLIO_PROFILE.key else None
+            ),
+            "semantic_sha256": snapshot.semantic_sha256,
             "identity_map_sha256": identity_hash,
             "recorded_at": snapshot.acquired_at.isoformat(),
             "effective_at": None,
@@ -1023,9 +1240,16 @@ def _write_private_report(store: SnapshotStore, report: dict[str, Any]) -> str:
     return str(report_path.relative_to(store.root))
 
 
-def _verify_target(engine: Engine, settings: Settings, requested_environment: str) -> None:
+def _verify_target(
+    engine: Engine,
+    settings: Settings,
+    requested_environment: str,
+    *,
+    read_only: bool = False,
+) -> None:
     try:
-        verify_database_preflight(
+        preflight = verify_database_read_only_preflight if read_only else verify_database_preflight
+        preflight(
             engine,
             configured_target_environment=settings.database_target_environment,
             requested_target_environment=requested_environment,
@@ -1069,6 +1293,23 @@ def _parser() -> argparse.ArgumentParser:
         subparser.add_argument("--market-run", required=True)
         subparser.add_argument("--provider-identifiers", type=Path)
         subparser.add_argument("--provider-identifiers-sha256")
+        subparser.add_argument(
+            "--portfolio-value-overlay",
+            type=Path,
+            help="private, explicitly approved value-overlay artifact",
+        )
+        subparser.add_argument(
+            "--portfolio-value-overlay-sha256",
+            help="exact SHA-256 of the approved private value-overlay artifact",
+        )
+        subparser.add_argument(
+            "--portfolio-source-value-bundle-sha256",
+            help="exact SHA-256 of the immutable native Sheets source-value bundle",
+        )
+        subparser.add_argument(
+            "--portfolio-source-value-approval-sha256",
+            help="exact SHA-256 of its separate source-value approval receipt",
+        )
         subparser.add_argument(
             "--target-environment",
             choices=("development", "rehearsal", "production"),
@@ -1129,14 +1370,21 @@ def main(argv: list[str] | None = None) -> int:
         settings = Settings()
         if settings.database_url is None:
             raise CanonicalBootstrapError("DATABASE_URL is required for target verification.")
+        read_only_preview = args.command == "preview"
         engine = create_database_engine(
             settings,
             write_operation="canonical_portfolio_bootstrap",
             write_operation_kind="bootstrap",
+            read_only=read_only_preview,
         )
         if engine is None:
             raise CanonicalBootstrapError("DATABASE_URL is required for target verification.")
-        _verify_target(engine, settings, args.target_environment)
+        _verify_target(
+            engine,
+            settings,
+            args.target_environment,
+            read_only=read_only_preview,
+        )
 
         observed_at = args.observed_at or now()
         if observed_at.tzinfo is None or observed_at.utcoffset() is None:
@@ -1148,6 +1396,10 @@ def main(argv: list[str] | None = None) -> int:
             args.portfolio_run,
             args.market_run,
             observed_at=observed_at.astimezone(UTC),
+            portfolio_value_overlay=args.portfolio_value_overlay,
+            portfolio_value_overlay_sha256=args.portfolio_value_overlay_sha256,
+            portfolio_source_value_bundle_sha256=(args.portfolio_source_value_bundle_sha256),
+            portfolio_source_value_approval_sha256=(args.portfolio_source_value_approval_sha256),
         )
         provider_plan = _load_provider_plan(args, plan)
         report = _base_report(portfolio, market, plan, provider_plan)

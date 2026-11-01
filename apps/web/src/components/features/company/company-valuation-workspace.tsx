@@ -12,6 +12,7 @@ import { CanonicalArchetypeExplorer } from "@/components/canonical-archetypes";
 import { CanonicalDcfExplorer } from "@/components/canonical-dcf";
 import { ModelMigrationStatus } from "@/components/model-migration-status";
 import { ModelOutputs as CompanyModelOutputHistory } from "@/components/features/company/company-model-output-history";
+import { ModelRevisionProposalReview } from "@/components/features/modeling/model-revision-proposal-review";
 import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyExpectedReturnHistory,
@@ -86,11 +87,26 @@ type ModelDescriptor = {
   revisionNumber: number | null;
   effectiveAt: string | null;
   recordedAt: string | null;
+  calculatedAsOf: string | null;
+  calculationKnownAt: string | null;
   actor: string | null;
   source: string | null;
   rationale: string | null;
   output: OutputView | null;
+  revisionHistory: ModelRevisionSummary[];
   driverSets: Record<ScenarioName, Driver[]>;
+};
+
+type ModelRevisionSummary = {
+  id: string;
+  revisionNumber: number | null;
+  methodologyVersion: string | null;
+  effectiveAt: string | null;
+  recordedAt: string | null;
+  source: string | null;
+  rationale: string | null;
+  weightedFairValue: string | null;
+  expectedReturn: string | null;
 };
 
 const methodLabels: Record<ModelMethod, string> = {
@@ -135,6 +151,27 @@ function readArray(value: unknown): Record<string, unknown>[] {
 
 function readRecord(value: unknown): Record<string, unknown> | null {
   return isRecord(value) ? value : null;
+}
+
+function revisionSummaries(value: unknown): ModelRevisionSummary[] {
+  return readArray(value).flatMap((item) => {
+    const outputs = readRecord(item.outputs);
+    const revisionId = readString(item.id);
+    if (!revisionId) return [];
+    return [
+      {
+        id: revisionId,
+        revisionNumber: readNumber(item.revision_number),
+        methodologyVersion: readString(item.methodology_version),
+        effectiveAt: readString(item.effective_at),
+        recordedAt: readString(item.recorded_at),
+        source: readString(item.source),
+        rationale: readString(item.rationale),
+        weightedFairValue: readString(outputs?.weighted_fv),
+        expectedReturn: readString(outputs?.expected_cash_flow_irr),
+      },
+    ];
+  });
 }
 
 function outputView(value: unknown): OutputView | null {
@@ -289,10 +326,13 @@ function nativeDescriptor(
     revisionNumber: readNumber(revision?.revision_number),
     effectiveAt: readString(revision?.effective_at),
     recordedAt: readString(revision?.recorded_at),
+    calculatedAsOf: readString(current?.calculated_as_of),
+    calculationKnownAt: readString(current?.known_at),
     actor: readString(revision?.actor),
     source: readString(revision?.source),
     rationale: readString(revision?.rationale),
     output,
+    revisionHistory: revisionSummaries(modelRecord.history),
     driverSets: method
       ? {
           BEAR: driversFor(method, revision, "BEAR"),
@@ -321,10 +361,13 @@ function importedDescriptor(snapshot: unknown): ModelDescriptor | null {
     revisionNumber: null,
     effectiveAt: readString(item.effective_at),
     recordedAt: readString(item.recorded_at),
+    calculatedAsOf: null,
+    calculationKnownAt: null,
     actor: readString(item.actor),
     source: readString(item.source),
     rationale: readString(item.rationale),
     output: outputView(item),
+    revisionHistory: [],
     driverSets: { BEAR: [], BASE: [], BULL: [] },
   };
 }
@@ -627,6 +670,97 @@ function MethodSelector({
   );
 }
 
+function AcceptedRevisionHistory({
+  descriptor,
+  onCompare,
+}: {
+  descriptor: ModelDescriptor | null;
+  onCompare: () => void;
+}) {
+  if (!descriptor || !descriptor.native) {
+    return (
+      <EmptyState
+        title="No native revision history is available"
+        description="Imported output snapshots are read-only and do not contain accepted model inputs or revision ancestry."
+      />
+    );
+  }
+  const history = [...descriptor.revisionHistory].sort(
+    (left, right) => (right.revisionNumber ?? 0) - (left.revisionNumber ?? 0),
+  );
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">Accepted revisions</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Recorded revisions are immutable. Input-level comparisons are
+            available in the method editor.
+          </p>
+        </div>
+        {descriptor.method && history.length > 1 && (
+          <Button type="button" variant="outline" size="sm" onClick={onCompare}>
+            Compare assumptions
+          </Button>
+        )}
+      </div>
+      {history.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No revision summaries were returned.
+        </p>
+      ) : (
+        <ol className="divide-y rounded-md border">
+          {history.map((revision) => (
+            <li
+              key={revision.id}
+              className="grid gap-2 p-3 sm:grid-cols-[minmax(9rem,0.7fr)_minmax(0,1.3fr)]"
+            >
+              <div>
+                <p className="text-sm font-medium">
+                  Revision {revision.revisionNumber ?? "—"}
+                  {revision.revisionNumber === descriptor.revisionNumber
+                    ? " · current"
+                    : ""}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Effective{" "}
+                  {revision.effectiveAt
+                    ? dateTime(revision.effectiveAt)
+                    : "unavailable"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Recorded{" "}
+                  {revision.recordedAt
+                    ? dateTime(revision.recordedAt)
+                    : "unavailable"}
+                </p>
+              </div>
+              <div className="min-w-0 space-y-1 text-xs">
+                <p className="break-words text-muted-foreground">
+                  {revision.methodologyVersion ?? "Method version unavailable"}{" "}
+                  · {revision.source ?? "Source not recorded"}
+                </p>
+                <p className="break-words">
+                  {revision.rationale ?? "Rationale not recorded"}
+                </p>
+                <p className="tabular-nums text-muted-foreground">
+                  Weighted fair value{" "}
+                  {formatOutputValue(
+                    revision.weightedFairValue,
+                    descriptor.currency,
+                  )}
+                  {" · "}Expected return{" "}
+                  {formatRatioValue(revision.expectedReturn)}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function modelDescriptors(
   dcfModels: FinancialModel[] | undefined,
   archetypeModels: ExtendedFinancialModel[] | undefined,
@@ -788,6 +922,36 @@ export function CompanyValuationWorkspace({
                     </div>
                     <div className="flex flex-wrap justify-between gap-2 border-b pb-2">
                       <dt className="text-muted-foreground">
+                        Recorded in application
+                      </dt>
+                      <dd className="text-right font-medium">
+                        {activeDescriptor.recordedAt
+                          ? dateTime(activeDescriptor.recordedAt)
+                          : "Unavailable"}
+                      </dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-2 border-b pb-2">
+                      <dt className="text-muted-foreground">
+                        Calculation as of
+                      </dt>
+                      <dd className="text-right font-medium">
+                        {activeDescriptor.calculatedAsOf
+                          ? dateTime(activeDescriptor.calculatedAsOf)
+                          : "Not recorded"}
+                      </dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-2 border-b pb-2">
+                      <dt className="text-muted-foreground">
+                        Calculation known at
+                      </dt>
+                      <dd className="text-right font-medium">
+                        {activeDescriptor.calculationKnownAt
+                          ? dateTime(activeDescriptor.calculationKnownAt)
+                          : "Not recorded"}
+                      </dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-2 border-b pb-2">
+                      <dt className="text-muted-foreground">
                         Comparability group
                       </dt>
                       <dd className="text-right font-medium">
@@ -833,6 +997,8 @@ export function CompanyValuationWorkspace({
           />
         )}
       </PageSection>
+
+      <ModelRevisionProposalReview companyId={companyId} />
 
       {partialErrors.length > 0 && !loading && (
         <p className="rounded-md border border-warning/30 bg-warning/5 p-3 text-xs text-muted-foreground">
@@ -921,13 +1087,30 @@ export function CompanyValuationWorkspace({
           onClick={() => setAuditOpen((open) => !open)}
           className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5"
         >
-          <span>Revision history & migration diagnostics</span>
+          <span>
+            Accepted revisions, imported outputs & migration diagnostics
+          </span>
           <span aria-hidden="true" className="text-muted-foreground">
             {auditOpen ? "−" : "+"}
           </span>
         </button>
         {auditOpen && (
           <div className="space-y-6 border-t p-4 sm:p-5">
+            <AcceptedRevisionHistory
+              descriptor={activeDescriptor}
+              onCompare={() => {
+                if (!activeDescriptor?.method) return;
+                setSelectedKey(activeDescriptor.key);
+                setNewMethod(activeDescriptor.method);
+                setEditorOpen(true);
+                document
+                  .getElementById("canonical-model-selector")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+              }}
+            />
             <ModelMigrationStatus companyId={companyId} />
             <CompanyModelOutputHistory companyId={companyId} />
           </div>

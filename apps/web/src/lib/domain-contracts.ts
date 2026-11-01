@@ -182,6 +182,14 @@ export type FinancialModelEvidenceReference =
   components["schemas"]["FinancialModelEvidenceReference"];
 export type FinancialModelEvidenceRead =
   components["schemas"]["FinancialModelEvidenceRead"];
+export type FinancialModelRevisionProposal =
+  components["schemas"]["FinancialModelRevisionProposalV1-Output"];
+export type ModelRevisionProposalRead =
+  components["schemas"]["ModelRevisionProposalRead"];
+export type ModelRevisionProposalPreviewRead =
+  components["schemas"]["ModelRevisionProposalPreviewRead"];
+export type ModelRevisionProposalDecisionRead =
+  components["schemas"]["ModelRevisionProposalDecisionRead"];
 export type GoogleSheetsSyncCheck =
   components["schemas"]["GoogleSheetsSyncCheckRead"];
 export type GoogleSheetsPortfolioStatePublish =
@@ -838,6 +846,10 @@ export function isRecurringOperationsStatus(
   return (
     isRecord(value) &&
     typeof value.enabled === "boolean" &&
+    typeof value.manual_operations_enabled === "boolean" &&
+    typeof value.workbook_sync_enabled === "boolean" &&
+    typeof value.portfolio_workbook_source_configured === "boolean" &&
+    typeof value.portfolio_workbook_credentials_available === "boolean" &&
     [
       "STARTING",
       "RUNNING",
@@ -2851,6 +2863,136 @@ export function isFinancialModelRevisionHistory(
   v: unknown,
 ): v is FinancialModelRevisionSummary[] {
   return array(v, isFinancialModelRevisionSummary);
+}
+
+function isFinancialModelRevisionProposal(value: unknown): boolean {
+  if (!isRecord(value) || !isRecord(value.method)) return false;
+  const method = value.method;
+  const methodology = method.methodology;
+  const inputs = method.inputs;
+  const validMethod =
+    methodology === "UFCF_DCF_10Y_FADE"
+      ? isRecord(inputs) &&
+        isDcfOperatingBaseInput(inputs.base) &&
+        Array.isArray(inputs.scenarios) &&
+        inputs.scenarios.length === 3 &&
+        inputs.scenarios.every(isDcfScenarioInput) &&
+        ["ufcf-dcf-fade-v1", "ufcf-dcf-explicit-tail-v1"].includes(
+          value.methodology_version as string,
+        )
+      : methodology === "OWNER_CASH_FLOW_10Y"
+        ? isOwnerCashFlowInput(inputs) &&
+          value.methodology_version === "owner-cash-flow-10y-v1"
+        : methodology === "RESIDUAL_INCOME_10Y_FADE"
+          ? isResidualIncomeInput(inputs) &&
+            value.methodology_version === "residual-income-10y-fade-v1"
+          : false;
+  return (
+    value.contract_type === "FinancialModelRevisionProposalV1" &&
+    value.contract_version === "1.0.0" &&
+    uuid(value.model_id) &&
+    uuid(value.company_id) &&
+    uuid(value.valuation_listing_id) &&
+    string(value.model_currency) &&
+    /^[A-Z]{3}$/.test(value.model_currency) &&
+    uuid(value.base_revision_id) &&
+    Number.isInteger(value.base_revision_number) &&
+    Number(value.base_revision_number) > 0 &&
+    string(value.external_revision_id) &&
+    timestamp(value.authored_at) &&
+    timestamp(value.effective_at) &&
+    string(value.source_reference) &&
+    value.source_reference.startsWith("https://") &&
+    string(value.rationale) &&
+    Array.isArray(value.supporting_evidence) &&
+    value.supporting_evidence.length > 0 &&
+    value.supporting_evidence.every(isFinancialModelEvidenceReference) &&
+    validMethod
+  );
+}
+
+function isModelRevisionProposalDiff(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    string(value.field) &&
+    nullableString(value.before) &&
+    nullableString(value.after)
+  );
+}
+
+export function isModelRevisionProposalRead(
+  value: unknown,
+): value is ModelRevisionProposalRead {
+  return (
+    isRecord(value) &&
+    uuid(value.id) &&
+    string(value.producer_id) &&
+    isFinancialModelRevisionProposal(value.proposal) &&
+    /^[0-9a-f]{64}$/.test(String(value.content_fingerprint)) &&
+    [
+      "PENDING",
+      "READY",
+      "CONFLICT",
+      "INVALID",
+      "ACCEPTED",
+      "REJECTED",
+    ].includes(value.status as string) &&
+    nullableString(value.issue) &&
+    (value.conflicting_proposal_ids === undefined ||
+      array(value.conflicting_proposal_ids, uuid)) &&
+    nullableUuid(value.accepted_revision_id) &&
+    nullableString(value.reviewer_id) &&
+    nullableString(value.decision_note) &&
+    timestamp(value.submitted_at) &&
+    (value.reviewed_at === null || timestamp(value.reviewed_at))
+  );
+}
+
+export function isModelRevisionProposalList(
+  value: unknown,
+): value is ModelRevisionProposalRead[] {
+  return array(value, isModelRevisionProposalRead);
+}
+
+export function isModelRevisionProposalPreviewRead(
+  value: unknown,
+): value is ModelRevisionProposalPreviewRead {
+  return (
+    isRecord(value) &&
+    uuid(value.proposal_id) &&
+    ["READY", "CONFLICT", "INVALID"].includes(value.status as string) &&
+    nullableString(value.reason) &&
+    nullableUuid(value.current_revision_id) &&
+    (value.current_revision_number === null ||
+      (Number.isInteger(value.current_revision_number) &&
+        Number(value.current_revision_number) > 0)) &&
+    array(value.input_changes ?? [], isModelRevisionProposalDiff) &&
+    array(value.output_changes ?? [], isModelRevisionProposalDiff) &&
+    (value.current_inputs === null || isRecord(value.current_inputs)) &&
+    isRecord(value.proposed_inputs) &&
+    (value.current_outputs === null || isRecord(value.current_outputs)) &&
+    (value.proposed_outputs === null || isRecord(value.proposed_outputs)) &&
+    array(value.proposed_projections ?? [], isRecord) &&
+    (value.preview_fingerprint === null ||
+      /^[0-9a-f]{64}$/.test(String(value.preview_fingerprint))) &&
+    timestamp(value.previewed_at)
+  );
+}
+
+export function isModelRevisionProposalDecisionRead(
+  value: unknown,
+): value is ModelRevisionProposalDecisionRead {
+  return (
+    isRecord(value) &&
+    ["ACCEPTED", "REJECTED", "PREVIEW_CHANGED", "CONFLICT", "INVALID"].includes(
+      value.status as string,
+    ) &&
+    isModelRevisionProposalRead(value.proposal) &&
+    (value.preview === undefined ||
+      value.preview === null ||
+      isModelRevisionProposalPreviewRead(value.preview)) &&
+    nullableUuid(value.accepted_revision_id)
+  );
 }
 
 export function isFinancialModelRevisionDetail(

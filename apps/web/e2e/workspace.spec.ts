@@ -408,6 +408,10 @@ test("recurring operations status explains partial provider work and fits mobile
     route.fulfill({
       json: {
         enabled: true,
+        manual_operations_enabled: false,
+        workbook_sync_enabled: false,
+        portfolio_workbook_source_configured: false,
+        portfolio_workbook_credentials_available: false,
         worker_state: "RUNNING",
         worker_started_at: observedAt,
         worker_last_seen_at: observedAt,
@@ -532,6 +536,14 @@ test("recurring operations status explains partial provider work and fits mobile
   await expect(
     page.getByRole("heading", {
       name: "Workbook synchronization and proposal intake",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Stage portfolio workbook sync" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", {
+      name: "Recompute rankings and Execution Pace",
     }),
   ).toBeVisible();
   await expect(

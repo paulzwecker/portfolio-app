@@ -1,0 +1,134 @@
+{
+  "report_version": 1,
+  "milestone": "Recovery C0.2 — Resolve Material Import Differences",
+  "assessment_date": "2026-10-31",
+  "comparison_evidence": {
+    "contract_version": "portfolio-live-value-comparison-v3",
+    "status": "COMPARED",
+    "source_metadata_matched": true,
+    "two_value_sweeps_stable": true,
+    "two_formula_sweeps_stable": true,
+    "comparison_time_recorded": false,
+    "values_eligible_for_new_overlay": false,
+    "reason_overlay_unavailable": [
+      "The v3 report has no comparison start/completion timestamps.",
+      "One importer-consumed Price Feed formula remains unresolved."
+    ]
+  },
+  "material_differences": {
+    "count": 105,
+    "distinct_cells": 105,
+    "root_cause": "XLSX cached formula results differ from stable live values for identical formulas; whether the cache was stale at export or referenced inputs changed afterward is unresolved.",
+    "classification": "stale_xlsx_formula_cache_relative_to_live_calculation",
+    "source_live_formula_text_exact_after_expansion": 105,
+    "known_volatile_formula_count": 0,
+    "by_target": {
+      "ScoreAssessment.COMPOUNDER_QUALITY.score": 40,
+      "ScoreAssessment.DURABILITY_10Y.score": 41,
+      "ScoreAssessment.EXECUTION.score": 2,
+      "ScoreAssessment.RISK.score": 1,
+      "legacy_rank_population.current_weight_input": 21
+    },
+    "old_report_formula_class_split": {
+      "FORMULA_DEFINITION_MISMATCH": 72,
+      "STALE_XLSX_CACHE_CANDIDATE": 33
+    }
+  },
+  "formula_reconciliation": {
+    "old_formula_text_difference_count": 1018,
+    "old_formula_text_difference_distinct_cells": 1018,
+    "shared_formula_cells_expanded": 907,
+    "shared_formula_cells_exact_after_expansion": 907,
+    "remaining_nonshared_formula_text_differences": 111,
+    "remaining_direct_formulas": 111,
+    "remaining_direct_formulas_with_different_function_signatures": 111,
+    "remaining_direct_formulas_with_matching_reference_sets": 111,
+    "remaining_direct_formula_consumed_by_current_importer": 1,
+    "remaining_direct_formulas_outside_current_importer": 110,
+    "remaining_nonshared_values_equal": 104,
+    "remaining_equal_values_outside_current_importer": 103,
+    "remaining_nonshared_values_unavailable": 7,
+    "supported_aux_listing_formula_still_unresolved": 1,
+    "formula_equivalence_inferred_from_value_only": false
+  },
+  "unavailable_or_error_states": {
+    "count": 441,
+    "distinct_cells": 441,
+    "legacy_rank_positions_explicit_unavailable": 429,
+    "company_name_empty": 3,
+    "unsupported_price_feed_row_class": 7,
+    "membership_inputs_unavailable": 2,
+    "lifecycle_companies_unresolved_in_source_only_plan": 5,
+    "held_company_impact": 0
+  },
+  "source_only_reconciliation": {
+    "database_accessed": false,
+    "companies": 219,
+    "securities": 100,
+    "listing_records": 100,
+    "held_positions": 22,
+    "cash_rows": 2,
+    "targets": 16,
+    "score_assessments": 506,
+    "ranking_rows_per_type": 219,
+    "resolved_lifecycle_counts_before_overlay": {
+      "PORTFOLIO": 21,
+      "WATCHLIST": 71,
+      "CANDIDATE": 96,
+      "DROP": 26,
+      "UNRESOLVED": 5
+    },
+    "listing_fields_incomplete": 11,
+    "listing_mappings_unresolved": 3,
+    "duplicate_legacy_rank_positions": 11,
+    "invalid_legacy_rank_values": 2,
+    "issue_code_counts": {
+      "PORTFOLIO_MEMBERSHIP_OVERRIDES_RESEARCH_BUCKET": 3,
+      "COMPANY_NAME_FALLBACK": 10,
+      "ALLOCATION_MEMBERSHIP_UNRESOLVED": 5,
+      "LIFECYCLE_SOURCE_INCOMPLETE": 5,
+      "LISTING_FIELDS_INCOMPLETE": 11,
+      "LISTING_MAPPING_UNRESOLVED": 3,
+      "RESERVE_TARGET_NOT_MODELED": 1,
+      "DUPLICATE_SCORE_ROW_RESOLVED_BY_DETAIL": 4,
+      "RANK_VALUE_INVALID": 2,
+      "DUPLICATE_RANK_POSITION": 11
+    },
+    "held_positions_with_resolved_exact_listings": 22
+  },
+  "comparison_observation_ledger": {
+    "all_observations": 3043,
+    "all_distinct_cells": 3043,
+    "material_value_differences": 105,
+    "material_distinct_cells": 105,
+    "formula_text_differences": 1018,
+    "formula_text_distinct_cells": 1018,
+    "equal_value_formula_observations": 524,
+    "equal_value_formula_distinct_cells": 524,
+    "unavailable_error_observations": 441,
+    "unavailable_error_distinct_cells": 441,
+    "source_fidelity_review_observations": 1070,
+    "source_fidelity_review_distinct_cells": 1070
+  },
+  "readiness": {
+    "structural_schema_review": "STRUCTURALLY_COMPATIBLE",
+    "portfolio_schema_acceptance": "NO_GO_PENDING_SOURCE_FIDELITY_AND_FORMULA_REVIEW",
+    "importer_value_fidelity": "NO_GO",
+    "canonical_bootstrap_preview": "NO_GO",
+    "production_write": "NOT_AUTHORIZED"
+  },
+  "operator_actions": [
+    "Run the bounded v5 comparison in the authorized Windows PowerShell environment.",
+    "Inspect the private v5 comparison and resolve the consumed Price Feed formula difference; candidate creation must fail until this is resolved.",
+    "If all consumed formula and value checks pass, generate and privately inspect a review-required overlay candidate.",
+    "Resolve or explicitly defer incomplete listing and lifecycle inputs.",
+    "Only then consider schema acceptance and canonical preview as separate operator actions."
+  ],
+  "safety": {
+    "workbook_edited": false,
+    "schema_accepted": false,
+    "neon_connected": false,
+    "database_written": false,
+    "provider_ingestion_run": false
+  }
+}

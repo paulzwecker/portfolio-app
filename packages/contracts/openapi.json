@@ -544,6 +544,120 @@
         "title": "AdditionalModelPortableContractV2",
         "type": "object"
       },
+      "AgentOwnerCashFlowProposalMethod-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "$ref": "#/components/schemas/OwnerCashFlowInput-Input"
+          },
+          "methodology": {
+            "const": "OWNER_CASH_FLOW_10Y",
+            "title": "Methodology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "methodology",
+          "inputs"
+        ],
+        "title": "AgentOwnerCashFlowProposalMethod",
+        "type": "object"
+      },
+      "AgentOwnerCashFlowProposalMethod-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "$ref": "#/components/schemas/OwnerCashFlowInput-Output"
+          },
+          "methodology": {
+            "const": "OWNER_CASH_FLOW_10Y",
+            "title": "Methodology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "methodology",
+          "inputs"
+        ],
+        "title": "AgentOwnerCashFlowProposalMethod",
+        "type": "object"
+      },
+      "AgentResidualIncomeProposalMethod-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "$ref": "#/components/schemas/ResidualIncomeInput-Input"
+          },
+          "methodology": {
+            "const": "RESIDUAL_INCOME_10Y_FADE",
+            "title": "Methodology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "methodology",
+          "inputs"
+        ],
+        "title": "AgentResidualIncomeProposalMethod",
+        "type": "object"
+      },
+      "AgentResidualIncomeProposalMethod-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "$ref": "#/components/schemas/ResidualIncomeInput-Output"
+          },
+          "methodology": {
+            "const": "RESIDUAL_INCOME_10Y_FADE",
+            "title": "Methodology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "methodology",
+          "inputs"
+        ],
+        "title": "AgentResidualIncomeProposalMethod",
+        "type": "object"
+      },
+      "AgentUfcfDcfProposalMethod-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "$ref": "#/components/schemas/DcfCalculationInput-Input"
+          },
+          "methodology": {
+            "const": "UFCF_DCF_10Y_FADE",
+            "title": "Methodology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "methodology",
+          "inputs"
+        ],
+        "title": "AgentUfcfDcfProposalMethod",
+        "type": "object"
+      },
+      "AgentUfcfDcfProposalMethod-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "$ref": "#/components/schemas/DcfCalculationInput-Output"
+          },
+          "methodology": {
+            "const": "UFCF_DCF_10Y_FADE",
+            "title": "Methodology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "methodology",
+          "inputs"
+        ],
+        "title": "AgentUfcfDcfProposalMethod",
+        "type": "object"
+      },
       "AllocationInput-Input": {
         "additionalProperties": false,
         "properties": {
@@ -4246,6 +4360,52 @@
           "outputs"
         ],
         "title": "CurrentNativeModelCalculationRead",
+        "type": "object"
+      },
+      "DcfCalculationInput-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/DcfOperatingBase-Input"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/DcfScenarioInput-Input"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Scenarios",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base",
+          "scenarios"
+        ],
+        "title": "DcfCalculationInput",
+        "type": "object"
+      },
+      "DcfCalculationInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/DcfOperatingBase-Output"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/DcfScenarioInput-Output"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Scenarios",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base",
+          "scenarios"
+        ],
+        "title": "DcfCalculationInput",
         "type": "object"
       },
       "DcfOperatingBase-Input": {
@@ -11588,6 +11748,270 @@
         "title": "FinancialModelRevisionCreate",
         "type": "object"
       },
+      "FinancialModelRevisionProposalV1-Input": {
+        "additionalProperties": false,
+        "description": "Producer-neutral, inputs-only proposal envelope; outputs are always server-calculated.",
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "base_revision_id": {
+            "format": "uuid",
+            "title": "Base Revision Id",
+            "type": "string"
+          },
+          "base_revision_number": {
+            "minimum": 1.0,
+            "title": "Base Revision Number",
+            "type": "integer"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "FinancialModelRevisionProposalV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "external_revision_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Revision Id",
+            "type": "string"
+          },
+          "method": {
+            "discriminator": {
+              "mapping": {
+                "OWNER_CASH_FLOW_10Y": "#/components/schemas/AgentOwnerCashFlowProposalMethod-Input",
+                "RESIDUAL_INCOME_10Y_FADE": "#/components/schemas/AgentResidualIncomeProposalMethod-Input",
+                "UFCF_DCF_10Y_FADE": "#/components/schemas/AgentUfcfDcfProposalMethod-Input"
+              },
+              "propertyName": "methodology"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AgentUfcfDcfProposalMethod-Input"
+              },
+              {
+                "$ref": "#/components/schemas/AgentOwnerCashFlowProposalMethod-Input"
+              },
+              {
+                "$ref": "#/components/schemas/AgentResidualIncomeProposalMethod-Input"
+              }
+            ],
+            "title": "Method"
+          },
+          "methodology_version": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "model_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "source_reference": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "supporting_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelEvidenceReference"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Supporting Evidence",
+            "type": "array"
+          },
+          "valuation_listing_id": {
+            "format": "uuid",
+            "title": "Valuation Listing Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_type",
+          "contract_version",
+          "model_id",
+          "company_id",
+          "valuation_listing_id",
+          "model_currency",
+          "methodology_version",
+          "base_revision_id",
+          "base_revision_number",
+          "external_revision_id",
+          "authored_at",
+          "effective_at",
+          "source_reference",
+          "rationale",
+          "supporting_evidence",
+          "method"
+        ],
+        "title": "FinancialModelRevisionProposalV1",
+        "type": "object"
+      },
+      "FinancialModelRevisionProposalV1-Output": {
+        "additionalProperties": false,
+        "description": "Producer-neutral, inputs-only proposal envelope; outputs are always server-calculated.",
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "base_revision_id": {
+            "format": "uuid",
+            "title": "Base Revision Id",
+            "type": "string"
+          },
+          "base_revision_number": {
+            "minimum": 1.0,
+            "title": "Base Revision Number",
+            "type": "integer"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "FinancialModelRevisionProposalV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "external_revision_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Revision Id",
+            "type": "string"
+          },
+          "method": {
+            "discriminator": {
+              "mapping": {
+                "OWNER_CASH_FLOW_10Y": "#/components/schemas/AgentOwnerCashFlowProposalMethod-Output",
+                "RESIDUAL_INCOME_10Y_FADE": "#/components/schemas/AgentResidualIncomeProposalMethod-Output",
+                "UFCF_DCF_10Y_FADE": "#/components/schemas/AgentUfcfDcfProposalMethod-Output"
+              },
+              "propertyName": "methodology"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AgentUfcfDcfProposalMethod-Output"
+              },
+              {
+                "$ref": "#/components/schemas/AgentOwnerCashFlowProposalMethod-Output"
+              },
+              {
+                "$ref": "#/components/schemas/AgentResidualIncomeProposalMethod-Output"
+              }
+            ],
+            "title": "Method"
+          },
+          "methodology_version": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "model_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "source_reference": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "supporting_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelEvidenceReference"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Supporting Evidence",
+            "type": "array"
+          },
+          "valuation_listing_id": {
+            "format": "uuid",
+            "title": "Valuation Listing Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_type",
+          "contract_version",
+          "model_id",
+          "company_id",
+          "valuation_listing_id",
+          "model_currency",
+          "methodology_version",
+          "base_revision_id",
+          "base_revision_number",
+          "external_revision_id",
+          "authored_at",
+          "effective_at",
+          "source_reference",
+          "rationale",
+          "supporting_evidence",
+          "method"
+        ],
+        "title": "FinancialModelRevisionProposalV1",
+        "type": "object"
+      },
       "FinancialModelRevisionRead": {
         "additionalProperties": false,
         "properties": {
@@ -17422,6 +17846,414 @@
         "title": "ModelOutputSnapshotRead",
         "type": "object"
       },
+      "ModelRevisionProposalDecisionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Revision Id"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRevisionProposalPreviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/ModelRevisionProposalRead"
+          },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "REJECTED",
+              "PREVIEW_CHANGED",
+              "CONFLICT",
+              "INVALID"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "proposal"
+        ],
+        "title": "ModelRevisionProposalDecisionRead",
+        "type": "object"
+      },
+      "ModelRevisionProposalDecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Decision Note",
+            "type": "string"
+          },
+          "preview_fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Preview Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview_fingerprint",
+          "decision_note"
+        ],
+        "title": "ModelRevisionProposalDecisionRequest",
+        "type": "object"
+      },
+      "ModelRevisionProposalDiff": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "before",
+          "after"
+        ],
+        "title": "ModelRevisionProposalDiff",
+        "type": "object"
+      },
+      "ModelRevisionProposalPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "current_inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Inputs"
+          },
+          "current_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Outputs"
+          },
+          "current_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Revision Id"
+          },
+          "current_revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Revision Number"
+          },
+          "input_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRevisionProposalDiff"
+            },
+            "title": "Input Changes",
+            "type": "array"
+          },
+          "output_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRevisionProposalDiff"
+            },
+            "title": "Output Changes",
+            "type": "array"
+          },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
+          },
+          "previewed_at": {
+            "format": "date-time",
+            "title": "Previewed At",
+            "type": "string"
+          },
+          "proposal_id": {
+            "format": "uuid",
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "proposed_inputs": {
+            "additionalProperties": true,
+            "title": "Proposed Inputs",
+            "type": "object"
+          },
+          "proposed_outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Outputs"
+          },
+          "proposed_projections": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Proposed Projections",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "READY",
+              "CONFLICT",
+              "INVALID"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "status",
+          "reason",
+          "current_revision_id",
+          "current_revision_number",
+          "current_inputs",
+          "proposed_inputs",
+          "current_outputs",
+          "proposed_outputs",
+          "preview_fingerprint",
+          "previewed_at"
+        ],
+        "title": "ModelRevisionProposalPreviewRead",
+        "type": "object"
+      },
+      "ModelRevisionProposalRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Revision Id"
+          },
+          "conflicting_proposal_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Conflicting Proposal Ids",
+            "type": "array"
+          },
+          "content_fingerprint": {
+            "title": "Content Fingerprint",
+            "type": "string"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "producer_id": {
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/FinancialModelRevisionProposalV1-Output"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "READY",
+              "CONFLICT",
+              "INVALID",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "producer_id",
+          "proposal",
+          "content_fingerprint",
+          "status",
+          "issue",
+          "accepted_revision_id",
+          "reviewer_id",
+          "decision_note",
+          "submitted_at",
+          "reviewed_at"
+        ],
+        "title": "ModelRevisionProposalRead",
+        "type": "object"
+      },
+      "ModelRevisionProposalRejectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Decision Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_note"
+        ],
+        "title": "ModelRevisionProposalRejectRequest",
+        "type": "object"
+      },
+      "ModelRevisionProposalSubmissionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "proposal": {
+            "$ref": "#/components/schemas/ModelRevisionProposalRead"
+          },
+          "replayed": {
+            "title": "Replayed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "proposal",
+          "replayed"
+        ],
+        "title": "ModelRevisionProposalSubmissionRead",
+        "type": "object"
+      },
       "OperationalJobAttemptRead": {
         "additionalProperties": false,
         "properties": {
@@ -17541,7 +18373,9 @@
               "SEC_FUNDAMENTALS",
               "SEC_FILINGS",
               "SHEETS_DISCOVERY",
+              "WORKBOOK_SYNC",
               "RESEARCH_REFRESH",
+              "DECISION_RECOMPUTE",
               "AGENT_WORK_FEED",
               "COMPANY_REFRESH",
               "REFRESH_ALL"
@@ -17666,7 +18500,9 @@
               "SEC_FUNDAMENTALS",
               "SEC_FILINGS",
               "SHEETS_DISCOVERY",
+              "WORKBOOK_SYNC",
               "RESEARCH_REFRESH",
+              "DECISION_RECOMPUTE",
               "AGENT_WORK_FEED",
               "COMPANY_REFRESH",
               "REFRESH_ALL"
@@ -20912,11 +21748,27 @@
             "title": "Jobs",
             "type": "array"
           },
+          "manual_operations_enabled": {
+            "title": "Manual Operations Enabled",
+            "type": "boolean"
+          },
           "market_data": {
             "$ref": "#/components/schemas/MarketRefreshStatusRead"
           },
+          "portfolio_workbook_credentials_available": {
+            "title": "Portfolio Workbook Credentials Available",
+            "type": "boolean"
+          },
+          "portfolio_workbook_source_configured": {
+            "title": "Portfolio Workbook Source Configured",
+            "type": "boolean"
+          },
           "sec_user_agent_configured": {
             "title": "Sec User Agent Configured",
+            "type": "boolean"
+          },
+          "workbook_sync_enabled": {
+            "title": "Workbook Sync Enabled",
             "type": "boolean"
           },
           "worker_last_seen_at": {
@@ -20959,6 +21811,10 @@
         },
         "required": [
           "enabled",
+          "manual_operations_enabled",
+          "workbook_sync_enabled",
+          "portfolio_workbook_source_configured",
+          "portfolio_workbook_credentials_available",
           "worker_state",
           "worker_started_at",
           "worker_last_seen_at",
@@ -34302,6 +35158,389 @@
           }
         },
         "summary": "Get Market Refresh Status",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/model-revision-proposals": {
+      "get": {
+        "operationId": "get_model_revision_proposals_v1_model_revision_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "READY",
+                    "CONFLICT",
+                    "INVALID",
+                    "ACCEPTED",
+                    "REJECTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelRevisionProposalRead"
+                  },
+                  "title": "Response Get Model Revision Proposals V1 Model Revision Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Model Revision Proposals",
+        "tags": [
+          "Portfolio research"
+        ]
+      },
+      "post": {
+        "operationId": "post_model_revision_proposal_v1_model_revision_proposals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialModelRevisionProposalV1-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRevisionProposalSubmissionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Model Revision Proposal",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/model-revision-proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_model_revision_proposal_v1_model_revision_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRevisionProposalRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Model Revision Proposal",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/model-revision-proposals/{proposal_id}/accept": {
+      "post": {
+        "operationId": "post_model_revision_proposal_accept_v1_model_revision_proposals__proposal_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelRevisionProposalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRevisionProposalDecisionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Model Revision Proposal Accept",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/model-revision-proposals/{proposal_id}/preview": {
+      "post": {
+        "operationId": "post_model_revision_proposal_preview_v1_model_revision_proposals__proposal_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRevisionProposalPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Model Revision Proposal Preview",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/model-revision-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "post_model_revision_proposal_reject_v1_model_revision_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelRevisionProposalRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRevisionProposalDecisionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Model Revision Proposal Reject",
         "tags": [
           "Portfolio research"
         ]

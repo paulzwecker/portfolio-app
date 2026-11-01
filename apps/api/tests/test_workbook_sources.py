@@ -25,6 +25,7 @@ from portfolio_api.workbook_sources import (
     GoogleDriveWorkbookReader,
     SnapshotStore,
     WorkbookSourceError,
+    _google_source,
     _read_operator_file,
     acquire_snapshot,
     inspect_workbook,
@@ -130,6 +131,16 @@ def _complete_profile_xlsx(
         date1904=True,
         defined_name="synthetic_name",
     )
+
+
+def _add_irrelevant_zip_member(data: bytes) -> bytes:
+    source = ZipFile(io.BytesIO(data))
+    output = io.BytesIO()
+    with source, ZipFile(output, "w", compression=ZIP_DEFLATED) as target:
+        for item in source.infolist():
+            target.writestr(item, source.read(item.filename))
+        target.writestr("customXml/ignored.xml", b"<ignored />")
+    return output.getvalue()
 
 
 class FakeResponse:
@@ -357,6 +368,38 @@ def test_changed_content_with_same_schema_is_versioned_and_deduplicated(tmp_path
     assert len(list(store.blob_root.glob("*/workbook.xlsx"))) == 2
 
 
+def test_portfolio_semantic_fingerprint_is_stable_across_binary_repacking(
+    tmp_path: Path,
+) -> None:
+    store = SnapshotStore(tmp_path / "private-snapshots")
+    original_data = _complete_profile_xlsx()
+    repacked_data = _add_irrelevant_zip_member(original_data)
+    assert hashlib.sha256(original_data).hexdigest() != hashlib.sha256(repacked_data).hexdigest()
+
+    first = acquire_snapshot(
+        store=store,
+        profile=PORTFOLIO_PROFILE,
+        source_identity="operator-supplied:semantic-equivalence",
+        fetch=lambda: AcquiredBytes(
+            original_data, "operator_supplied_xlsx", None, None, None, XLSX_MIME
+        ),
+    )
+    store.accept_schema_baseline(first["run_id"], first["artifact_sha256"])
+    second = acquire_snapshot(
+        store=store,
+        profile=PORTFOLIO_PROFILE,
+        source_identity="operator-supplied:semantic-equivalence",
+        fetch=lambda: AcquiredBytes(
+            repacked_data, "operator_supplied_xlsx", None, None, None, XLSX_MIME
+        ),
+    )
+
+    assert first["artifact_sha256"] != second["artifact_sha256"]
+    assert first["semantic_sha256"] == second["semantic_sha256"]
+    assert second["content_state"] == "CHANGED"
+    assert second["semantic_state"] == "UNCHANGED"
+
+
 def test_wrong_hash_incomplete_and_corrupt_workbooks_fail_closed_without_blob(
     tmp_path: Path,
 ) -> None:
@@ -395,7 +438,9 @@ def test_wrong_hash_incomplete_and_corrupt_workbooks_fail_closed_without_blob(
     assert "missing required sheet: Price Feed" in incomplete["diagnostics"]
     assert corrupt["error_code"] == "INVALID_XLSX"
     assert mismatch["import_triggered"] is False
-    assert not list(store.blob_root.glob("*/workbook.xlsx"))
+    # Exact-hash failures are rejected before freezing. Once bytes are frozen,
+    # malformed/incomplete workbooks remain available for audit, but never import.
+    assert len(list(store.blob_root.glob("*/workbook.xlsx"))) == 2
     assert len(list(store.run_root.glob("*.json"))) == 3
 
 
@@ -465,6 +510,62 @@ def test_drive_api_exports_native_sheet_and_records_only_safe_metadata() -> None
     assert session.calls[1][0].endswith(f"/files/{file_id}/export")
     assert session.calls[1][1]["params"] == {"mimeType": XLSX_MIME}
     assert session.calls[2][0] == f"{DRIVE_FILES_API}/{file_id}"
+
+
+def test_portfolio_acquisition_reuses_the_explicit_sheets_workbook_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from portfolio_api import workbook_sources
+
+    configured_id = "synthetic-configured-portfolio-id"
+    credential_path = tmp_path / "synthetic-service-account.json"
+    monkeypatch.setenv("GOOGLE_SHEETS_SPREADSHEET_ID", configured_id)
+    monkeypatch.setenv("GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE", str(credential_path))
+    monkeypatch.delenv("GOOGLE_DRIVE_PORTFOLIO_WORKBOOK_FILE_ID", raising=False)
+    reader = object()
+    loaded: list[Path] = []
+
+    def load_reader(path: Path) -> Any:
+        loaded.append(path)
+        return reader
+
+    monkeypatch.setattr(workbook_sources, "load_google_drive_reader", load_reader)
+    actual_reader, actual_id = _google_source(PORTFOLIO_PROFILE)
+
+    assert actual_reader is reader
+    assert actual_id == configured_id
+    assert loaded == [credential_path]
+
+
+def test_explicit_portfolio_drive_id_takes_precedence_over_sheets_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from portfolio_api import workbook_sources
+
+    explicit_id = "synthetic-approved-drive-id"
+    monkeypatch.setenv("GOOGLE_SHEETS_SPREADSHEET_ID", "synthetic-other-sheet-id")
+    monkeypatch.setenv("GOOGLE_DRIVE_PORTFOLIO_WORKBOOK_FILE_ID", explicit_id)
+    monkeypatch.setenv(
+        "GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE", str(tmp_path / "synthetic-service-account.json")
+    )
+    monkeypatch.setattr(workbook_sources, "load_google_drive_reader", lambda _path: object())
+
+    _reader, actual_id = _google_source(PORTFOLIO_PROFILE)
+
+    assert actual_id == explicit_id
+
+
+def test_market_data_acquisition_does_not_guess_from_portfolio_sheet_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GOOGLE_SHEETS_SPREADSHEET_ID", "synthetic-portfolio-sheet-id")
+    monkeypatch.delenv("GOOGLE_DRIVE_MARKET_DATA_WORKBOOK_FILE_ID", raising=False)
+
+    with pytest.raises(WorkbookSourceError) as error:
+        _google_source(MARKET_DATA_PROFILE)
+
+    assert error.value.code == "DRIVE_SOURCE_NOT_CONFIGURED"
+    assert "GOOGLE_DRIVE_MARKET_DATA_WORKBOOK_FILE_ID" in error.value.message
 
 
 def test_drive_api_downloads_uploaded_xlsx_and_retries_transient_failures() -> None:

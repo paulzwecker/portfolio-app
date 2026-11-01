@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime, time
 from typing import Annotated, Literal, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -13,6 +13,8 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from portfolio_api import candidate_pipeline as candidate_research
+from portfolio_api import model_proposal_auth
+from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
 from portfolio_api.decision_evaluation import company_decision_evaluation
@@ -148,6 +150,27 @@ def session_for(request: Request) -> Iterator[Session]:
 
 
 Db = Annotated[Session, Depends(session_for, scope="function")]
+
+
+def model_proposal_agent_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Model-Proposal-Token"),
+) -> str:
+    return model_proposal_auth.require_agent(request, token)
+
+
+def model_proposal_reviewer_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Model-Proposal-Token"),
+) -> str:
+    return model_proposal_auth.require_reviewer(request, token)
+
+
+def model_proposal_reader_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Model-Proposal-Token"),
+) -> tuple[model_proposal_auth.ProposalRole, str]:
+    return model_proposal_auth.require_proposal_reader(request, token)
 
 
 @router.get(
@@ -848,11 +871,13 @@ def post_operational_job_request(
     db: Db,
 ) -> s.OperationalJobRequestRead:
     settings = cast(Settings, request.app.state.settings)
-    if not settings.recurring_operations_enabled:
+    if not (settings.recurring_operations_enabled or settings.manual_operations_enabled):
         raise HTTPException(
             503,
-            "The background operations worker is disabled; no refresh request was queued.",
+            "Manual operations are disabled; no refresh request was queued.",
         )
+    if value.job_name == "WORKBOOK_SYNC" and not settings.workbook_sync_enabled:
+        raise HTTPException(503, "Workbook synchronization is disabled in this environment.")
     try:
         job_request, deduplicated = create_job_request(db, value)
     except ValueError as error:
@@ -871,11 +896,18 @@ def post_operational_job_request_retry(
     db: Db,
 ) -> s.OperationalJobRequestRead:
     settings = cast(Settings, request.app.state.settings)
-    if not settings.recurring_operations_enabled:
+    if not (settings.recurring_operations_enabled or settings.manual_operations_enabled):
         raise HTTPException(
             503,
-            "The background operations worker is disabled; no retry was queued.",
+            "Manual operations are disabled; no retry was queued.",
         )
+    existing = db.get(OperationalJobRequest, request_id)
+    if (
+        existing is not None
+        and existing.job_name == "WORKBOOK_SYNC"
+        and not settings.workbook_sync_enabled
+    ):
+        raise HTTPException(503, "Workbook synchronization is disabled in this environment.")
     try:
         job_request = retry_job_request(db, request_id)
     except LookupError as error:
@@ -1494,6 +1526,98 @@ def post_additional_model_contract_import(
     model_id: UUID, value: s.AdditionalModelPortableContractV2, db: Db
 ) -> s.AdditionalModelContractImportRead:
     return operations.import_additional_model_contract(db, model_id, value)
+
+
+@router.post(
+    "/model-revision-proposals",
+    response_model=s.ModelRevisionProposalSubmissionRead,
+    status_code=201,
+)
+def post_model_revision_proposal(
+    value: s.FinancialModelRevisionProposalV1,
+    producer_id: Annotated[str, Depends(model_proposal_agent_identity)],
+    db: Db,
+) -> s.ModelRevisionProposalSubmissionRead:
+    return proposal_operations.submit_model_revision_proposal(db, value, producer_id=producer_id)
+
+
+@router.get(
+    "/model-revision-proposals",
+    response_model=list[s.ModelRevisionProposalRead],
+)
+def get_model_revision_proposals(
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+    db: Db,
+    company_id: UUID | None = None,
+    status: Literal["PENDING", "READY", "CONFLICT", "INVALID", "ACCEPTED", "REJECTED"]
+    | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> list[s.ModelRevisionProposalRead]:
+    del reviewer_id
+    return proposal_operations.list_model_revision_proposals(
+        db, company_id=company_id, status=status, limit=limit
+    )
+
+
+@router.get(
+    "/model-revision-proposals/{proposal_id}",
+    response_model=s.ModelRevisionProposalRead,
+)
+def get_model_revision_proposal(
+    proposal_id: UUID,
+    reader: Annotated[
+        tuple[model_proposal_auth.ProposalRole, str], Depends(model_proposal_reader_identity)
+    ],
+    db: Db,
+) -> s.ModelRevisionProposalRead:
+    proposal = proposal_operations.get_model_revision_proposal(db, proposal_id)
+    role, identity = reader
+    if role == "AGENT" and proposal.producer_id != identity:
+        raise HTTPException(404, "Model proposal not found.")
+    return proposal
+
+
+@router.post(
+    "/model-revision-proposals/{proposal_id}/preview",
+    response_model=s.ModelRevisionProposalPreviewRead,
+)
+def post_model_revision_proposal_preview(
+    proposal_id: UUID,
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+    db: Db,
+) -> s.ModelRevisionProposalPreviewRead:
+    del reviewer_id
+    return proposal_operations.preview_model_revision_proposal(db, proposal_id)
+
+
+@router.post(
+    "/model-revision-proposals/{proposal_id}/accept",
+    response_model=s.ModelRevisionProposalDecisionRead,
+)
+def post_model_revision_proposal_accept(
+    proposal_id: UUID,
+    value: s.ModelRevisionProposalDecisionRequest,
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+    db: Db,
+) -> s.ModelRevisionProposalDecisionRead:
+    return proposal_operations.accept_model_revision_proposal(
+        db, proposal_id, value, reviewer_id=reviewer_id
+    )
+
+
+@router.post(
+    "/model-revision-proposals/{proposal_id}/reject",
+    response_model=s.ModelRevisionProposalDecisionRead,
+)
+def post_model_revision_proposal_reject(
+    proposal_id: UUID,
+    value: s.ModelRevisionProposalRejectRequest,
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+    db: Db,
+) -> s.ModelRevisionProposalDecisionRead:
+    return proposal_operations.reject_model_revision_proposal(
+        db, proposal_id, value.decision_note, reviewer_id=reviewer_id
+    )
 
 
 @router.get(

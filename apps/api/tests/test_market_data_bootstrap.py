@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from portfolio_api.database_write_target import install_database_write_target_guard
 from portfolio_api.domain.models import (
+    CanonicalBootstrapRun,
     Company,
     CorporateAction,
     CurrentLifecycle,
@@ -42,6 +43,8 @@ from portfolio_api.external_data import (
 )
 from portfolio_api.market_data_bootstrap import (
     MarketDataBootstrapError,
+    _next_checkpoint,
+    _parser,
     _temporal_issues,
     _verify_target,
     _write_private_report,
@@ -381,7 +384,7 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
         checkpoint = session.scalar(
             select(MarketDataBootstrapCheckpoint).where(
                 MarketDataBootstrapCheckpoint.run_id == run.id,
-                MarketDataBootstrapCheckpoint.subject_kind == "FX_PAIR",
+                MarketDataBootstrapCheckpoint.subject_kind == "LISTING",
             )
         )
         assert checkpoint is not None
@@ -400,7 +403,7 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
         postgres_engine,
         target_settings,
         operation="market_data_bootstrap_test",
-        operation_kind="ingestion",
+        operation_kind="bootstrap",
         audit_sink=audit.append,
     )
     verify_database_write_target(postgres_engine)
@@ -411,6 +414,7 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     first = execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256=digest,
         provider=provider,
@@ -423,6 +427,7 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     final = execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256=digest,
         provider=provider,
@@ -462,13 +467,16 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
         )
         assert len(payloads) == 2 and all(row.payload_sha256 for row in payloads)
         assert all(row.retrieved_at == RETRIEVED_AT for row in payloads)
-        reconciliation = reconcile_market_data_bootstrap(session, run_id)
+        reconciliation = reconcile_market_data_bootstrap(
+            session, run_id, target_environment="development"
+        )
         assert reconciliation["reconciliation"]["status"] == "MATCHED"
 
     count_before = len(provider.calls)
     replay = execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256=digest,
         provider=provider,
@@ -493,7 +501,9 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
         checkpoint_report["coverage"] = coverage
         checkpoint.report = checkpoint_report
     with Session(postgres_engine) as session:
-        tampered = reconcile_market_data_bootstrap(session, run_id)
+        tampered = reconcile_market_data_bootstrap(
+            session, run_id, target_environment="development"
+        )
         assert tampered["reconciliation"]["status"] == "MISMATCH"
         assert any(
             row["code"] == "CANONICAL_FINGERPRINT_MISMATCH"
@@ -520,6 +530,7 @@ def test_provider_gaps_are_distinguished_from_ingestion_failures(
     result = execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256=digest,
         provider=SyntheticProvider(mode=mode),
@@ -530,7 +541,7 @@ def test_provider_gaps_are_distinguished_from_ingestion_failures(
         checkpoint = session.scalar(
             select(MarketDataBootstrapCheckpoint).where(
                 MarketDataBootstrapCheckpoint.run_id == run_id,
-                MarketDataBootstrapCheckpoint.subject_kind == "FX_PAIR",
+                MarketDataBootstrapCheckpoint.subject_kind == "LISTING",
             )
         )
         assert checkpoint is not None
@@ -558,6 +569,7 @@ def test_bootstrap_blocks_crosswalk_digest_change_before_provider_calls(
     result = execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256="0" * 64,
         provider=provider,
@@ -597,6 +609,7 @@ def test_unallowlisted_required_fx_pair_blocks_preparation_and_provider_access(
     result = execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256=digest,
         provider=provider,
@@ -621,6 +634,7 @@ def test_changed_listing_identity_blocks_its_checkpoint_before_fetch(
     execute_market_data_bootstrap(
         postgres_engine,
         run_id,
+        target_environment="development",
         crosswalk=crosswalk,
         crosswalk_sha256=digest,
         provider=provider,
@@ -664,25 +678,251 @@ def test_temporal_validation_rejects_future_observation_and_out_of_window_action
     }
 
 
-def test_bootstrap_window_and_production_selection_are_rejected() -> None:
+def test_bootstrap_window_rejects_more_than_ten_years() -> None:
     from portfolio_api.market_data_bootstrap import _validate_date_window
 
     with pytest.raises(MarketDataBootstrapError, match="ten years"):
         _validate_date_window(date(2010, 1, 1), date(2026, 10, 5))
-    with pytest.raises(MarketDataBootstrapError, match="disabled for production"):
-        preview_market_data_bootstrap(
-            Session(),
-            crosswalk=YahooListingCrosswalk(
-                provider_id="YAHOO_FINANCE",
-                provider_schema_version="yahoo-chart-v8",
-                verified_at=RETRIEVED_AT,
-                mappings=(),
-            ),
-            crosswalk_sha256="0" * 64,
+
+
+def test_market_bootstrap_cli_accepts_explicit_production_scope() -> None:
+    args = _parser().parse_args(
+        [
+            "preview",
+            "--target-environment",
+            "production",
+            "--start-date",
+            START.isoformat(),
+            "--end-date",
+            END.isoformat(),
+        ]
+    )
+    assert args.target_environment == "production"
+
+
+@pytest.mark.parametrize(
+    ("read_only", "expected"),
+    ((False, "write"), (True, "read_only")),
+)
+def test_market_data_commands_use_target_preflight_for_operation_kind(
+    monkeypatch: pytest.MonkeyPatch,
+    read_only: bool,
+    expected: str,
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "portfolio_api.market_data_bootstrap.verify_database_read_only_preflight",
+        lambda *_args, **_kwargs: calls.append("read_only"),
+    )
+    monkeypatch.setattr(
+        "portfolio_api.market_data_bootstrap.verify_database_preflight",
+        lambda *_args, **_kwargs: calls.append("write"),
+    )
+    _verify_target(
+        None,  # type: ignore[arg-type]
+        Settings(database_target_environment="production"),
+        "production",
+        read_only=read_only,
+    )
+    assert calls == [expected]
+
+
+@pytest.mark.integration
+def test_market_production_preview_reports_missing_canonical_import(
+    postgres_engine: Engine,
+) -> None:
+    crosswalk, digest = _crosswalk(_mapping(uuid4(), uuid4(), uuid4()))
+    with Session(postgres_engine) as session:
+        report = preview_market_data_bootstrap(
+            session,
+            crosswalk=crosswalk,
+            crosswalk_sha256=digest,
             start_date=START,
             end_date=END,
             target_environment="production",
         )
+
+    assert report["status"] == "BLOCKED_CANONICAL_IMPORT"
+    assert report["canonical_import_readiness"]["status"] == "MISSING"
+
+
+@pytest.mark.integration
+def test_market_bootstrap_production_scope_is_frozen_and_prioritizes_held_before_watchlist(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        held_company, held_security, held_listing = _seed_canonical_scope(session)
+        watch_company_id, watch_security_id, watch_listing_id = uuid4(), uuid4(), uuid4()
+        watch_company = Company(id=watch_company_id, name="Synthetic Watchlist Corporation")
+        watch_security = Security(
+            id=watch_security_id,
+            company_id=watch_company_id,
+            name="Synthetic Watchlist Common",
+            security_type="COMMON_STOCK",
+        )
+        watch_listing = Listing(
+            id=watch_listing_id,
+            security_id=watch_security_id,
+            venue="NASDAQ",
+            ticker="WATCH",
+            currency="USD",
+        )
+        watch_lifecycle = LifecycleEvent(
+            id=uuid4(),
+            company_id=watch_company_id,
+            sequence=1,
+            previous_state=None,
+            new_state="WATCHLIST",
+            effective_at=datetime(2026, 10, 1, tzinfo=UTC),
+            actor="IMPORT",
+            reason="Synthetic integration fixture",
+            source="synthetic-test",
+        )
+        session.add(watch_company)
+        session.flush()
+        session.add(watch_security)
+        session.flush()
+        session.add(watch_listing)
+        session.add(watch_lifecycle)
+        session.flush()
+        session.add(CurrentLifecycle(company_id=watch_company_id, event_id=watch_lifecycle.id))
+        session.flush()
+        held_mapping = _mapping(held_company.id, held_security.id, held_listing.id)
+        watch_mapping = held_mapping.model_copy(
+            update={
+                "ticker": "WATCH",
+                "provider_symbol": "WATCH",
+                "canonical_company_id": watch_company_id,
+                "canonical_security_id": watch_security_id,
+                "canonical_listing_id": watch_listing_id,
+            }
+        )
+        crosswalk, digest = _crosswalk(held_mapping)
+        crosswalk = crosswalk.model_copy(update={"mappings": (held_mapping, watch_mapping)})
+        digest = hashlib.sha256(crosswalk.model_dump_json().encode()).hexdigest()
+        session.add(
+            CanonicalBootstrapRun(
+                id=uuid4(),
+                input_digest="a" * 64,
+                source_digest="b" * 64,
+                portfolio_snapshot_run_id="1" * 32,
+                market_snapshot_run_id="2" * 32,
+                import_version="synthetic-test",
+                observed_at=RETRIEVED_AT,
+                recorded_at=RETRIEVED_AT,
+                status="APPLIED",
+                report={"reconciliation": {"status": "MATCHED"}, "source_gaps": []},
+            )
+        )
+        session.flush()
+
+        run = prepare_market_data_bootstrap(
+            session,
+            crosswalk=crosswalk,
+            crosswalk_sha256=digest,
+            start_date=START,
+            end_date=END,
+            target_environment="production",
+        )
+
+        frozen_listings = run.scope.get("listings")
+        assert isinstance(frozen_listings, list)
+        assert all(isinstance(item, dict) for item in frozen_listings)
+        assert run.target_environment == "production"
+        assert frozen_listings[0]["identity"]["listing_id"] == str(held_listing.id)
+        assert frozen_listings[0]["priority_tier"] == "HELD"
+        assert frozen_listings[1]["identity"]["listing_id"] == str(watch_listing_id)
+        assert frozen_listings[1]["priority_tier"] == "WATCHLIST"
+        first_checkpoint = _next_checkpoint(session, run, RETRIEVED_AT)
+        assert first_checkpoint is not None
+        assert first_checkpoint.listing_id == held_listing.id
+
+        scoped_preview = preview_market_data_bootstrap(
+            session,
+            crosswalk=crosswalk,
+            crosswalk_sha256=digest,
+            start_date=START,
+            end_date=END,
+            target_environment="production",
+            company_id=watch_company_id,
+        )
+        assert scoped_preview["selected_listing_count"] == 1
+        assert scoped_preview["listing_priority_counts"]["WATCHLIST"] == 1
+
+
+@pytest.mark.integration
+def test_production_market_ingestion_stops_before_provider_without_reconciled_import(
+    postgres_engine: Engine,
+) -> None:
+    company_id, security_id, listing_id, run_id = uuid4(), uuid4(), uuid4(), uuid4()
+    crosswalk, digest = _crosswalk(_mapping(company_id, security_id, listing_id))
+    with Session(postgres_engine) as session, session.begin():
+        session.add(
+            MarketDataBootstrapRun(
+                id=run_id,
+                input_digest="c" * 64,
+                provider_id="YAHOO_FINANCE",
+                provider_schema_version="yahoo-chart-v8",
+                crosswalk_sha256=digest,
+                target_environment="production",
+                start_date=START,
+                end_date=END,
+                scope={"listings": []},
+                status="PREPARED",
+                prepared_at=RETRIEVED_AT,
+                report={},
+            )
+        )
+
+    provider = SyntheticProvider()
+    with pytest.raises(
+        MarketDataBootstrapError,
+        match="requested target environment does not match",
+    ):
+        execute_market_data_bootstrap(
+            postgres_engine,
+            run_id,
+            target_environment="rehearsal",
+            crosswalk=crosswalk,
+            crosswalk_sha256=digest,
+            provider=provider,
+            max_checkpoints=1,
+            min_request_interval_seconds=0,
+        )
+    assert provider.calls == []
+    with pytest.raises(
+        MarketDataBootstrapError,
+        match="requires a reconciled canonical portfolio import",
+    ):
+        execute_market_data_bootstrap(
+            postgres_engine,
+            run_id,
+            target_environment="production",
+            crosswalk=crosswalk,
+            crosswalk_sha256=digest,
+            provider=provider,
+            max_checkpoints=1,
+            min_request_interval_seconds=0,
+        )
+    assert provider.calls == []
+
+
+def test_market_bootstrap_company_id_is_supported_for_bounded_scope() -> None:
+    company_id = uuid4()
+    args = _parser().parse_args(
+        [
+            "prepare",
+            "--target-environment",
+            "production",
+            "--start-date",
+            START.isoformat(),
+            "--end-date",
+            END.isoformat(),
+            "--company-id",
+            str(company_id),
+        ]
+    )
+    assert args.company_id == company_id
 
 
 def test_private_report_is_create_only_and_written_outside_the_repository(

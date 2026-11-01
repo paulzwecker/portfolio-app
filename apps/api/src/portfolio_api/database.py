@@ -6,6 +6,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from portfolio_api.database_write_target import (
     WriteOperationKind,
+    install_database_read_only_guard,
     install_database_write_target_guard,
 )
 from portfolio_api.settings import Settings
@@ -28,22 +29,29 @@ def create_database_engine(
     *,
     write_operation: str = "application_write",
     write_operation_kind: WriteOperationKind = "application",
+    read_only: bool = False,
 ) -> Engine | None:
     if settings.database_url is None:
         return None
+    connect_options = "-c statement_timeout=3000"
+    if read_only:
+        connect_options += " -c default_transaction_read_only=on"
     engine = create_engine(
         settings.database_url.get_secret_value(),
         pool_pre_ping=True,
         pool_size=2,
         max_overflow=2,
         pool_timeout=3,
-        connect_args={"connect_timeout": 3, "options": "-c statement_timeout=3000"},
+        connect_args={"connect_timeout": 3, "options": connect_options},
         hide_parameters=True,
     )
-    install_database_write_target_guard(
-        engine,
-        settings,
-        operation=write_operation,
-        operation_kind=write_operation_kind,
-    )
+    if read_only:
+        install_database_read_only_guard(engine, settings)
+    else:
+        install_database_write_target_guard(
+            engine,
+            settings,
+            operation=write_operation,
+            operation_kind=write_operation_kind,
+        )
     return engine

@@ -544,8 +544,13 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
         or admin_url.host not in {"127.0.0.1", "localhost", "::1"}
     ):
         pytest.fail("Migration tests only create databases on a loopback _test PostgreSQL endpoint")
-    if not os.environ.get("MIGRATION_PG_TOOLS_CONTAINER") and not shutil.which("pg_dump"):
-        pytest.fail("Set MIGRATION_PG_TOOLS_CONTAINER or install PostgreSQL 18 client tools")
+    if not tools_container:
+        missing_tools = [tool for tool in ("pg_dump", "pg_restore") if not shutil.which(tool)]
+        if missing_tools:
+            pytest.skip(
+                "PostgreSQL migration integration requires PostgreSQL 18 client tools "
+                "(pg_dump and pg_restore) or MIGRATION_PG_TOOLS_CONTAINER"
+            )
 
     names = [f"m14b1_{uuid4().hex[:12]}_{suffix}_test" for suffix in ("source", "target", "abort")]
     restore_role = f"m14b1_restore_{uuid4().hex[:10]}"
@@ -555,6 +560,19 @@ def migration_databases(monkeypatch: pytest.MonkeyPatch) -> Any:
         isolation_level="AUTOCOMMIT",
         hide_parameters=True,
     )
+    with admin_engine.connect() as connection:
+        privileges = connection.execute(
+            text(
+                "SELECT rolcreatedb OR rolsuper, rolcreaterole OR rolsuper "
+                "FROM pg_roles WHERE rolname = current_user"
+            )
+        ).one()
+    if not all(privileges):
+        admin_engine.dispose()
+        pytest.skip(
+            "PostgreSQL migration integration requires CREATEDB and CREATEROLE "
+            "on the isolated test server"
+        )
     created: list[str] = []
     database_urls: dict[str, URL] = {}
     try:

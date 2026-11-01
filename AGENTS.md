@@ -1,392 +1,62 @@
-# AGENTS.md
+# AGENTS.md — Personal Universe / Portfolio
 
-## Mission
+## Mission and precedence
 
-Build and maintain a web-based public-equity research, financial-modeling and portfolio-management platform.
+Build the Portfolio Research Platform as the first application in a private, modular Personal Universe. Deliver useful, reliable investment workflows—not a spreadsheet clone or infrastructure for its own sake.
 
-The application succeeds the legacy Google Sheets Portfolio/Watchlist system while preserving its economic meaning, auditability and investment discipline.
+Follow explicit owner instructions, this file, scoped `AGENTS.md` files, then relevant approved domain/architecture contracts. When documents disagree, **preserve established financial and production behavior**; record the conflict and seek a decision rather than inventing a rule. Do not treat planned features as implemented.
 
-The goal is not to reproduce spreadsheets in a browser.
+## Read before work
 
-The goal is a canonical, traceable investment platform with strong modeling, data and research workflows.
+- `docs/PRODUCT_VISION.md` — product outcomes and non-goals.
+- `ROADMAP.md` — current task, dependencies, acceptance criteria and verified progress.
+- `docs/architecture/personal-universe.md` — repository/platform target; read for shared-platform changes.
+- `docs/architecture/portfolio-application.md` — Portfolio domain, data ownership, models and integration; read for Portfolio changes.
+- `docs/domain-model.md` — canonical identity, lifecycle, scores and portfolio contracts when relevant.
+- `docs/financial-models.md` — supported methods, return definitions and accepted revision semantics for model work.
+- Applicable `apps/web/AGENTS.md`, `apps/api/AGENTS.md`, and relevant domain/model/source contracts when touching those areas.
 
----
+Read only documents relevant to the change. Existing detailed financial/domain documentation remains authoritative for its own domain; these summaries do not supersede it.
 
-## Instruction hierarchy
+## Non-negotiable invariants
 
-Follow, in order:
+- Identity: **Company → Security → Listing**. Ticker is not company identity. Keep reporting, model, listing and portfolio currencies distinct.
+- Keep the decision hierarchy explicit: 10Y Durability, Compounder Quality, credible per-share compounding, valuation/Expected IRR, portfolio fit, then execution. Keep Durability (0–5), Quality (0–5), Execution (1–5) and Risk (1–5, higher is riskier) independent; do not add an opaque composite or infer lifecycle.
+- Investment decisions are separate: external facts → financial models → interpretation → portfolio construction → execution. Rankings, prices, model outputs or holdings must never silently infer lifecycle, overwrite assumptions, or rewrite strategic targets.
+- Lifecycle is explicit: `PORTFOLIO`, `WATCHLIST`, `CANDIDATE`, `DROP`. Durability, Quality, Execution and Risk scores retain their independent definitions. Preserve existing approved investment rules.
+- Keep valuation methodology and return basis explicit. In particular, legacy enterprise UFCF IRR is **not** automatically comparable to shareholder cash-flow IRR. Preserve Bear/Base/Bull semantics, native model parity and accepted revision history.
+- Where defined, Expected Cash-Flow IRR is based on probability-weighted expected shareholder cash flows; the investor hurdle is a required-return/risk-adequacy measure, not WACC; Weighted Fair Value is a valuation reference, not a fixed-horizon stock-price forecast. Preserve legacy method-specific return definitions rather than relabeling them.
+- Missing is not zero. Preserve units, timescopes, provenance, observed/effective/recorded times, immutable accepted history, and conflict detection. Do not fabricate source data.
+- Google Sheets remains authoritative for legacy workflows until explicitly migrated. Accepted canonical application revisions live in PostgreSQL. Use versioned, hash-verified, typed transfer packages and reviewed ownership transitions; never silently overwrite newer accepted state.
+- One shared web/API/DB deployment is the long-term platform direction, **not** permission for mass restructuring, cross-app table access or changes to production.
 
-1. explicit user instructions
-2. this file
-3. relevant scoped `AGENTS.md`
-4. relevant domain documentation in `docs/`
-5. legacy workbook behavior where deliberately used as migration evidence
+## Technical ownership
 
-Do not mechanically read every document for every task.
+- Next.js owns presentation and interaction; it does not implement financial, ranking, scoring, portfolio or reconciliation calculations. FastAPI owns validation, deterministic models and analytics; PostgreSQL owns migrated canonical state and history.
+- External facts flow from provider/source evidence through typed raw observations and domain normalization into canonical data. Do not silently blend provider conflicts or fabricate effective, observed, publication or recording times.
+- For historical analysis, distinguish reporting/economic period, effective/publication time, observation/retrieval time and recorded time. Do not use later-known information in an earlier state.
+- Keep implementation explicit and domain-scoped. Avoid generic rule engines, event sourcing or new infrastructure without a demonstrated need.
 
-Read the documentation relevant to the area being changed.
+## Autonomous execution loop
 
-When financial behavior is ambiguous, preserve known behavior and document the uncertainty rather than inventing investment policy.
+1. Read `ROADMAP.md` execution cursor; inspect Git state, relevant code and prerequisites.
+2. Select the next **ready**, smallest user-valuable subtask; avoid speculative infrastructure.
+3. Implement, run meaningful checks and independently review correctness, security, integration and UX. Fix findings.
+4. Record actual evidence, blockers, decisions and exact next step in `ROADMAP.md` **after each subtask**. Never mark an unverified task complete.
+5. If blocked, log the cause and proceed only to an independent ready task. Do not repeatedly retry unchanged failures.
+6. At the milestone gate run integrated checks, review the diff, reassess roadmap against the product vision, push a dedicated branch and open a PR when permitted. Record PR URL. PR creation does **not** authorize merge or deployment.
+7. Keep a single unambiguous execution cursor; preserve progress across agent sessions. Do not silently change the product vision, financial policy, security boundaries or authority model.
 
----
+## Git, tests, and evidence
 
-# Architecture
+Preserve unrelated edits and untracked files. No force-push, history rewrite, destructive cleanup or mixing unrelated changes. Commit coherent units; never commit secrets, private financial packages, source snapshots or sensitive diagnostics. Verify repository visibility before publishing. Use separate implementing/reviewing agents when practical; CI and human review are the real gates.
 
-## Frontend
+Report distinctly: `IMPLEMENTATION_COMPLETE`, `LOCAL_VERIFIED`, `LIVE_SOURCE_VALIDATED`, `PRODUCTION_PREVIEW_VERIFIED`, `PRODUCTION_READY`, and `PRODUCTION_APPLIED`—only with actual evidence. Check applicable unit/integration/type/contract/migration/authorization/E2E tests. Validate desktop and mobile when UI changes; report unavailable browsers honestly. Do not weaken tests, invariants or guards just to get a green result.
 
-Next.js owns presentation and interaction.
+## Permission boundary
 
-Do not duplicate canonical financial, ranking, scoring, portfolio or reconciliation logic in React.
+Autonomous: local code, documentation, isolated DB tests/migrations, authorized read-only source/Neon checks, commits, feature-branch push and PR creation. Terminal access does not prove network authorization.
 
-See `apps/web/AGENTS.md`.
+**Require separate explicit owner authorization** for production schema or data writes, production deployments, modifying authoritative Google Sheets, approving financial models or research decisions, changing live credentials/auth configuration, enabling recurring ingest/jobs, merging protected PRs where review is required, and destructive or history-rewriting Git actions. Before any authorized production action verify exact target, scope, immutable inputs, preview, recovery point, and rollback path. Never bypass sandbox/network/DB safeguards.
 
-## Backend
-
-FastAPI owns:
-
-- domain validation
-- deterministic financial calculations
-- portfolio analytics
-- external-data normalization
-- model/revision operations
-- rankings/signals
-- ingestion and synchronization
-
-See `apps/api/AGENTS.md`.
-
-## Database
-
-PostgreSQL is canonical for migrated application state and history.
-
-Use relational current state plus targeted revision, event and snapshot tables.
-
-Do not introduce generic event sourcing without a demonstrated need.
-
----
-
-# Core domain boundaries
-
-Preserve this direction:
-
-```text
-External facts
-    ↓
-Estimates / reported fundamentals
-    ↓
-Financial models
-    ↓
-Investment interpretation
-    ↓
-Portfolio construction
-    ↓
-Execution timing
-```
-
-Downstream domains must not silently rewrite upstream assumptions.
-
-Examples:
-
-- price momentum may affect execution timing
-- price movement must not change model assumptions
-- target weights do not automatically change when prices change
-- model outputs do not determine lifecycle
-- rankings do not change holdings or targets by themselves
-
----
-
-# Identity
-
-Use:
-
-```text
-Company → Security → Listing
-```
-
-A ticker is a listing attribute, not a company identifier.
-
-Keep reporting currency, model currency, listing currency and portfolio currency distinct.
-
-Never substitute one listing for another merely because market data is easier to obtain.
-
-Detailed identity semantics belong in `docs/domain-model.md`.
-
----
-
-# Investment semantics
-
-The system supports concentrated, long-duration ownership of exceptional businesses.
-
-Decision hierarchy:
-
-1. 10Y Durability
-2. Compounder Quality
-3. Forward fundamental compounding
-4. Valuation / Expected IRR
-5. Portfolio fit
-6. Execution timing
-
-Expected Cash-Flow IRR is the primary modeled opportunity-return measure after quality and durability gates.
-
-Investor hurdle is a required-return/risk-adequacy measure and is not WACC.
-
-Expected Excess is:
-
-```text
-Expected IRR - Hurdle
-```
-
-Weighted Fair Value is a valuation reference, not a fixed-horizon stock-price forecast.
-
----
-
-# Scores
-
-Keep independent:
-
-- 10Y Durability: 0–5, higher better
-- Compounder Quality: 0–5, higher better
-- Execution: 1–5, higher better
-- Risk: 1–5, higher means more risk
-
-Do not collapse these into an opaque composite unless approved domain logic explicitly requires it.
-
----
-
-# Lifecycle and portfolio
-
-Lifecycle is explicit:
-
-- `PORTFOLIO`
-- `WATCHLIST`
-- `CANDIDATE`
-- `DROP`
-
-Do not infer lifecycle from holdings, models, rankings, scores or prices.
-
-Keep separate:
-
-- current holdings
-- strategic target architecture
-- execution timing
-
-Execution Pace must not rewrite long-term target weights or underwriting assumptions.
-
----
-
-# Financial models
-
-The application is canonical for accepted model state and revision history.
-
-Google Sheets remains a supported external model-authoring environment.
-
-```text
-Web App
-   ↕
-Canonical Model Contract
-   ↕
-Google Sheets
-```
-
-Both web and Sheets edits must enter the same revision system.
-
-Never silently overwrite a newer model revision.
-
-Separate:
-
-- editable assumptions
-- deterministic projections
-- normalized outputs
-
-Different businesses may use different valuation methodologies.
-
-Standardize interfaces, not financial methodology.
-
-Normal application use should not require LLM inference.
-
-External agents may perform reasoning and propose model updates, but deterministic calculations and accepted revision history remain auditable application state.
-
-See `docs/financial-models.md`.
-
----
-
-# Model-output semantics
-
-Production models expose a normalized interface where applicable:
-
-- Bear/Base/Bull FV
-- scenario probabilities
-- Weighted Fair Value
-- Weighted Upside
-- Expected Cash-Flow IRR
-- Hurdle
-- Expected Excess
-- Forward Fundamental CAGR
-- model currency/status
-
-Bear/Base/Bull are explicit economic scenarios.
-
-Do not average scenario IRRs.
-
-Canonical Expected Cash-Flow IRR uses probability-weighted expected shareholder cash flows.
-
-Where migrated legacy models use a different return definition, preserve that methodology and label it explicitly rather than silently redefining it.
-
----
-
-# External data
-
-Build one clean canonical dataset from complementary sources.
-
-Use:
-
-```text
-provider
-  ↓
-raw observation
-  ↓
-normalization
-  ↓
-canonical observation
-  ↓
-derived analytics
-```
-
-Provider schemas must not become domain schemas.
-
-Preserve source provenance and point-in-time semantics.
-
-Prefer primary sources for reported facts where practical.
-
-Use complementary providers for coverage and fallback.
-
-Do not silently blend conflicting observations.
-
-Source precedence is domain-specific.
-
-For consensus estimates, preserve provider continuity rather than synthesizing estimates across vendors.
-
-See `docs/external-data-architecture.md` and `apps/api/AGENTS.md`.
-
----
-
-# Time, history and missing data
-
-Missing is not zero.
-
-Use explicit null and quality/status states.
-
-Never fabricate historical data.
-
-Historical observations and accepted revisions must not be rewritten to match current state.
-
-Where relevant distinguish:
-
-- reporting/economic period
-- effective/publication time
-- observed/retrieved time
-- recorded time
-
-Historical analysis must avoid look-ahead bias.
-
-Material changes should retain appropriate provenance.
-
----
-
-# Migration
-
-Migrate domain by domain.
-
-For each migrated domain or financial calculation:
-
-1. identify authoritative legacy/source semantics
-2. implement the smallest coherent replacement
-3. reconcile against representative source data
-4. add deterministic tests
-5. migrate downstream dependencies only after verification
-
-A visually correct UI is not proof of migration correctness.
-
-Prioritize active Portfolio and Watchlist usefulness over abstract architectural completeness.
-
-Do not add methodologies or infrastructure merely to increase coverage counts.
-
----
-
-# UI direction
-
-The product should feel like professional investment research software, not a spreadsheet rendered in a browser.
-
-Prefer:
-
-- strong information hierarchy
-- compact layouts
-- progressive disclosure
-- traceable changes
-- historical context
-- responsive design
-- explicit freshness/data-quality states
-
-Avoid:
-
-- giant forms
-- duplicated metrics
-- unnecessary spreadsheet-like grids
-- decorative charts with no analytical value
-
-See `apps/web/AGENTS.md`.
-
----
-
-# Engineering
-
-Prefer:
-
-- explicit code
-- strong typing
-- small domain modules
-- deterministic functions
-- financial regression tests
-- ordinary relational designs
-- reuse before abstraction
-
-Avoid:
-
-- speculative rules engines
-- generic workflow systems
-- generic event sourcing
-- infrastructure without a demonstrated requirement
-
-Do not weaken financial or data-integrity semantics to simplify implementation.
-
----
-
-# Agent behavior
-
-For each task:
-
-1. inspect the current implementation
-2. read only relevant documentation
-3. preserve domain ownership
-4. make the smallest coherent change
-5. run relevant checks
-6. verify affected user flows
-7. update documentation only when domain/architecture meaning changes
-
-Prefer solving the requested problem over expanding scope.
-
----
-
-# Definition of done
-
-A change is complete when appropriate to its scope:
-
-- implementation works
-- relevant tests/typechecks pass
-- migrations/contracts are valid where affected
-- missing/error states remain explicit
-- financial parity is checked where required
-- historical/provenance behavior remains correct
-- relevant UI works on desktop and mobile
-- documentation reflects material semantic changes
-
-Correctness, economic meaning and traceability take priority over minimizing code volume.
+When blocked by an approval gate, prepare a precise, read-only handoff and continue unrelated safe work when available.

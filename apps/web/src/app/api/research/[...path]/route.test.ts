@@ -147,6 +147,10 @@ it("validates the market refresh status contract", async () => {
 it("validates recurring operations status before forwarding it", async () => {
   const response = {
     enabled: true,
+    manual_operations_enabled: false,
+    workbook_sync_enabled: false,
+    portfolio_workbook_source_configured: false,
+    portfolio_workbook_credentials_available: false,
     worker_state: "RUNNING",
     worker_started_at: "2026-10-16T01:00:00Z",
     worker_last_seen_at: "2026-10-16T01:05:00Z",
@@ -898,6 +902,79 @@ it.each([
     );
   },
 );
+
+it("keeps model proposal reviewer credentials server-side and permits an empty preview request", async () => {
+  vi.stubEnv("MODEL_PROPOSAL_REVIEWER_TOKEN", "reviewer-secret-for-test");
+  vi.stubEnv("API_ACCESS_TOKEN", "api-secret-for-test");
+  const preview = {
+    proposal_id: id,
+    status: "READY",
+    reason: null,
+    current_revision_id: id,
+    current_revision_number: 1,
+    input_changes: [],
+    output_changes: [],
+    current_inputs: {},
+    proposed_inputs: {},
+    current_outputs: {},
+    proposed_outputs: {},
+    proposed_projections: [],
+    preview_fingerprint: "a".repeat(64),
+    previewed_at: "2026-10-16T12:00:00Z",
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json(preview));
+  vi.stubGlobal("fetch", mock);
+
+  const path = ["model-revision-proposals", id, "preview"];
+  const result = await POST(
+    new Request(`http://localhost/api/research/${path.join("/")}`, {
+      method: "POST",
+    }),
+    context(path),
+  );
+
+  expect(result.status).toBe(200);
+  const returnedBody = result.clone();
+  expect(await result.json()).toEqual(preview);
+  expect(mock).toHaveBeenCalledTimes(1);
+  expect(mock.mock.calls[0]![1]!.body).toBeUndefined();
+  expect(mock.mock.calls[0]![1]!.headers).toEqual({
+    "Content-Type": "application/json",
+    "X-API-Access-Token": "api-secret-for-test",
+    "X-Model-Proposal-Token": "reviewer-secret-for-test",
+  });
+  expect(await returnedBody.text()).not.toContain("reviewer-secret-for-test");
+});
+
+it("fails closed when model proposal reviewer credentials are not configured", async () => {
+  vi.stubEnv("MODEL_PROPOSAL_REVIEWER_TOKEN", "");
+  const mock = vi.fn();
+  vi.stubGlobal("fetch", mock);
+  const response = await GET(
+    new Request("http://localhost/api/research/model-revision-proposals"),
+    context(["model-revision-proposals"]),
+  );
+  expect(response.status).toBe(503);
+  expect(await response.text()).not.toContain("secret");
+  expect(mock).not.toHaveBeenCalled();
+});
+
+it("forwards only the company-scoped model proposal review filter", async () => {
+  vi.stubEnv("MODEL_PROPOSAL_REVIEWER_TOKEN", "reviewer-secret-for-test");
+  const mock = vi.fn().mockResolvedValue(Response.json([]));
+  vi.stubGlobal("fetch", mock);
+  const result = await GET(
+    new Request(
+      `http://localhost/api/research/model-revision-proposals?company_id=${id}&limit=100&password=ignored`,
+    ),
+    context(["model-revision-proposals"]),
+  );
+  expect(result.status).toBe(200);
+  const endpoint = mock.mock.calls[0]![0] as URL;
+  expect(endpoint.searchParams.get("company_id")).toBe(id);
+  expect(endpoint.searchParams.get("limit")).toBe("100");
+  expect(endpoint.searchParams.has("password")).toBe(false);
+});
 
 it("allows only the research and thesis Sheets queue routes and validates responses", async () => {
   const run = {

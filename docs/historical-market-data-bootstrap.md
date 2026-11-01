@@ -18,8 +18,11 @@ Implemented functionality is available through `db:bootstrap-market-data`.
 Synthetic PostgreSQL 18 integration tests cover preview, exact identity checks,
 bounded resume after an interrupted checkpoint, provider gaps, idempotent replay,
 and exact persisted-row reconciliation. No real Yahoo requests, real workbook
-inputs, Neon database, or production data were used in those tests. The live
-operator procedure below is prepared but has not been executed.
+inputs, Neon database, or production data were used in those tests. Production is
+an explicit target choice, but the live procedure remains inactive and unexecuted.
+Production requests require a reconciled canonical portfolio bootstrap receipt.
+See [the shared production ingestion runbook](production-data-ingestion-operations.md)
+for target gating, bounded execution, reconciliation and historical coverage caveats.
 
 ## Frozen source and identity scope
 
@@ -46,8 +49,11 @@ inserted.
 
 The prepared run pins the provider/crosswalk hash, normalizer versions, exact
 listing identities, required currency pairs, target environment, and date window.
-Changing a listing identity or crosswalk after preparation blocks the affected
-run; correct the reviewed source and prepare a new run.
+Listings are ordered as held positions first, other Portfolio listings second, and
+Watchlist listings third; FX pairs follow those listing checkpoints. A company
+scope can be supplied for a bounded preview/preparation. Changing a listing
+identity or crosswalk after preparation blocks the affected run; correct the
+reviewed source and prepare a new run.
 
 ## Corporate actions and adjustment semantics
 
@@ -67,17 +73,24 @@ facts.
 
 ## Target and execution safety
 
-Every command requires `--target-environment development` or `rehearsal` and
-requires `DATABASE_TARGET_ENVIRONMENT` to match. Before reading the crosswalk or
-calling Yahoo, the command uses the shared write-target guard and checks the exact
-Alembic head. For Neon this validates the resolved project, branch, endpoint, and
-database identity. A branch label alone is insufficient. Production is excluded
-from the command's argument choices.
+Every command requires `--target-environment development`, `rehearsal`, or
+`production`, and requires `DATABASE_TARGET_ENVIRONMENT` to match. `preview`,
+`status`, and `reconcile` use a PostgreSQL read-only engine and the read-only target
+verifier; they do not require production-write authorization. `prepare`, `run`, and
+`resume` use the shared write-target guard and check the exact Alembic head before
+writing or calling Yahoo. A production writer additionally requires the verified
+Neon primary branch, exact project/branch/endpoint/database, direct
+`sslmode=verify-full` connection, a non-superuser role,
+`DATABASE_PRODUCTION_WRITES_AUTHORIZED=true`, and interactive confirmation of the
+exact `BOOTSTRAP <project>/<branch>/<endpoint>/<database>` phrase. Production
+provider requests also require a successfully reconciled canonical portfolio
+bootstrap receipt. A branch label alone is insufficient.
 
-Use a disposable local PostgreSQL database or an independently verified isolated
-rehearsal target. Keep `DATABASE_URL` in the operator's approved secret store or
-untracked local environment file. Do not paste it in commands, reports, tickets,
-or shell transcripts. The command output is sanitized; a private report contains
+Use a disposable local PostgreSQL database, an independently verified isolated
+rehearsal target, or an explicitly authorized verified production primary. Keep
+`DATABASE_URL` in the operator's approved secret store or untracked local
+environment file. Do not paste it in commands, reports, tickets, or shell
+transcripts. The command output is sanitized; a private report contains
 canonical company/listing identifiers, coverage, provider receipt hashes, and
 failure codes, but no connection URL or credential. Store reports outside the
 repository and do not upload them to CI or a PR.
@@ -228,6 +241,48 @@ The existing Alembic migration adds `market_data_bootstrap_runs` and
 provider-payload/history migration group. Downgrade is destructive to those run
 receipts; do not downgrade a rehearsal or production schema to clear a run.
 
+## Guarded production procedure
+
+This procedure is available only after the canonical portfolio bootstrap has a
+persisted `APPLIED` or `APPLIED_WITH_GAPS` receipt whose reconciliation is
+`MATCHED`. Production previews expose that prerequisite; provider execution
+rechecks it before any Yahoo request. No recurring ingestion is enabled.
+
+First run a read-only production preview with the exact reviewed scope. The CLI
+verifies the Neon primary identity, database, TLS, privileges, and Alembic head
+without production-write authorization:
+
+```powershell
+$env:DATABASE_TARGET_ENVIRONMENT = 'production'
+$preview = Join-Path $env:USERPROFILE 'Documents\market-preview.json'
+npm run db:bootstrap-market-data -- preview `
+  --target-environment production `
+  --start-date '<YYYY-MM-DD>' `
+  --end-date '<YYYY-MM-DD>' `
+  --report $preview
+if ($LASTEXITCODE -ne 0) { throw 'Production market-data preview is blocked.' }
+```
+
+Review canonical-import readiness, provider crosswalk and held/Portfolio/Watchlist
+listing tiers. Stop on any unresolved held-listing or required-FX mapping. Only
+after a separate operation-specific approval, set authorization in this interactive
+PowerShell process and prepare a bounded run:
+
+```powershell
+$env:DATABASE_PRODUCTION_WRITES_AUTHORIZED = 'true'
+npm run db:bootstrap-market-data -- prepare `
+  --target-environment production `
+  --start-date '<YYYY-MM-DD>' `
+  --end-date '<YYYY-MM-DD>'
+```
+
+The guard prompts for the exact target confirmation; commands must run in an
+interactive terminal. Begin with `run --max-checkpoints 1`, review its private
+report, then use `resume` on the same run with bounded batches. Run `status` and
+`reconcile` using read-only target verification afterward. Clear both temporary
+environment settings when finished. This document does not authorize any
+production request.
+
 ## Verification status
 
 - **Implemented:** bounded preview, frozen preparation, exact identity and FX
@@ -237,7 +292,8 @@ receipts; do not downgrade a rehearsal or production schema to clear a run.
 - **Tested:** synthetic provider responses, a disposable PostgreSQL 18 schema,
   target guard, exact decimal persistence, native listing currency/provider
   identity, current-quote exclusion, retry/unavailable classification, interrupted
-  resume, and rerun idempotency.
+  resume, rerun idempotency, production-target ordering and the canonical import
+  prerequisite before a provider call.
 - **Staged:** operator commands and report template in this document.
 - **Executed:** no live Yahoo retrieval, real-source bootstrap, Neon rehearsal, or
   production write has been performed by Codex.

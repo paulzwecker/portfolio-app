@@ -1,5 +1,7 @@
 ﻿# Application architecture through Milestone 2C and provider contracts
 
+> **Historical implementation reference:** This document records verified architecture and behavior through Milestone 2C. It is retained as implementation history, not as the current product plan or platform target. For current outcomes and sequencing, use [`docs/PRODUCT_VISION.md`](PRODUCT_VISION.md) and [`ROADMAP.md`](../ROADMAP.md); for target platform and Portfolio boundaries, use [`Personal Universe`](architecture/personal-universe.md) and [`Portfolio application architecture`](architecture/portfolio-application.md). More specific domain contracts remain authoritative for financial and data semantics. Planned behavior in the newer architecture documents must still be verified in code before it is treated as implemented.
+
 ## Request path
 
 ```mermaid

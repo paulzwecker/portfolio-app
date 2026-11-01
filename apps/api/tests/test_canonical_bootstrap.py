@@ -14,14 +14,19 @@ from xml.sax.saxutils import escape
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
+from alembic import command
+from alembic.runtime.migration import MigrationContext
 from pydantic import SecretStr
-from sqlalchemy import event, func, select
+from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.orm import Session
 
+from portfolio_api import canonical_bootstrap, legacy_import
 from portfolio_api.canonical_bootstrap import (
     IMPORT_VERSION,
+    ApprovedWorkbookSnapshot,
     CanonicalBootstrapError,
     ProviderIdentifier,
+    _validate_overlay_observation_cutoff,
     apply_canonical_bootstrap,
     build_import_plan,
     import_blocking_issues,
@@ -30,6 +35,7 @@ from portfolio_api.canonical_bootstrap import (
 )
 from portfolio_api.database_write_target import (
     DatabaseWriteTargetError,
+    install_database_read_only_guard,
     install_database_write_target_guard,
     verify_database_write_target,
 )
@@ -42,12 +48,17 @@ from portfolio_api.domain.models import (
     HoldingSnapshot,
     LegacyImportBatch,
     Portfolio,
+    RankingEntry,
+    RankingRun,
     ResearchPriorityInput,
+    ScoreAssessment,
     TargetAllocation,
     TargetRevision,
 )
+from portfolio_api.migrations import alembic_config
 from portfolio_api.settings import Settings
 from portfolio_api.workbook_sources import (
+    GOOGLE_SHEET_MIME,
     MARKET_DATA_PROFILE,
     PORTFOLIO_PROFILE,
     XLSX_MIME,
@@ -61,6 +72,48 @@ PORTFOLIO_TARGET = Decimal("0.123456789012")
 POSITION_QUANTITY = Decimal("3.1250000001")
 CASH_BALANCE = Decimal("250.2500000001")
 SYNTHETIC_CIK = "0000000001"
+
+
+def test_native_google_snapshot_requires_separate_approved_source_value_bundle(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    portfolio = ApprovedWorkbookSnapshot(
+        run_id="a" * 32,
+        profile=PORTFOLIO_PROFILE.key,
+        expected_filename=PORTFOLIO_PROFILE.expected_filename,
+        sha256="b" * 64,
+        path=tmp_path / "portfolio.xlsx",
+        acquired_at=OBSERVED_AT,
+        schema_fingerprint="c" * 64,
+        semantic_sha256="d" * 64,
+        workbook=legacy_import.Workbook(Path("portfolio.xlsx"), "b" * 64, {}),
+        acquisition_run_id="a" * 32,
+        source_identity_sha256="e" * 64,
+        source_modified_at="2026-10-31T09:59:00Z",
+        source_mime_type=GOOGLE_SHEET_MIME,
+    )
+    market = ApprovedWorkbookSnapshot(
+        run_id="f" * 32,
+        profile=MARKET_DATA_PROFILE.key,
+        expected_filename=MARKET_DATA_PROFILE.expected_filename,
+        sha256="1" * 64,
+        path=tmp_path / "market.xlsx",
+        acquired_at=OBSERVED_AT,
+        schema_fingerprint="2" * 64,
+        workbook=None,
+        acquisition_run_id="f" * 32,
+        source_mime_type=XLSX_MIME,
+    )
+    monkeypatch.setattr(
+        canonical_bootstrap,
+        "resolve_approved_snapshot",
+        lambda _store, run_id, **_kwargs: portfolio if run_id == portfolio.run_id else market,
+    )
+
+    with pytest.raises(CanonicalBootstrapError, match="requires an explicitly approved"):
+        build_import_plan(
+            SnapshotStore(tmp_path / "private-store"), portfolio.run_id, market.run_id
+        )
 
 
 def _sheet_xml(cells: dict[str, str]) -> str:
@@ -304,6 +357,21 @@ def _prepared_inputs(
     return store, portfolio, market, plan
 
 
+def test_live_value_overlay_cannot_be_imported_before_its_observation_window() -> None:
+    comparison_completed_at = "2026-10-31T09:02:00+00:00"
+
+    with pytest.raises(CanonicalBootstrapError, match="predates the live value comparison"):
+        _validate_overlay_observation_cutoff(
+            comparison_completed_at,
+            datetime(2026, 10, 31, 9, 1, tzinfo=UTC),
+        )
+
+    _validate_overlay_observation_cutoff(
+        comparison_completed_at,
+        datetime(2026, 10, 31, 9, 2, tzinfo=UTC),
+    )
+
+
 def test_snapshot_import_requires_approved_current_hash_checked_run(tmp_path: Path) -> None:
     portfolio_bytes, _market_bytes = synthetic_workbooks()
     store = SnapshotStore(tmp_path / "private-snapshot-store")
@@ -333,6 +401,66 @@ def test_snapshot_import_requires_approved_current_hash_checked_run(tmp_path: Pa
     )
     assert resolved.sha256 == acquired["artifact_sha256"]
     assert resolved.path.read_bytes() == portfolio_bytes
+    assert resolved.semantic_sha256 is not None
+    assert resolved.workbook is not None
+
+
+def test_approved_portfolio_snapshot_requires_matching_semantic_fingerprint(
+    tmp_path: Path,
+) -> None:
+    portfolio_bytes, _market_bytes = synthetic_workbooks()
+    store = SnapshotStore(tmp_path / "private-snapshot-store")
+    acquisition = _snapshot(
+        store,
+        PORTFOLIO_PROFILE,
+        portfolio_bytes,
+        source_identity="synthetic-source",
+        accepted=False,
+    )
+    accepted = store.accept_schema_baseline(acquisition["run_id"], acquisition["artifact_sha256"])
+    corrupted_sha = "0" * 64
+    for run_id in (acquisition["run_id"], accepted["run_id"]):
+        path = store.run_root / f"{run_id}.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest["semantic_sha256"] = corrupted_sha
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(CanonicalBootstrapError, match="fingerprint differs from its manifest"):
+        resolve_approved_snapshot(
+            store,
+            accepted["run_id"],
+            expected_profile=PORTFOLIO_PROFILE.key,
+            expected_contract_version=PORTFOLIO_PROFILE.contract_version,
+            expected_filename=PORTFOLIO_PROFILE.expected_filename,
+        )
+
+
+def test_pre_fingerprint_portfolio_snapshot_requires_reacquisition(tmp_path: Path) -> None:
+    portfolio_bytes, _market_bytes = synthetic_workbooks()
+    store = SnapshotStore(tmp_path / "private-snapshot-store")
+    acquisition = _snapshot(
+        store,
+        PORTFOLIO_PROFILE,
+        portfolio_bytes,
+        source_identity="synthetic-source",
+        accepted=False,
+    )
+    accepted = store.accept_schema_baseline(acquisition["run_id"], acquisition["artifact_sha256"])
+    for run_id in (acquisition["run_id"], accepted["run_id"]):
+        path = store.run_root / f"{run_id}.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest.pop("semantic_fingerprint_version", None)
+        manifest.pop("semantic_sha256", None)
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(CanonicalBootstrapError, match="predates importer-value fingerprints"):
+        resolve_approved_snapshot(
+            store,
+            accepted["run_id"],
+            expected_profile=PORTFOLIO_PROFILE.key,
+            expected_contract_version=PORTFOLIO_PROFILE.contract_version,
+            expected_filename=PORTFOLIO_PROFILE.expected_filename,
+        )
 
 
 def test_newer_source_acquisition_invalidates_an_older_snapshot_selection(tmp_path: Path) -> None:
@@ -530,6 +658,18 @@ def test_postgres18_bootstrap_resumes_after_interruption_and_is_idempotent(
     assert first["reconciliation"]["status"] == "MATCHED"
 
     with Session(postgres_engine) as session:
+        counts_before_replay = {
+            "holding_snapshots": session.scalar(select(func.count()).select_from(HoldingSnapshot)),
+            "holding_positions": session.scalar(select(func.count()).select_from(HoldingPosition)),
+            "cash_positions": session.scalar(select(func.count()).select_from(CashPosition)),
+            "target_revisions": session.scalar(select(func.count()).select_from(TargetRevision)),
+            "target_allocations": session.scalar(
+                select(func.count()).select_from(TargetAllocation)
+            ),
+            "score_assessments": session.scalar(select(func.count()).select_from(ScoreAssessment)),
+            "ranking_runs": session.scalar(select(func.count()).select_from(RankingRun)),
+            "ranking_entries": session.scalar(select(func.count()).select_from(RankingEntry)),
+        }
         repeated = apply_canonical_bootstrap(
             session,
             portfolio_snapshot=portfolio,
@@ -539,8 +679,26 @@ def test_postgres18_bootstrap_resumes_after_interruption_and_is_idempotent(
             observed_at=OBSERVED_AT,
             resume=True,
         )
+        counts_after_replay = {
+            "holding_snapshots": session.scalar(select(func.count()).select_from(HoldingSnapshot)),
+            "holding_positions": session.scalar(select(func.count()).select_from(HoldingPosition)),
+            "cash_positions": session.scalar(select(func.count()).select_from(CashPosition)),
+            "target_revisions": session.scalar(select(func.count()).select_from(TargetRevision)),
+            "target_allocations": session.scalar(
+                select(func.count()).select_from(TargetAllocation)
+            ),
+            "score_assessments": session.scalar(select(func.count()).select_from(ScoreAssessment)),
+            "ranking_runs": session.scalar(select(func.count()).select_from(RankingRun)),
+            "ranking_entries": session.scalar(select(func.count()).select_from(RankingEntry)),
+        }
         assert repeated["status"] == "ALREADY_APPLIED"
         assert repeated["reconciliation"]["status"] == "MATCHED"
+        assert counts_after_replay == counts_before_replay
+        assert counts_after_replay["score_assessments"] == len(plan.scores)
+        assert counts_after_replay["ranking_runs"] == len(plan.rankings)
+        assert counts_after_replay["ranking_entries"] == sum(
+            len(rows) for rows in plan.rankings.values()
+        )
         assert session.scalar(select(func.count()).select_from(Company)) == 2
         assert session.scalar(select(func.count()).select_from(Portfolio)) == 1
         assert session.scalar(select(func.count()).select_from(HoldingSnapshot)) == 1
@@ -573,6 +731,36 @@ def test_postgres18_bootstrap_resumes_after_interruption_and_is_idempotent(
 
 
 @pytest.mark.integration
+def test_canonical_bootstrap_imports_at_last_recorded_production_schema(
+    postgres_engine: Any, tmp_path: Path
+) -> None:
+    """R7's canonical importer must work at 6c without the later sync/ingestion migrations."""
+    with postgres_engine.begin() as connection:
+        config = alembic_config()
+        config.attributes["connection"] = connection
+        command.downgrade(config, "6c2eaf0b8147")
+        assert set(MigrationContext.configure(connection).get_current_heads()) == {"6c2eaf0b8147"}
+
+    _store, portfolio, market, plan = _prepared_inputs(tmp_path)
+    with Session(postgres_engine) as session, session.begin():
+        report = apply_canonical_bootstrap(
+            session,
+            portfolio_snapshot=portfolio,
+            market_snapshot=market,
+            plan=plan,
+            provider_plan=None,
+            observed_at=OBSERVED_AT,
+            resume=True,
+        )
+
+    assert report["status"] == "APPLIED"
+    assert report["reconciliation"]["status"] == "MATCHED"
+    with Session(postgres_engine) as session:
+        assert session.scalar(select(func.count()).select_from(Company)) == 2
+        assert session.scalar(select(func.count()).select_from(CanonicalBootstrapRun)) == 1
+
+
+@pytest.mark.integration
 def test_local_bootstrap_target_guard_rejects_wrong_environment_before_writes(
     postgres_engine: Any,
 ) -> None:
@@ -587,3 +775,148 @@ def test_local_bootstrap_target_guard_rejects_wrong_environment_before_writes(
         verify_database_write_target(postgres_engine)
     with Session(postgres_engine) as session:
         assert session.scalar(select(func.count()).select_from(Company)) == 0
+
+
+@pytest.mark.integration
+def test_canonical_bootstrap_preview_uses_read_only_postgres_and_writes_no_receipt(
+    postgres_engine: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    store, portfolio, market, _plan = _prepared_inputs(tmp_path)
+    target_database = postgres_engine.url.database
+    assert target_database is not None and target_database.endswith("_test")
+    with postgres_engine.connect() as connection:
+        schema = connection.execute(select(func.current_schema())).scalar_one()
+    settings = _target_settings(
+        postgres_engine,
+        database_local_test_writes_authorized=False,
+        database_local_writes_authorized=False,
+        database_production_writes_authorized=False,
+    )
+    read_engine = create_engine(
+        postgres_engine.url,
+        connect_args={
+            "options": (
+                f"-c search_path={schema} -c statement_timeout=5000 "
+                "-c default_transaction_read_only=on"
+            )
+        },
+        hide_parameters=True,
+    )
+    install_database_read_only_guard(read_engine, settings)
+    attempted_mutations: list[str] = []
+
+    def record_mutation_attempt(
+        _connection: Any,
+        _cursor: Any,
+        statement: str,
+        _parameters: Any,
+        context: Any,
+        _executemany: bool,
+    ) -> None:
+        from portfolio_api.database_write_target import _statement_may_write
+
+        if _statement_may_write(statement, context):
+            attempted_mutations.append(statement)
+
+    event.listen(read_engine, "before_cursor_execute", record_mutation_attempt)
+    monkeypatch.setattr(canonical_bootstrap, "Settings", lambda: settings)
+
+    def provide_read_only_engine(*_args: Any, **kwargs: Any) -> Any:
+        assert kwargs["read_only"] is True
+        return read_engine
+
+    monkeypatch.setattr(canonical_bootstrap, "create_database_engine", provide_read_only_engine)
+    try:
+        exit_code = canonical_bootstrap.main(
+            [
+                "preview",
+                "--store",
+                str(store.root),
+                "--portfolio-run",
+                portfolio.run_id,
+                "--market-run",
+                market.run_id,
+                "--target-environment",
+                "development",
+            ]
+        )
+        output = json.loads(capsys.readouterr().out)
+        assert exit_code == 0
+        assert output["status"] in {"READY", "READY_WITH_SOURCE_GAPS"}
+        assert attempted_mutations == []
+    finally:
+        read_engine.dispose()
+
+    with Session(postgres_engine) as session:
+        assert session.scalar(select(func.count()).select_from(Company)) == 0
+        assert session.scalar(select(func.count()).select_from(Portfolio)) == 0
+        assert session.scalar(select(func.count()).select_from(HoldingSnapshot)) == 0
+        assert session.scalar(select(func.count()).select_from(CanonicalBootstrapRun)) == 0
+        assert session.scalar(select(func.count()).select_from(LegacyImportBatch)) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("command", ["apply", "resume"])
+def test_bootstrap_apply_and_resume_keep_the_write_authorization_gate(
+    command: str,
+    postgres_engine: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    store, portfolio, market, _plan = _prepared_inputs(tmp_path)
+    settings = _target_settings(
+        postgres_engine,
+        database_local_test_writes_authorized=False,
+        database_local_writes_authorized=False,
+        database_production_writes_authorized=False,
+    )
+    with postgres_engine.connect() as connection:
+        schema = connection.execute(select(func.current_schema())).scalar_one()
+    guarded_engine = create_engine(
+        postgres_engine.url,
+        connect_args={"options": f"-c search_path={schema} -c statement_timeout=5000"},
+        hide_parameters=True,
+    )
+    install_database_write_target_guard(
+        guarded_engine,
+        settings,
+        operation="canonical_portfolio_bootstrap",
+        operation_kind="bootstrap",
+    )
+    monkeypatch.setattr(canonical_bootstrap, "Settings", lambda: settings)
+
+    def provide_write_engine(*_args: Any, **kwargs: Any) -> Any:
+        assert kwargs["read_only"] is False
+        return guarded_engine
+
+    monkeypatch.setattr(canonical_bootstrap, "create_database_engine", provide_write_engine)
+
+    try:
+        exit_code = canonical_bootstrap.main(
+            [
+                command,
+                "--store",
+                str(store.root),
+                "--portfolio-run",
+                portfolio.run_id,
+                "--market-run",
+                market.run_id,
+                "--target-environment",
+                "development",
+            ]
+        )
+
+        captured = capsys.readouterr()
+        assert exit_code == 2
+        assert "local_test_write_not_authorized" in caplog.text
+        assert captured.err
+        with Session(postgres_engine) as session:
+            assert session.scalar(select(func.count()).select_from(Company)) == 0
+            assert session.scalar(select(func.count()).select_from(CanonicalBootstrapRun)) == 0
+    finally:
+        guarded_engine.dispose()
