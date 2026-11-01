@@ -7,16 +7,16 @@
 
 ## Execution cursor — edit after EVERY subtask
 
-| Field                   | Current value                                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `M0` — Reconcile repository and establish loop                                                                            |
-| Next task               | `M0.6` — Verify Actions on the corrected commit; then finalize the M0 PR state                                            |
-| Status                  | `IN_PROGRESS / CI_REGRESSION_FIX`                                                                                         |
-| Current branch / commit | `codex/m0-integrated-release-candidate` / `99a8bdf`                                                                       |
-| Last verified tests     | `npm run check`: pass; API 592 passed, 2 skipped; DCF source tests 2 passed; prior API integration 133 passed, 4 skipped  |
-| Latest PR               | [Draft PR #13](https://github.com/paulzwecker/portfolio-app/pull/13)                                                      |
-| Primary blocker         | Corrected Actions rerun pending; prior run exposed sparse-checkout fixture coupling and six unclassified migration tables |
-| Next approval gate      | No production migration, write, deployment or model acceptance without its separate explicit approval                     |
+| Field                   | Current value                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Active milestone        | `M0` — Reconcile repository and establish loop                                                                           |
+| Next task               | `M0.6` — Verify Actions after the migration-head assertion fix; then finalize the M0 PR state                            |
+| Status                  | `IN_PROGRESS / POSTGRES_CI_FIX`                                                                                          |
+| Current branch / commit | `codex/m0-integrated-release-candidate` / `3533b83`                                                                      |
+| Last verified tests     | `npm run check`: pass; API 592 passed, 2 skipped; DCF source tests 2 passed; prior API integration 133 passed, 4 skipped |
+| Latest PR               | [Draft PR #13](https://github.com/paulzwecker/portfolio-app/pull/13)                                                     |
+| Primary blocker         | Corrected Actions rerun pending; prior PostgreSQL job used a stale Alembic-head expectation                              |
+| Next approval gate      | No production migration, write, deployment or model acceptance without its separate explicit approval                    |
 
 **Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
 
@@ -46,7 +46,7 @@
 - [x] **M0.5** Verify model workspace in browser desktop/mobile (including proposal preview and explicit reviewer confirmation); distinguish fixture browser evidence from live database verification.
   - Evidence (2026-11-01): `npm run test:e2e -- --project=desktop --project=mobile` completed with 55 passed, 11 conditionally skipped and 0 failed. The model workspace preview/accept flow verifies proposed-vs-current input/output differences, disabled acceptance before review, required decision note, explicit confirmation, one acceptance request and immutable revision ID. The broader run covers Company Explorer, Portfolio, Decisions, Universe, Research review, Operations states, navigation and responsive behavior in Chromium desktop/iPhone-sized mobile contexts. Initial failures were stale E2E assertions for content behind existing disclosures and an updated missing-estimate message; tests were aligned with current accessible UI semantics. No product behavior was changed. `npx prettier --check apps/web/e2e/research.spec.ts` and `git diff --check` pass. Eleven live-database or project-conditional checks remain skipped; this is fixture-based UI evidence, not live Neon/deployed verification.
 - [ ] **M0.6** Milestone quality review; open PR, capture check results and owner decision; reassess M1–M9 against Product Vision.
-  - Review evidence (2026-11-01): owner confirmed the two XLSX files already tracked on public `origin/main` are safe to publish; they remain unchanged. The PR adds no workbook snapshots and the credential-pattern scan found no token, service-account credential or database URL patterns. Private source identifiers remain omitted. CI on the runner-fix commit confirmed `ubuntu-24.04` restores Python 3.12.3 setup, then surfaced two tests that read the excluded workbook and a migration table-group inventory missing six newer application tables. Commit `99a8bdf` marks the workbook-dependent cases as `source_data`, classifies the six tables, and adds a registry-coverage regression. Local `npm run check` passes (592 API passed, 2 skipped; web 166 passed), and both source-data DCF tests pass locally. GitHub rerun on the corrected commit is pending. No merge, production write/migration, manual deployment, Sheets edit or model acceptance occurred.
+  - Review evidence (2026-11-01): owner confirmed the two XLSX files already tracked on public `origin/main` are safe to publish; they remain unchanged. The PR adds no workbook snapshots and the credential-pattern scan found no token, service-account credential or database URL patterns. Private source identifiers remain omitted. CI confirmed the `ubuntu-24.04` pin restores Python 3.12.3 setup, then exposed two tests coupled to the excluded workbook, six unclassified application tables, and stale backup/restore assertions for Alembic `6c2eaf0b8147` even though the fixture upgrades to the repository head. Commit `99a8bdf` marks the workbook-dependent tests as `source_data`, classifies the six tables and adds a registry-coverage regression; commit `3533b83` derives both backup/restore assertions from the checked-in Alembic heads. Local `npm run check` passes (592 API passed, 2 skipped; web 166 passed); both source-data DCF tests pass locally. The corrected PostgreSQL Actions rerun is pending. No merge, production write/migration, manual deployment, Sheets edit or model acceptance occurred.
   - Product alignment is recorded below; the dependency ordering remains consistent with the approved vision and architecture.
 
 ### M0.6 Product-vision reassessment
@@ -197,4 +197,4 @@ _Add one short row per completed subtask: date | task ID | commit | tests/eviden
 | 2026-11-01 | M0.3 | `f0405f5` (consolidated)| Package parity validation; contracts current; focused 71-pass suite; single migration head | Source inputs remain proposed; production schema is behind local head | M0.4 |
 | 2026-11-01 | M0.4 | `f0405f5` (consolidated)| Full local quality checks PASS; PostgreSQL integration 133 passed, 4 skipped | Browser workflow is the remaining local M0 gate; production schema remains behind local head | M0.5 |
 | 2026-11-01 | M0.5 | `f0405f5` (consolidated)| Desktop/mobile Playwright: 55 passed, 11 skipped, 0 failed; focused browser regression corrected; formatting and diff checks pass | Live database/deployed checks remain unverified; no application behavior changed | M0.6 |
-| 2026-11-01 | M0.6 (IN_PROGRESS) | `99a8bdf` | Corrected Ubuntu pin; fixed sparse-checkout test classification and migration table-group coverage; `npm run check` passes | Corrected GitHub Actions rerun pending; no merge or production action | Verify checks on PR #13 |
+| 2026-11-01 | M0.6 (IN_PROGRESS) | `3533b83` | Corrected Ubuntu pin, CI source-data test classification, migration table-group coverage and stale Alembic-head assertions; `npm run check` passes | Corrected GitHub Actions rerun pending; no merge or production action | Verify checks on PR #13 |
