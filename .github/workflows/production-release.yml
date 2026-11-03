@@ -82,24 +82,6 @@ jobs:
       vercel_domain: ${{ steps.providers.outputs.vercel_domain }}
     env:
       RELEASE_SHA: ${{ needs.validate_release.outputs.release_sha }}
-      APP_ENV: development
-      DATABASE_TARGET_ENVIRONMENT: production
-      DATABASE_TARGET_DATABASE: neondb
-      DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
-      DATABASE_URL: ${{ secrets.PRODUCTION_READONLY_DATABASE_URL }}
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: delicate-heart-04560404
-      NEON_BRANCH_ID: br-morning-truth-b96361yh
-      NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
-      RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_READONLY_DATABASE_URL }}
-      RECOVERY_BRANCH_ID: ${{ vars.RECOVERY_BRANCH_ID }}
-      RECOVERY_ENDPOINT_ID: ${{ vars.RECOVERY_ENDPOINT_ID }}
-      CLOUD_INGESTION_ENABLED: "false"
-      RECURRING_OPERATIONS_ENABLED: "false"
-      MANUAL_OPERATIONS_ENABLED: "false"
-      WORKBOOK_SYNC_ENABLED: "false"
-      GOOGLE_SHEETS_POLL_SECONDS: "0"
-      FMP_CONSENSUS_INGESTION_ENABLED: "false"
     steps:
       - name: Check out the release commit
         uses: actions/checkout@v4
@@ -125,7 +107,48 @@ jobs:
 
       - name: Verify Neon identity, schema and current recovery point
         id: database
+        env:
+          APP_ENV: development
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
+          DATABASE_URL: ${{ secrets.PRODUCTION_READONLY_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: delicate-heart-04560404
+          NEON_BRANCH_ID: br-morning-truth-b96361yh
+          NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
+          RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_READONLY_DATABASE_URL }}
+          RECOVERY_BRANCH_ID: ${{ vars.RECOVERY_BRANCH_ID }}
+          RECOVERY_ENDPOINT_ID: ${{ vars.RECOVERY_ENDPOINT_ID }}
+          CLOUD_INGESTION_ENABLED: "false"
+          RECURRING_OPERATIONS_ENABLED: "false"
+          MANUAL_OPERATIONS_ENABLED: "false"
+          WORKBOOK_SYNC_ENABLED: "false"
+          GOOGLE_SHEETS_POLL_SECONDS: "0"
+          FMP_CONSENSUS_INGESTION_ENABLED: "false"
+          UV_NO_SYNC: "1"
         run: node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.production_release readonly
+
+      - name: Verify current Alembic metadata when migration is not needed
+        if: steps.database.outputs.migration_required == 'false'
+        env:
+          APP_ENV: development
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
+          DATABASE_URL: ${{ secrets.PRODUCTION_READONLY_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: delicate-heart-04560404
+          NEON_BRANCH_ID: br-morning-truth-b96361yh
+          NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
+          CLOUD_INGESTION_ENABLED: "false"
+          RECURRING_OPERATIONS_ENABLED: "false"
+          MANUAL_OPERATIONS_ENABLED: "false"
+          WORKBOOK_SYNC_ENABLED: "false"
+          GOOGLE_SHEETS_POLL_SECONDS: "0"
+          FMP_CONSENSUS_INGESTION_ENABLED: "false"
+          UV_NO_SYNC: "1"
+        run: node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.production_release schema-check
 
       - name: Verify Render and Vercel projects without changing settings
         id: providers
@@ -152,25 +175,6 @@ jobs:
       deployments: write
     env:
       RELEASE_SHA: ${{ needs.validate_release.outputs.release_sha }}
-      APP_ENV: development
-      DATABASE_TARGET_ENVIRONMENT: production
-      DATABASE_TARGET_DATABASE: neondb
-      DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true"
-      DATABASE_URL: ${{ secrets.NEON_PRODUCTION_MIGRATION_DATABASE_URL }}
-      MIGRATION_CONFIRMATION: ${{ inputs.migration_confirmation }}
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: delicate-heart-04560404
-      NEON_BRANCH_ID: br-morning-truth-b96361yh
-      NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
-      RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_READONLY_DATABASE_URL }}
-      RECOVERY_BRANCH_ID: ${{ vars.RECOVERY_BRANCH_ID }}
-      RECOVERY_ENDPOINT_ID: ${{ vars.RECOVERY_ENDPOINT_ID }}
-      CLOUD_INGESTION_ENABLED: "false"
-      RECURRING_OPERATIONS_ENABLED: "false"
-      MANUAL_OPERATIONS_ENABLED: "false"
-      WORKBOOK_SYNC_ENABLED: "false"
-      GOOGLE_SHEETS_POLL_SECONDS: "0"
-      FMP_CONSENSUS_INGESTION_ENABLED: "false"
     steps:
       - name: Check out the exact release commit
         uses: actions/checkout@v4
@@ -199,18 +203,89 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/release/assert-current-main.mjs
 
-      - name: Reverify write target, reviewed base, recovery point and exact migration confirmation
+      - name: Reverify read-only target, reviewed base, recovery point and exact migration confirmation
+        env:
+          APP_ENV: development
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
+          DATABASE_URL: ${{ secrets.PRODUCTION_READONLY_DATABASE_URL }}
+          MIGRATION_CONFIRMATION: ${{ inputs.migration_confirmation }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: delicate-heart-04560404
+          NEON_BRANCH_ID: br-morning-truth-b96361yh
+          NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
+          RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_READONLY_DATABASE_URL }}
+          RECOVERY_BRANCH_ID: ${{ vars.RECOVERY_BRANCH_ID }}
+          RECOVERY_ENDPOINT_ID: ${{ vars.RECOVERY_ENDPOINT_ID }}
+          CLOUD_INGESTION_ENABLED: "false"
+          RECURRING_OPERATIONS_ENABLED: "false"
+          MANUAL_OPERATIONS_ENABLED: "false"
+          WORKBOOK_SYNC_ENABLED: "false"
+          GOOGLE_SHEETS_POLL_SECONDS: "0"
+          FMP_CONSENSUS_INGESTION_ENABLED: "false"
+          UV_NO_SYNC: "1"
         run: node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.production_release migration-preflight
 
-      - name: Apply only the checked-in Alembic migration chain through the existing guard
-        run: npm run db:migrate
+      - name: Apply only the checked-in Alembic migration chain
+        env:
+          APP_ENV: development
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true"
+          DATABASE_URL: ${{ secrets.NEON_PRODUCTION_MIGRATION_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: delicate-heart-04560404
+          NEON_BRANCH_ID: br-morning-truth-b96361yh
+          NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
+          CLOUD_INGESTION_ENABLED: "false"
+          RECURRING_OPERATIONS_ENABLED: "false"
+          MANUAL_OPERATIONS_ENABLED: "false"
+          WORKBOOK_SYNC_ENABLED: "false"
+          GOOGLE_SHEETS_POLL_SECONDS: "0"
+          FMP_CONSENSUS_INGESTION_ENABLED: "false"
+          UV_NO_SYNC: "1"
+        run: |
+          npm run db:migrate
 
-      - name: Verify Alembic metadata against checked-in models
-        run: npm run db:check
+      - name: Verify migrated schema metadata with read-only authority
+        env:
+          APP_ENV: development
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
+          DATABASE_URL: ${{ secrets.PRODUCTION_READONLY_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: delicate-heart-04560404
+          NEON_BRANCH_ID: br-morning-truth-b96361yh
+          NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
+          CLOUD_INGESTION_ENABLED: "false"
+          RECURRING_OPERATIONS_ENABLED: "false"
+          MANUAL_OPERATIONS_ENABLED: "false"
+          WORKBOOK_SYNC_ENABLED: "false"
+          GOOGLE_SHEETS_POLL_SECONDS: "0"
+          FMP_CONSENSUS_INGESTION_ENABLED: "false"
+          UV_NO_SYNC: "1"
+        run: node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.production_release schema-check
 
       - name: Reverify exact production head in a read-only transaction
         env:
+          APP_ENV: development
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
           DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
+          DATABASE_URL: ${{ secrets.PRODUCTION_READONLY_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: delicate-heart-04560404
+          NEON_BRANCH_ID: br-morning-truth-b96361yh
+          NEON_ENDPOINT_ID: ep-snowy-term-b9gr75j6
+          CLOUD_INGESTION_ENABLED: "false"
+          RECURRING_OPERATIONS_ENABLED: "false"
+          MANUAL_OPERATIONS_ENABLED: "false"
+          WORKBOOK_SYNC_ENABLED: "false"
+          GOOGLE_SHEETS_POLL_SECONDS: "0"
+          FMP_CONSENSUS_INGESTION_ENABLED: "false"
+          UV_NO_SYNC: "1"
         run: node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.production_release readonly
 
   schema_gate:
@@ -250,8 +325,6 @@ jobs:
       deployments: write
     env:
       RELEASE_SHA: ${{ needs.validate_release.outputs.release_sha }}
-      RENDER_DEPLOY_TOKEN: ${{ secrets.RENDER_DEPLOY_TOKEN }}
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Check out the exact release commit
         uses: actions/checkout@v4
@@ -266,6 +339,9 @@ jobs:
 
       - name: Deploy the exact SHA and require live API readiness
         id: deploy
+        env:
+          RENDER_DEPLOY_TOKEN: ${{ secrets.RENDER_DEPLOY_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/release/render-deploy.mjs
 
   vercel_deploy:
@@ -280,11 +356,6 @@ jobs:
       deployments: write
     env:
       RELEASE_SHA: ${{ needs.validate_release.outputs.release_sha }}
-      GITHUB_TOKEN: ${{ github.token }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_DEPLOY_TOKEN }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PRODUCTION_DOMAIN: ${{ vars.VERCEL_PRODUCTION_DOMAIN }}
     steps:
       - name: Check out the exact release commit
         uses: actions/checkout@v4
@@ -297,8 +368,30 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: Build from this checkout and deploy the matching artifact
-        id: deploy
+      - name: Install pinned Vercel CLI without credentials
+        run: npm install --prefix "${RUNNER_TEMP}/vercel-cli" --no-save --no-audit --no-fund vercel@24.14.0
+
+      - name: Link the Vercel project and pull production build settings
+        env:
+          VERCEL_CLI_PATH: ${{ runner.temp }}/vercel-cli/node_modules/.bin/vercel
+          VERCEL_TOKEN: ${{ secrets.VERCEL_DEPLOY_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+        run: node scripts/release/vercel-prepare.mjs
+
+      - name: Build production web artifact without deployment credentials
+        env:
+          VERCEL_CLI_PATH: ${{ runner.temp }}/vercel-cli/node_modules/.bin/vercel
+        run: node scripts/release/vercel-build.mjs
+
+      - name: Deploy and verify the exact web commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERCEL_CLI_PATH: ${{ runner.temp }}/vercel-cli/node_modules/.bin/vercel
+          VERCEL_TOKEN: ${{ secrets.VERCEL_DEPLOY_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PRODUCTION_DOMAIN: ${{ vars.VERCEL_PRODUCTION_DOMAIN }}
         run: node scripts/release/vercel-deploy.mjs
 
   smoke:
@@ -310,10 +403,6 @@ jobs:
     permissions:
       contents: read
       deployments: write
-    env:
-      VERCEL_PRODUCTION_DOMAIN: ${{ vars.VERCEL_PRODUCTION_DOMAIN }}
-      WEB_ACCESS_USERNAME: ${{ secrets.WEB_ACCESS_USERNAME }}
-      WEB_ACCESS_PASSWORD: ${{ secrets.WEB_ACCESS_PASSWORD }}
     steps:
       - name: Check out the exact release commit
         uses: actions/checkout@v4
@@ -327,6 +416,10 @@ jobs:
           node-version-file: .node-version
 
       - name: Verify API readiness and authenticated web-to-API reads
+        env:
+          VERCEL_PRODUCTION_DOMAIN: ${{ vars.VERCEL_PRODUCTION_DOMAIN }}
+          WEB_ACCESS_USERNAME: ${{ secrets.WEB_ACCESS_USERNAME }}
+          WEB_ACCESS_PASSWORD: ${{ secrets.WEB_ACCESS_PASSWORD }}
         run: node scripts/release/smoke.mjs
 
   release_evidence:

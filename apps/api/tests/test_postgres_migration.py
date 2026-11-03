@@ -18,7 +18,7 @@ import psycopg
 import pytest
 from alembic import command
 from sqlalchemy import Table, create_engine, text
-from sqlalchemy.engine import URL, make_url
+from sqlalchemy.engine import URL, Engine, make_url
 
 from portfolio_api.database import Base
 from portfolio_api.domain import models
@@ -43,6 +43,7 @@ from portfolio_api.postgres_migration import (
     schema_check,
     verify_backup,
 )
+from portfolio_api.production_release import _check_mapped_alembic_metadata
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
@@ -50,6 +51,16 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 def test_every_mapped_application_table_has_a_migration_group() -> None:
     assert set(Base.metadata.tables) <= set(TABLE_GROUP_BY_NAME)
     assert len(TABLE_GROUP_BY_NAME) == sum(len(group) for group in TABLE_GROUPS.values())
+
+
+@pytest.mark.integration
+def test_alembic_metadata_check_succeeds_in_readonly_postgres_schema(
+    postgres_engine: Engine,
+) -> None:
+    with postgres_engine.connect() as connection:
+        connection.exec_driver_sql("SET TRANSACTION READ ONLY")
+        _check_mapped_alembic_metadata(connection)
+        connection.rollback()
 
 
 MIGRATION_ENVIRONMENT_NAMES = (

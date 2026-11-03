@@ -18,9 +18,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from alembic import command as alembic_command
+from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from alembic.util.exc import CommandError
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.engine import Connection, Engine, make_url
 from sqlalchemy.exc import SQLAlchemyError
 
 from portfolio_api.database import create_database_engine
@@ -28,7 +31,6 @@ from portfolio_api.database_write_target import (
     DatabaseWriteTargetError,
     NeonControlPlaneClient,
     verify_database_read_target,
-    verify_database_write_target,
 )
 from portfolio_api.domain import models as _models  # noqa: F401 -- register mapped tables
 from portfolio_api.migrations import expected_heads
@@ -292,21 +294,48 @@ def run_readonly_preflight() -> dict[str, str]:
     return result
 
 
+def run_readonly_schema_check() -> dict[str, str]:
+    """Compare mapped metadata to the release schema through a read-only engine."""
+    release_sha = _release_sha()
+    if os.environ.get("APP_ENV") != "development":
+        raise ReleasePreflightError("release_preflight_app_env_must_be_development")
+    settings = Settings(_env_file=None)
+    validate_read_settings(settings)
+    engine = create_database_engine(settings, read_only=True)
+    if engine is None:
+        raise ReleasePreflightError("production_readonly_database_url_missing")
+    try:
+        verify_database_read_target(engine, required_tables=CORE_READ_TABLES)
+        current = _current_heads(engine)
+        if current != expected_heads():
+            raise ReleasePreflightError("production_schema_not_at_release_head")
+        with engine.connect() as connection:
+            try:
+                _check_mapped_alembic_metadata(connection)
+            finally:
+                connection.rollback()
+        result = {
+            "release_sha": release_sha,
+            "alembic_head": next(iter(current)),
+            "metadata_check": "no_drift",
+            "connection": "read_only",
+        }
+    finally:
+        engine.dispose()
+    return result
+
+
 def run_migration_preflight() -> dict[str, str]:
     release_sha = _release_sha()
+    if os.environ.get("APP_ENV") != "development":
+        raise ReleasePreflightError("release_preflight_app_env_must_be_development")
     settings = Settings(_env_file=None)
-    if not settings.database_production_writes_authorized:
-        raise ReleasePreflightError("production_migration_authorization_missing")
-    validate_read_settings_for_migration(settings)
-    engine = create_database_engine(
-        settings,
-        write_operation="production_release_migration_preflight",
-        write_operation_kind="schema_migration",
-    )
+    validate_read_settings(settings)
+    engine = create_database_engine(settings, read_only=True)
     if engine is None:
-        raise ReleasePreflightError("production_migration_database_url_missing")
+        raise ReleasePreflightError("production_readonly_database_url_missing")
     try:
-        verify_database_write_target(engine)
+        verify_database_read_target(engine, required_tables=CORE_READ_TABLES)
         current = _current_heads(engine)
         if current != {PRODUCTION_BASE_REVISION}:
             raise ReleasePreflightError("production_schema_changed_since_review")
@@ -327,8 +356,8 @@ def run_migration_preflight() -> dict[str, str]:
             "release_sha": release_sha,
             "production_head": PRODUCTION_BASE_REVISION,
             "repository_head": RELEASE_HEAD,
-            "write_target_guard": "passed",
-            "authorization": "job_scoped",
+            "read_target_guard": "passed",
+            "write_authorization": "disabled",
         }
     finally:
         engine.dispose()
@@ -336,42 +365,33 @@ def run_migration_preflight() -> dict[str, str]:
     return result
 
 
-def validate_read_settings_for_migration(settings: Settings) -> None:
-    if (
-        settings.database_target_environment != "production"
-        or settings.database_target_database != DATABASE_NAME
-        or settings.neon_project_id != PROJECT_ID
-        or settings.neon_branch_id != PRIMARY_BRANCH_ID
-        or settings.neon_endpoint_id != PRIMARY_ENDPOINT_ID
-        or settings.neon_api_key is None
-    ):
-        raise ReleasePreflightError("verified_neon_production_identity_required")
-    if (
-        any(
-            (
-                settings.cloud_ingestion_enabled,
-                settings.recurring_operations_enabled,
-                settings.manual_operations_enabled,
-                settings.workbook_sync_enabled,
-                settings.fmp_consensus_ingestion_enabled,
-            )
-        )
-        or settings.google_sheets_poll_seconds != 0
-    ):
-        raise ReleasePreflightError("background_operations_must_be_disabled")
-    if settings.database_url is None:
-        raise ReleasePreflightError("production_migration_database_url_missing")
-    url = make_url(settings.database_url.get_secret_value())
-    if url.query.get("sslmode") != "verify-full" or "-pooler." in (url.host or ""):
-        raise ReleasePreflightError("production_direct_tls_target_invalid")
+def _check_mapped_alembic_metadata(connection: Connection) -> None:
+    """Run Alembic autogenerate comparison on the supplied read-only connection."""
+    config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
+    config.attributes["connection"] = connection
+    try:
+        alembic_command.check(config)
+    except CommandError:
+        raise ReleasePreflightError("alembic_metadata_drift_detected") from None
+    except SQLAlchemyError:
+        raise ReleasePreflightError("alembic_metadata_check_database_error") from None
+    except Exception:
+        raise ReleasePreflightError("alembic_metadata_check_failed") from None
+    finally:
+        config.attributes.pop("connection", None)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("readonly", "migration-preflight"))
+    parser.add_argument("mode", choices=("readonly", "migration-preflight", "schema-check"))
     args = parser.parse_args(argv)
     try:
-        result = run_readonly_preflight() if args.mode == "readonly" else run_migration_preflight()
+        if args.mode == "readonly":
+            result = run_readonly_preflight()
+        elif args.mode == "migration-preflight":
+            result = run_migration_preflight()
+        else:
+            result = run_readonly_schema_check()
         print(json.dumps(result, sort_keys=True))
         return 0
     except (DatabaseWriteTargetError, ReleasePreflightError, SQLAlchemyError, ValueError) as error:

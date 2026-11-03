@@ -7,17 +7,23 @@ import {
 } from "./provider-api.mjs";
 
 function runCli(args, cwd) {
-  const result = spawnSync(
-    "npx",
-    ["--yes", "vercel@24.14.0", ...args, "--cwd", cwd],
-    {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      windowsHide: true,
-      env: process.env,
-      maxBuffer: 16 * 1024 * 1024,
+  const cli = process.env.VERCEL_CLI_PATH;
+  if (!cli) throw new Error("vercel_cli_not_preinstalled");
+  const result = spawnSync(cli, [...args, "--cwd", cwd], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    windowsHide: true,
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      CI: "1",
+      VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+      VERCEL_PROJECT_ID: process.env.VERCEL_PROJECT_ID,
+      VERCEL_ORG_ID: process.env.VERCEL_ORG_ID,
+      VERCEL_TELEMETRY_DISABLED: "1",
     },
-  );
+    maxBuffer: 16 * 1024 * 1024,
+  });
   if (result.error || result.status !== 0)
     throw new Error("vercel_cli_step_failed");
   return result.stdout;
@@ -51,22 +57,10 @@ async function main() {
     teamId: org,
     releaseSha: sha,
   });
-  if (!prior.deployment) {
-    runCli(["link", "--yes", "--project", project, "--scope", org], "apps/web");
-    runCli(["pull", "--yes", "--environment=production"], "apps/web");
-    runCli(["build", "--prod"], "apps/web");
-    await ensureMainTip(sha);
-    prior = await findVercelDeploymentForCommit({
-      token,
-      projectId: project,
-      teamId: org,
-      releaseSha: sha,
-    });
-  }
-
   let idOrUrl = prior.idOrUrl;
   const reused = Boolean(idOrUrl);
   if (!reused) {
+    await ensureMainTip(sha);
     const cliOutput = runCli(
       [
         "deploy",
