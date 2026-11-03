@@ -126,7 +126,7 @@ There is no Docker requirement. Render uses its native Python runtime and `uv`; 
 | ------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `APP_ENV`                            | Yes      | `production` for the main API or `preview` for an isolated preview API. Both modes fail startup without a 32+ character token.        |
 | `PYTHON_VERSION`                     | Yes      | `3.13.16`; pinned within the API's `>=3.12,<3.14` supported range.                                                                    |
-| `DATABASE_URL`                       | Yes      | Neon **direct** connection URL using `postgresql+psycopg://...?...sslmode=require`. Use the non-pooler hostname.                      |
+| `DATABASE_URL`                       | Yes      | Neon **direct** connection URL using `postgresql+psycopg://...?...sslmode=verify-full`. Use the non-pooler hostname.                  |
 | `API_ACCESS_TOKEN`                   | Yes      | Random secret of at least 32 characters. Copy the same value to Vercel's matching environment scope. Never use a `NEXT_PUBLIC_` name. |
 | `CLOUD_INGESTION_ENABLED`            | No       | `false` initially. Set `true` only on an explicitly approved cron service.                                                            |
 | `RECURRING_OPERATIONS_ENABLED`       | No       | `false` initially; set `true` on the API and cron services only when the cron is activated.                                           |
@@ -172,15 +172,15 @@ Local development defaults to `APP_ENV=development`, where the remote auth gates
 
 ## Neon connection, TLS and pooling
 
-Create a Neon project in the same region as Render when possible (Frankfurt is configured in the Blueprint). Choose PostgreSQL 18 to match the major version verified by the repository's existing PostgreSQL setup. In Neon, copy the **Direct connection** URL. Replace the URI scheme `postgresql://` with `postgresql+psycopg://` and retain `sslmode=require`, for example:
+Create a Neon project in the same region as Render when possible (Frankfurt is configured in the Blueprint). Choose PostgreSQL 18 to match the major version verified by the repository's existing PostgreSQL setup. In Neon, copy the **Direct connection** URL. Replace the URI scheme `postgresql://` with `postgresql+psycopg://` and set `sslmode=verify-full`, for example:
 
 ```text
-postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=require
+postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=verify-full
 ```
 
 The password must be URL-encoded. Never put the real URL in this guide, Git, Vercel client variables or a browser request. Existing SQLAlchemy settings use `pool_pre_ping`, a 3-second connection timeout and a bounded pool of 2 connections plus at most 2 overflow connections per process.
 
-Use Neon's direct endpoint for this application. The market and recurring workers acquire session-scoped PostgreSQL advisory locks with `pg_try_advisory_lock`; transaction-pooler connections do not preserve the session semantics these locks require. SQLAlchemy provides the small persistent application-side pool, and `sslmode=require` encrypts each database connection. Alembic reads the same `DATABASE_URL` as the API.
+Use Neon's direct endpoint for this application. The market and recurring workers acquire session-scoped PostgreSQL advisory locks with `pg_try_advisory_lock`; transaction-pooler connections do not preserve the session semantics these locks require. SQLAlchemy provides the small persistent application-side pool. `sslmode=verify-full` encrypts each connection and verifies the endpoint hostname. Alembic reads the same `DATABASE_URL` as the API.
 
 ## Migrations and safe database migration
 
@@ -192,7 +192,7 @@ historical domains that require preservation or explicit omission approval.
 Deploying the API does not change the database. For a **new empty Neon database**, apply the checked-in Alembic chain from a trusted workstation after setting its `DATABASE_URL` for that PowerShell session:
 
 ```powershell
-$env:DATABASE_URL = 'postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=require'
+$env:DATABASE_URL = 'postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=verify-full'
 npm run db:migrate
 npm run db:check
 Remove-Item Env:DATABASE_URL
@@ -259,7 +259,7 @@ Set `RECURRING_OPERATIONS_ENABLED=true` on the API service at the same time if t
 ### 1. Neon
 
 1. Create a project named `portfolio-research` and select PostgreSQL 18, Frankfurt, and a project/branch dedicated to this environment.
-2. Open **Connect**, select **Direct connection**, and copy the URL. Use the direct endpoint, set TLS with `sslmode=require`, URL-encode the password, and change the driver prefix to `postgresql+psycopg://` for application settings.
+2. Open **Connect**, select **Direct connection**, and copy the URL. Use the direct endpoint, set TLS with `sslmode=verify-full`, URL-encode the password, and change the driver prefix to `postgresql+psycopg://` for application settings.
 3. Keep the URL in a password manager until entering it in Render. Do not create a second database containing real data unless its transfer is approved.
 
 ### 2. Render

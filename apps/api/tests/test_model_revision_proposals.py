@@ -181,7 +181,7 @@ def test_remote_proposal_api_uses_role_token_without_broad_api_token() -> None:
         {
             "app_env": "preview",
             "database_url": SecretStr(
-                "postgresql+psycopg://test:test@192.0.2.1:5432/preview?sslmode=require"
+                "postgresql+psycopg://test:test@192.0.2.1:5432/preview?sslmode=verify-full"
             ),
             "api_access_token": SecretStr("broad-api-token-for-test-only-000000000000"),
             "model_proposal_agent_token": SecretStr(AGENT_TOKEN),

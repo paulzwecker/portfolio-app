@@ -146,8 +146,8 @@ class Settings(BaseSettings):
             if "-pooler." in database_url.host:
                 raise ValueError("DATABASE_URL must use the direct PostgreSQL endpoint")
             sslmode = database_url.query.get("sslmode")
-            if sslmode not in {"require", "verify-ca", "verify-full"}:
-                raise ValueError("DATABASE_URL must require TLS with sslmode=require or stronger")
+            if sslmode != "verify-full":
+                raise ValueError("DATABASE_URL must use sslmode=verify-full for remote deployments")
         if self.app_env in {"preview", "production"} and (
             self.api_access_token is None or len(self.api_access_token.get_secret_value()) < 32
         ):

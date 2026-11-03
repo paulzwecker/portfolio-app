@@ -6,7 +6,8 @@ services:
     region: frankfurt
     branch: main
     rootDir: apps/api
-    autoDeployTrigger: commit
+    # Production releases are dispatched from the protected GitHub workflow.
+    autoDeployTrigger: off
     buildCommand: uv sync --locked --no-dev
     startCommand: uv run --locked --no-dev uvicorn portfolio_api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health/live
@@ -17,11 +18,31 @@ services:
         value: "3.13.16"
       - key: DATABASE_URL
         sync: false
+      - key: DATABASE_TARGET_ENVIRONMENT
+        value: production
+      - key: DATABASE_TARGET_DATABASE
+        value: neondb
+      - key: DATABASE_PRODUCTION_WRITES_AUTHORIZED
+        value: "false"
+      - key: DATABASE_REHEARSAL_WRITES_AUTHORIZED
+        value: "false"
+      - key: NEON_API_KEY
+        sync: false
+      - key: NEON_PROJECT_ID
+        value: delicate-heart-04560404
+      - key: NEON_BRANCH_ID
+        value: br-morning-truth-b96361yh
+      - key: NEON_ENDPOINT_ID
+        value: ep-snowy-term-b9gr75j6
       - key: API_ACCESS_TOKEN
         sync: false
       - key: CLOUD_INGESTION_ENABLED
         value: "false"
       - key: RECURRING_OPERATIONS_ENABLED
+        value: "false"
+      - key: MANUAL_OPERATIONS_ENABLED
+        value: "false"
+      - key: WORKBOOK_SYNC_ENABLED
         value: "false"
       - key: GOOGLE_SHEETS_POLL_SECONDS
         value: "0"

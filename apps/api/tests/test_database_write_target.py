@@ -323,8 +323,16 @@ def test_pooler_and_non_verified_tls_are_rejected_before_use() -> None:
     with pytest.raises(ValidationError, match="direct PostgreSQL endpoint"):
         remote_settings(url=pooler_url)
 
-    tls_settings = remote_settings(url=REMOTE_URL.replace("verify-full", "require"))
-    tls_identity = remote_identity(REMOTE_URL.replace("verify-full", "require"))
+    unverified_tls_url = REMOTE_URL.replace("verify-full", "require")
+    with pytest.raises(ValidationError, match="sslmode=verify-full"):
+        remote_settings(url=unverified_tls_url)
+
+    # Preserve defense in depth: even if a Settings object is modified after
+    # validation, the database write-target guard independently rejects it.
+    tls_settings = remote_settings().model_copy(
+        update={"database_url": SecretStr(unverified_tls_url)}
+    )
+    tls_identity = remote_identity(unverified_tls_url)
     with pytest.raises(DatabaseWriteTargetError, match="tls_hostname_verification_required"):
         validate(tls_settings, tls_identity, neon_target())
 
