@@ -15,7 +15,8 @@ const excludedSourcePaths = [
   "apps/api/tests/fixtures/w_hdfc_residual_income_v1.json",
   "apps/api/tests/fixtures/w_tost_owner_cash_flow_v1.json",
 ];
-const forbiddenPaths = ["docs", "reference", ...excludedSourcePaths];
+const forbiddenPaths = ["reference", ...excludedSourcePaths];
+const allowedCiDocsFiles = new Set(["docs/deployment-and-migrations.md"]);
 
 export function validateWorkflowCheckoutPolicy(workflow) {
   const steps = workflow
@@ -45,6 +46,18 @@ export function validateWorkflowCheckoutPolicy(workflow) {
           "CI checkout must exclude source-bound test and fixture paths.",
         );
       }
+    }
+    const docsPaths = step
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("/docs/"));
+    if (
+      docsPaths.length !== 1 ||
+      docsPaths[0] !== "/docs/deployment-and-migrations.md"
+    ) {
+      throw new Error(
+        "CI may include only the deployment and migration runbook from docs/.",
+      );
     }
   }
 }
@@ -101,9 +114,29 @@ export function validateWorkflowWorkbookIsolation(workflow) {
 }
 
 export function findForbiddenSourcePaths(root) {
-  return forbiddenPaths.filter((relativePath) =>
+  const present = forbiddenPaths.filter((relativePath) =>
     containsFiles(path.join(root, relativePath)),
   );
+  const docsFiles = listFiles(path.join(root, "docs"), "docs");
+  if (docsFiles.some((relativePath) => !allowedCiDocsFiles.has(relativePath))) {
+    present.unshift("docs");
+  }
+  return present;
+}
+
+function listFiles(directory, relativeDirectory) {
+  if (!existsSync(directory)) return [];
+  const details = lstatSync(directory);
+  if (details.isSymbolicLink() || !details.isDirectory()) {
+    return [relativeDirectory];
+  }
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = path.join(directory, entry.name);
+    const relativePath = path.posix.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) return listFiles(absolutePath, relativePath);
+    if (entry.isFile() || entry.isSymbolicLink()) return [relativePath];
+    return [];
+  });
 }
 
 function containsFiles(directory) {
