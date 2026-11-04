@@ -32,6 +32,10 @@ test("GitHub PR and main CI provide the three documented required checks", () =>
   const ci = read(".github/workflows/ci.yml");
   assert.match(ci, /pull_request:\s*\n\s+branches: \[main\]/);
   assert.match(ci, /push:\s*\n\s+branches: \[main\]/);
+  assert.equal(
+    (ci.match(/^\s+\/docs\/deployment-and-migrations\.md$/gm) ?? []).length,
+    3,
+  );
   for (const jobName of [
     "Quality, contracts and build",
     "PostgreSQL integration tests",

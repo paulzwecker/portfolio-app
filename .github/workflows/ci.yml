@@ -36,6 +36,7 @@ jobs:
             /scripts/
             /tools/
             /.github/
+            /docs/deployment-and-migrations.md
             !/apps/api/tests/test_legacy_import.py
             !/apps/api/tests/test_consensus_source_data.py
             !/apps/api/tests/test_model_input_migration.py
@@ -129,6 +130,7 @@ jobs:
             /scripts/
             /tools/
             /.github/
+            /docs/deployment-and-migrations.md
             !/apps/api/tests/test_legacy_import.py
             !/apps/api/tests/test_consensus_source_data.py
             !/apps/api/tests/test_model_input_migration.py
@@ -191,6 +193,7 @@ jobs:
             /scripts/
             /tools/
             /.github/
+            /docs/deployment-and-migrations.md
             !/apps/api/tests/test_legacy_import.py
             !/apps/api/tests/test_consensus_source_data.py
             !/apps/api/tests/test_model_input_migration.py
