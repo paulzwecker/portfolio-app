@@ -44,6 +44,15 @@ PRODUCTION_BASE_REVISION = "6c2eaf0b8147"
 RELEASE_HEAD = "9f2a6d4c81b7"
 CORE_READ_TABLES = ("companies",)
 MIGRATION_CONFIRMATION_PREFIX = "MIGRATE"
+EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION = "ACCEPT INITIAL EMPTY BASELINE WITHOUT RECOVERY"
+NONESSENTIAL_EMPTY_BASELINE_TABLES = frozenset(
+    {
+        "alembic_version",
+        "ranking_definitions",
+        "return_methodology_definitions",
+        "score_definitions",
+    }
+)
 
 
 class ReleasePreflightError(RuntimeError):
@@ -66,6 +75,18 @@ def migration_confirmation(
     return (
         f"{MIGRATION_CONFIRMATION_PREFIX} {project_id}/{branch_id}/{endpoint_id}/"
         f"{database}/{current}->{target}"
+    )
+
+
+def recovery_required(inventory: Mapping[str, int]) -> bool:
+    """Require a restore point when any non-reference application state exists.
+
+    Only the reviewed initial schema/reference rows are exempt. Unknown tables
+    with rows fail closed and therefore require a verified recovery branch.
+    """
+    return any(
+        count > 0 and table not in NONESSENTIAL_EMPTY_BASELINE_TABLES
+        for table, count in inventory.items()
     )
 
 
@@ -271,7 +292,8 @@ def run_readonly_preflight() -> dict[str, str]:
         current = _current_heads(engine)
         required_migration = migration_required(current, expected_heads())
         inventory, fingerprint, total_rows = _database_inventory(engine)
-        if required_migration:
+        needs_recovery = required_migration and recovery_required(inventory)
+        if needs_recovery:
             _verify_recovery(settings, current, inventory)
         if settings.database_url is None:
             raise ReleasePreflightError("production_readonly_database_url_missing")
@@ -283,10 +305,19 @@ def run_readonly_preflight() -> dict[str, str]:
             "production_head": next(iter(current)),
             "repository_head": RELEASE_HEAD,
             "migration_required": str(required_migration).lower(),
+            "recovery_required": str(needs_recovery).lower(),
             "public_table_count": str(len(inventory)),
             "public_row_count": str(total_rows),
             "inventory_fingerprint": fingerprint,
-            "recovery_verified": str(required_migration).lower(),
+            "recovery_verified": (
+                "verified"
+                if needs_recovery
+                else (
+                    "not_required_empty_baseline"
+                    if required_migration
+                    else "not_required_schema_current"
+                )
+            ),
         }
     finally:
         engine.dispose()
@@ -340,7 +371,17 @@ def run_migration_preflight() -> dict[str, str]:
         if current != {PRODUCTION_BASE_REVISION}:
             raise ReleasePreflightError("production_schema_changed_since_review")
         inventory, _, _ = _database_inventory(engine)
-        _verify_recovery(settings, current, inventory)
+        needs_recovery = recovery_required(inventory)
+        empty_baseline_confirmation = os.environ.get("EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION", "")
+        if needs_recovery:
+            if empty_baseline_confirmation:
+                raise ReleasePreflightError("empty_baseline_recovery_confirmation_not_applicable")
+            _verify_recovery(settings, current, inventory)
+            recovery_status = "verified"
+        else:
+            if empty_baseline_confirmation != EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION:
+                raise ReleasePreflightError("empty_baseline_recovery_confirmation_required")
+            recovery_status = "not_required_empty_baseline"
         expected = migration_confirmation(
             project_id=PROJECT_ID,
             branch_id=PRIMARY_BRANCH_ID,
@@ -358,6 +399,8 @@ def run_migration_preflight() -> dict[str, str]:
             "repository_head": RELEASE_HEAD,
             "read_target_guard": "passed",
             "write_authorization": "disabled",
+            "recovery_required": str(needs_recovery).lower(),
+            "recovery_verified": recovery_status,
         }
     finally:
         engine.dispose()

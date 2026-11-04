@@ -48,6 +48,7 @@ const unsafeEnvironmentKeys = [
   "NEON_API_KEY",
   "RECOVERY_DATABASE_URL",
   "MIGRATION_CONFIRMATION",
+  "EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION",
   "RENDER_DEPLOY_TOKEN",
   "RENDER_READ_TOKEN",
   "VERCEL_TOKEN",
@@ -58,7 +59,7 @@ const unsafeEnvironmentKeys = [
 
 test("provider credentials and DB authorization are not job-scoped", () => {
   for (const [name, nextName] of [
-    ["cloud_preflight", "migration"],
+    ["cloud_preflight", "owner_approval"],
     ["migration", "schema_gate"],
     ["render_deploy", "vercel_deploy"],
     ["vercel_deploy", "smoke"],
@@ -79,7 +80,7 @@ test("provider credentials and DB authorization are not job-scoped", () => {
 });
 
 test("read-only Neon credentials are limited to database verification steps", () => {
-  const cloud = jobSection("cloud_preflight", "migration");
+  const cloud = jobSection("cloud_preflight", "owner_approval");
   const readStep = stepBlock(
     cloud,
     "Verify Neon identity, schema and current recovery point",
@@ -137,6 +138,10 @@ test("production writer credentials are limited to guarded migration steps", () 
     /NEON_PRODUCTION_MIGRATION_DATABASE_URL|DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true"/,
   );
   assert.match(preflightStep, /MIGRATION_CONFIRMATION:/);
+  assert.match(
+    preflightStep,
+    /EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION: \$\{\{ inputs\.empty_baseline_no_recovery_confirmation \}\}/,
+  );
 
   const migrationStep = stepBlock(
     migration,
@@ -258,6 +263,44 @@ test("provider deploy and web smoke credentials are step-scoped", () => {
     smokeStep,
     /WEB_ACCESS_PASSWORD: \$\{\{ secrets\.WEB_ACCESS_PASSWORD \}\}/,
   );
+});
+
+test("one credential-free owner approval gates migration and all deployments", () => {
+  const validation = jobSection("validate_release", "cloud_preflight");
+  assert.match(validation, /GITHUB_ACTOR_ID: \$\{\{ github\.actor_id \}\}/);
+
+  const plan = jobSection("release_plan", "owner_approval");
+  assert.match(plan, /needs: \[validate_release, cloud_preflight\]/);
+  assert.match(plan, /MIGRATION_REQUIRED:/);
+  assert.match(plan, /RECOVERY_REQUIRED:/);
+  assert.doesNotMatch(
+    plan,
+    /secrets\.|NEON_API_KEY|DATABASE_URL|RENDER_READ_TOKEN|VERCEL_READ_TOKEN/,
+  );
+
+  const approval = jobSection("owner_approval", "migration");
+  assert.match(
+    approval,
+    /needs: \[validate_release, cloud_preflight, release_plan\]/,
+  );
+  assert.match(approval, /environment: production-release-approval/);
+  assert.match(approval, /permissions: \{\}/);
+  assert.doesNotMatch(
+    approval,
+    /secrets\.|GITHUB_TOKEN|RENDER_|VERCEL_|DATABASE_URL/,
+  );
+  assert.doesNotMatch(workflow, /RELEASE_REVIEWER_IDS/);
+
+  for (const [name, nextName] of [
+    ["migration", "schema_gate"],
+    ["schema_gate", "render_deploy"],
+    ["render_deploy", "vercel_deploy"],
+    ["vercel_deploy", "smoke"],
+    ["smoke", "release_evidence"],
+  ]) {
+    const job = jobSection(name, nextName);
+    assert.match(job, /owner_approval/);
+  }
 });
 
 test("Vercel application build receives only a narrow environment allowlist", () => {

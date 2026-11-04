@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
+  INITIAL_MIGRATION_CONFIRMATION,
   REQUIRED_CI_CHECKS,
   validateHealthResponse,
-  validateProtectedEnvironment,
+  validateOwnerApprovalEnvironment,
+  validateReleaseApprovalInputs,
   validateReleaseIdentity,
   validateRenderDeployment,
   validateRenderService,
+  validateSecretEnvironment,
   validateVercelDeployment,
   validateVercelProject,
 } from "./policy.mjs";
@@ -29,6 +33,8 @@ test("release identity requires the current main tip and green CI on that exact 
       requestedSha: sha,
       mainSha: sha,
       checkRuns: greenRuns,
+      eventActorId: "123",
+      ownerId: 123,
     }),
     [],
   );
@@ -39,6 +45,8 @@ test("release identity requires the current main tip and green CI on that exact 
       requestedSha: sha,
       mainSha: sha,
       checkRuns: greenRuns,
+      eventActorId: "123",
+      ownerId: 123,
     }).includes("workflow_dispatch_must_use_main"),
   );
   assert.ok(
@@ -48,6 +56,8 @@ test("release identity requires the current main tip and green CI on that exact 
       requestedSha: sha,
       mainSha: "ab".repeat(20),
       checkRuns: greenRuns,
+      eventActorId: "123",
+      ownerId: 123,
     }).includes("release_sha_must_be_current_main_tip"),
   );
   assert.ok(
@@ -64,6 +74,8 @@ test("release identity requires the current main tip and green CI on that exact 
           started_at: "2026-11-03T10:00:00Z",
         },
       ],
+      eventActorId: "123",
+      ownerId: 123,
     }).includes(`required_check_not_green:${REQUIRED_CI_CHECKS[0]}`),
   );
   assert.ok(
@@ -73,16 +85,30 @@ test("release identity requires the current main tip and green CI on that exact 
       requestedSha: sha,
       mainSha: sha,
       checkRuns: [...greenRuns, { ...greenRuns[0], started_at: "invalid" }],
+      eventActorId: "123",
+      ownerId: 123,
     }).includes(`required_check_timestamp_invalid:${REQUIRED_CI_CHECKS[0]}`),
+  );
+  assert.ok(
+    validateReleaseIdentity({
+      eventRef: "refs/heads/main",
+      eventSha: sha,
+      requestedSha: sha,
+      mainSha: sha,
+      checkRuns: greenRuns,
+      eventActorId: "456",
+      ownerId: 123,
+    }).includes("workflow_dispatch_must_be_started_by_repository_owner"),
   );
 });
 
-test("protected environments require an allowlisted reviewer and only main deployment policy", () => {
+test("single-owner approval requires the repository owner and permits owner self-approval", () => {
   const environment = {
     protection_rules: [
+      { type: "branch_policy" },
       {
         type: "required_reviewers",
-        prevent_self_review: true,
+        prevent_self_review: false,
         reviewers: [{ type: "User", reviewer: { id: 123 } }],
       },
     ],
@@ -93,56 +119,168 @@ test("protected environments require an allowlisted reviewer and only main deplo
   };
   const policies = { branch_policies: [{ type: "branch", name: "main" }] };
   assert.deepEqual(
-    validateProtectedEnvironment({
+    validateOwnerApprovalEnvironment({
       environment,
       branchPolicies: policies,
-      reviewerIds: [123],
+      ownerId: 123,
     }),
     [],
   );
   assert.ok(
-    validateProtectedEnvironment({
+    validateOwnerApprovalEnvironment({
       environment,
       branchPolicies: policies,
-      reviewerIds: [456],
-    }).includes("required_release_reviewer_not_configured"),
+      ownerId: 456,
+    }).includes("single_owner_approval_rule_mismatch"),
   );
   assert.ok(
-    validateProtectedEnvironment({
+    validateOwnerApprovalEnvironment({
       environment: {
         ...environment,
         protection_rules: [
-          { ...environment.protection_rules[0], prevent_self_review: false },
+          { type: "branch_policy" },
+          { ...environment.protection_rules[1], prevent_self_review: true },
         ],
       },
       branchPolicies: policies,
-      reviewerIds: [123],
-    }).includes("required_release_reviewer_not_configured"),
+      ownerId: 123,
+    }).includes("single_owner_approval_rule_mismatch"),
   );
   assert.ok(
-    validateProtectedEnvironment({
+    validateOwnerApprovalEnvironment({
       environment: {
         ...environment,
         protection_rules: [
+          { type: "branch_policy" },
           {
-            ...environment.protection_rules[0],
+            ...environment.protection_rules[1],
             reviewers: [
-              ...environment.protection_rules[0].reviewers,
+              ...environment.protection_rules[1].reviewers,
               { type: "User", reviewer: { id: 456 } },
             ],
           },
         ],
       },
       branchPolicies: policies,
-      reviewerIds: [123],
-    }).includes("required_release_reviewer_not_configured"),
+      ownerId: 123,
+    }).includes("single_owner_approval_rule_mismatch"),
   );
   assert.ok(
-    validateProtectedEnvironment({
+    validateOwnerApprovalEnvironment({
       environment,
       branchPolicies: { branch_policies: [{ type: "branch", name: "*" }] },
-      reviewerIds: [123],
+      ownerId: 123,
     }).includes("environment_branch_policy_must_allow_main_only"),
+  );
+});
+
+test("credential environments are main-only and add no second reviewer gate", () => {
+  const environment = {
+    protection_rules: [{ type: "branch_policy" }],
+    deployment_branch_policy: {
+      protected_branches: false,
+      custom_branch_policies: true,
+    },
+  };
+  const branchPolicies = {
+    branch_policies: [{ type: "branch", name: "main" }],
+  };
+  assert.deepEqual(
+    validateSecretEnvironment({ environment, branchPolicies }),
+    [],
+  );
+  assert.ok(
+    validateSecretEnvironment({
+      environment: {
+        ...environment,
+        protection_rules: [
+          { type: "branch_policy" },
+          {
+            type: "required_reviewers",
+            prevent_self_review: false,
+            reviewers: [{ type: "User", reviewer: { id: 123 } }],
+          },
+        ],
+      },
+      branchPolicies,
+    }).includes("secret_environment_must_not_add_approval_gate"),
+  );
+  assert.ok(
+    validateSecretEnvironment({
+      environment,
+      branchPolicies: { branch_policies: [{ type: "branch", name: "*" }] },
+    }).includes("environment_branch_policy_must_allow_main_only"),
+  );
+});
+
+test("release approval inputs must match the read-only migration and recovery plan", () => {
+  assert.deepEqual(
+    validateReleaseApprovalInputs({
+      migrationRequired: "true",
+      runMigrations: "true",
+      recoveryRequired: "false",
+      migrationConfirmation: INITIAL_MIGRATION_CONFIRMATION,
+      emptyBaselineConfirmation: EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    validateReleaseApprovalInputs({
+      migrationRequired: "true",
+      runMigrations: "true",
+      recoveryRequired: "true",
+      migrationConfirmation: INITIAL_MIGRATION_CONFIRMATION,
+      emptyBaselineConfirmation: "",
+    }),
+    [],
+  );
+  assert.deepEqual(
+    validateReleaseApprovalInputs({
+      migrationRequired: "false",
+      runMigrations: "false",
+      recoveryRequired: "false",
+      migrationConfirmation: "",
+      emptyBaselineConfirmation: "",
+    }),
+    [],
+  );
+  assert.ok(
+    validateReleaseApprovalInputs({
+      migrationRequired: "true",
+      runMigrations: "false",
+      recoveryRequired: "false",
+      migrationConfirmation: INITIAL_MIGRATION_CONFIRMATION,
+      emptyBaselineConfirmation: EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
+    }).includes("migration_checkbox_must_match_verified_schema"),
+  );
+  assert.ok(
+    validateReleaseApprovalInputs({
+      migrationRequired: "true",
+      runMigrations: "true",
+      recoveryRequired: "false",
+      migrationConfirmation: INITIAL_MIGRATION_CONFIRMATION,
+      emptyBaselineConfirmation: "",
+    }).includes("empty_baseline_recovery_confirmation_required"),
+  );
+  assert.ok(
+    validateReleaseApprovalInputs({
+      migrationRequired: "true",
+      runMigrations: "true",
+      recoveryRequired: "true",
+      migrationConfirmation: INITIAL_MIGRATION_CONFIRMATION,
+      emptyBaselineConfirmation: EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
+    }).includes(
+      "empty_baseline_confirmation_not_allowed_when_recovery_required",
+    ),
+  );
+  assert.ok(
+    validateReleaseApprovalInputs({
+      migrationRequired: "unknown",
+      runMigrations: "true",
+      recoveryRequired: "false",
+      migrationConfirmation: INITIAL_MIGRATION_CONFIRMATION,
+      emptyBaselineConfirmation: EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
+    }).includes("migration_requirement_unavailable"),
   );
 });
 

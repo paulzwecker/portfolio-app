@@ -1,4 +1,10 @@
-export const RELEASE_ENVIRONMENTS = Object.freeze([
+export const RELEASE_APPROVAL_ENVIRONMENT = "production-release-approval";
+export const INITIAL_MIGRATION_CONFIRMATION =
+  "MIGRATE delicate-heart-04560404/br-morning-truth-b96361yh/ep-snowy-term-b9gr75j6/neondb/6c2eaf0b8147->9f2a6d4c81b7";
+export const EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION =
+  "ACCEPT INITIAL EMPTY BASELINE WITHOUT RECOVERY";
+
+export const RELEASE_SECRET_ENVIRONMENTS = Object.freeze([
   "production-readonly",
   "production-migration",
   "production-api",
@@ -12,12 +18,62 @@ export const REQUIRED_CI_CHECKS = Object.freeze([
   "Windows migration command compatibility",
 ]);
 
+export function validateReleaseApprovalInputs({
+  migrationRequired,
+  runMigrations,
+  recoveryRequired,
+  migrationConfirmation,
+  emptyBaselineConfirmation,
+}) {
+  const errors = [];
+  if (!["true", "false"].includes(String(migrationRequired))) {
+    errors.push("migration_requirement_unavailable");
+    return errors;
+  }
+  if (!["true", "false"].includes(String(recoveryRequired))) {
+    errors.push("recovery_requirement_unavailable");
+    return errors;
+  }
+
+  const migrationNeeded = String(migrationRequired) === "true";
+  const runRequested = String(runMigrations) === "true";
+  const recoveryNeeded = String(recoveryRequired) === "true";
+  if (migrationNeeded !== runRequested) {
+    errors.push("migration_checkbox_must_match_verified_schema");
+  }
+
+  if (!migrationNeeded) {
+    if (migrationConfirmation || emptyBaselineConfirmation) {
+      errors.push("migration_confirmations_must_be_empty_without_migration");
+    }
+    return errors;
+  }
+
+  if (migrationConfirmation !== INITIAL_MIGRATION_CONFIRMATION) {
+    errors.push("exact_migration_confirmation_mismatch");
+  }
+  if (recoveryNeeded) {
+    if (emptyBaselineConfirmation) {
+      errors.push(
+        "empty_baseline_confirmation_not_allowed_when_recovery_required",
+      );
+    }
+  } else if (
+    emptyBaselineConfirmation !== EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION
+  ) {
+    errors.push("empty_baseline_recovery_confirmation_required");
+  }
+  return errors;
+}
+
 export function validateReleaseIdentity({
   eventRef,
   eventSha,
   requestedSha,
   mainSha,
   checkRuns,
+  eventActorId,
+  ownerId,
   requiredChecks = REQUIRED_CI_CHECKS,
 }) {
   const errors = [];
@@ -25,6 +81,12 @@ export function validateReleaseIdentity({
 
   if (eventRef !== "refs/heads/main")
     errors.push("workflow_dispatch_must_use_main");
+  if (
+    !/^\d+$/.test(String(ownerId ?? "")) ||
+    String(eventActorId ?? "") !== String(ownerId)
+  ) {
+    errors.push("workflow_dispatch_must_be_started_by_repository_owner");
+  }
   if (!shaPattern.test(requestedSha ?? "")) errors.push("release_sha_invalid");
   if (requestedSha?.toLowerCase() !== eventSha?.toLowerCase()) {
     errors.push("release_sha_must_match_dispatch_commit");
@@ -59,38 +121,8 @@ export function validateReleaseIdentity({
   return errors;
 }
 
-export function validateProtectedEnvironment({
-  environment,
-  branchPolicies,
-  reviewerIds,
-}) {
+function validateMainOnlyEnvironment({ environment, branchPolicies }) {
   const errors = [];
-  const rules = environment?.protection_rules;
-  const expected = new Set((reviewerIds ?? []).map(String));
-  if (!Array.isArray(rules))
-    errors.push("environment_protection_rules_missing");
-  if (expected.size === 0 || [...expected].some((id) => !/^\d+$/.test(id))) {
-    errors.push("release_reviewer_allowlist_missing");
-  }
-
-  const reviewerRule = rules?.find(
-    (rule) => rule.type === "required_reviewers",
-  );
-  const configuredReviewers = reviewerRule?.reviewers ?? [];
-  const actualReviewers = new Set(
-    configuredReviewers.map((reviewer) =>
-      String(reviewer.reviewer?.id ?? reviewer.id),
-    ),
-  );
-  if (
-    !reviewerRule ||
-    reviewerRule.prevent_self_review !== true ||
-    actualReviewers.size === 0 ||
-    [...actualReviewers].some((id) => !expected.has(id))
-  ) {
-    errors.push("required_release_reviewer_not_configured");
-  }
-
   const deploymentPolicy = environment?.deployment_branch_policy;
   if (
     deploymentPolicy?.protected_branches !== false ||
@@ -106,6 +138,60 @@ export function validateProtectedEnvironment({
     policies[0]?.name !== "main"
   ) {
     errors.push("environment_branch_policy_must_allow_main_only");
+  }
+  return errors;
+}
+
+export function validateOwnerApprovalEnvironment({
+  environment,
+  branchPolicies,
+  ownerId,
+}) {
+  const errors = validateMainOnlyEnvironment({ environment, branchPolicies });
+  const rules = environment?.protection_rules;
+  if (!Array.isArray(rules))
+    errors.push("environment_protection_rules_missing");
+  const allowedRuleTypes = new Set(["required_reviewers", "branch_policy"]);
+  const branchRules = rules?.filter((rule) => rule.type === "branch_policy");
+  if (
+    rules?.some((rule) => !allowedRuleTypes.has(rule.type)) ||
+    (branchRules?.length ?? 0) > 1
+  ) {
+    errors.push("approval_environment_has_unexpected_protection_rule");
+  }
+  const reviewerRules = rules?.filter(
+    (rule) => rule.type === "required_reviewers",
+  );
+  const reviewerRule = reviewerRules?.[0];
+  const configuredReviewers = reviewerRule?.reviewers ?? [];
+  const actualReviewers = configuredReviewers.map((reviewer) => ({
+    type: reviewer.type,
+    id: String(reviewer.reviewer?.id ?? reviewer.id ?? ""),
+  }));
+  if (
+    !/^\d+$/.test(String(ownerId ?? "")) ||
+    rules?.length !== 1 + (branchRules?.length ?? 0) ||
+    reviewerRules?.length !== 1 ||
+    reviewerRule?.prevent_self_review !== false ||
+    actualReviewers.length !== 1 ||
+    actualReviewers[0]?.type !== "User" ||
+    actualReviewers[0]?.id !== String(ownerId)
+  ) {
+    errors.push("single_owner_approval_rule_mismatch");
+  }
+  return errors;
+}
+
+export function validateSecretEnvironment({ environment, branchPolicies }) {
+  const errors = validateMainOnlyEnvironment({ environment, branchPolicies });
+  const rules = environment?.protection_rules;
+  if (!Array.isArray(rules)) {
+    errors.push("environment_protection_rules_missing");
+  } else if (
+    rules.some((rule) => rule.type !== "branch_policy") ||
+    rules.filter((rule) => rule.type === "branch_policy").length > 1
+  ) {
+    errors.push("secret_environment_must_not_add_approval_gate");
   }
   return errors;
 }
