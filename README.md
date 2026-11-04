@@ -428,8 +428,10 @@ documented in [docs/recurring-operations.md](docs/recurring-operations.md). Keep
 service-account configuration in the ignored local `.env`; FMP ingestion remains opt-in after
 rights are confirmed. The `/model-sync` page shows worker health and job blockers.
 
-Cloud hosting preparation, access controls, environment variables, migration and
-backup steps are documented in [docs/cloud-deployment.md](docs/cloud-deployment.md).
+Cloud hosting preparation and historical deployment records are in
+[docs/cloud-deployment.md](docs/cloud-deployment.md). The current native deployment
+and separately reviewed production migration procedure is in
+[docs/deployment-and-migrations.md](docs/deployment-and-migrations.md).
 
 Default endpoints:
 

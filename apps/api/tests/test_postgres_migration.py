@@ -43,7 +43,6 @@ from portfolio_api.postgres_migration import (
     schema_check,
     verify_backup,
 )
-from portfolio_api.production_release import _check_mapped_alembic_metadata
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
@@ -59,7 +58,12 @@ def test_alembic_metadata_check_succeeds_in_readonly_postgres_schema(
 ) -> None:
     with postgres_engine.connect() as connection:
         connection.exec_driver_sql("SET TRANSACTION READ ONLY")
-        _check_mapped_alembic_metadata(connection)
+        config = alembic_config()
+        config.attributes["connection"] = connection
+        try:
+            command.check(config)
+        finally:
+            config.attributes.pop("connection", None)
         connection.rollback()
 
 

@@ -6,18 +6,57 @@ import pytest
 from alembic.config import Config
 from alembic.util.exc import CommandError
 
-from portfolio_api.production_release import (
-    EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
+from portfolio_api.production_migration_preflight import (
     PRODUCTION_BASE_REVISION,
     RELEASE_HEAD,
-    ReleasePreflightError,
+    ProductionMigrationPreflightError,
+    _checkout_sha,
     migration_confirmation,
     migration_required,
-    recovery_required,
     run_migration_preflight,
     run_readonly_schema_check,
     validate_recovery_window,
 )
+
+
+def test_preflight_requires_the_exact_clean_main_checkout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EXPECTED_CHECKOUT_SHA", "a" * 40)
+    with patch(
+        "portfolio_api.production_migration_preflight.subprocess.check_output",
+        side_effect=["a" * 40, "main", ""],
+    ) as check_output:
+        assert _checkout_sha() == "a" * 40
+    assert [call.args[0] for call in check_output.call_args_list] == [
+        ["git", "rev-parse", "HEAD"],
+        ["git", "branch", "--show-current"],
+        ["git", "status", "--porcelain", "--untracked-files=all"],
+    ]
+
+
+@pytest.mark.parametrize(
+    ("branch", "status", "message"),
+    [
+        ("feature", "", "checkout_must_be_main"),
+        ("main", " M render.yaml", "checkout_must_be_clean"),
+    ],
+)
+def test_preflight_rejects_non_main_or_dirty_checkout(
+    monkeypatch: pytest.MonkeyPatch,
+    branch: str,
+    status: str,
+    message: str,
+) -> None:
+    monkeypatch.setenv("EXPECTED_CHECKOUT_SHA", "a" * 40)
+    with (
+        patch(
+            "portfolio_api.production_migration_preflight.subprocess.check_output",
+            side_effect=["a" * 40, branch, status],
+        ),
+        pytest.raises(ProductionMigrationPreflightError, match=message),
+    ):
+        _checkout_sha()
 
 
 def test_release_from_verified_production_head_requires_migration() -> None:
@@ -38,7 +77,7 @@ def test_release_at_repository_head_skips_migration() -> None:
     ],
 )
 def test_unreviewed_heads_fail_closed(current: set[str], repository: set[str]) -> None:
-    with pytest.raises(ReleasePreflightError):
+    with pytest.raises(ProductionMigrationPreflightError):
         migration_required(current, repository)
 
 
@@ -63,39 +102,14 @@ def test_recovery_point_must_be_recent_and_persist_long_enough() -> None:
         expires_at=now + timedelta(days=2),
         now=now,
     )
-    with pytest.raises(ReleasePreflightError, match="within_four_hours"):
+    with pytest.raises(ProductionMigrationPreflightError, match="within_four_hours"):
         validate_recovery_window(created_at=now - timedelta(hours=5), expires_at=None, now=now)
-    with pytest.raises(ReleasePreflightError, match="expires_too_soon"):
+    with pytest.raises(ProductionMigrationPreflightError, match="expires_too_soon"):
         validate_recovery_window(
             created_at=now - timedelta(hours=1),
             expires_at=now + timedelta(hours=12),
             now=now,
         )
-
-
-def test_recovery_is_not_required_for_only_reviewed_schema_reference_rows() -> None:
-    assert not recovery_required(
-        {
-            "alembic_version": 1,
-            "ranking_definitions": 11,
-            "return_methodology_definitions": 4,
-            "score_definitions": 4,
-        }
-    )
-
-
-@pytest.mark.parametrize(
-    "inventory",
-    [
-        {"companies": 1},
-        {"financial_model_revisions": 1},
-        {"unknown_future_table": 1},
-    ],
-)
-def test_recovery_is_required_for_any_nonbaseline_or_unknown_rows(
-    inventory: dict[str, int],
-) -> None:
-    assert recovery_required(inventory)
 
 
 def test_migration_preflight_uses_only_readonly_target_guard(
@@ -115,26 +129,24 @@ def test_migration_preflight_uses_only_readonly_target_guard(
             target=RELEASE_HEAD,
         ),
     )
-    monkeypatch.setenv(
-        "EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION",
-        EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION,
-    )
 
     with (
-        patch("portfolio_api.production_release._release_sha", return_value="a" * 40),
-        patch("portfolio_api.production_release.Settings", return_value=settings),
-        patch("portfolio_api.production_release.validate_read_settings") as validate,
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch("portfolio_api.production_migration_preflight.validate_read_settings") as validate,
         patch(
-            "portfolio_api.production_release.create_database_engine",
+            "portfolio_api.production_migration_preflight.create_database_engine",
             return_value=engine,
         ) as create_engine,
-        patch("portfolio_api.production_release.verify_database_read_target") as read_guard,
         patch(
-            "portfolio_api.production_release._current_heads",
+            "portfolio_api.production_migration_preflight.verify_database_read_target"
+        ) as read_guard,
+        patch(
+            "portfolio_api.production_migration_preflight._current_heads",
             return_value={PRODUCTION_BASE_REVISION},
         ),
         patch(
-            "portfolio_api.production_release._database_inventory",
+            "portfolio_api.production_migration_preflight._database_inventory",
             return_value=(
                 {
                     "alembic_version": 1,
@@ -146,19 +158,28 @@ def test_migration_preflight_uses_only_readonly_target_guard(
                 20,
             ),
         ),
-        patch("portfolio_api.production_release._verify_recovery") as verify_recovery,
+        patch("portfolio_api.production_migration_preflight._verify_recovery") as verify_recovery,
     ):
         result = run_migration_preflight()
 
     validate.assert_called_once_with(settings)
     create_engine.assert_called_once_with(settings, read_only=True)
     read_guard.assert_called_once()
-    verify_recovery.assert_not_called()
+    verify_recovery.assert_called_once_with(
+        settings,
+        {PRODUCTION_BASE_REVISION},
+        {
+            "alembic_version": 1,
+            "ranking_definitions": 11,
+            "return_methodology_definitions": 4,
+            "score_definitions": 4,
+        },
+    )
     engine.dispose.assert_called_once()
     assert result["read_target_guard"] == "passed"
     assert result["write_authorization"] == "disabled"
-    assert result["recovery_required"] == "false"
-    assert result["recovery_verified"] == "not_required_empty_baseline"
+    assert result["recovery_required"] == "true"
+    assert result["recovery_verified"] == "verified"
 
 
 def test_migration_preflight_requires_recovery_when_application_data_exists(
@@ -167,7 +188,6 @@ def test_migration_preflight_requires_recovery_when_application_data_exists(
     engine = Mock()
     settings = object()
     monkeypatch.setenv("APP_ENV", "development")
-    monkeypatch.delenv("EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION", raising=False)
     monkeypatch.setenv(
         "MIGRATION_CONFIRMATION",
         migration_confirmation(
@@ -181,20 +201,23 @@ def test_migration_preflight_requires_recovery_when_application_data_exists(
     )
 
     with (
-        patch("portfolio_api.production_release._release_sha", return_value="a" * 40),
-        patch("portfolio_api.production_release.Settings", return_value=settings),
-        patch("portfolio_api.production_release.validate_read_settings"),
-        patch("portfolio_api.production_release.create_database_engine", return_value=engine),
-        patch("portfolio_api.production_release.verify_database_read_target"),
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch("portfolio_api.production_migration_preflight.validate_read_settings"),
         patch(
-            "portfolio_api.production_release._current_heads",
+            "portfolio_api.production_migration_preflight.create_database_engine",
+            return_value=engine,
+        ),
+        patch("portfolio_api.production_migration_preflight.verify_database_read_target"),
+        patch(
+            "portfolio_api.production_migration_preflight._current_heads",
             return_value={PRODUCTION_BASE_REVISION},
         ),
         patch(
-            "portfolio_api.production_release._database_inventory",
+            "portfolio_api.production_migration_preflight._database_inventory",
             return_value=({"companies": 1}, "inventory-hash", 1),
         ),
-        patch("portfolio_api.production_release._verify_recovery") as verify_recovery,
+        patch("portfolio_api.production_migration_preflight._verify_recovery") as verify_recovery,
     ):
         result = run_migration_preflight()
 
@@ -203,29 +226,33 @@ def test_migration_preflight_requires_recovery_when_application_data_exists(
     assert result["recovery_verified"] == "verified"
 
 
-def test_empty_baseline_migration_requires_explicit_no_recovery_confirmation(
+def test_migration_preflight_requires_recovery_even_for_empty_baseline(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     engine = Mock()
     monkeypatch.setenv("APP_ENV", "development")
-    monkeypatch.delenv("EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION", raising=False)
+    for variable in ("RECOVERY_DATABASE_URL", "RECOVERY_BRANCH_ID", "RECOVERY_ENDPOINT_ID"):
+        monkeypatch.delenv(variable, raising=False)
     with (
-        patch("portfolio_api.production_release._release_sha", return_value="a" * 40),
-        patch("portfolio_api.production_release.Settings", return_value=object()),
-        patch("portfolio_api.production_release.validate_read_settings"),
-        patch("portfolio_api.production_release.create_database_engine", return_value=engine),
-        patch("portfolio_api.production_release.verify_database_read_target"),
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=object()),
+        patch("portfolio_api.production_migration_preflight.validate_read_settings"),
         patch(
-            "portfolio_api.production_release._current_heads",
+            "portfolio_api.production_migration_preflight.create_database_engine",
+            return_value=engine,
+        ),
+        patch("portfolio_api.production_migration_preflight.verify_database_read_target"),
+        patch(
+            "portfolio_api.production_migration_preflight._current_heads",
             return_value={PRODUCTION_BASE_REVISION},
         ),
         patch(
-            "portfolio_api.production_release._database_inventory",
+            "portfolio_api.production_migration_preflight._database_inventory",
             return_value=({}, "inventory-hash", 0),
         ),
         pytest.raises(
-            ReleasePreflightError,
-            match="empty_baseline_recovery_confirmation_required",
+            ProductionMigrationPreflightError,
+            match="fresh_recovery_point_configuration_required",
         ),
     ):
         run_migration_preflight()
@@ -248,24 +275,24 @@ def test_schema_metadata_check_uses_verified_readonly_engine(
         observed["connection"] = config.attributes.get("connection")
 
     with (
-        patch("portfolio_api.production_release._release_sha", return_value="a" * 40),
-        patch("portfolio_api.production_release.Settings", return_value=settings),
-        patch("portfolio_api.production_release.validate_read_settings"),
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch("portfolio_api.production_migration_preflight.validate_read_settings"),
         patch(
-            "portfolio_api.production_release.create_database_engine",
+            "portfolio_api.production_migration_preflight.create_database_engine",
             return_value=engine,
         ) as create_engine,
-        patch("portfolio_api.production_release.verify_database_read_target"),
+        patch("portfolio_api.production_migration_preflight.verify_database_read_target"),
         patch(
-            "portfolio_api.production_release._current_heads",
+            "portfolio_api.production_migration_preflight._current_heads",
             return_value={RELEASE_HEAD},
         ),
         patch(
-            "portfolio_api.production_release.expected_heads",
+            "portfolio_api.production_migration_preflight.expected_heads",
             return_value={RELEASE_HEAD},
         ),
         patch(
-            "portfolio_api.production_release.alembic_command.check",
+            "portfolio_api.production_migration_preflight.alembic_command.check",
             side_effect=capture_connection,
         ) as check,
     ):
@@ -291,27 +318,29 @@ def test_schema_metadata_drift_error_is_sanitized(
     engine.connect.return_value = connection_context
     monkeypatch.setenv("APP_ENV", "development")
     with (
-        patch("portfolio_api.production_release._release_sha", return_value="a" * 40),
-        patch("portfolio_api.production_release.Settings", return_value=object()),
-        patch("portfolio_api.production_release.validate_read_settings"),
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=object()),
+        patch("portfolio_api.production_migration_preflight.validate_read_settings"),
         patch(
-            "portfolio_api.production_release.create_database_engine",
+            "portfolio_api.production_migration_preflight.create_database_engine",
             return_value=engine,
         ),
-        patch("portfolio_api.production_release.verify_database_read_target"),
+        patch("portfolio_api.production_migration_preflight.verify_database_read_target"),
         patch(
-            "portfolio_api.production_release._current_heads",
+            "portfolio_api.production_migration_preflight._current_heads",
             return_value={RELEASE_HEAD},
         ),
         patch(
-            "portfolio_api.production_release.expected_heads",
+            "portfolio_api.production_migration_preflight.expected_heads",
             return_value={RELEASE_HEAD},
         ),
         patch(
-            "portfolio_api.production_release.alembic_command.check",
+            "portfolio_api.production_migration_preflight.alembic_command.check",
             side_effect=CommandError("private SQL details"),
         ),
-        pytest.raises(ReleasePreflightError, match="alembic_metadata_drift_detected") as exc,
+        pytest.raises(
+            ProductionMigrationPreflightError, match="alembic_metadata_drift_detected"
+        ) as exc,
     ):
         run_readonly_schema_check()
     assert "private SQL details" not in str(exc.value)

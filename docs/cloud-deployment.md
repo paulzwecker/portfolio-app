@@ -8,6 +8,15 @@ historical snapshot below does not describe the current production schema or
 deployment status. The live read-only checks recorded in the M1 addendum below
 supersede it where they differ.
 
+## Current deployment workflow
+
+For current instructions, use [Native deployment and separately reviewed
+migrations](deployment-and-migrations.md). It supersedes older coordinated-release
+workflow references in this historical guide. The checked-in configuration uses
+GitHub PR CI, Render's native deploy-after-checks behavior, and Vercel's native
+production/preview Git deployments. Production schema migration remains an explicit,
+separately authorized operator command with a fresh recovery point.
+
 ## M1 live verification — 2026-11-01
 
 - GitHub deployment metadata records a successful Render `main - portfolio-api`
@@ -36,24 +45,24 @@ supersede it where they differ.
   production is at `6c2eaf0b8147`. It expires on 2026-11-24. It is not a current
   pre-migration recovery point for an upgrade from the live production schema.
 
-### M1 release and recovery gates
+### Historical M1 deployment and recovery notes
 
-The API startup intentionally does not migrate the database. Render's liveness
-probe can remain green while readiness is red, so operational checks must include
-`/health/ready` and the `/api/health` proxy rather than relying on `/health/live`.
-Render's Blueprint is configured to deploy commits from `main`; Vercel branch
-previews may be created by the Git integration. Do not point a preview at the
+The API startup intentionally does not migrate the database. `/health/live` only
+checks that FastAPI is serving; `/health/ready` and the `/api/health` proxy include
+database schema readiness. The current checked-in Render configuration now uses
+`/health/ready` as a deploy health gate. The older production service may still use
+its prior dashboard configuration until the owner follows the current runbook; do
+not assume the Blueprint has been synced. Do not point a Vercel preview at the
 production API or database. The current API shares one Neon database across its
-instances, and the configured shared Basic Auth is not per-user authorization.
+instances, and shared Basic Auth is not per-user authorization.
 
-Before a production migration is considered ready, create a fresh recovery
-branch from the verified current primary, then independently verify its parent,
-expiry, endpoint, database, schema head and data inventory. Rehearse backup and
-restore using PostgreSQL 18 client tools and a disposable PostgreSQL role with
-the required isolated-test privileges. Do not use the stale recovery branch or
-downgrade the production schema as an application rollback strategy. Keep
-production write authorization, ingestion, recurring jobs and Sheets polling
-disabled until their separate review gates pass.
+Before a production migration, create a fresh recovery branch from the verified
+current primary, then independently verify its parent, expiry, endpoint, database,
+schema head and data inventory. Do not use the stale recovery branch or downgrade
+the production schema as an application rollback strategy. Keep production write
+authorization, ingestion, recurring jobs and Sheets polling disabled until their
+separate review gates pass. The detailed step order and temporary deploy freezes
+are in the current deployment runbook linked above.
 
 ## Milestone 13B activation status — 2026-10-17
 
@@ -266,10 +275,10 @@ Set `RECURRING_OPERATIONS_ENABLED=true` on the API service at the same time if t
 
 1. Open Render Dashboard → **New → Blueprint** and connect this GitHub repo.
 2. Select the repository's `main` branch. Render reads root `render.yaml` and shows a Python **Web Service** named `portfolio-api`, region **Frankfurt**, plan **Free**, root directory `apps/api`.
-3. Confirm Build Command `uv sync --locked --no-dev`, Start Command `uv run --locked --no-dev uvicorn portfolio_api.main:app --host 0.0.0.0 --port $PORT`, Health Check Path `/health/live`, and `PYTHON_VERSION=3.13.16`.
+3. Confirm Build Command `uv sync --locked --no-dev`, Start Command `uv run --locked --no-dev uvicorn portfolio_api.main:app --host 0.0.0.0 --port $PORT`, Health Check Path `/health/ready`, and `PYTHON_VERSION=3.13.16`. Keep Auto-Deploy set to **After CI Checks Pass**; use [the current deployment runbook](deployment-and-migrations.md) for the ordered migration and first-activation procedure.
 4. Enter the Neon direct URL for `DATABASE_URL`. Generate a random `API_ACCESS_TOKEN` of at least 32 characters and use the same value later in Vercel Production. Leave provider keys blank. Confirm ingestion variables remain `false` and `GOOGLE_SHEETS_POLL_SECONDS` remains `0`.
 5. Apply the Blueprint and wait for the deploy. The Render service URL will be `https://portfolio-api.onrender.com` unless Render reports a naming conflict.
-6. Apply Alembic to the empty Neon database using the PowerShell command above. Check Render `https://portfolio-api.onrender.com/health/live` for `200`, then `/health/ready` for `schema=current`.
+6. Apply Alembic to the empty Neon database only through the separately reviewed procedure in [the current deployment runbook](deployment-and-migrations.md). Check `/health/live` for process liveness and `/health/ready` for `schema=current`.
 
 For an always-on API, change only its compute plan to `0.5c-512mb` (the Render Starter plan) in **Service → Settings → Instance Type**. Do not add persistent disk storage; PostgreSQL lives in Neon.
 

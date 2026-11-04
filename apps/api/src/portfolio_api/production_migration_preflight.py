@@ -1,4 +1,4 @@
-"""Read-only production release preflight and separately gated migration preflight.
+"""Read-only target, recovery, and schema preflight for operator-run migrations.
 
 This module never applies a migration or deploys a service. The only mutating
 command remains the existing guarded `npm run db:migrate` path.
@@ -44,29 +44,20 @@ PRODUCTION_BASE_REVISION = "6c2eaf0b8147"
 RELEASE_HEAD = "9f2a6d4c81b7"
 CORE_READ_TABLES = ("companies",)
 MIGRATION_CONFIRMATION_PREFIX = "MIGRATE"
-EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION = "ACCEPT INITIAL EMPTY BASELINE WITHOUT RECOVERY"
-NONESSENTIAL_EMPTY_BASELINE_TABLES = frozenset(
-    {
-        "alembic_version",
-        "ranking_definitions",
-        "return_methodology_definitions",
-        "score_definitions",
-    }
-)
 
 
-class ReleasePreflightError(RuntimeError):
+class ProductionMigrationPreflightError(RuntimeError):
     """Sanitized release validation error with no provider response body."""
 
 
 def migration_required(current_heads: set[str], repository_heads: set[str]) -> bool:
     if repository_heads != {RELEASE_HEAD}:
-        raise ReleasePreflightError("repository_migration_head_unexpected")
+        raise ProductionMigrationPreflightError("repository_migration_head_unexpected")
     if current_heads == {RELEASE_HEAD}:
         return False
     if current_heads == {PRODUCTION_BASE_REVISION}:
         return True
-    raise ReleasePreflightError("production_schema_head_requires_new_review")
+    raise ProductionMigrationPreflightError("production_schema_head_requires_new_review")
 
 
 def migration_confirmation(
@@ -78,42 +69,34 @@ def migration_confirmation(
     )
 
 
-def recovery_required(inventory: Mapping[str, int]) -> bool:
-    """Require a restore point when any non-reference application state exists.
-
-    Only the reviewed initial schema/reference rows are exempt. Unknown tables
-    with rows fail closed and therefore require a verified recovery branch.
-    """
-    return any(
-        count > 0 and table not in NONESSENTIAL_EMPTY_BASELINE_TABLES
-        for table, count in inventory.items()
-    )
-
-
 def validate_recovery_window(
     *, created_at: datetime, expires_at: datetime | None, now: datetime
 ) -> None:
     if created_at.tzinfo is None or now.tzinfo is None:
-        raise ReleasePreflightError("recovery_timestamps_must_be_timezone_aware")
+        raise ProductionMigrationPreflightError("recovery_timestamps_must_be_timezone_aware")
     if created_at < now - timedelta(hours=4) or created_at > now + timedelta(minutes=5):
-        raise ReleasePreflightError("recovery_point_must_be_created_within_four_hours")
+        raise ProductionMigrationPreflightError("recovery_point_must_be_created_within_four_hours")
     if expires_at is not None and (
         expires_at.tzinfo is None or expires_at <= now + timedelta(hours=24)
     ):
-        raise ReleasePreflightError("recovery_point_expires_too_soon")
+        raise ProductionMigrationPreflightError("recovery_point_expires_too_soon")
 
 
 def validate_read_settings(settings: Settings) -> None:
     if settings.database_url is None:
-        raise ReleasePreflightError("production_readonly_database_url_missing")
+        raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
     if settings.app_env != "development":
-        raise ReleasePreflightError("release_preflight_must_run_in_isolated_tooling_mode")
+        raise ProductionMigrationPreflightError(
+            "production_migration_preflight_must_run_in_isolated_tooling_mode"
+        )
     if settings.database_target_environment != "production":
-        raise ReleasePreflightError("production_database_target_environment_mismatch")
+        raise ProductionMigrationPreflightError("production_database_target_environment_mismatch")
     if settings.database_target_database != DATABASE_NAME:
-        raise ReleasePreflightError("production_database_name_mismatch")
+        raise ProductionMigrationPreflightError("production_database_name_mismatch")
     if settings.database_production_writes_authorized:
-        raise ReleasePreflightError("production_write_authorization_must_be_disabled_in_preflight")
+        raise ProductionMigrationPreflightError(
+            "production_write_authorization_must_be_disabled_in_preflight"
+        )
     if (
         any(
             (
@@ -126,14 +109,14 @@ def validate_read_settings(settings: Settings) -> None:
         )
         or settings.google_sheets_poll_seconds != 0
     ):
-        raise ReleasePreflightError("background_operations_must_be_disabled")
+        raise ProductionMigrationPreflightError("background_operations_must_be_disabled")
     if (
         settings.neon_project_id != PROJECT_ID
         or settings.neon_branch_id != PRIMARY_BRANCH_ID
         or settings.neon_endpoint_id != PRIMARY_ENDPOINT_ID
         or settings.neon_api_key is None
     ):
-        raise ReleasePreflightError("verified_neon_production_identity_required")
+        raise ProductionMigrationPreflightError("verified_neon_production_identity_required")
     url = make_url(settings.database_url.get_secret_value())
     if (
         url.database != DATABASE_NAME
@@ -141,7 +124,7 @@ def validate_read_settings(settings: Settings) -> None:
         or "-pooler." in url.host
         or url.query.get("sslmode") != "verify-full"
     ):
-        raise ReleasePreflightError("production_direct_tls_target_invalid")
+        raise ProductionMigrationPreflightError("production_direct_tls_target_invalid")
 
 
 def _current_heads(engine: Engine) -> set[str]:
@@ -151,7 +134,7 @@ def _current_heads(engine: Engine) -> set[str]:
             connection.rollback()
             return heads
     except SQLAlchemyError:
-        raise ReleasePreflightError("production_alembic_revision_unavailable") from None
+        raise ProductionMigrationPreflightError("production_alembic_revision_unavailable") from None
 
 
 def _database_inventory(engine: Engine) -> tuple[dict[str, int], str, int]:
@@ -167,7 +150,7 @@ def _database_inventory(engine: Engine) -> tuple[dict[str, int], str, int]:
         canonical = json.dumps(counts, sort_keys=True, separators=(",", ":")).encode()
         return counts, hashlib.sha256(canonical).hexdigest(), sum(counts.values())
     except SQLAlchemyError:
-        raise ReleasePreflightError("database_inventory_read_failed") from None
+        raise ProductionMigrationPreflightError("database_inventory_read_failed") from None
 
 
 def _branch_timestamps(
@@ -178,10 +161,12 @@ def _branch_timestamps(
     try:
         payload = client._get_json(f"/projects/{PROJECT_ID}/branches/{branch_id}")
     except DatabaseWriteTargetError as error:
-        raise ReleasePreflightError(f"neon_recovery_metadata_unavailable:{error.code}") from None
+        raise ProductionMigrationPreflightError(
+            f"neon_recovery_metadata_unavailable:{error.code}"
+        ) from None
     branch = payload.get("branch", payload)
     if not isinstance(branch, Mapping):
-        raise ReleasePreflightError("neon_recovery_metadata_invalid")
+        raise ProductionMigrationPreflightError("neon_recovery_metadata_invalid")
     created = _parse_datetime(branch.get("created_at"))
     expires = _parse_datetime(branch.get("expires_at"))
     return created, expires
@@ -191,13 +176,13 @@ def _parse_datetime(value: Any) -> datetime | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ReleasePreflightError("neon_branch_timestamp_invalid")
+        raise ProductionMigrationPreflightError("neon_branch_timestamp_invalid")
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
-        raise ReleasePreflightError("neon_branch_timestamp_invalid") from None
+        raise ProductionMigrationPreflightError("neon_branch_timestamp_invalid") from None
     if parsed.tzinfo is None:
-        raise ReleasePreflightError("neon_branch_timestamp_invalid")
+        raise ProductionMigrationPreflightError("neon_branch_timestamp_invalid")
     return parsed
 
 
@@ -225,11 +210,11 @@ def _verify_recovery(
     recovery_branch = os.environ.get("RECOVERY_BRANCH_ID")
     recovery_endpoint = os.environ.get("RECOVERY_ENDPOINT_ID")
     if not all((recovery_url, recovery_branch, recovery_endpoint)):
-        raise ReleasePreflightError("fresh_recovery_point_configuration_required")
+        raise ProductionMigrationPreflightError("fresh_recovery_point_configuration_required")
     created_at, expires_at = _branch_timestamps(primary, str(recovery_branch))
     now = datetime.now(UTC)
     if created_at is None:
-        raise ReleasePreflightError("recovery_branch_creation_time_missing")
+        raise ProductionMigrationPreflightError("recovery_branch_creation_time_missing")
     validate_recovery_window(created_at=created_at, expires_at=expires_at, now=now)
 
     recovery = _read_settings_for_recovery(
@@ -239,67 +224,85 @@ def _verify_recovery(
     if recovery_url_obj.query.get("sslmode") != "verify-full" or "-pooler." in (
         recovery_url_obj.host or ""
     ):
-        raise ReleasePreflightError("recovery_direct_tls_target_invalid")
+        raise ProductionMigrationPreflightError("recovery_direct_tls_target_invalid")
     engine = create_database_engine(recovery, read_only=True)
     if engine is None:
-        raise ReleasePreflightError("recovery_database_url_missing")
+        raise ProductionMigrationPreflightError("recovery_database_url_missing")
     try:
         verify_database_read_target(engine, required_tables=CORE_READ_TABLES)
         recovery_head = _current_heads(engine)
         recovery_inventory, _, _ = _database_inventory(engine)
         if recovery_head != prod_head:
-            raise ReleasePreflightError("recovery_schema_differs_from_production")
+            raise ProductionMigrationPreflightError("recovery_schema_differs_from_production")
         if recovery_inventory != prod_inventory:
-            raise ReleasePreflightError("recovery_data_inventory_differs_from_production")
+            raise ProductionMigrationPreflightError(
+                "recovery_data_inventory_differs_from_production"
+            )
     finally:
         engine.dispose()
 
 
-def _release_sha() -> str:
-    value = os.environ.get("RELEASE_SHA", "")
+def _checkout_sha() -> str:
+    value = os.environ.get("EXPECTED_CHECKOUT_SHA", "")
     if not re.fullmatch(r"[0-9a-f]{40}", value):
-        raise ReleasePreflightError("release_sha_invalid")
+        raise ProductionMigrationPreflightError("checkout_sha_invalid")
+    repository_root = Path(__file__).resolve().parents[4]
     try:
         checkout_sha = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+            ["git", "rev-parse", "HEAD"],
+            cwd=repository_root,
+            text=True,
+            stderr=subprocess.DEVNULL,
         ).strip()
+        branch = subprocess.check_output(
+            ["git", "branch", "--show-current"],
+            cwd=repository_root,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=repository_root,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
     except (OSError, subprocess.CalledProcessError):
-        raise ReleasePreflightError("release_checkout_identity_unavailable") from None
+        raise ProductionMigrationPreflightError("checkout_identity_unavailable") from None
     if checkout_sha != value:
-        raise ReleasePreflightError("release_checkout_sha_mismatch")
+        raise ProductionMigrationPreflightError("checkout_sha_mismatch")
+    if branch != "main":
+        raise ProductionMigrationPreflightError("checkout_must_be_main")
+    if status:
+        raise ProductionMigrationPreflightError("checkout_must_be_clean")
     return value
 
 
-def _write_github_outputs(values: dict[str, str]) -> None:
-    output_file = os.environ.get("GITHUB_OUTPUT")
-    if output_file:
-        with Path(output_file).open("a", encoding="utf-8") as handle:
-            for key, value in values.items():
-                handle.write(f"{key}={value}\n")
-
-
 def run_readonly_preflight() -> dict[str, str]:
-    release_sha = _release_sha()
+    checkout_sha = _checkout_sha()
     if os.environ.get("APP_ENV") != "development":
-        raise ReleasePreflightError("release_preflight_app_env_must_be_development")
+        raise ProductionMigrationPreflightError(
+            "production_migration_preflight_app_env_must_be_development"
+        )
     settings = Settings(_env_file=None)
     validate_read_settings(settings)
     engine = create_database_engine(settings, read_only=True)
     if engine is None:
-        raise ReleasePreflightError("production_readonly_database_url_missing")
+        raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
     try:
         verify_database_read_target(engine, required_tables=CORE_READ_TABLES)
         current = _current_heads(engine)
         required_migration = migration_required(current, expected_heads())
         inventory, fingerprint, total_rows = _database_inventory(engine)
-        needs_recovery = required_migration and recovery_required(inventory)
+        # Every schema migration requires a freshly verified pre-migration state,
+        # including the initial migration while only reference rows exist.
+        needs_recovery = required_migration
         if needs_recovery:
             _verify_recovery(settings, current, inventory)
         if settings.database_url is None:
-            raise ReleasePreflightError("production_readonly_database_url_missing")
+            raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
         url = make_url(settings.database_url.get_secret_value())
         result = {
-            "release_sha": release_sha,
+            "checkout_sha": checkout_sha,
             "database_name": DATABASE_NAME,
             "database_host": str(url.host),
             "production_head": next(iter(current)),
@@ -310,43 +313,38 @@ def run_readonly_preflight() -> dict[str, str]:
             "public_row_count": str(total_rows),
             "inventory_fingerprint": fingerprint,
             "recovery_verified": (
-                "verified"
-                if needs_recovery
-                else (
-                    "not_required_empty_baseline"
-                    if required_migration
-                    else "not_required_schema_current"
-                )
+                "verified" if needs_recovery else ("not_required_schema_current")
             ),
         }
     finally:
         engine.dispose()
-    _write_github_outputs(result)
     return result
 
 
 def run_readonly_schema_check() -> dict[str, str]:
     """Compare mapped metadata to the release schema through a read-only engine."""
-    release_sha = _release_sha()
+    checkout_sha = _checkout_sha()
     if os.environ.get("APP_ENV") != "development":
-        raise ReleasePreflightError("release_preflight_app_env_must_be_development")
+        raise ProductionMigrationPreflightError(
+            "production_migration_preflight_app_env_must_be_development"
+        )
     settings = Settings(_env_file=None)
     validate_read_settings(settings)
     engine = create_database_engine(settings, read_only=True)
     if engine is None:
-        raise ReleasePreflightError("production_readonly_database_url_missing")
+        raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
     try:
         verify_database_read_target(engine, required_tables=CORE_READ_TABLES)
         current = _current_heads(engine)
         if current != expected_heads():
-            raise ReleasePreflightError("production_schema_not_at_release_head")
+            raise ProductionMigrationPreflightError("production_schema_not_at_release_head")
         with engine.connect() as connection:
             try:
                 _check_mapped_alembic_metadata(connection)
             finally:
                 connection.rollback()
         result = {
-            "release_sha": release_sha,
+            "checkout_sha": checkout_sha,
             "alembic_head": next(iter(current)),
             "metadata_check": "no_drift",
             "connection": "read_only",
@@ -357,31 +355,24 @@ def run_readonly_schema_check() -> dict[str, str]:
 
 
 def run_migration_preflight() -> dict[str, str]:
-    release_sha = _release_sha()
+    checkout_sha = _checkout_sha()
     if os.environ.get("APP_ENV") != "development":
-        raise ReleasePreflightError("release_preflight_app_env_must_be_development")
+        raise ProductionMigrationPreflightError(
+            "production_migration_preflight_app_env_must_be_development"
+        )
     settings = Settings(_env_file=None)
     validate_read_settings(settings)
     engine = create_database_engine(settings, read_only=True)
     if engine is None:
-        raise ReleasePreflightError("production_readonly_database_url_missing")
+        raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
     try:
         verify_database_read_target(engine, required_tables=CORE_READ_TABLES)
         current = _current_heads(engine)
         if current != {PRODUCTION_BASE_REVISION}:
-            raise ReleasePreflightError("production_schema_changed_since_review")
+            raise ProductionMigrationPreflightError("production_schema_changed_since_review")
         inventory, _, _ = _database_inventory(engine)
-        needs_recovery = recovery_required(inventory)
-        empty_baseline_confirmation = os.environ.get("EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION", "")
-        if needs_recovery:
-            if empty_baseline_confirmation:
-                raise ReleasePreflightError("empty_baseline_recovery_confirmation_not_applicable")
-            _verify_recovery(settings, current, inventory)
-            recovery_status = "verified"
-        else:
-            if empty_baseline_confirmation != EMPTY_BASELINE_NO_RECOVERY_CONFIRMATION:
-                raise ReleasePreflightError("empty_baseline_recovery_confirmation_required")
-            recovery_status = "not_required_empty_baseline"
+        _verify_recovery(settings, current, inventory)
+        recovery_status = "verified"
         expected = migration_confirmation(
             project_id=PROJECT_ID,
             branch_id=PRIMARY_BRANCH_ID,
@@ -392,19 +383,18 @@ def run_migration_preflight() -> dict[str, str]:
         )
         supplied = os.environ.get("MIGRATION_CONFIRMATION", "")
         if supplied != expected:
-            raise ReleasePreflightError("exact_migration_confirmation_mismatch")
+            raise ProductionMigrationPreflightError("exact_migration_confirmation_mismatch")
         result = {
-            "release_sha": release_sha,
+            "checkout_sha": checkout_sha,
             "production_head": PRODUCTION_BASE_REVISION,
             "repository_head": RELEASE_HEAD,
             "read_target_guard": "passed",
             "write_authorization": "disabled",
-            "recovery_required": str(needs_recovery).lower(),
+            "recovery_required": "true",
             "recovery_verified": recovery_status,
         }
     finally:
         engine.dispose()
-    _write_github_outputs(result)
     return result
 
 
@@ -415,11 +405,11 @@ def _check_mapped_alembic_metadata(connection: Connection) -> None:
     try:
         alembic_command.check(config)
     except CommandError:
-        raise ReleasePreflightError("alembic_metadata_drift_detected") from None
+        raise ProductionMigrationPreflightError("alembic_metadata_drift_detected") from None
     except SQLAlchemyError:
-        raise ReleasePreflightError("alembic_metadata_check_database_error") from None
+        raise ProductionMigrationPreflightError("alembic_metadata_check_database_error") from None
     except Exception:
-        raise ReleasePreflightError("alembic_metadata_check_failed") from None
+        raise ProductionMigrationPreflightError("alembic_metadata_check_failed") from None
     finally:
         config.attributes.pop("connection", None)
 
@@ -437,10 +427,15 @@ def main(argv: list[str] | None = None) -> int:
             result = run_readonly_schema_check()
         print(json.dumps(result, sort_keys=True))
         return 0
-    except (DatabaseWriteTargetError, ReleasePreflightError, SQLAlchemyError, ValueError) as error:
+    except (
+        DatabaseWriteTargetError,
+        ProductionMigrationPreflightError,
+        SQLAlchemyError,
+        ValueError,
+    ) as error:
         code = error.code if isinstance(error, DatabaseWriteTargetError) else str(error)
         safe_code = re.sub(r"[^A-Za-z0-9_:.-]", "_", code)[:160]
-        print(f"production_release_preflight_blocked:{safe_code or 'unknown'}", file=sys.stderr)
+        print(f"production_migration_preflight_blocked:{safe_code or 'unknown'}", file=sys.stderr)
         return 2
 
 
