@@ -7,16 +7,16 @@
 
 ## Execution cursor — edit after EVERY subtask
 
-| Field                   | Current value                                                                                                                              |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active milestone        | `M1` — Verify cloud target and safe delivery controls                                                                                      |
-| Next task               | Owner review of fresh source changes, private reconciliation and accepted exclusions; then separately review a recovery point and authorize the exact apply, if desired. |
-| Status                  | `LIVE_READ_ONLY_PREVIEW_VERIFIED: READY_WITH_EXCLUSIONS; APPLY NOT AUTHORIZED`                                                               |
-| Current branch / commit | `main` at `f3a64783b1a64fdd0abe29a690b8480d673c0b1e`, matching `origin/main`; PR #17 is merged.                                            |
-| Last verified tests     | 26 focused source tests and two isolated PostgreSQL integration tests passed; targeted Ruff and mypy passed.                               |
-| Latest PR               | [Restoration PR #17](https://github.com/paulzwecker/portfolio-app/pull/17) is merged.                                                       |
-| Primary blocker         | Owner review of two source-version differences and optional exclusions, plus separate recovery-point and production-apply authorization.    |
-| Next approval gate      | Review the private exact reconciliation and source differences. Do not apply until a fresh recovery point and separate exact-scope approval exist. |
+| Field                   | Current value                                                                                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active milestone        | `M2` — First real reviewed company/model in cloud                                                                                                                           |
+| Next task               | Finish independent review and open one consolidated M2 PR; exact current P-GOOGL source approval and production identity/model apply remain owner-gated.                    |
+| Status                  | `M2 PARTIAL: LIVE PACKAGE PARITY PASS; IDENTITY PREVIEW READY; MODEL PREVIEW BLOCKED_IDENTITY; PRODUCTION ACCEPTANCE NOT AUTHORIZED`                                        |
+| Current branch / commit | `codex/m2-first-real-pgoogl-model` from merged `main`; local M2 implementation and sanitized roadmap changes are review-ready.                                              |
+| Last verified tests     | `npm run check` passed (166 web, 642 API, 5 deployment, 3 policy, contracts/build); PostgreSQL integration 135 passed/4 skipped; desktop/mobile model E2E 2 passed.         |
+| Latest PR               | Restoration PR #17 is merged; one consolidated M2 PR will be opened after independent review.                                                                               |
+| Primary blocker         | The exact source revision changes five revenue-growth assumptions and 26 published outputs; model acceptance, recovery point and production writes remain separately gated. |
+| Next approval gate      | Review the private source-diff package for the exact current P-GOOGL payload. Do not accept it or write production without scoped approval and a verified recovery point.   |
 
 **Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `PARTIAL`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `REVIEW_PENDING`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
 
@@ -115,6 +115,15 @@ The M1→M2→M3 order matches the product vision and Portfolio architecture: ve
 - [ ] **M2.4** **OWNER GATE:** Review exact migration, fresh recovery point, identity bootstrap and model acceptance/apply plan. Without explicit approval, mark blocked and work on unrelated ready tasks.
 - [ ] **M2.5** After explicit scoped approval only, apply migration/identity/model transactions; verify receipts, idempotency, immutable revision history and expected counts.
 - [ ] **M2.6** Verify Render/API and browser (desktop/mobile) reads the accepted valuation; confirm enterprise IRR label vs shareholder IRR and unavailable data behavior. Review and open milestone PR for code/docs; production action recorded separately.
+
+### M2 execution evidence — 2026-11-05
+
+- [x] **M2.1 (LOCAL_VERIFIED + LIVE_SOURCE_VALIDATED)** The historical immutable package hash revalidated, and a fresh direct-Sheets capture was created and validated privately. Both pass the native 30-projection / 22-output parity contract; the exact package IDs and hashes remain in the private store. The capture has no source revision ID or effective date. The canonical company/listing mapping is unchanged and explicit.
+- [ ] **M2.2 (OWNER_GATED)** Independent review found five changed revenue-growth inputs (three Bear, two Bull) and 26 changed published-output fields between the prior and current captures. Formula parity passes; Bear/Bull source probabilities differ from the old fixture while Base has only the documented serialization-scale residual. The source remains `PROPOSED_SOURCE_REVISION`; exact values/evidence are in a private review package. No fixture or source assumption was modified or accepted.
+- [ ] **M2.3 (PARTIAL, PRODUCTION_PREVIEW_VERIFIED)** Production schema head `9f2a6d4c81b7` is live and matches the sole local Alembic head. The identity read-only preview is `READY_TO_CREATE` for one Company, Security, Listing and receipt; those records are absent. The model preview returns `BLOCKED_IDENTITY` because the exact identity does not exist. A stale preview-head allowlist was corrected to accept the additive `9f2a6d4c81b7` schema; focused regression passed. No database writes occurred.
+- [ ] **M2.4 (OWNER_GATED)** No production recovery point, identity apply or model acceptance was performed. Broad approval for M2 implementation was not treated as approval of the exact changing model inputs, recovery point or production-write command. Current target-bound source/portfolio preview remains read-only; the exact current model package still requires explicit owner decision.
+- [ ] **M2.5 (NOT PERFORMED, OWNER_GATED)** No production migration or write. Production is already at the reviewed local head; identity and model apply remain separate guarded operations requiring exact scope authorization and recovery protection.
+- [ ] **M2.6 (PARTIAL)** Synthetic model-proposal review E2E passed in desktop and mobile Playwright projects; model API/identity and proposal tests passed in isolated `portfolio_app_test` schemas. Full `npm run check` passed (166 web tests, 642 API tests, 2 skipped, deployment/repository policy checks, contracts, typechecks and optimized build); full PostgreSQL integration passed (135, 4 skipped). Production valuation readback/browser evidence is unavailable until the exact model revision is explicitly accepted and applied.
 
 ## Milestone M3 — Useful canonical portfolio baseline
 
@@ -239,3 +248,4 @@ _Add one short row per completed subtask: date | task ID | commit | tests/eviden
 | 2026-11-04 | M1.7 | `93ad826` | `npm run check` and PostgreSQL integration pass; one Alembic head; native deployment plan in PR #14 | Remote CI/Preview tracked on PR #14; existing-target migration path remains recovery-first | M1.8 |
 | 2026-11-05 | M1.8 | `bd39bfe` | 78 focused API tests; fresh isolated-schema migration roundtrip; 5 deployment contract tests; targeted static/format checks pass | Empty-only initial bootstrap path prepared; live target and deployment configuration remain unverified and unchanged | Owner review/merge, then separately authorized new-target preflight/migration |
 | 2026-11-05 | M1.8 final import-prep | `f3a6478` (merged `main`) | Fresh read-only source captures; exact target-bound preview; 22/22 holdings, 2 cash rows, 16 targets, zero blockers; private exact reconciliation verified | Source-version differences and exclusions require owner review; no apply, recovery point, schema approval or write performed | Owner review; separately create/verify recovery point and authorize exact apply |
+| 2026-11-05 | M2.1–M2.3 | Local M2 branch | Current P-GOOGL capture + parity; full unit/contract/type/build and PostgreSQL integration suites pass; production identity preview `READY_TO_CREATE`; model preview `BLOCKED_IDENTITY`; desktop/mobile model E2E pass | Five model inputs and 26 outputs differ from prior capture; exact proposal remains owner-gated; no production writes | Independent review; one final PR; keep model acceptance/apply owner-gated |

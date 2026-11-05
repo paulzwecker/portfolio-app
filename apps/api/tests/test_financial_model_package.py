@@ -1065,7 +1065,12 @@ def test_model_identity_read_only_preview_accepts_only_known_schema_heads() -> N
 
     validate_identity_preview_heads({"6c2eaf0b8147"})
     validate_identity_preview_heads({"3e5c8a1d7b42"})
-    with pytest.raises(ModelIdentityBootstrapError, match="reviewed canonical schema revisions"):
+    validate_identity_preview_heads({"9f2a6d4c81b7"})
+    with pytest.raises(
+        ModelIdentityBootstrapError, match="explicitly reviewed canonical schema head"
+    ):
         validate_identity_preview_heads({"unknown_head"})
-    with pytest.raises(ModelIdentityBootstrapError, match="reviewed canonical schema revisions"):
+    with pytest.raises(
+        ModelIdentityBootstrapError, match="explicitly reviewed canonical schema head"
+    ):
         validate_identity_preview_heads({"6c2eaf0b8147", "3e5c8a1d7b42"})

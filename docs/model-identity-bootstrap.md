@@ -66,10 +66,13 @@ npm run db:bootstrap-model-identity -- preview `
 
 Preview uses the shared read-only target guard with an explicit read scope of
 `companies`, `securities` and `listings`. It checks the exact configured target,
-Neon control-plane identity, TLS, role, read-only session and one of the reviewed
-canonical schema heads from `6c2eaf0b8147` through `3e5c8a1d7b42`. It does not
-require unrelated later tables to preview identity. If the receipt table is not
-present, the preview reports `receipt_schema_available=false` and
+Neon control-plane identity, TLS, role, read-only session and one of the exact
+reviewed canonical schema heads: `6c2eaf0b8147`, `b16d4f8a2c91`,
+`c17a0b9d4e62`, `3e5c8a1d7b42` or `9f2a6d4c81b7`. The final migration adds
+the agent-proposal table and does not alter Company/Security/Listing identity
+tables. The preview does not require unrelated later tables to preview identity.
+If the receipt table is not present, the preview reports
+`receipt_schema_available=false` and
 `apply_available=false`; it still shows the planned receipt as a migration
 dependency. No records are inserted during preview. A target, schema, or
 identity preflight failure is a hard stop.

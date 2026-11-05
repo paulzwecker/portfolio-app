@@ -51,7 +51,13 @@ from portfolio_api.settings import Settings
 
 IDENTITY_MAPPING_VERSION = "p-googl-canonical-identity-v1"
 IDENTITY_PREVIEW_SCHEMA_HEADS = frozenset(
-    {"6c2eaf0b8147", "b16d4f8a2c91", "c17a0b9d4e62", "3e5c8a1d7b42"}
+    {
+        "6c2eaf0b8147",
+        "b16d4f8a2c91",
+        "c17a0b9d4e62",
+        "3e5c8a1d7b42",
+        "9f2a6d4c81b7",
+    }
 )
 IDENTITY_PREVIEW_REQUIRED_TABLES = ("companies", "securities", "listings")
 
@@ -150,8 +156,7 @@ def validate_identity_preview_heads(current_heads: set[str]) -> None:
     """Allow only known schema revisions with the unchanged canonical identity tables."""
     if len(current_heads) != 1 or not current_heads <= IDENTITY_PREVIEW_SCHEMA_HEADS:
         raise ModelIdentityBootstrapError(
-            "The identity preview supports only the reviewed canonical schema revisions "
-            "6c2eaf0b8147 through 3e5c8a1d7b42."
+            "The identity preview supports only one explicitly reviewed canonical schema head."
         )
 
 
