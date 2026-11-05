@@ -203,6 +203,7 @@ def test_read_only_production_target_needs_no_production_write_authorization(
 
 
 def test_read_target_table_scope_is_a_subset_of_mapped_application_tables() -> None:
+    assert _application_table_names(()) == ()
     scoped = _application_table_names(("companies", "securities", "listings"))
     assert scoped == ("companies", "listings", "securities")
     assert "model_identity_bootstrap_receipts" in _application_table_names()
@@ -323,8 +324,16 @@ def test_pooler_and_non_verified_tls_are_rejected_before_use() -> None:
     with pytest.raises(ValidationError, match="direct PostgreSQL endpoint"):
         remote_settings(url=pooler_url)
 
-    tls_settings = remote_settings(url=REMOTE_URL.replace("verify-full", "require"))
-    tls_identity = remote_identity(REMOTE_URL.replace("verify-full", "require"))
+    unverified_tls_url = REMOTE_URL.replace("verify-full", "require")
+    with pytest.raises(ValidationError, match="sslmode=verify-full"):
+        remote_settings(url=unverified_tls_url)
+
+    # Preserve defense in depth: even if a Settings object is modified after
+    # validation, the database write-target guard independently rejects it.
+    tls_settings = remote_settings().model_copy(
+        update={"database_url": SecretStr(unverified_tls_url)}
+    )
+    tls_identity = remote_identity(unverified_tls_url)
     with pytest.raises(DatabaseWriteTargetError, match="tls_hostname_verification_required"):
         validate(tls_settings, tls_identity, neon_target())
 

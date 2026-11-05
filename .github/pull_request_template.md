@@ -15,3 +15,10 @@
 - [ ] No credentials or personal portfolio state are committed
 - [ ] Migrations include a reviewed rollback/reconciliation plan
 - [ ] Missing, stale and unavailable states remain explicit
+
+## Owner review before merging
+
+- [ ] I reviewed the complete diff and the effect on production behavior.
+- [ ] I reviewed required CI and any Vercel Preview evidence.
+- [ ] I checked migration compatibility, target guards and recovery implications.
+- [ ] Any production migration/deployment step remains separately authorized.

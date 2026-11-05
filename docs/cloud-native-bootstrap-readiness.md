@@ -168,11 +168,24 @@ reviews. See the [workbook import](workbook-import.md),
 - `render.yaml` keeps `CLOUD_INGESTION_ENABLED=false`,
   `RECURRING_OPERATIONS_ENABLED=false`, and Sheets polling at `0`. No Cron service
   is configured. Keep those values unchanged during a bootstrap rehearsal.
-- The task context says Vercel and Render are deployed. The current
-  `cloud-deployment.md` introduction still describes them as unprovisioned, and
-  this review did not query either provider. Reconcile that documentation state
-  with the operator's service consoles before using deployment-specific steps;
-  this assessment relies on checked-in defaults only.
+- M1 read-only verification on 2026-11-01 confirmed a successful Render `main`
+  deployment at the merged M0 commit. Its liveness endpoint returned `200`, but
+  readiness returned `503` (`database=connected`, `schema=outdated`) because live
+  Neon remains at `6c2eaf0b8147` while the repository expects `9f2a6d4c81b7`.
+  The unauthenticated Render API request returned `401`. The Render control-plane
+  credential available to this environment was rejected (`401`), so deployed
+  environment overrides and recurring-job flags remain unverified.
+- A Vercel PR preview was found through GitHub metadata; the unauthenticated page
+  and `/api/health` both returned `401`. Without Vercel project credentials or a
+  production domain, this does not verify authenticated application behavior or
+  production environment settings. See the M1 addendum in
+  `cloud-deployment.md`; checked-in deployment defaults are not proof of hosted
+  settings.
+- The existing Neon recovery branch is a ready child of production but contains
+  Alembic `12a6f0d9c3e1`, predating the current production head `6c2eaf0b8147`,
+  and expires on 2026-11-24. It is not a current-schema pre-migration restore
+  point. Create and verify a fresh recovery branch from the current primary
+  before any separately authorized production migration.
 - Render Free API instances sleep after 15 minutes idle. The API process does not
   run workers. A bootstrap spanning provider calls is not a reliable request or
   web-service operation. The optional Render Cron path is a separately billed

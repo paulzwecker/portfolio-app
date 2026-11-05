@@ -4,9 +4,65 @@ This document carries forward the Milestone 13A deployment foundation and a
 Milestone 13B status snapshot dated 2026-10-17. That snapshot records Neon as
 connected to the existing `portfolio-research` project and `production` branch,
 with Render and Vercel then unprovisioned and scheduled ingestion inactive. The
-Milestone 14B-R task context says Render and Vercel have since been deployed; no
-live cloud check was made during this review, so confirm the present service
-settings in their consoles before relying on deployment steps below.
+historical snapshot below does not describe the current production schema or
+deployment status. The live read-only checks recorded in the M1 addendum below
+supersede it where they differ.
+
+## Current deployment workflow
+
+For current instructions, use [Native deployment and separately reviewed
+migrations](deployment-and-migrations.md). It supersedes older coordinated-release
+workflow references in this historical guide. The checked-in configuration uses
+GitHub PR CI, Render's native deploy-after-checks behavior, and Vercel's native
+production/preview Git deployments. Production schema migration remains an explicit,
+separately authorized operator command with a fresh recovery point.
+
+## M1 live verification — 2026-11-01
+
+- GitHub deployment metadata records a successful Render `main - portfolio-api`
+  deployment for commit `6bd9fa0`. A read-only request to the configured Render
+  service returned `200` from `/health/live`; `/health/ready` returned `503`
+  with `database=connected` and `schema=outdated`. The deployed application is
+  therefore running but not ready against the live database. The unauthenticated
+  `/v1/companies` request returned `401`, consistent with the API access gate.
+- Neon was independently verified at Alembic head `6c2eaf0b8147`; this checkout
+  expects `9f2a6d4c81b7`. No migration, production write, ingestion or deployment
+  was performed during M1.
+- The Render control-plane API rejected the locally configured read token with
+  HTTP `401`. The Render service's live environment-variable names and deployed
+  worker flags could not be inspected. The checked-in `render.yaml` defaults
+  ingestion and recurring operations off, but it does not prove that dashboard
+  overrides are absent.
+- GitHub records a successful Vercel status for the merged M0 commit, and the
+  existing PR preview was discoverable from PR metadata. Unauthenticated requests
+  to its page and `/api/health` returned `401`, but the response did not identify
+  whether Vercel Deployment Protection or the application's Basic Auth gate
+  produced it. No Vercel CLI, project link, API token or production domain is
+  configured locally, so authenticated behavior and production environment
+  settings remain unverified.
+- The existing Neon recovery branch is ready and is a child of the primary
+  branch, but its snapshot has Alembic head `12a6f0d9c3e1`, while current
+  production is at `6c2eaf0b8147`. It expires on 2026-11-24. It is not a current
+  pre-migration recovery point for an upgrade from the live production schema.
+
+### Historical M1 deployment and recovery notes
+
+The API startup intentionally does not migrate the database. `/health/live` only
+checks that FastAPI is serving; `/health/ready` and the `/api/health` proxy include
+database schema readiness. The current checked-in Render configuration now uses
+`/health/ready` as a deploy health gate. The older production service may still use
+its prior dashboard configuration until the owner follows the current runbook; do
+not assume the Blueprint has been synced. Do not point a Vercel preview at the
+production API or database. The current API shares one Neon database across its
+instances, and shared Basic Auth is not per-user authorization.
+
+Before a production migration, create a fresh recovery branch from the verified
+current primary, then independently verify its parent, expiry, endpoint, database,
+schema head and data inventory. Do not use the stale recovery branch or downgrade
+the production schema as an application rollback strategy. Keep production write
+authorization, ingestion, recurring jobs and Sheets polling disabled until their
+separate review gates pass. The detailed step order and temporary deploy freezes
+are in the current deployment runbook linked above.
 
 ## Milestone 13B activation status — 2026-10-17
 
@@ -79,7 +135,7 @@ There is no Docker requirement. Render uses its native Python runtime and `uv`; 
 | ------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `APP_ENV`                            | Yes      | `production` for the main API or `preview` for an isolated preview API. Both modes fail startup without a 32+ character token.        |
 | `PYTHON_VERSION`                     | Yes      | `3.13.16`; pinned within the API's `>=3.12,<3.14` supported range.                                                                    |
-| `DATABASE_URL`                       | Yes      | Neon **direct** connection URL using `postgresql+psycopg://...?...sslmode=require`. Use the non-pooler hostname.                      |
+| `DATABASE_URL`                       | Yes      | Neon **direct** connection URL using `postgresql+psycopg://...?...sslmode=verify-full`. Use the non-pooler hostname.                  |
 | `API_ACCESS_TOKEN`                   | Yes      | Random secret of at least 32 characters. Copy the same value to Vercel's matching environment scope. Never use a `NEXT_PUBLIC_` name. |
 | `CLOUD_INGESTION_ENABLED`            | No       | `false` initially. Set `true` only on an explicitly approved cron service.                                                            |
 | `RECURRING_OPERATIONS_ENABLED`       | No       | `false` initially; set `true` on the API and cron services only when the cron is activated.                                           |
@@ -125,15 +181,15 @@ Local development defaults to `APP_ENV=development`, where the remote auth gates
 
 ## Neon connection, TLS and pooling
 
-Create a Neon project in the same region as Render when possible (Frankfurt is configured in the Blueprint). Choose PostgreSQL 18 to match the major version verified by the repository's existing PostgreSQL setup. In Neon, copy the **Direct connection** URL. Replace the URI scheme `postgresql://` with `postgresql+psycopg://` and retain `sslmode=require`, for example:
+Create a Neon project in the same region as Render when possible (Frankfurt is configured in the Blueprint). Choose PostgreSQL 18 to match the major version verified by the repository's existing PostgreSQL setup. In Neon, copy the **Direct connection** URL. Replace the URI scheme `postgresql://` with `postgresql+psycopg://` and set `sslmode=verify-full`, for example:
 
 ```text
-postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=require
+postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=verify-full
 ```
 
 The password must be URL-encoded. Never put the real URL in this guide, Git, Vercel client variables or a browser request. Existing SQLAlchemy settings use `pool_pre_ping`, a 3-second connection timeout and a bounded pool of 2 connections plus at most 2 overflow connections per process.
 
-Use Neon's direct endpoint for this application. The market and recurring workers acquire session-scoped PostgreSQL advisory locks with `pg_try_advisory_lock`; transaction-pooler connections do not preserve the session semantics these locks require. SQLAlchemy provides the small persistent application-side pool, and `sslmode=require` encrypts each database connection. Alembic reads the same `DATABASE_URL` as the API.
+Use Neon's direct endpoint for this application. The market and recurring workers acquire session-scoped PostgreSQL advisory locks with `pg_try_advisory_lock`; transaction-pooler connections do not preserve the session semantics these locks require. SQLAlchemy provides the small persistent application-side pool. `sslmode=verify-full` encrypts each connection and verifies the endpoint hostname. Alembic reads the same `DATABASE_URL` as the API.
 
 ## Migrations and safe database migration
 
@@ -145,7 +201,7 @@ historical domains that require preservation or explicit omission approval.
 Deploying the API does not change the database. For a **new empty Neon database**, apply the checked-in Alembic chain from a trusted workstation after setting its `DATABASE_URL` for that PowerShell session:
 
 ```powershell
-$env:DATABASE_URL = 'postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=require'
+$env:DATABASE_URL = 'postgresql+psycopg://<role>:<url-encoded-password>@<direct-endpoint>:5432/<database>?sslmode=verify-full'
 npm run db:migrate
 npm run db:check
 Remove-Item Env:DATABASE_URL
@@ -212,17 +268,17 @@ Set `RECURRING_OPERATIONS_ENABLED=true` on the API service at the same time if t
 ### 1. Neon
 
 1. Create a project named `portfolio-research` and select PostgreSQL 18, Frankfurt, and a project/branch dedicated to this environment.
-2. Open **Connect**, select **Direct connection**, and copy the URL. Use the direct endpoint, set TLS with `sslmode=require`, URL-encode the password, and change the driver prefix to `postgresql+psycopg://` for application settings.
+2. Open **Connect**, select **Direct connection**, and copy the URL. Use the direct endpoint, set TLS with `sslmode=verify-full`, URL-encode the password, and change the driver prefix to `postgresql+psycopg://` for application settings.
 3. Keep the URL in a password manager until entering it in Render. Do not create a second database containing real data unless its transfer is approved.
 
 ### 2. Render
 
 1. Open Render Dashboard → **New → Blueprint** and connect this GitHub repo.
 2. Select the repository's `main` branch. Render reads root `render.yaml` and shows a Python **Web Service** named `portfolio-api`, region **Frankfurt**, plan **Free**, root directory `apps/api`.
-3. Confirm Build Command `uv sync --locked --no-dev`, Start Command `uv run --locked --no-dev uvicorn portfolio_api.main:app --host 0.0.0.0 --port $PORT`, Health Check Path `/health/live`, and `PYTHON_VERSION=3.13.16`.
+3. Confirm Build Command `uv sync --locked --no-dev`, Start Command `uv run --locked --no-dev uvicorn portfolio_api.main:app --host 0.0.0.0 --port $PORT`, Health Check Path `/health/ready`, and `PYTHON_VERSION=3.13.16`. Keep Auto-Deploy set to **After CI Checks Pass**; use [the current deployment runbook](deployment-and-migrations.md) for the ordered migration and first-activation procedure.
 4. Enter the Neon direct URL for `DATABASE_URL`. Generate a random `API_ACCESS_TOKEN` of at least 32 characters and use the same value later in Vercel Production. Leave provider keys blank. Confirm ingestion variables remain `false` and `GOOGLE_SHEETS_POLL_SECONDS` remains `0`.
 5. Apply the Blueprint and wait for the deploy. The Render service URL will be `https://portfolio-api.onrender.com` unless Render reports a naming conflict.
-6. Apply Alembic to the empty Neon database using the PowerShell command above. Check Render `https://portfolio-api.onrender.com/health/live` for `200`, then `/health/ready` for `schema=current`.
+6. Apply Alembic to the empty Neon database only through the separately reviewed procedure in [the current deployment runbook](deployment-and-migrations.md). Check `/health/live` for process liveness and `/health/ready` for `schema=current`.
 
 For an always-on API, change only its compute plan to `0.5c-512mb` (the Render Starter plan) in **Service → Settings → Instance Type**. Do not add persistent disk storage; PostgreSQL lives in Neon.
 
@@ -239,17 +295,13 @@ Vercel Hobby is limited to personal, non-commercial use. Use the plan allowed by
 
 ## Verification and known limits
 
-Local verification for this milestone is recorded above. The Neon project and
-production branch were verified live, including migrations, readiness and a
-temporary FastAPI connection. Render and Vercel have not been connected or
-deployed. Before enabling a remote write flow, verify:
-
-1. An unauthenticated Vercel page and `/api/research/*` request return `401`.
-2. Authenticated Vercel requests use the server-side token; browser source and responses do not contain it.
-3. A direct Render `/v1/*` request without `X-API-Access-Token` returns `401`; direct health checks remain available.
-4. `/api/health` reports database connection and current Alembic schema.
-5. Preview uses an isolated Neon branch/API before enabling its API token.
-6. An optional cron is absent until approved; when later created, its disabled gate is tested before setting `CLOUD_INGESTION_ENABLED=true`.
+The 2026-10-17 activation results below are historical. The M1 live status above
+is the current observed baseline. Authenticated Vercel page/API behavior,
+Vercel production settings, Render dashboard overrides, `/api/health` with
+credentials, and the absence of a remotely configured Cron service still need
+verification through authorized provider access. A `401` from an unauthenticated
+preview does not by itself prove which of the platform or application gates
+handled the request.
 
 The local database sizing check is recorded above. The root `.env` remains a local-development configuration and must not be replaced with a Neon URL during normal local work.
 

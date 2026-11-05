@@ -849,7 +849,7 @@ def _application_table_names(required_tables: tuple[str, ...] | None = None) -> 
     if required_tables is None:
         return tuple(sorted(available))
     requested = set(required_tables)
-    if not requested or len(requested) != len(required_tables) or not requested <= available:
+    if len(requested) != len(required_tables) or not requested <= available:
         raise DatabaseWriteTargetError(
             "read_table_scope_invalid",
             "The read-only target check requested an unsupported application table scope.",
@@ -1271,6 +1271,9 @@ def verify_database_read_target(
 
     The default checks the complete mapped schema. Narrow scopes are intended only
     for documented read-only previews that query a strict subset of domain tables.
+    An explicit empty tuple verifies connection/target identity without requiring
+    application tables; use it only to prove a new database is empty before its
+    first migration. It does not authorize writes.
     """
     guard = getattr(engine, "_portfolio_database_read_only_guard", None)
     if not isinstance(guard, DatabaseReadOnlyGuard):

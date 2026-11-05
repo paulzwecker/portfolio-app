@@ -343,6 +343,9 @@ def _run_one_job(
 def _run_sec_domain(
     engine: Engine, settings: Settings, domain: ExternalDataDomain, now_at: datetime
 ) -> dict[str, object]:
+    if now_at.tzinfo is None:
+        raise ValueError("SEC scheduled operation timestamp must be timezone-aware")
+    now_utc = now_at.astimezone(UTC)
     if not settings.sec_user_agent:
         return {
             "status": "BLOCKED",
@@ -364,7 +367,7 @@ def _run_sec_domain(
         replay_of = None
         replay_scope: dict[str, Any] | None = None
         replay_count = 0
-        if latest is not None and latest.created_at.date() == now_at.date():
+        if latest is not None and latest.created_at.astimezone(UTC).date() == now_utc.date():
             last_attempt = session.scalar(
                 select(ExternalIngestionAttempt)
                 .where(ExternalIngestionAttempt.run_id == latest.id)
@@ -388,7 +391,7 @@ def _run_sec_domain(
                         ExternalIngestionRun.replay_of_run_id.is_not(None),
                         ExternalIngestionRun.domain == domain.value,
                         ExternalIngestionRun.created_at
-                        >= datetime.combine(now_at.date(), datetime.min.time(), UTC),
+                        >= datetime.combine(now_utc.date(), datetime.min.time(), UTC),
                     )
                 )
                 or 0
@@ -405,7 +408,7 @@ def _run_sec_domain(
             session,
             settings,
             domains=[domain],
-            run_date=now_at.date(),
+            run_date=now_utc.date(),
             replay_of_run_id=replay_of,
             replay_scope=replay_scope,
         )

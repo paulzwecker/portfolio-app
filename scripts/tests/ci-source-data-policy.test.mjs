@@ -17,6 +17,16 @@ const workflow = await import("node:fs").then(({ readFileSync }) =>
 
 test("all GitHub CI checkouts use the restricted source tree", () => {
   assert.doesNotThrow(() => validateWorkflowCheckoutPolicy(workflow));
+  assert.throws(
+    () =>
+      validateWorkflowCheckoutPolicy(
+        workflow.replace(
+          "/docs/deployment-and-migrations.md",
+          "/docs/private-source-notes.md",
+        ),
+      ),
+    /only the deployment and migration runbook/,
+  );
 });
 
 test("GitHub CI cannot access Google credentials, workbook IDs or source snapshots", () => {
@@ -66,6 +76,17 @@ test("the CI source-data guard detects excluded operator input paths", () => {
       recursive: true,
     });
     assert.deepEqual(findForbiddenSourcePaths(root), []);
+    writeFileSync(
+      path.join(root, "docs", "deployment-and-migrations.md"),
+      "public runbook",
+    );
+    assert.deepEqual(findForbiddenSourcePaths(root), []);
+    writeFileSync(
+      path.join(root, "docs", "private-source-notes.md"),
+      "private document",
+    );
+    assert.deepEqual(findForbiddenSourcePaths(root), ["docs"]);
+    rmSync(path.join(root, "docs", "private-source-notes.md"));
     mkdirSync(path.join(root, "reference", "workbook"), { recursive: true });
     writeFileSync(
       path.join(root, "reference", "workbook", "synthetic.xlsx"),

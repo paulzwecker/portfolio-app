@@ -22,7 +22,7 @@ def test_remote_api_requires_proxy_token_except_health_checks() -> None:
     settings = Settings(
         _env_file=None,
         database_url=SecretStr(
-            "postgresql+psycopg://portfolio_app:password@127.0.0.1/portfolio_app?sslmode=require"
+            "postgresql+psycopg://portfolio_app:password@127.0.0.1/portfolio_app?sslmode=verify-full"
         ),
         app_env="production",
         api_access_token=SecretStr("x" * 40),
@@ -55,7 +55,7 @@ def test_remote_api_settings_fail_closed_without_token() -> None:
         Settings(
             _env_file=None,
             database_url=SecretStr(
-                "postgresql+psycopg://portfolio_app:password@127.0.0.1/portfolio_app?sslmode=require"
+                "postgresql+psycopg://portfolio_app:password@127.0.0.1/portfolio_app?sslmode=verify-full"
             ),
             app_env="preview",
             api_access_token=None,
@@ -77,19 +77,31 @@ def test_remote_api_requires_long_access_token() -> None:
         Settings(
             _env_file=None,
             database_url=SecretStr(
-                "postgresql+psycopg://portfolio_app:password@127.0.0.1/portfolio_app?sslmode=require"
+                "postgresql+psycopg://portfolio_app:password@127.0.0.1/portfolio_app?sslmode=verify-full"
             ),
             app_env="production",
             api_access_token=SecretStr("too-short"),
         )
 
 
-def test_remote_api_requires_tls_database_url() -> None:
-    with pytest.raises(ValidationError, match="sslmode=require"):
+def test_remote_api_requires_hostname_verified_tls_database_url() -> None:
+    with pytest.raises(ValidationError, match="sslmode=verify-full"):
         Settings(
             _env_file=None,
             database_url=SecretStr(
                 "postgresql+psycopg://portfolio_app:password@localhost/portfolio_app"
+            ),
+            app_env="production",
+            api_access_token=SecretStr("x" * 40),
+        )
+
+
+def test_remote_api_rejects_encryption_without_hostname_verification() -> None:
+    with pytest.raises(ValidationError, match="sslmode=verify-full"):
+        Settings(
+            _env_file=None,
+            database_url=SecretStr(
+                "postgresql+psycopg://portfolio_app:password@db.example/neondb?sslmode=require"
             ),
             app_env="production",
             api_access_token=SecretStr("x" * 40),
