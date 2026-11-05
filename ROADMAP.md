@@ -14,7 +14,7 @@
 | Status                  | `M1 PARTIAL; readiness diagnostics IMPLEMENTATION_COMPLETE/LOCAL_VERIFIED; production connection failure UNRESOLVED`                |
 | Current branch / commit | `codex/readiness-connection-diagnostics` based on `81e883c`.                                                                        |
 | Last verified tests     | Focused readiness tests and targeted static checks; see diagnostic PR for exact evidence.                                           |
-| Latest PR               | PR #15 merged as `81e883c`; connection diagnostics PR pending creation.                                                             |
+| Latest PR               | PR #15 merged as `81e883c`; [connection diagnostics PR #16](https://github.com/paulzwecker/portfolio-app/pull/16) is open.          |
 | Primary blocker         | Render readiness remains 503; its existing logs do not reveal the swallowed SQLAlchemy failure.                                     |
 | Next approval gate      | Review diagnostic PR; deployment or live provider setting changes require separate explicit owner authorization.                    |
 
