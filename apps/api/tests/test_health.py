@@ -1,3 +1,5 @@
+import socket
+import ssl
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -151,6 +153,82 @@ def test_connection_failure_does_not_expose_credentials() -> None:
     assert result.database == "unavailable"
     assert result.schema_status == "unavailable"
     assert "secret" not in result.model_dump_json()
+
+
+@pytest.mark.parametrize(
+    ("message", "category"),
+    [
+        ("certificate verify failed", "tls_certificate"),
+        ("password authentication failed", "authentication"),
+        ("could not translate host name", "dns"),
+        ("connection timed out", "timeout"),
+        ("unexpected error", "other"),
+    ],
+)
+def test_readiness_logs_only_safe_connection_diagnostics(
+    caplog: pytest.LogCaptureFixture, message: str, category: str
+) -> None:
+    engine = MagicMock(spec=Engine)
+    engine.connect.side_effect = OperationalError(
+        "postgresql://secret-user:secret-password@private-host/db",
+        {},
+        Exception(f"{message}; secret-password private-host"),
+    )
+    result = check_readiness(engine, {"head"})
+    assert result.database == "unavailable"
+    assert result.schema_status == "unavailable"
+    assert f'"category": "{category}"' in caplog.text
+    assert '"exception_class": "Exception"' in caplog.text
+    assert '"phase": "connection"' in caplog.text
+    assert "secret" not in caplog.text
+    assert "private-host" not in caplog.text
+
+
+def test_readiness_logs_schema_query_errors_without_driver_message(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    engine = MagicMock(spec=Engine)
+    with patch("portfolio_api.health.MigrationContext.configure") as configure:
+        configure.return_value.get_current_heads.side_effect = ProgrammingError(
+            "private SQL", {}, Exception("private driver message")
+        )
+        result = check_readiness(engine, {"head"})
+    assert result.database == "connected"
+    assert result.schema_status == "unavailable"
+    assert '"phase": "schema_query"' in caplog.text
+    assert "private" not in caplog.text
+
+
+def test_readiness_classifies_safe_authentication_sqlstate(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class DriverError(Exception):
+        sqlstate = "28P01"
+
+    engine = MagicMock(spec=Engine)
+    engine.connect.side_effect = OperationalError("private SQL", {}, DriverError("private"))
+    check_readiness(engine, {"head"})
+    assert '"category": "authentication"' in caplog.text
+    assert '"sqlstate": "28P01"' in caplog.text
+    assert "private" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("original", "category"),
+    [
+        (ssl.SSLCertVerificationError("private"), "tls_certificate"),
+        (socket.gaierror("private"), "dns"),
+        (TimeoutError("private"), "timeout"),
+    ],
+)
+def test_readiness_classifies_typed_errors_without_exposing_messages(
+    caplog: pytest.LogCaptureFixture, original: Exception, category: str
+) -> None:
+    engine = MagicMock(spec=Engine)
+    engine.connect.side_effect = OperationalError("private SQL", {}, original)
+    check_readiness(engine, {"head"})
+    assert f'"category": "{category}"' in caplog.text
+    assert "private" not in caplog.text
 
 
 def test_connected_database_with_old_schema_is_not_ready(caplog: pytest.LogCaptureFixture) -> None:
