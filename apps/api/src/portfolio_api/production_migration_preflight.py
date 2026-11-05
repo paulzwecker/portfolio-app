@@ -44,6 +44,7 @@ PRODUCTION_BASE_REVISION = "6c2eaf0b8147"
 RELEASE_HEAD = "9f2a6d4c81b7"
 CORE_READ_TABLES = ("companies",)
 MIGRATION_CONFIRMATION_PREFIX = "MIGRATE"
+INITIAL_BOOTSTRAP_CONFIRMATION_PREFIX = "INITIALIZE"
 
 
 class ProductionMigrationPreflightError(RuntimeError):
@@ -83,6 +84,23 @@ def validate_recovery_window(
 
 
 def validate_read_settings(settings: Settings) -> None:
+    _validate_common_production_read_settings(settings)
+    if (
+        settings.neon_project_id != PROJECT_ID
+        or settings.neon_branch_id != PRIMARY_BRANCH_ID
+        or settings.neon_endpoint_id != PRIMARY_ENDPOINT_ID
+    ):
+        raise ProductionMigrationPreflightError("verified_neon_production_identity_required")
+
+
+def validate_fresh_bootstrap_read_settings(settings: Settings) -> None:
+    """Validate a configured production primary for an empty-database bootstrap."""
+    _validate_common_production_read_settings(settings)
+    if not all((settings.neon_project_id, settings.neon_branch_id, settings.neon_endpoint_id)):
+        raise ProductionMigrationPreflightError("verified_neon_production_identity_required")
+
+
+def _validate_common_production_read_settings(settings: Settings) -> None:
     if settings.database_url is None:
         raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
     if settings.app_env != "development":
@@ -91,11 +109,18 @@ def validate_read_settings(settings: Settings) -> None:
         )
     if settings.database_target_environment != "production":
         raise ProductionMigrationPreflightError("production_database_target_environment_mismatch")
-    if settings.database_target_database != DATABASE_NAME:
-        raise ProductionMigrationPreflightError("production_database_name_mismatch")
-    if settings.database_production_writes_authorized:
+    if not settings.database_target_database:
+        raise ProductionMigrationPreflightError("production_database_name_missing")
+    if any(
+        (
+            settings.database_local_test_writes_authorized,
+            settings.database_local_writes_authorized,
+            settings.database_rehearsal_writes_authorized,
+            settings.database_production_writes_authorized,
+        )
+    ):
         raise ProductionMigrationPreflightError(
-            "production_write_authorization_must_be_disabled_in_preflight"
+            "all_database_write_authorizations_must_be_disabled_in_preflight"
         )
     if (
         any(
@@ -110,16 +135,11 @@ def validate_read_settings(settings: Settings) -> None:
         or settings.google_sheets_poll_seconds != 0
     ):
         raise ProductionMigrationPreflightError("background_operations_must_be_disabled")
-    if (
-        settings.neon_project_id != PROJECT_ID
-        or settings.neon_branch_id != PRIMARY_BRANCH_ID
-        or settings.neon_endpoint_id != PRIMARY_ENDPOINT_ID
-        or settings.neon_api_key is None
-    ):
+    if settings.neon_api_key is None:
         raise ProductionMigrationPreflightError("verified_neon_production_identity_required")
     url = make_url(settings.database_url.get_secret_value())
     if (
-        url.database != DATABASE_NAME
+        url.database != settings.database_target_database
         or url.host is None
         or "-pooler." in url.host
         or url.query.get("sslmode") != "verify-full"
@@ -151,6 +171,40 @@ def _database_inventory(engine: Engine) -> tuple[dict[str, int], str, int]:
         return counts, hashlib.sha256(canonical).hexdigest(), sum(counts.values())
     except SQLAlchemyError:
         raise ProductionMigrationPreflightError("database_inventory_read_failed") from None
+
+
+def _user_relations(engine: Engine) -> tuple[str, ...]:
+    """Return user-schema relations that would make a target non-empty."""
+    try:
+        with engine.connect() as connection:
+            rows: list[Any] = list(
+                connection.execute(
+                    text(
+                        """SELECT n.nspname || '.' || c.relname
+                       FROM pg_catalog.pg_class AS c
+                       JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+                       WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+                         AND n.nspname !~ '^pg_'
+                         AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+                       ORDER BY n.nspname, c.relname"""
+                    )
+                ).scalars()
+            )
+            relations = tuple(str(value) for value in rows)
+            connection.rollback()
+            return relations
+    except SQLAlchemyError:
+        raise ProductionMigrationPreflightError("database_relation_inventory_read_failed") from None
+
+
+def _current_schema(engine: Engine) -> str:
+    try:
+        with engine.connect() as connection:
+            schema = connection.execute(text("SELECT current_schema()")).scalar_one_or_none()
+            connection.rollback()
+            return str(schema or "")
+    except SQLAlchemyError:
+        raise ProductionMigrationPreflightError("database_schema_identity_read_failed") from None
 
 
 def _branch_timestamps(
@@ -242,7 +296,7 @@ def _verify_recovery(
         engine.dispose()
 
 
-def _checkout_sha() -> str:
+def _checkout_sha(*, allow_codex_branch: bool = False) -> str:
     value = os.environ.get("EXPECTED_CHECKOUT_SHA", "")
     if not re.fullmatch(r"[0-9a-f]{40}", value):
         raise ProductionMigrationPreflightError("checkout_sha_invalid")
@@ -270,11 +324,119 @@ def _checkout_sha() -> str:
         raise ProductionMigrationPreflightError("checkout_identity_unavailable") from None
     if checkout_sha != value:
         raise ProductionMigrationPreflightError("checkout_sha_mismatch")
-    if branch != "main":
+    if branch != "main" and not (allow_codex_branch and branch.startswith("codex/")):
         raise ProductionMigrationPreflightError("checkout_must_be_main")
     if status:
         raise ProductionMigrationPreflightError("checkout_must_be_clean")
     return value
+
+
+def initial_bootstrap_confirmation(
+    *, project_id: str, branch_id: str, endpoint_id: str, database: str, target: str
+) -> str:
+    """Bind the empty-target review to one Neon primary and full migration range."""
+    return (
+        f"{INITIAL_BOOTSTRAP_CONFIRMATION_PREFIX} {project_id}/{branch_id}/{endpoint_id}/"
+        f"{database}/base->{target}"
+    )
+
+
+def run_fresh_bootstrap_preflight() -> dict[str, str]:
+    """Read-only proof that an exact Neon primary is empty before its first migration."""
+    checkout_sha = _checkout_sha(allow_codex_branch=True)
+    if os.environ.get("APP_ENV") != "development":
+        raise ProductionMigrationPreflightError(
+            "production_migration_preflight_app_env_must_be_development"
+        )
+    settings = Settings(_env_file=None)
+    validate_fresh_bootstrap_read_settings(settings)
+    if expected_heads() != {RELEASE_HEAD}:
+        raise ProductionMigrationPreflightError("repository_migration_head_unexpected")
+    engine = create_database_engine(settings, read_only=True)
+    if engine is None:
+        raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
+    try:
+        verify_database_read_target(engine, required_tables=())
+        if _current_schema(engine) != "public":
+            raise ProductionMigrationPreflightError("fresh_bootstrap_default_schema_must_be_public")
+        current = _current_heads(engine)
+        if current:
+            raise ProductionMigrationPreflightError(
+                "fresh_bootstrap_target_already_has_migration_state"
+            )
+        relations = _user_relations(engine)
+        if relations:
+            raise ProductionMigrationPreflightError("fresh_bootstrap_target_contains_relations")
+        inventory, fingerprint, total_rows = _database_inventory(engine)
+        if inventory or total_rows:
+            raise ProductionMigrationPreflightError("fresh_bootstrap_target_contains_tables")
+        database = settings.database_target_database
+        project_id = settings.neon_project_id
+        branch_id = settings.neon_branch_id
+        endpoint_id = settings.neon_endpoint_id
+        if not all((database, project_id, branch_id, endpoint_id)):
+            raise ProductionMigrationPreflightError("verified_neon_production_identity_required")
+        expected_confirmation = initial_bootstrap_confirmation(
+            project_id=str(project_id),
+            branch_id=str(branch_id),
+            endpoint_id=str(endpoint_id),
+            database=str(database),
+            target=RELEASE_HEAD,
+        )
+        if os.environ.get("INITIAL_BOOTSTRAP_CONFIRMATION", "") != expected_confirmation:
+            raise ProductionMigrationPreflightError("exact_initial_bootstrap_confirmation_mismatch")
+        return {
+            "checkout_sha": checkout_sha,
+            "database_name": str(database),
+            "neon_project_id": str(project_id),
+            "neon_primary_branch_id": str(branch_id),
+            "neon_endpoint_id": str(endpoint_id),
+            "current_head": "base",
+            "repository_head": RELEASE_HEAD,
+            "migration_required": "true",
+            "empty_database_verified": "true",
+            "public_table_count": str(len(inventory)),
+            "public_row_count": str(total_rows),
+            "user_relation_count": str(len(relations)),
+            "inventory_fingerprint": fingerprint,
+            "recovery_required": "false",
+            "write_authorization": "disabled",
+        }
+    finally:
+        engine.dispose()
+
+
+def run_fresh_bootstrap_schema_check() -> dict[str, str]:
+    """Read-only verification after the complete fresh-database upgrade."""
+    checkout_sha = _checkout_sha(allow_codex_branch=True)
+    if os.environ.get("APP_ENV") != "development":
+        raise ProductionMigrationPreflightError(
+            "production_migration_preflight_app_env_must_be_development"
+        )
+    settings = Settings(_env_file=None)
+    validate_fresh_bootstrap_read_settings(settings)
+    engine = create_database_engine(settings, read_only=True)
+    if engine is None:
+        raise ProductionMigrationPreflightError("production_readonly_database_url_missing")
+    try:
+        verify_database_read_target(engine)
+        current = _current_heads(engine)
+        if current != expected_heads() or current != {RELEASE_HEAD}:
+            raise ProductionMigrationPreflightError("fresh_bootstrap_schema_not_at_release_head")
+        with engine.connect() as connection:
+            try:
+                _check_mapped_alembic_metadata(connection)
+            finally:
+                connection.rollback()
+        return {
+            "checkout_sha": checkout_sha,
+            "database_name": str(settings.database_target_database),
+            "alembic_head": RELEASE_HEAD,
+            "metadata_check": "no_drift",
+            "connection": "read_only",
+        }
+    finally:
+        engine.dispose()
 
 
 def run_readonly_preflight() -> dict[str, str]:
@@ -416,13 +578,26 @@ def _check_mapped_alembic_metadata(connection: Connection) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("readonly", "migration-preflight", "schema-check"))
+    parser.add_argument(
+        "mode",
+        choices=(
+            "readonly",
+            "migration-preflight",
+            "schema-check",
+            "fresh-bootstrap-preflight",
+            "fresh-bootstrap-schema-check",
+        ),
+    )
     args = parser.parse_args(argv)
     try:
         if args.mode == "readonly":
             result = run_readonly_preflight()
         elif args.mode == "migration-preflight":
             result = run_migration_preflight()
+        elif args.mode == "fresh-bootstrap-preflight":
+            result = run_fresh_bootstrap_preflight()
+        elif args.mode == "fresh-bootstrap-schema-check":
+            result = run_fresh_bootstrap_schema_check()
         else:
             result = run_readonly_schema_check()
         print(json.dumps(result, sort_keys=True))

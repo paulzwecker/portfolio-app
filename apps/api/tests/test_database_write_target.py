@@ -203,6 +203,7 @@ def test_read_only_production_target_needs_no_production_write_authorization(
 
 
 def test_read_target_table_scope_is_a_subset_of_mapped_application_tables() -> None:
+    assert _application_table_names(()) == ()
     scoped = _application_table_names(("companies", "securities", "listings"))
     assert scoped == ("companies", "listings", "securities")
     assert "model_identity_bootstrap_receipts" in _application_table_names()

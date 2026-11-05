@@ -5,18 +5,299 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from alembic.config import Config
 from alembic.util.exc import CommandError
+from pydantic import SecretStr
 
 from portfolio_api.production_migration_preflight import (
     PRODUCTION_BASE_REVISION,
     RELEASE_HEAD,
     ProductionMigrationPreflightError,
     _checkout_sha,
+    initial_bootstrap_confirmation,
     migration_confirmation,
     migration_required,
+    run_fresh_bootstrap_preflight,
+    run_fresh_bootstrap_schema_check,
     run_migration_preflight,
     run_readonly_schema_check,
+    validate_fresh_bootstrap_read_settings,
     validate_recovery_window,
 )
+from portfolio_api.settings import Settings
+
+
+def fresh_settings(**overrides: Any) -> Settings:
+    values: dict[str, Any] = {
+        "database_url": SecretStr(
+            "postgresql+psycopg://reader:synthetic-password@"
+            "ep-new-primary.example.neon.tech:5432/newdb?sslmode=verify-full"
+        ),
+        "app_env": "development",
+        "database_target_environment": "production",
+        "database_target_database": "newdb",
+        "database_production_writes_authorized": False,
+        "database_rehearsal_writes_authorized": False,
+        "database_local_writes_authorized": False,
+        "database_local_test_writes_authorized": False,
+        "neon_api_key": SecretStr("synthetic-neon-key"),
+        "neon_project_id": "prj_new_example",
+        "neon_branch_id": "br_new_primary",
+        "neon_endpoint_id": "ep_new_direct",
+        "cloud_ingestion_enabled": False,
+        "recurring_operations_enabled": False,
+        "manual_operations_enabled": False,
+        "workbook_sync_enabled": False,
+        "google_sheets_poll_seconds": 0,
+        "fmp_consensus_ingestion_enabled": False,
+    }
+    values.update(overrides)
+    return Settings(**values)
+
+
+def test_fresh_bootstrap_settings_accept_a_configured_new_primary() -> None:
+    validate_fresh_bootstrap_read_settings(fresh_settings())
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"database_target_database": "another_database"}, "production_direct_tls_target_invalid"),
+        ({"database_production_writes_authorized": True}, "all_database_write_authorizations"),
+        ({"recurring_operations_enabled": True}, "background_operations_must_be_disabled"),
+        ({"neon_endpoint_id": None}, "verified_neon_production_identity_required"),
+        (
+            {
+                "database_url": SecretStr(
+                    "postgresql+psycopg://reader:synthetic-password@"
+                    "ep-new-primary-pooler.example.neon.tech:5432/newdb?sslmode=verify-full"
+                )
+            },
+            "production_direct_tls_target_invalid",
+        ),
+    ],
+)
+def test_fresh_bootstrap_settings_reject_unsafe_targets(
+    overrides: dict[str, Any], message: str
+) -> None:
+    with pytest.raises(ProductionMigrationPreflightError, match=message):
+        validate_fresh_bootstrap_read_settings(fresh_settings(**overrides))
+
+
+def test_fresh_bootstrap_confirmation_binds_target_and_full_chain() -> None:
+    assert initial_bootstrap_confirmation(
+        project_id="prj_new_example",
+        branch_id="br_new_primary",
+        endpoint_id="ep_new_direct",
+        database="newdb",
+        target=RELEASE_HEAD,
+    ) == (f"INITIALIZE prj_new_example/br_new_primary/ep_new_direct/newdb/base->{RELEASE_HEAD}")
+
+
+def test_fresh_bootstrap_preflight_accepts_only_verified_empty_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = fresh_settings()
+    engine = Mock()
+    confirmation = initial_bootstrap_confirmation(
+        project_id="prj_new_example",
+        branch_id="br_new_primary",
+        endpoint_id="ep_new_direct",
+        database="newdb",
+        target=RELEASE_HEAD,
+    )
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("INITIAL_BOOTSTRAP_CONFIRMATION", confirmation)
+    with (
+        patch(
+            "portfolio_api.production_migration_preflight._checkout_sha",
+            return_value="a" * 40,
+        ) as checkout,
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch(
+            "portfolio_api.production_migration_preflight.validate_fresh_bootstrap_read_settings"
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.expected_heads",
+            return_value={RELEASE_HEAD},
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.create_database_engine",
+            return_value=engine,
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.verify_database_read_target"
+        ) as read_guard,
+        patch(
+            "portfolio_api.production_migration_preflight._current_schema", return_value="public"
+        ),
+        patch("portfolio_api.production_migration_preflight._current_heads", return_value=set()),
+        patch("portfolio_api.production_migration_preflight._user_relations", return_value=()),
+        patch(
+            "portfolio_api.production_migration_preflight._database_inventory",
+            return_value=({}, "empty-inventory-hash", 0),
+        ),
+        patch("portfolio_api.production_migration_preflight._verify_recovery") as recovery,
+    ):
+        result = run_fresh_bootstrap_preflight()
+
+    checkout.assert_called_once_with(allow_codex_branch=True)
+    read_guard.assert_called_once_with(engine, required_tables=())
+    recovery.assert_not_called()
+    engine.dispose.assert_called_once()
+    assert result["migration_required"] == "true"
+    assert result["empty_database_verified"] == "true"
+    assert result["recovery_required"] == "false"
+    assert result["write_authorization"] == "disabled"
+
+
+@pytest.mark.parametrize(
+    ("heads", "relations", "inventory", "rows", "message"),
+    [
+        ({"6c2eaf0b8147"}, (), {}, 0, "already_has_migration_state"),
+        (set(), ("public.companies",), {"companies": 0}, 0, "contains_relations"),
+        (set(), (), {"reference_data": 1}, 1, "contains_tables"),
+    ],
+)
+def test_fresh_bootstrap_preflight_rejects_initialized_or_data_bearing_targets(
+    monkeypatch: pytest.MonkeyPatch,
+    heads: set[str],
+    relations: tuple[str, ...],
+    inventory: dict[str, int],
+    rows: int,
+    message: str,
+) -> None:
+    settings = fresh_settings()
+    engine = Mock()
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv(
+        "INITIAL_BOOTSTRAP_CONFIRMATION",
+        initial_bootstrap_confirmation(
+            project_id="prj_new_example",
+            branch_id="br_new_primary",
+            endpoint_id="ep_new_direct",
+            database="newdb",
+            target=RELEASE_HEAD,
+        ),
+    )
+    with (
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch(
+            "portfolio_api.production_migration_preflight.validate_fresh_bootstrap_read_settings"
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.expected_heads",
+            return_value={RELEASE_HEAD},
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.create_database_engine",
+            return_value=engine,
+        ),
+        patch("portfolio_api.production_migration_preflight.verify_database_read_target"),
+        patch(
+            "portfolio_api.production_migration_preflight._current_schema", return_value="public"
+        ),
+        patch("portfolio_api.production_migration_preflight._current_heads", return_value=heads),
+        patch(
+            "portfolio_api.production_migration_preflight._user_relations", return_value=relations
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight._database_inventory",
+            return_value=(inventory, "inventory-hash", rows),
+        ),
+        pytest.raises(ProductionMigrationPreflightError, match=message),
+    ):
+        run_fresh_bootstrap_preflight()
+    engine.dispose.assert_called_once()
+
+
+def test_fresh_bootstrap_preflight_requires_exact_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = fresh_settings()
+    engine = Mock()
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("INITIAL_BOOTSTRAP_CONFIRMATION", "INITIALIZE wrong-target")
+    with (
+        patch("portfolio_api.production_migration_preflight._checkout_sha", return_value="a" * 40),
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch(
+            "portfolio_api.production_migration_preflight.validate_fresh_bootstrap_read_settings"
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.expected_heads",
+            return_value={RELEASE_HEAD},
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.create_database_engine",
+            return_value=engine,
+        ),
+        patch("portfolio_api.production_migration_preflight.verify_database_read_target"),
+        patch(
+            "portfolio_api.production_migration_preflight._current_schema", return_value="public"
+        ),
+        patch("portfolio_api.production_migration_preflight._current_heads", return_value=set()),
+        patch("portfolio_api.production_migration_preflight._user_relations", return_value=()),
+        patch(
+            "portfolio_api.production_migration_preflight._database_inventory",
+            return_value=({}, "inventory-hash", 0),
+        ),
+        pytest.raises(
+            ProductionMigrationPreflightError,
+            match="exact_initial_bootstrap_confirmation_mismatch",
+        ),
+    ):
+        run_fresh_bootstrap_preflight()
+    engine.dispose.assert_called_once()
+
+
+def test_fresh_bootstrap_schema_check_uses_verified_readonly_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = MagicMock()
+    engine = Mock()
+    connection_context = MagicMock()
+    connection_context.__enter__.return_value = connection
+    engine.connect.return_value = connection_context
+    settings = fresh_settings()
+    monkeypatch.setenv("APP_ENV", "development")
+    with (
+        patch(
+            "portfolio_api.production_migration_preflight._checkout_sha",
+            return_value="a" * 40,
+        ) as checkout,
+        patch("portfolio_api.production_migration_preflight.Settings", return_value=settings),
+        patch(
+            "portfolio_api.production_migration_preflight.validate_fresh_bootstrap_read_settings"
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.create_database_engine",
+            return_value=engine,
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.verify_database_read_target"
+        ) as read_guard,
+        patch(
+            "portfolio_api.production_migration_preflight._current_heads",
+            return_value={RELEASE_HEAD},
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight.expected_heads",
+            return_value={RELEASE_HEAD},
+        ),
+        patch(
+            "portfolio_api.production_migration_preflight._check_mapped_alembic_metadata"
+        ) as metadata_check,
+    ):
+        result = run_fresh_bootstrap_schema_check()
+
+    checkout.assert_called_once_with(allow_codex_branch=True)
+    read_guard.assert_called_once_with(engine)
+    metadata_check.assert_called_once_with(connection)
+    connection.rollback.assert_called_once()
+    engine.dispose.assert_called_once()
+    assert result["alembic_head"] == RELEASE_HEAD
+    assert result["metadata_check"] == "no_drift"
+    assert result["connection"] == "read_only"
 
 
 def test_preflight_requires_the_exact_clean_main_checkout(

@@ -96,12 +96,13 @@ reported `/health/live = 200` and `/health/ready = 503` (`schema=outdated`). Thi
 historical evidence, not a substitute for fresh verification. Recheck Neon identity,
 schema, data inventory and Render/Vercel settings before any future release action.
 
-Do **not** let this code deploy against the old schema. Use the temporary provider
-freezes below, merge only after CI and review, migrate from the exact merged checkout
-under a separate authorization, and remove the freezes only after the database and
-currently deployed API report the expected schema and readiness. The checked-in
-Render readiness path also prevents a later incompatible build from receiving
-traffic; it is a deployment backstop, not a replacement for migration sequencing.
+Do **not** point the application at this older database with code that requires the
+newer schema. For a first activation on a separate, verified-empty Neon database,
+use the short path below; it does not migrate or retire this older database. For a
+schema change to an existing data-bearing database, use the coordinated migration
+procedure in the following section. The checked-in Render readiness path keeps an
+incompatible new instance out of traffic; it is a deployment backstop, not a
+replacement for migration sequencing.
 
 The reviewed migration chain is linear:
 
@@ -113,7 +114,120 @@ The revisions add workbook-sync tables, expand two check constraints, and add mo
 identity/proposal tables. There is no data backfill. Do not assume a code rollback
 can downgrade the database: downgrades can drop new tables and reject new values.
 
-## First activation and temporary deployment freezes
+## Initial activation on a new, empty Neon database
+
+This path applies only when the exact configured Neon primary database has no
+user relations, no rows, and no Alembic revision. It upgrades that new target from
+`base` through the complete checked-in migration chain. It does not require a
+historical-schema reconciliation or recovery branch because there is no existing
+application state to preserve. If any user relation or Alembic state exists, stop
+and use the data-bearing migration procedure below; do not call the target empty.
+
+Keep the existing Render and Vercel projects. Do not point either service at the
+new database until the migration and read-only schema check succeed. Keep the
+previous Neon database intact until the new service is healthy and its read-only
+identity/data inventory has been reviewed. Retiring the previous target is a
+separate owner decision.
+
+1. In Neon, create a new database on a primary branch (or a new Neon project if
+   that is the chosen isolation boundary). Use the direct endpoint and a
+   non-superuser migration-capable role. Record its exact project, primary branch,
+   endpoint and database identifiers. Do not use a child/recovery branch as the
+   production target.
+2. In a secure local PowerShell session, configure `DATABASE_URL` with the direct
+   endpoint and `sslmode=verify-full`; set `APP_ENV=development`,
+   `DATABASE_TARGET_ENVIRONMENT=production`, `DATABASE_TARGET_DATABASE` to the
+   exact new database name, and the matching `NEON_PROJECT_ID`, `NEON_BRANCH_ID`,
+   `NEON_ENDPOINT_ID` and existing `NEON_API_KEY`. Keep all database write
+   authorizations false, `CLOUD_INGESTION_ENABLED=false`,
+   `RECURRING_OPERATIONS_ENABLED=false`, `MANUAL_OPERATIONS_ENABLED=false`,
+   workbook sync disabled, and `GOOGLE_SHEETS_POLL_SECONDS=0`. The preflight reads
+   process settings only; it does not load `.env` itself. Do not persist write
+   authorization in `.env`.
+3. Check out the clean, reviewed PR #14 commit that contains the migration graph.
+   Copy that exact 40-character SHA from the reviewed GitHub PR into
+   `EXPECTED_CHECKOUT_SHA`. Set `INITIAL_BOOTSTRAP_CONFIRMATION` to the exact
+   `INITIALIZE <project>/<primary-branch>/<endpoint>/<database>/base-><head>`
+   string shown below, using the identifiers and repository head returned by the
+   independent Neon/GitHub checks. Run the read-only preflight:
+
+   ```powershell
+   $env:EXPECTED_CHECKOUT_SHA = '<reviewed 40-character PR commit SHA>'
+   $env:INITIAL_BOOTSTRAP_CONFIRMATION = 'INITIALIZE <project>/<primary-branch>/<endpoint>/<database>/base->9f2a6d4c81b7'
+   npm run db:production-preflight -- fresh-bootstrap-preflight
+   ```
+
+   The command verifies the clean pinned `main` or `codex/*` checkout, exact Neon
+   primary through the control-plane API and live PostgreSQL connection, TLS,
+   database name, empty public/default schema, absence of user relations, absence
+   of Alembic state, and disabled write/background authorization. It reports an
+   empty-state fingerprint and `recovery_required=false`; it is read-only. A
+   mismatch, unknown relation, or changed target is a stop condition.
+
+4. Review the exact target, migration head, empty-state result and PR checks. Only
+   after separate explicit owner authorization, recheck `git rev-parse HEAD` and
+   run the existing full-chain migration with temporary process-only authorization.
+   This is `alembic upgrade head` through the guarded `db:migrate` command; never
+   use `alembic stamp`:
+
+   ```powershell
+   $previousAuthorization = [Environment]::GetEnvironmentVariable('DATABASE_PRODUCTION_WRITES_AUTHORIZED', 'Process')
+   if ($previousAuthorization -eq 'true') { throw 'Start without production write authorization.' }
+   try {
+       $env:DATABASE_PRODUCTION_WRITES_AUTHORIZED = 'true'
+       npm run db:migrate
+       if ($LASTEXITCODE -ne 0) { throw 'Migration failed; stop and inspect the target read-only.' }
+   }
+   finally {
+       if ($null -eq $previousAuthorization) { Remove-Item Env:DATABASE_PRODUCTION_WRITES_AUTHORIZED -ErrorAction SilentlyContinue }
+       else { $env:DATABASE_PRODUCTION_WRITES_AUTHORIZED = $previousAuthorization }
+   }
+   ```
+
+   The database write-target guard still verifies production primary identity,
+   TLS, role privileges and explicit production authorization on the migration
+   connection. The empty-database preflight does not authorize or execute DDL. If
+   migration stops partway through, do not rerun the empty preflight, stamp, reset
+   or downgrade; inspect the exact Alembic state and seek owner review.
+
+5. With production write authorization false again, verify the same pinned target:
+
+   ```powershell
+   npm run db:production-preflight -- fresh-bootstrap-schema-check
+   npm run db:check
+   ```
+
+   The first command verifies the exact Neon primary, release head and mapped
+   metadata read-only. Both must pass before connecting the web service.
+
+6. In the existing Render service, configure `APP_ENV=production`, the new direct
+   `DATABASE_URL`, `DATABASE_TARGET_ENVIRONMENT=production`, the exact
+   `DATABASE_TARGET_DATABASE`, `NEON_PROJECT_ID`, `NEON_BRANCH_ID`,
+   `NEON_ENDPOINT_ID`, and the already used `NEON_API_KEY`. Keep
+   `DATABASE_PRODUCTION_WRITES_AUTHORIZED=false` and
+   `DATABASE_REHEARSAL_WRITES_AUTHORIZED=false`; retain the existing
+   `API_ACCESS_TOKEN`. Keep cloud ingestion, recurring/manual operations, workbook
+   sync, FMP and Sheets polling disabled. Keep `/health/ready` and native
+   **Auto-Deploy After CI Checks Pass** enabled. Do not add a migration pre-deploy
+   command. The migrated schema is ready before Render connects; its native health
+   check gates traffic.
+7. In the existing Vercel project, retain root `apps/web`, production branch
+   `main`, the production Render `API_BASE_URL`, the existing matching server-side
+   `API_ACCESS_TOKEN`, and existing web login settings. Keep pull-request Preview
+   deployments enabled, and do not point Preview at production data. No new
+   deployment service, environment, API token or orchestrator is needed.
+8. After the owner reviews the exact PR head and required checks, merge through the
+   protected GitHub PR path. Render deploys natively after CI checks pass and
+   `/health/ready`; Vercel creates its native production deployment from `main`.
+   Verify deployed commit and authenticated health before any separate decision to
+   retire the previous Neon database. This procedure changes no settings or target
+   automatically.
+
+For future migrations on a database with accepted application data, use the
+recovery-first procedure below. The first-activation exception is not reusable for
+an existing database, even if its application tables currently contain zero rows.
+
+## Existing data-bearing database: coordinated schema migration
 
 Perform these steps in order when the owner is ready to merge this deployment
 change. They are instructions only; no live setting has been changed here.

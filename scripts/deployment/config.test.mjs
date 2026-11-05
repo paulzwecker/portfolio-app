@@ -15,6 +15,22 @@ test("Render deploys main only after CI and gates traffic on database readiness"
   assert.match(render, /autoDeployTrigger: checksPass/);
   assert.match(render, /healthCheckPath: \/health\/ready/);
   assert.doesNotMatch(render, /preDeployCommand:.*(?:db:migrate|alembic)/);
+  for (const variable of [
+    "DATABASE_TARGET_DATABASE",
+    "NEON_PROJECT_ID",
+    "NEON_BRANCH_ID",
+    "NEON_ENDPOINT_ID",
+  ]) {
+    assert.match(
+      render,
+      new RegExp(`key: ${variable}\\s+sync: false`),
+      `${variable} must be configured for the selected production database`,
+    );
+  }
+  assert.doesNotMatch(
+    render,
+    /delicate-heart-04560404|br-morning-truth-b96361yh|ep-snowy-term-b9gr75j6/,
+  );
 });
 
 test("Vercel retains the monorepo build and native preview/production Git behavior", () => {
@@ -49,7 +65,7 @@ test("GitHub PR and main CI provide the three documented required checks", () =>
   );
 });
 
-test("production migrations stay outside deployment and require a recovery preflight", () => {
+test("production migrations stay manual and distinguish empty first activation from later recovery", () => {
   const preflight = read(
     "apps/api/src/portfolio_api/production_migration_preflight.py",
   );
@@ -57,12 +73,22 @@ test("production migrations stay outside deployment and require a recovery prefl
   const packageJson = JSON.parse(read("package.json"));
   assert.match(preflight, /create_database_engine\(settings, read_only=True\)/);
   assert.match(preflight, /_verify_recovery\(settings, current, inventory\)/);
+  assert.match(preflight, /run_fresh_bootstrap_preflight/);
+  assert.match(
+    preflight,
+    /verify_database_read_target\(engine, required_tables=\(\)\)/,
+  );
+  assert.match(preflight, /_user_relations\(engine\)/);
   assert.doesNotMatch(preflight, /alembic_command\.upgrade|command\.upgrade/);
   assert.ok(packageJson.scripts["db:production-preflight"]);
   assert.match(runbook, /DATABASE_PRODUCTION_WRITES_AUTHORIZED=true/);
+  assert.match(runbook, /fresh-bootstrap-preflight/);
+  assert.match(runbook, /fresh-bootstrap-schema-check/);
+  assert.match(runbook, /recovery_required=false/);
+  assert.match(runbook, /alembic stamp/);
   assert.match(runbook, /fresh recovery point/i);
   assert.match(runbook, /Never run `npm run db:migrate` from CI/);
-  assert.match(runbook, /temporary deployment freezes/i);
+  assert.match(runbook, /Freeze production deployments before merge/i);
   assert.ok(runbook.includes("Auto-Deploy **After CI Checks Pass**"));
   assert.ok(runbook.includes("select **Only build preview**"));
 });

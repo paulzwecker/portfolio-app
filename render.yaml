@@ -22,7 +22,7 @@ services:
       - key: DATABASE_TARGET_ENVIRONMENT
         value: production
       - key: DATABASE_TARGET_DATABASE
-        value: neondb
+        sync: false
       - key: DATABASE_PRODUCTION_WRITES_AUTHORIZED
         value: "false"
       - key: DATABASE_REHEARSAL_WRITES_AUTHORIZED
@@ -30,11 +30,11 @@ services:
       - key: NEON_API_KEY
         sync: false
       - key: NEON_PROJECT_ID
-        value: delicate-heart-04560404
+        sync: false
       - key: NEON_BRANCH_ID
-        value: br-morning-truth-b96361yh
+        sync: false
       - key: NEON_ENDPOINT_ID
-        value: ep-snowy-term-b9gr75j6
+        sync: false
       - key: API_ACCESS_TOKEN
         sync: false
       - key: CLOUD_INGESTION_ENABLED
