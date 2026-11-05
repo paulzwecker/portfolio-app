@@ -1,5 +1,7 @@
 """Readiness verifies a real query and the installed Alembic revision."""
 
+import json
+import logging
 from datetime import UTC, datetime
 from typing import Literal
 
@@ -8,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 
 class LivenessResponse(BaseModel):
@@ -40,6 +44,25 @@ def check_readiness(engine: Engine | None, heads: set[str]) -> HealthResponse:
             result.schema_status = "current" if current_heads == heads else "outdated"
             if result.schema_status == "current":
                 result.status = "ok"
+            else:
+                try:
+                    database, schema = connection.execute(
+                        text("SELECT current_database(), current_schema()")
+                    ).one()
+                except SQLAlchemyError:
+                    database, schema = None, None
+                logger.warning(
+                    "readiness_schema_mismatch %s",
+                    json.dumps(
+                        {
+                            "expected_revisions": sorted(heads),
+                            "observed_revisions": sorted(current_heads),
+                            "database": database,
+                            "schema": schema,
+                        },
+                        sort_keys=True,
+                    ),
+                )
     except SQLAlchemyError:
         # Connection strings, driver messages, and credentials never reach a client.
         pass

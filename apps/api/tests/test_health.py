@@ -153,18 +153,30 @@ def test_connection_failure_does_not_expose_credentials() -> None:
     assert "secret" not in result.model_dump_json()
 
 
-def test_connected_database_with_old_schema_is_not_ready() -> None:
+def test_connected_database_with_old_schema_is_not_ready(caplog: pytest.LogCaptureFixture) -> None:
     engine = MagicMock(spec=Engine)
+    engine.connect.return_value.__enter__.return_value.execute.return_value.one.return_value = (
+        "testdb",
+        "public",
+    )
     with patch("portfolio_api.health.MigrationContext.configure") as configure:
         configure.return_value.get_current_heads.return_value = ("old",)
         result = check_readiness(engine, {"head"})
     assert result.status == "error"
     assert result.database == "connected"
     assert result.schema_status == "outdated"
+    assert '"expected_revisions": ["head"]' in caplog.text
+    assert '"observed_revisions": ["old"]' in caplog.text
+    assert '"database": "testdb"' in caplog.text
+    assert '"schema": "public"' in caplog.text
 
 
 def test_connected_database_without_migrations_is_not_ready() -> None:
     engine = MagicMock(spec=Engine)
+    engine.connect.return_value.__enter__.return_value.execute.return_value.one.return_value = (
+        "testdb",
+        "public",
+    )
     with patch("portfolio_api.health.MigrationContext.configure") as configure:
         configure.return_value.get_current_heads.return_value = ()
         result = check_readiness(engine, {"head"})
