@@ -262,7 +262,7 @@ def _cell_xml(address: str, value: str) -> str:
     return f'<c r="{address}" t="inlineStr"><is><t>{escape(value)}</t></is></c>'
 
 
-def _synthetic_market_xlsx() -> bytes:
+def _synthetic_market_xlsx(*, shared_strings: bool = False) -> bytes:
     cells = {
         "A5": "SYN",
         "B5": "Synthetic Corporation",
@@ -273,9 +273,14 @@ def _synthetic_market_xlsx() -> bytes:
         "K5": "READY",
     }
     rows: dict[int, list[str]] = {}
-    for address, value in cells.items():
+    for index, (address, value) in enumerate(cells.items()):
         row = int(re.sub(r"[^0-9]", "", address))
-        rows.setdefault(row, []).append(_cell_xml(address, value))
+        node = (
+            f'<c r="{address}" t="s"><v>{index}</v></c>'
+            if shared_strings
+            else _cell_xml(address, value)
+        )
+        rows.setdefault(row, []).append(node)
     row_xml = "".join(
         f'<row r="{row}">{"".join(nodes)}</row>' for row, nodes in sorted(rows.items())
     )
@@ -302,12 +307,21 @@ def _synthetic_market_xlsx() -> bytes:
             'Target="worksheets/sheet1.xml"/></Relationships>',
         )
         archive.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+        if shared_strings:
+            strings = "".join(f"<si><t>{escape(value)}</t></si>" for value in cells.values())
+            archive.writestr(
+                "xl/sharedStrings.xml",
+                '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                f"{strings}</sst>",
+            )
     return output.getvalue()
 
 
-def _stub_approved_market_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+def _stub_approved_market_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, shared_strings: bool = False
+) -> str:
     market_path = tmp_path / "approved-market-data.xlsx"
-    market_bytes = _synthetic_market_xlsx()
+    market_bytes = _synthetic_market_xlsx(shared_strings=shared_strings)
     market_path.write_bytes(market_bytes)
     market_run_id = "c" * 32
     market_sha = hashlib.sha256(market_bytes).hexdigest()
@@ -539,15 +553,18 @@ def test_snapshot_replay_checks_structure_fingerprint(tmp_path: Path) -> None:
     assert error.value.code == "SNAPSHOT_STRUCTURE_HASH_MISMATCH"
 
 
+@pytest.mark.parametrize("shared_strings", [False, True])
 def test_minimal_projection_reuses_existing_canonical_import_contracts(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shared_strings: bool
 ) -> None:
     store = _store(tmp_path)
     session = _FakeGoogleSession()
     session.values[("Universe Registry", 6, 1)] = session._text("OPT")
     session.values[("Universe Registry", 6, 2)] = session._text("Optional Research Company")
     captured = _reader(tmp_path, session).capture(store)
-    market_run_id = _stub_approved_market_snapshot(tmp_path, monkeypatch)
+    market_run_id = _stub_approved_market_snapshot(
+        tmp_path, monkeypatch, shared_strings=shared_strings
+    )
 
     minimal = build_minimal_import_plan(store, captured.run_id, captured.sha256, market_run_id)
     assert not [issue for issue in minimal.plan.issues if issue.severity == "ERROR"]

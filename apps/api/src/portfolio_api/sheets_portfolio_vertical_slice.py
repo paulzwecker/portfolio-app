@@ -927,7 +927,7 @@ def _header_value(workbook: legacy_import.Workbook, sheet: str, address: str) ->
 
 def _text_value_cell(workbook: legacy_import.Workbook, sheet: str, address: str) -> bool:
     cell = workbook.cell(sheet, address)
-    return cell.value is None or cell.kind in {"str", "inlineStr"}
+    return cell.value is None or cell.kind in {"str", "inlineStr", "s"}
 
 
 def _validate_headers(workbook: legacy_import.Workbook) -> None:
