@@ -30,6 +30,22 @@ readiness identity source. Held positions must resolve uniquely to a READY listi
 or to one of the supported explicit AUX mappings. A source ticker alone never
 selects a listing.
 
+The existing SPYY AUX mapping has one reviewed literal identity: standalone ETF
+ISIN `IE00B44Z5B48`, WKN `A1JJTC`, Xetra/Deutsche Börse listing `ETR:SPYY`,
+trading currency EUR. The workbook's A-column AUX classification may be a formula
+only for that exact identity and an ETF holding; its B/C/D/H identity cells must
+remain literal and match the reviewed key, listing and currency. The snapshot's
+formula and effective classification remain recorded, and the listing source
+reference includes the reviewed identity version. The security has no fabricated
+company. The separate USD share-class currency is not substituted for the EUR
+listing currency; the canonical security schema does not store ISIN or WKN. Provider
+symbols require separate review: the existing Yahoo crosswalk and the issuer's
+current Reuters identifier are distinct source claims.
+[Deutsche Börse](https://live.deutsche-boerse.com/en/etf/state-street-spdr-msci-all-country-world-ucits-etf-acc)
+and [State Street](https://www.ssga.com/at/en_gb/intermediary/etfs/state-street-spdr-msci-all-country-world-ucits-etf-acc-spyy-gy)
+provide security and listing evidence. All other derived AUX identity cells and
+unreviewed listing variants remain blocked.
+
 The workbook remains authoritative for the values captured by this contract.
 Google Sheets API effective values are read directly. Blank, formula-empty,
 empty-string, zero, numeric, text, boolean, and error states are preserved
