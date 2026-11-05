@@ -262,7 +262,7 @@ def _cell_xml(address: str, value: str) -> str:
     return f'<c r="{address}" t="inlineStr"><is><t>{escape(value)}</t></is></c>'
 
 
-def _synthetic_market_xlsx() -> bytes:
+def _synthetic_market_xlsx(*, shared_strings: bool = False) -> bytes:
     cells = {
         "A5": "SYN",
         "B5": "Synthetic Corporation",
@@ -273,9 +273,14 @@ def _synthetic_market_xlsx() -> bytes:
         "K5": "READY",
     }
     rows: dict[int, list[str]] = {}
-    for address, value in cells.items():
+    for index, (address, value) in enumerate(cells.items()):
         row = int(re.sub(r"[^0-9]", "", address))
-        rows.setdefault(row, []).append(_cell_xml(address, value))
+        node = (
+            f'<c r="{address}" t="s"><v>{index}</v></c>'
+            if shared_strings
+            else _cell_xml(address, value)
+        )
+        rows.setdefault(row, []).append(node)
     row_xml = "".join(
         f'<row r="{row}">{"".join(nodes)}</row>' for row, nodes in sorted(rows.items())
     )
@@ -302,12 +307,21 @@ def _synthetic_market_xlsx() -> bytes:
             'Target="worksheets/sheet1.xml"/></Relationships>',
         )
         archive.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+        if shared_strings:
+            strings = "".join(f"<si><t>{escape(value)}</t></si>" for value in cells.values())
+            archive.writestr(
+                "xl/sharedStrings.xml",
+                '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                f"{strings}</sst>",
+            )
     return output.getvalue()
 
 
-def _stub_approved_market_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+def _stub_approved_market_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, shared_strings: bool = False
+) -> str:
     market_path = tmp_path / "approved-market-data.xlsx"
-    market_bytes = _synthetic_market_xlsx()
+    market_bytes = _synthetic_market_xlsx(shared_strings=shared_strings)
     market_path.write_bytes(market_bytes)
     market_run_id = "c" * 32
     market_sha = hashlib.sha256(market_bytes).hexdigest()
@@ -443,6 +457,52 @@ def test_explicit_aux_listing_mappings_keep_security_and_currency_basis(
     assert [item.listing_key for item in supporting] == ([] if key == "SPYY" else ["TSM"])
 
 
+@pytest.mark.parametrize(
+    ("changed", "accepted"),
+    [
+        ({}, True),
+        ({"D5": legacy_import.Cell("XETR:SPYY", "str")}, False),
+        ({"H5": legacy_import.Cell("USD", "str")}, False),
+        ({"B5": legacy_import.Cell("SPYY ETF", "str", formula="other()")}, False),
+        ({"C5": legacy_import.Cell("SPYY", "str", formula="other()")}, False),
+        ({"D5": legacy_import.Cell("ETR:SPYY", "str", formula="other()")}, False),
+        ({"H5": legacy_import.Cell("EUR", "str", formula="other()")}, False),
+        ({"A5": legacy_import.Cell("NOT_AUX", "str", formula="other()")}, False),
+        ({"A5": legacy_import.Cell("AUX", "n", formula="other()")}, False),
+    ],
+)
+def test_reviewed_etf_identity_allows_only_derived_classification(
+    tmp_path: Path, changed: dict[str, legacy_import.Cell], accepted: bool
+) -> None:
+    cells = {
+        "A5": legacy_import.Cell("AUX", "str", formula="classification()"),
+        "B5": legacy_import.Cell("SPYY ETF", "str"),
+        "C5": legacy_import.Cell("SPYY", "str"),
+        "D5": legacy_import.Cell("ETR:SPYY", "str"),
+        "H5": legacy_import.Cell("EUR", "str"),
+    }
+    cells.update(changed)
+    portfolio = legacy_import.Workbook(
+        path=tmp_path / "source.json", sha256="a" * 64, sheets={"Price Feed": cells}
+    )
+    listing, supporting, issue = _resolve_aux_listing(
+        portfolio,
+        source_ticker="SPYY",
+        source_listing="SPYY",
+        holding_kind="etf",
+        market_by_company={},
+    )
+    assert (listing is not None) is accepted
+    if listing is not None:
+        assert listing.security_type == "ETF"
+        assert listing.security_key == "ETF:SPYY"
+        assert (listing.venue, listing.ticker, listing.currency) == ("ETR", "SPYY", "EUR")
+        assert "reviewed-etf:IE00B44Z5B48:ETR:SPYY:EUR:v1" in listing.source
+        assert not supporting and issue is None
+    else:
+        assert issue is not None
+
+
 def test_stable_capture_is_frozen_hashed_and_replayable(tmp_path: Path) -> None:
     session = _FakeGoogleSession()
     reader = _reader(tmp_path, session)
@@ -539,15 +599,18 @@ def test_snapshot_replay_checks_structure_fingerprint(tmp_path: Path) -> None:
     assert error.value.code == "SNAPSHOT_STRUCTURE_HASH_MISMATCH"
 
 
+@pytest.mark.parametrize("shared_strings", [False, True])
 def test_minimal_projection_reuses_existing_canonical_import_contracts(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shared_strings: bool
 ) -> None:
     store = _store(tmp_path)
     session = _FakeGoogleSession()
     session.values[("Universe Registry", 6, 1)] = session._text("OPT")
     session.values[("Universe Registry", 6, 2)] = session._text("Optional Research Company")
     captured = _reader(tmp_path, session).capture(store)
-    market_run_id = _stub_approved_market_snapshot(tmp_path, monkeypatch)
+    market_run_id = _stub_approved_market_snapshot(
+        tmp_path, monkeypatch, shared_strings=shared_strings
+    )
 
     minimal = build_minimal_import_plan(store, captured.run_id, captured.sha256, market_run_id)
     assert not [issue for issue in minimal.plan.issues if issue.severity == "ERROR"]
@@ -614,6 +677,55 @@ def test_missing_declared_header_fails_before_projection() -> None:
     with pytest.raises(SheetsPortfolioError) as error:
         _validate_headers(workbook)
     assert error.value.code == "WORKBOOK_HEADER_CONTRACT_MISMATCH"
+
+
+@pytest.mark.integration
+def test_reviewed_etf_is_a_standalone_security_in_local_rehearsal(
+    postgres_engine: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from portfolio_api.sheets_portfolio_vertical_slice import _apply_in_transaction, _target_scope
+
+    session = _FakeGoogleSession()
+    session.values.update(
+        {
+            ("Current Holdings", 7, 1): session._text("etf"),
+            ("Current Holdings", 7, 2): session._text("SPYY"),
+            ("Current Holdings", 7, 4): session._text("SPYY"),
+            ("Current Holdings", 7, 5): session._number(Decimal("1")),
+            ("Price Feed", 5, 1): {
+                "userEnteredValue": {"formulaValue": '=IF(TRUE,"AUX","")'},
+                "effectiveValue": {"stringValue": "AUX"},
+            },
+            ("Price Feed", 5, 2): session._text("SPYY ETF"),
+            ("Price Feed", 5, 3): session._text("SPYY"),
+            ("Price Feed", 5, 4): session._text("ETR:SPYY"),
+            ("Price Feed", 5, 8): session._text("EUR"),
+        }
+    )
+    store = _store(tmp_path)
+    captured = _reader(tmp_path, session).capture(store)
+    market_run_id = _stub_approved_market_snapshot(tmp_path, monkeypatch)
+    minimal = build_minimal_import_plan(store, captured.run_id, captured.sha256, market_run_id)
+    assert not [issue for issue in minimal.plan.issues if issue.severity == "ERROR"]
+    settings = Settings(
+        database_url="postgresql+psycopg://unused:unused@localhost/unused_test",
+        database_target_environment="development",
+        database_target_database="unused_test",
+    )
+    with Session(postgres_engine) as db, db.begin():
+        _apply_in_transaction(
+            db,
+            minimal,
+            target_environment="development",
+            input_sha256="b" * 64,
+            target_scope=_target_scope(settings, "development"),
+        )
+    with Session(postgres_engine) as db:
+        etf = db.scalars(select(Security).where(Security.security_type == "ETF")).one()
+        assert etf.company_id is None
+        listing = db.scalars(select(Listing).where(Listing.security_id == etf.id)).one()
+        assert (listing.venue, listing.ticker, listing.currency) == ("ETR", "SPYY", "EUR")
+        assert db.scalar(select(func.count()).select_from(Company)) == 1
 
 
 @pytest.mark.integration

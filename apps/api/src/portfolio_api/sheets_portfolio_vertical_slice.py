@@ -927,7 +927,7 @@ def _header_value(workbook: legacy_import.Workbook, sheet: str, address: str) ->
 
 def _text_value_cell(workbook: legacy_import.Workbook, sheet: str, address: str) -> bool:
     cell = workbook.cell(sheet, address)
-    return cell.value is None or cell.kind in {"str", "inlineStr"}
+    return cell.value is None or cell.kind in {"str", "inlineStr", "s"}
 
 
 def _validate_headers(workbook: legacy_import.Workbook) -> None:
@@ -1074,7 +1074,12 @@ def _resolve_aux_listing(
         if aux_key not in {"SPYY", "TSM-ADR"}:
             continue
         source = _workbook_source_ref(portfolio, "Price Feed", f"A{row_number}:H{row_number}")
-        identity_columns = ("A", "B", "C", "D", "H")
+        if not _text_value_cell(portfolio, "Price Feed", f"A{row_number}"):
+            continue
+        # Column A classifies an AUX row; the security/listing identity is in B/C/D/H.
+        # A calculated classification is usable only for the separately reviewed,
+        # exact SPYY Xetra EUR identity. The identity fields must remain literal.
+        identity_columns = ("B", "C", "D", "H")
         if any(
             not _text_value_cell(portfolio, "Price Feed", f"{column}{row_number}")
             or portfolio.cell("Price Feed", f"{column}{row_number}").formula is not None
@@ -1086,6 +1091,16 @@ def _resolve_aux_listing(
         currency = legacy_import._value(row, "H")
         if name is None or market_symbol is None or currency is None:
             continue
+        if portfolio.cell("Price Feed", f"A{row_number}").formula is not None:
+            if not (
+                aux_key == "SPYY"
+                and source_ticker == "SPYY"
+                and holding_kind == "etf"
+                and _normalize_listing_symbol(market_symbol) == "ETR:SPYY"
+                and currency == "EUR"
+            ):
+                continue
+            source += "#reviewed-etf:IE00B44Z5B48:ETR:SPYY:EUR:v1"
         if not re.fullmatch(r"[A-Z]{3}", currency):
             continue
         source_match = _normalize_listing_symbol(source_listing)
