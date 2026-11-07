@@ -577,7 +577,7 @@ async def build_provider_import(
         and company_lifecycle[company.id] in {"PORTFOLIO", "WATCHLIST"}
         and (company_ids is None or company.id in company_ids)
     }
-    if listing_keys is not None:
+    if scope == "listings":
         scoped_company_ids = {company.id for _, _, company in selected if company is not None}
         active_companies = {
             identifier: identity

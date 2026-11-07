@@ -1102,9 +1102,16 @@ def _yahoo_operation(
     company_ids: set[UUID] | None,
     fx_pairs: set[tuple[str, str]] | None,
     frozen_crosswalk: YahooListingCrosswalk | None = None,
+    listing_scope: bool = False,
 ) -> dict[ExternalDataDomain, DomainOutcome]:
     crosswalk = frozen_crosswalk or load_yahoo_crosswalk(crosswalk_path)
     provider = YahooFinanceProvider(crosswalk)
+    if listing_scope:
+        scope_kind = "listings"
+    elif company_ids is not None:
+        scope_kind = "company"
+    else:
+        scope_kind = "active"
     report = asyncio.run(
         build_provider_import(
             session,
@@ -1113,7 +1120,7 @@ def _yahoo_operation(
             end_date=end_date,
             start_date=start_date,
             lookback_days=lookback_days,
-            scope="company" if company_ids is not None else "active",
+            scope=scope_kind,
             corporate_action_overlap_days=corporate_action_overlap_days,
             listing_keys=listing_keys,
             company_ids=company_ids,
@@ -1180,6 +1187,7 @@ def run_scheduled(
         _states_from_scope(replay_scope) if replay_scope is not None else None
     )
     claims: dict[ExternalDataDomain, RunClaim] = {}
+    scopes: dict[ExternalDataDomain, dict[str, Any]] = {}
     for domain in ordered:
         if (
             domain
@@ -1207,11 +1215,13 @@ def run_scheduled(
         if domain == ExternalDataDomain.FX and fx_pair_filter is not None:
             scope["required_fx_pairs"] = [list(pair) for pair in sorted(fx_pair_filter)]
         if domain in YAHOO_MARKET_DOMAINS and listing_key_filter is not None:
+            scope["scope"] = "listings"
             scope["listing_keys"] = [
                 {"venue": venue, "ticker": ticker} for venue, ticker in sorted(listing_key_filter)
             ]
         if domain in YAHOO_DOMAINS and frozen_yahoo_crosswalk is not None:
             scope["crosswalk_sha256"] = frozen_yahoo_crosswalk[1]
+        scopes[domain] = scope
         claim = _claim_run(
             session,
             PROVIDERS[domain],
@@ -1283,6 +1293,7 @@ def run_scheduled(
                 company_ids=scoped_company_ids,
                 fx_pairs=fx_pairs,
                 frozen_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
+                listing_scope=market_scope.get("scope") == "listings",
             )
 
         _execute_cycle(session, yahoo_claims, yahoo_cycle)
@@ -1338,18 +1349,7 @@ def run_scheduled(
     # Include previously completed same-day rows so repeated scheduling is observable and cheap.
     reused_domains = [domain for domain in ordered if domain not in claims]
     for domain in reused_domains:
-        scope = (
-            replay_scope
-            if replay_scope is not None and replay_of_run_id is not None
-            else _scope_for_domain(
-                session,
-                domain,
-                start_date=start_date,
-                end_date=end_date,
-                lookback_days=lookback_days,
-                company_ids=company_ids,
-            )
-        )
+        scope = scopes[domain]
         key = _idempotency_key(
             PROVIDERS[domain], domain, scope, run_date, request_nonce or replay_of_run_id
         )

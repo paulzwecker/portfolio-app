@@ -22,25 +22,33 @@
   documentation links and whitespace checks.
   Existing detailed outcomes remain in database run ledgers. No UI changed.
 
-## Current build increment
+## Current verified increment
 
-Cloud market correction now pins a repeatable-read canonical scope, exact listing
-keys, required FX and one reviewed crosswalk object/hash. It uses 90 inclusive
-calendar dates and rejects scopes over 30 listing/pair subjects before claims or
-provider access. Existing transport/run retry limits give a conservative upper
-bound of 12 HTTP attempts per subject. Legacy development/model FX behavior is
-retained outside this cloud path. Frozen replay rejects changed mapping bytes or
-replacement filters. Eight scope/replay tests and 26 adapter regressions pass.
+- `34b0175` pins a repeatable-read canonical scope, listing keys, required FX and
+  reviewed crosswalk object/hash. Cloud corrections use 90 inclusive calendar dates
+  and at most 30 listing/pair subjects. Existing retries imply at most 12 transport
+  attempts per subject in one invocation. Legacy model FX behavior is retained.
+- Real synthetic Yahoo payloads now pass through normalization and the existing
+  database importer into Portfolio/Operations HTTP readback. Exact EUR totals,
+  snapshot/cash/target preservation, fresh-connection replay, FX outage and recovery
+  on the next UTC cycle are covered. Captured mappings survive a file change during
+  fetch, while invalid subsequent source captures stop before new records.
+- Fixed replay reporting to reuse the captured request scope. Explicit listing
+  scope keeps unrelated companies outside its diagnostics while legacy full-universe
+  gaps remain visible. Focused regression passed 84 cases, with strict types/lint.
 
 ## Next build steps
 
-1. Prove synthetic refresh → EUR valuation and Operations/API readback through the
-   actual importer, including replay, source changes, outage/partial results and
-   unchanged holdings/targets. Use `test_cloud_market_refresh.py` and existing
-   synthetic Yahoo fixtures. Inspect desktop/mobile when UI changes.
-2. Finalize any remaining scope/retry/freshness gaps before the milestone's
-   INTEGRATE gate. The 90-date/30-subject policy is a local release proposal,
-   pending explicit review and authorization before production activation.
+1. Resolve bounded same-day recovery using the existing run/attempt/replay records.
+   Current same-scope terminal failures are reused until the next UTC cycle or an
+   explicit operator retry. Preserve source hashes, retry caps and provider budgets.
+2. Make cloud preflight blockers visible durably in Operations. They currently
+   return a safe CLI failure code before ingestion claims, leaving prior run status
+   intact. Reuse existing operational ledgers rather than adding a job framework.
+3. Review the synthetic investor journey and data/freshness presentation, then use
+   INTEGRATE once the local milestone is complete. The 90-date/30-subject policy
+   requires explicit review before production activation. Actual hosted cycles,
+   current-state recovery and provider coverage remain separately gated.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR
 belong to the completed milestone's INTEGRATE gate. Production backfill/scheduling,
