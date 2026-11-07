@@ -10,7 +10,8 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | Active work   | MP2.1 Read-only publication onboarding preflight                                                         |
 | Branch        | `codex/mp2-readonly-publication-preflight`, from merged PR #23 (`0717498`)                               |
 | Status        | MP2.1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. Ready for integration review                             |
-| Next task     | Review MP2.1 PR, then prepare the reviewed real publication and canonical base for MP2.2                 |
+| Next task     | Review/merge PR #24, then prepare the reviewed real publication and canonical base for MP2.2             |
+| PR            | [#24](https://github.com/paulzwecker/portfolio-app/pull/24), open for owner review                       |
 | Approval gate | Real source installation/publication, first-model seeding and acceptance require separate owner approval |
 
 ## Baseline and outstanding gates
