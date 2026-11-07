@@ -55,6 +55,60 @@ from portfolio_api.workbook_sources import SnapshotStore
 SOURCE_ID = "s" * 30
 
 
+def test_approval_digest_changes_with_source_or_target() -> None:
+    from portfolio_api.sheets_portfolio_vertical_slice import _bound_input_sha256
+
+    settings = Settings(
+        database_url="postgresql+psycopg://unused:unused@localhost/unused_test",
+        neon_project_id="synthetic-project",
+        neon_branch_id="synthetic-branch",
+        neon_endpoint_id="synthetic-endpoint",
+    )
+    first = SimpleNamespace(input_sha256="a" * 64)
+    second = SimpleNamespace(input_sha256="b" * 64)
+    digest, _ = _bound_input_sha256(first, settings, "production")  # type: ignore[arg-type]
+    changed_source, _ = _bound_input_sha256(second, settings, "production")  # type: ignore[arg-type]
+    changed_settings = settings.model_copy(update={"neon_branch_id": "another-branch"})
+    changed_target, _ = _bound_input_sha256(first, changed_settings, "production")  # type: ignore[arg-type]
+    assert len({digest, changed_source, changed_target}) == 3
+
+
+@pytest.mark.parametrize("expected,approved", [("a" * 64, "b" * 64), ("b" * 64, "a" * 64)])
+def test_apply_rejects_changed_source_or_target_hash_before_database_access(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, expected: str, approved: str
+) -> None:
+    from portfolio_api import sheets_portfolio_vertical_slice as module
+
+    monkeypatch.setattr(module, "build_minimal_import_plan", lambda *_args: object())
+    monkeypatch.setattr(module, "_bound_input_sha256", lambda *_args: ("a" * 64, {}))
+
+    def no_database(*_args: Any, **_kwargs: Any) -> None:
+        pytest.fail("A mismatched source or target hash must not open a database")
+
+    monkeypatch.setattr(module, "create_database_engine", no_database)
+    result = module.main(
+        [
+            "apply",
+            "--store",
+            str(tmp_path),
+            "--sheets-run",
+            "synthetic",
+            "--sheets-sha256",
+            "c" * 64,
+            "--market-run",
+            "synthetic",
+            "--target-environment",
+            "production",
+            "--expected-input-sha256",
+            expected,
+            "--approve-input-sha256",
+            approved,
+            "--confirm-minimal-sheets-contract-reviewed",
+        ]
+    )
+    assert result == 2
+
+
 def _column_number(value: str) -> int:
     result = 0
     for character in value:
@@ -677,6 +731,85 @@ def test_missing_declared_header_fails_before_projection() -> None:
     with pytest.raises(SheetsPortfolioError) as error:
         _validate_headers(workbook)
     assert error.value.code == "WORKBOOK_HEADER_CONTRACT_MISMATCH"
+
+
+@pytest.mark.integration
+def test_guarded_minimal_bootstrap_revalidates_and_replays_in_isolated_postgres(
+    postgres_engine: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from portfolio_api import database_write_target as guard_module
+    from portfolio_api.sheets_portfolio_vertical_slice import _apply_in_transaction, _target_scope
+
+    store = _store(tmp_path)
+    captured = _reader(tmp_path, _FakeGoogleSession()).capture(store)
+    market_run = _stub_approved_market_snapshot(tmp_path, monkeypatch)
+    minimal = build_minimal_import_plan(store, captured.run_id, captured.sha256, market_run)
+    settings = Settings(
+        database_url="postgresql+psycopg://unused:unused@localhost/unused_test",
+        database_target_environment="production",
+        database_target_database="unused_test",
+        database_production_writes_authorized=True,
+        neon_project_id="synthetic-project",
+        neon_branch_id="synthetic-branch",
+        neon_endpoint_id="synthetic-endpoint",
+    )
+    scope = _target_scope(settings, "production")
+    phrase = "BOOTSTRAP synthetic-project/synthetic-branch/synthetic-endpoint/unused_test"
+    prompts: list[str] = []
+    response = ["incorrect"]
+
+    def confirmation(expected: str) -> str:
+        prompts.append(expected)
+        return response[0]
+
+    def validate(**kwargs: Any) -> dict[str, str]:
+        assert kwargs["settings"].database_production_writes_authorized
+        provider = kwargs["confirmation_provider"]
+        if provider is None or provider(phrase) != phrase:
+            raise guard_module.DatabaseWriteTargetError("confirmation_mismatch", "synthetic")
+        return {"environment": "production"}
+
+    monkeypatch.setattr(guard_module, "_read_live_identity", lambda *_args: None)
+    monkeypatch.setattr(guard_module, "_interactive_confirmation", confirmation)
+    monkeypatch.setattr(guard_module, "validate_database_write_target", validate)
+    guard = guard_module.install_database_write_target_guard(
+        postgres_engine,
+        settings,
+        operation="canonical_portfolio_bootstrap",
+        operation_kind="bootstrap",
+    )
+    with (
+        postgres_engine.connect() as connection,
+        pytest.raises(guard_module.DatabaseWriteTargetError, match="confirmation_mismatch"),
+    ):
+        guard.verify_connection(connection, phase="preflight")
+    with Session(postgres_engine) as session:
+        assert session.scalar(select(func.count()).select_from(Company)) == 0
+        assert session.scalar(select(func.count()).select_from(CanonicalBootstrapRun)) == 0
+
+    response[0] = phrase
+    with postgres_engine.connect() as connection:
+        guard.verify_connection(connection, phase="preflight")
+    with Session(postgres_engine) as session, session.begin():
+        applied = _apply_in_transaction(
+            session,
+            minimal,
+            target_environment="production",
+            input_sha256="a" * 64,
+            target_scope=scope,
+        )
+        assert applied["status"] == "APPLIED"
+    assert len(prompts) == 2
+    with Session(postgres_engine) as session, session.begin():
+        replay = _apply_in_transaction(
+            session,
+            minimal,
+            target_environment="production",
+            input_sha256="a" * 64,
+            target_scope=scope,
+        )
+        assert replay["status"] == "ALREADY_APPLIED"
+        assert session.scalar(select(func.count()).select_from(CanonicalBootstrapRun)) == 1
 
 
 @pytest.mark.integration

@@ -615,6 +615,144 @@ def test_preflight_never_marks_a_connection_as_verified_for_a_later_write(
     assert connection.info["portfolio_database_write_target_guard"] == guard._guard_id
 
 
+def test_production_bootstrap_confirmation_survives_revalidation_but_not_new_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_resolved_dns(monkeypatch)
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._read_live_identity", lambda *_args: remote_identity()
+    )
+    prompts: list[str] = []
+
+    def confirm(expected: str) -> str:
+        prompts.append(expected)
+        return expected
+
+    monkeypatch.setattr("portfolio_api.database_write_target._interactive_confirmation", confirm)
+    guard = DatabaseWriteTargetGuard(
+        remote_settings(), operation="canonical_portfolio_bootstrap", operation_kind="bootstrap"
+    )
+    monkeypatch.setattr(
+        guard, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    connection = SimpleNamespace(info={}, engine=SimpleNamespace(url=make_url(REMOTE_URL)))
+    guard.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+    guard.verify_connection(connection, phase="before_write")  # type: ignore[arg-type]
+    assert len(prompts) == 1
+    assert connection.info["portfolio_database_write_target_guard"] == guard._guard_id
+
+    another = DatabaseWriteTargetGuard(
+        remote_settings(), operation="canonical_portfolio_bootstrap", operation_kind="bootstrap"
+    )
+    monkeypatch.setattr(
+        another, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    another.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+    assert len(prompts) == 2
+
+    guard.settings = guard.settings.model_copy(update={"neon_project_id": "different_project"})
+    monkeypatch.setattr(
+        guard,
+        "neon_client",
+        SimpleNamespace(read_target=lambda *_args: neon_target(project_id="different_project")),
+    )
+    with pytest.raises(DatabaseWriteTargetError, match="confirmation_mismatch"):
+        guard.verify_connection(connection)  # type: ignore[arg-type]
+    assert guard._bootstrap_confirmation is None
+    guard.settings = remote_settings()
+    monkeypatch.setattr(
+        guard, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    guard.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+    assert len(prompts) == 3
+    guard.operation = "another_bootstrap"
+    with pytest.raises(DatabaseWriteTargetError, match="database_guard_operation_changed"):
+        guard.verify_connection(
+            SimpleNamespace(info={}, engine=SimpleNamespace(url=make_url(REMOTE_URL)))  # type: ignore[arg-type]
+        )
+    assert guard._bootstrap_confirmation is None
+
+
+@pytest.mark.parametrize("response", ["", "incorrect"])
+def test_failed_bootstrap_confirmation_is_not_retained(
+    monkeypatch: pytest.MonkeyPatch, response: str
+) -> None:
+    install_resolved_dns(monkeypatch)
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._read_live_identity", lambda *_args: remote_identity()
+    )
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._interactive_confirmation", lambda _expected: response
+    )
+    guard = DatabaseWriteTargetGuard(
+        remote_settings(), operation="canonical_portfolio_bootstrap", operation_kind="bootstrap"
+    )
+    monkeypatch.setattr(
+        guard, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    connection = SimpleNamespace(info={}, engine=SimpleNamespace(url=make_url(REMOTE_URL)))
+    with pytest.raises(DatabaseWriteTargetError, match="confirmation_mismatch"):
+        guard.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+    assert guard._bootstrap_confirmation is None
+    assert not connection.info
+
+
+def test_bootstrap_rechecks_revoked_authorization_on_cached_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_resolved_dns(monkeypatch)
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._read_live_identity", lambda *_args: remote_identity()
+    )
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._interactive_confirmation", lambda expected: expected
+    )
+    guard = DatabaseWriteTargetGuard(
+        remote_settings(), operation="canonical_portfolio_bootstrap", operation_kind="bootstrap"
+    )
+    monkeypatch.setattr(
+        guard, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    connection = SimpleNamespace(info={}, engine=SimpleNamespace(url=make_url(REMOTE_URL)))
+    guard.verify_connection(connection, phase="before_write")  # type: ignore[arg-type]
+    guard.settings = guard.settings.model_copy(
+        update={"database_production_writes_authorized": False}
+    )
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        guard.verify_connection(connection)  # type: ignore[arg-type]
+    assert guard._bootstrap_confirmation is None
+    assert not connection.info
+
+
+def test_bootstrap_discards_confirmation_after_unexpected_revalidation_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_resolved_dns(monkeypatch)
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._read_live_identity", lambda *_args: remote_identity()
+    )
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._interactive_confirmation", lambda expected: expected
+    )
+    guard = DatabaseWriteTargetGuard(
+        remote_settings(), operation="canonical_portfolio_bootstrap", operation_kind="bootstrap"
+    )
+    monkeypatch.setattr(
+        guard, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    connection = SimpleNamespace(info={}, engine=SimpleNamespace(url=make_url(REMOTE_URL)))
+    guard.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+
+    def failed_identity(*_args: Any) -> None:
+        raise RuntimeError("synthetic connection failure")
+
+    monkeypatch.setattr("portfolio_api.database_write_target._read_live_identity", failed_identity)
+    with pytest.raises(RuntimeError, match="synthetic connection failure"):
+        guard.verify_connection(connection)  # type: ignore[arg-type]
+    assert guard._bootstrap_confirmation is None
+    assert not connection.info
+
+
 def test_neon_redirect_handler_refuses_redirects() -> None:
     handler = _RejectRedirects()
     assert handler.redirect_request(None, None, 302, "Found", {}, "https://attacker.test/") is None
