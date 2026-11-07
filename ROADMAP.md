@@ -5,14 +5,14 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 
 ## Execution cursor
 
-| Field         | Current value                                                                                             |
-| ------------- | --------------------------------------------------------------------------------------------------------- |
-| Active work   | MP1 publication-review completion on existing PR #23                                                      |
-| Branch        | `codex/model-publication-vertical-slice`                                                                  |
-| Status        | IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. Updated PR awaits owner review                                  |
-| Next task     | Review/merge PR #23, then resume MP2 from updated main with a reviewed real template and canonical base   |
-| PR            | [#23](https://github.com/paulzwecker/portfolio-app/pull/23), open and unmerged at inspection              |
-| Approval gate | Owner review/merge, followed by separately authorized source installation and production/model operations |
+| Field         | Current value                                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| Active work   | C2.1 held-listing/FX coverage, canonical ingestion compatibility and recovery assessment                   |
+| Branch        | `codex/c2-canonical-ingestion-readiness`, independently based on merged PR #23                             |
+| Status        | PRODUCTION_PREVIEW_VERIFIED for market scope; focused verification and integration review in progress      |
+| Next task     | Finish checks and PR; prepare bounded market execution/recovery plan and reviewed SEC issuer mappings      |
+| PR            | New C2 PR pending. Completed [#24](https://github.com/paulzwecker/portfolio-app/pull/24) remains unchanged |
+| Approval gate | Owner merge, current-state recovery and separately authorized ingestion. P-GOOGL acceptance remains DEFER  |
 
 ## Baseline and outstanding gates
 
@@ -29,6 +29,9 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
   tests (19 passed), and desktop/mobile model review (two passed).
 - Production synchronization and automatic promotion await authorization. M7
   retains backup/restore privilege/tool skips and hosted role-separation work.
+- PR #23 merged as `0717498`; PR #24 contains the completed publication preflight
+  and capability-roadmap work awaiting owner review. C2.1 advances the independent
+  missing market-data foundation without expanding that completed PR.
 
 ## Current integration milestone
 
@@ -64,6 +67,28 @@ Original task definitions, decisions and evidence remain in the
 [roadmap through MP1](docs/history/roadmap-through-mp1.md).
 
 ## Execution evidence
+
+### C2.1 — canonical ingestion readiness
+
+- Live read-only target/control-plane checks verified the current production
+  identity, `public` schema, head `9f2a6d4c81b7` and unchanged minimal counts.
+  Prices, FX, corporate actions, fundamentals, source documents and models are
+  absent. Private reports retain exact inventory and target evidence.
+- Fixed a confirmed receipt-format incompatibility: provider readiness expected
+  root reconciliation, while minimal Sheets v1 stores it in a linked legacy
+  report. The adapter validates exact versions, hashes, identities and all domain
+  evidence without editing receipts or changing production authorization.
+- The existing production-target read-only market preview changed from
+  `BLOCKED_CANONICAL_IMPORT` to `READY`: 22/22 held mappings, DKK/EUR and USD/EUR,
+  no mapping blockers, zero provider requests and zero database writes. The
+  one-year planning window is 2025-11-07 through 2026-11-06. SEC preview now
+  recognizes the baseline but correctly blocks on zero reviewed CIK mappings.
+- Recovery remains ready and expires 2026-11-14 09:54 CET, but contains the empty
+  pre-import state. A separately authorized current-state recovery point is
+  required before future writes. Local TLS required a process-only trusted CA
+  selection, preserving `verify-full`; persistent settings were unchanged.
+- Next action: finish focused PostgreSQL/quality checks and independent review,
+  then open the C2 integration PR. Production ingestion remains unauthorized.
 
 | Date       | Task                    | Evidence                                                                                                                                                                                                                                                                                                                                                                  | Next action                                             |
 | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
