@@ -77,12 +77,13 @@ unmapped, or non-parity models remain blocked by the existing native importer an
 into accepted state. The command never creates a rank or execution run; run those existing
 read-only previews separately only after their prerequisites are satisfied.
 
-## Current readiness
+## Historical readiness at implementation
 
-The current local private store contains portfolio acquisitions marked
+The implementation-time private store contained portfolio acquisitions marked
 `ACQUIRED_REVIEW_REQUIRED`; no schema-approved snapshot is available. The current local settings
 also have production writes, recurring operations, Sheets polling, and cloud ingestion disabled.
-No import or production write has been performed for this bootstrap. A target-verified preview
+That record describes the full-workbook model bootstrap. The later minimal
+portfolio restoration is recorded in [the canonical baseline](production-canonical-baseline.md). A target-verified preview
 requires working Neon control-plane access as well as an approved frozen snapshot.
 
 The native model migration inventory is hash-pinned to its reviewed source workbook. Do not update

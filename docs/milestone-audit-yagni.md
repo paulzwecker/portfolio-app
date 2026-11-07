@@ -1,5 +1,7 @@
 # Milestone audit and YAGNI pass
 
+> Historical evidence for the recorded milestone/date. Current production scope is in [production-canonical-baseline.md](production-canonical-baseline.md), and current execution is in [ROADMAP.md](../ROADMAP.md). Retain the safety and provenance details for the workflows they describe.
+
 Audit date: 2026-10-05  
 Scope: Milestones 0 through 2A, including the controlled workbook import. Milestone
 2B and later work was reviewed only as roadmap context; it was not implemented.

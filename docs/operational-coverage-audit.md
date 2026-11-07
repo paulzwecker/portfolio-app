@@ -1,5 +1,7 @@
 # Milestone 6.1 — Operational coverage and integrity audit
 
+> Historical evidence for the recorded milestone/date. Current production scope is in [production-canonical-baseline.md](production-canonical-baseline.md), and current execution is in [ROADMAP.md](../ROADMAP.md). Retain the safety and provenance details for the workflows they describe.
+
 - Audit date: 2026-10-06
 - Evidence cutoff: 2026-10-05
 - Scope: 21 Portfolio companies first, then 71 Watchlist companies (92 total).

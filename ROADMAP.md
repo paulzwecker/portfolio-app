@@ -1,277 +1,77 @@
-# Personal Universe / Portfolio — Adaptive Delivery Roadmap
+# Portfolio execution roadmap
 
-**Version:** 0.1 — proposed initial plan; **not** a statement of live repo readiness  
-**North star:** `docs/PRODUCT_VISION.md`  
-**Portfolio architecture:** `docs/architecture/portfolio-application.md`  
-**Platform architecture:** `docs/architecture/personal-universe.md`
+Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns outcomes.
+The [documentation index](docs/README.md) routes detailed contracts and runbooks.
 
-## Execution cursor — edit after EVERY subtask
+## Execution cursor
 
-| Field                   | Current value                                                                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                           |
-| Next task               | Review and merge the cohesive MP1 publication PR, then begin MP2 from updated main with a reviewed real template and canonical base.        |
-| Status                  | `MP1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED`; real-source rollout and M2 investment acceptance remain owner-gated.                        |
-| Current branch / commit | `codex/model-publication-vertical-slice`, based on merged main `eb14b73`.                                                                   |
-| Last verified tests     | npm run check passed; integration 137 passed / 4 skipped; final focused suite 19 passed; desktop/mobile model-review E2E 2 passed.          |
-| Latest PR               | [MP1 publication PR #23](https://github.com/paulzwecker/portfolio-app/pull/23) open for owner review.                                       |
-| Primary blocker         | MP1 awaits PR review/merge. Real rollout requires a reviewed canonical base and source installation; M2 investment review recommends DEFER. |
-| Next approval gate      | Owner reviews MP1 PR. Real source installation, model assumption acceptance and production operations each retain explicit approval gates.  |
+| Field         | Current value                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
+| Active work   | MP1 foundation extension on existing PR #23                                                               |
+| Branch        | `codex/model-publication-vertical-slice`                                                                  |
+| Status        | Documentation audit implemented; independent-model synchronization in progress                            |
+| Next task     | Scope source revision identity by canonical model, then verify exact model selection                      |
+| PR            | [#23](https://github.com/paulzwecker/portfolio-app/pull/23), open and unmerged at inspection              |
+| Approval gate | Owner review/merge, followed by separately authorized source installation and production/model operations |
 
-**Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `PARTIAL`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `REVIEW_PENDING`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
+## Baseline and outstanding gates
 
-## How agents execute this roadmap
+- M0 merged as PR #13. M1 is `PRODUCTION_VERIFIED` for the minimal portfolio scope.
+  The [canonical baseline](docs/production-canonical-baseline.md) records 209
+  companies, 23 securities/listings, 22 holdings, two cash rows and 16 targets.
+- M2 P-GOOGL is `PRODUCTION_PREVIEW_VERIFIED` and unaccepted. Native parity passes.
+  The private investment review recommends DEFER pending dated assumptions, fiscal
+  alignment and methodology evidence. PR #22 merged.
+- Last recorded production schema is `9f2a6d4c81b7`. Reverify live target/schema
+  before operations. The portfolio recovery branch expires 2026-11-14 at 09:54 CET.
+- Original MP1 local verification passed full quality/build checks (166 web and
+  659 API tests, two skips), PostgreSQL (137 passed, four skips), focused sync
+  tests (19 passed), and desktop/mobile model review (two passed).
+- Production synchronization and automatic promotion await authorization. M7
+  retains backup/restore privilege/tool skips and hosted role-separation work.
 
-1. Read the cursor, relevant architecture/contract docs and Git status. Check whether the preceding work exists in the current branch.
-2. Select the **next ready subtask**, not the easiest large refactor. Deliver the smallest coherent vertical slice; test, inspect, review once and correct defects.
-3. After **each subtask**, edit its checkbox/status and evidence line, update cursor, log blockers/decisions and revise adjacent dependencies. Commit the roadmap update with the change (or alone for an accurate blocked-state update).
-4. If a block requires owner authorization, stop that action; work on an independent task only when it does not compromise the milestone's coherence.
-5. At a milestone gate: verify acceptance evidence, run all affected suites and UX checks, review security/privacy diff, assess vision alignment, push a feature branch and open a PR with test evidence. Record URL and status. **Do not automatically merge, deploy or apply a production change.**
-6. Once a PR is merged or the owner explicitly permits the next integration branch, recheck repository reality, update the remaining plan and continue. Avoid stacking branches on unreviewed work without making dependencies explicit.
-7. Limit self-editing of the long-term vision: agents may change future technical tasks, not fundamental financial policy, product mission, auth model or production authority without owner review.
+## Current integration milestone
 
-## Milestone M0 — Reconcile repository and establish autonomous loop
+| Task                                     | Status         | Acceptance                                                                                        |
+| ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| MP1.1 Publication contract               | LOCAL_VERIFIED | Frozen typed publication, native parity, bounded capture and durable proposals                    |
+| MP1.2 Reliability                        | LOCAL_VERIFIED | Source lock, replay and immutable conflicts retained through acceptance                           |
+| MP1.F1 Documentation hierarchy           | IMPLEMENTED    | Selective entrypoints, index, original history preserved, stale claims scoped and link validation |
+| MP1.F2 Independent model synchronization | IN_PROGRESS    | Same-company methods may share revision labels; conflicts remain scoped to their model            |
+| MP1.F3 Exact model selection             | READY          | Summary, history and editor preserve the selected model/listing                                   |
+| MP1.F4 Cross-method proof                | READY          | DCF/owner-cash-flow/residual-income retain independent evidence, revisions and return definitions |
+| MP1.F5 Integration gate                  | READY          | Focused/DB/UI checks, independent review, quality checks and one updated PR                       |
 
-**Objective:** A trustworthy baseline; all previous work protected, scoped and checkable.  
-**Dependencies:** None. **Exit:** one reviewed integration PR, deterministic tests or documented residual failures, roadmap cursor accurate. **Completed:** PR #13 merged to `main` as `6bd9fa0776130eb7663fe95b8f62aa8b6af478de`.
+## Next milestones
 
-- [x] **M0.1** Inventory `git status`, branches, stashes, commits, untracked work, existing docs and CI. Preserve unrelated changes (`AGENTS.md`, `docs/architecture/` historically reported). Evidence: inventory with paths and owned work; never assume pasted milestone reports equal merged code.
-  - Evidence (2026-11-01; inventory recorded in `a179433`): branch `codex/n1-model-release-candidate` at `261955d` when surveyed; the supplied docs were preserved and subsequently reconciled. Branch contained 23 commits ahead of `main`/`origin/main`, including M2/M5–M8 integration commits `d82535f`, `1be9a85`, and docs commit `2cde719`. One unrelated stash (`stash@{0}`, Task 8 readiness test isolation) and all listed recovery/task branches remain intact. CI exists at `.github/workflows/ci.yml`; source-data policy check passes and confirms excluded workbook/source paths are not in the CI checkout. The two workbook files are tracked from the initial commit but excluded by the CI sparse-checkout policy; no new private artifacts were staged. Local Alembic graph has the single head `9f2a6d4c81b7`; migrations from production head `6c2eaf0b8147` are chained through `b16d4f8a2c91`, `c17a0b9d4e62`, `3e5c8a1d7b42`, then `9f2a6d4c81b7`. No files or branches were reset, discarded or switched.
-- [x] **M0.2** Adopt/reconcile this documentation kit with existing repo docs, without overwriting local modifications. Establish doc links, source-of-truth precedence and minimal `AGENTS.md`; preserve all scoped agent rules.
-  - Evidence (2026-11-01; implementation commit `1275f7e`): added explicit links from README and root `AGENTS.md` to the vision, roadmap, platform architecture and Portfolio architecture; retained scoped web/API instructions and linked authoritative domain/model contracts. Clarified `docs/architecture.md` as the historical implementation snapshot through Milestone 2C. Kept proposed platform direction separate from implemented behavior, summarized the financial/model invariants that had been condensed from the prior root guidance, and preserved the provided documents' substantive content while reconciling links and precedence. `npm run format:check`, `git diff --check`, and documentation target existence checks pass. No code, model, migration or financial behavior changed.
-- [x] **M0.3** Separate and commit outstanding identity bootstrap, model-package v2/v3, proposal API, migrations and workspace changes into reviewable commits; resolve generated-contract drift and Alembic graph. Preserve approved P-GOOGL package hash and proposed-state semantics.
-  - Evidence (2026-11-01): inspected the committed implementation and migration history (`3b237b5` package v1, `d82535f` package templates/multi-archetype, identity bootstrap, proposal API and migrations, `1be9a85` reviewer workspace, `2cde719` contracts/operating docs); no outstanding application-code changes were present. `npm run contracts:check` reports current OpenAPI/TypeScript artifacts; Alembic reports one head `9f2a6d4c81b7` and linear production-to-local chain `6c2eaf0b8147 → b16d4f8a2c91 → c17a0b9d4e62 → 3e5c8a1d7b42 → 9f2a6d4c81b7`. Focused model/package/exporter/archetype/proposal/guard/migration suite: 71 passed, 2 skipped, 37 deselected. Revalidated private P-GOOGL package hash; `PARITY_PASS`, 30/30 projections and 22/22 output checks, `PROPOSED_SOURCE_REVISION`. The earlier backend integration commit combines several related features; it is preserved rather than rewritten. No production operations were performed.
-- [x] **M0.4** Run backend/frontend/type/contract/migration suites; diagnose full-repo mypy and inventory failures rather than blanket disabling. Record genuine pre-existing failures with baseline evidence.
-  - Evidence (2026-11-01): `npm run check` passed lint, format, Next typecheck, strict mypy (`172` files), web unit tests (`166`), API unit tests (`593 passed, 2 skipped, 193 deselected`), repository source-data policy (`3 passed`), contracts, and optimized Next.js build. `npm run test:integration` passed against the preflight-verified local `127.0.0.1/portfolio_app_test` target (`133 passed, 4 skipped, 651 deselected`); migration roundtrip and incremental upgrade from `6c2eaf0b8147` were exercised in disposable schemas. Focused N1 suite was also green (`71 passed, 2 skipped`). `alembic heads` reports only `9f2a6d4c81b7`; no generated files or test changes remain in the working tree. Skips are retained as reported by pytest, not converted to passes. No production operation was run.
-- [x] **M0.5** Verify model workspace in browser desktop/mobile (including proposal preview and explicit reviewer confirmation); distinguish fixture browser evidence from live database verification.
-  - Evidence (2026-11-01): `npm run test:e2e -- --project=desktop --project=mobile` completed with 55 passed, 11 conditionally skipped and 0 failed. The model workspace preview/accept flow verifies proposed-vs-current input/output differences, disabled acceptance before review, required decision note, explicit confirmation, one acceptance request and immutable revision ID. The broader run covers Company Explorer, Portfolio, Decisions, Universe, Research review, Operations states, navigation and responsive behavior in Chromium desktop/iPhone-sized mobile contexts. Initial failures were stale E2E assertions for content behind existing disclosures and an updated missing-estimate message; tests were aligned with current accessible UI semantics. No product behavior was changed. `npx prettier --check apps/web/e2e/research.spec.ts` and `git diff --check` pass. Eleven live-database or project-conditional checks remain skipped; this is fixture-based UI evidence, not live Neon/deployed verification.
-- [x] **M0.6** Complete the milestone quality review, open the integration PR, capture final CI evidence and reassess M1–M9 against Product Vision. M0 is complete after the verified merge to `main`.
-  - Review evidence (2026-11-01): owner confirmed the two XLSX files already tracked on public `origin/main` are safe to publish; they remain unchanged. The PR changed-file list contains no workbook or private package snapshots. The credential-pattern scan found no token, service-account credential or database URL patterns; private source identifiers remain omitted. PR #13 merged to `main` as `6bd9fa0776130eb7663fe95b8f62aa8b6af478de`; it contained 121 changed files across the integrated prior implementation. No private workbook snapshot or model package was added.
-  - Historical CI resolution evidence: the initial `ubuntu-latest` runner could not provide pinned Python 3.12.3; `f3b91df` pins Linux jobs to `ubuntu-24.04`. That run exposed two workbook-dependent tests in CI's deliberately sparse/private-data-free checkout and six unclassified ORM tables; `99a8bdf` marked the tests `source_data`, classified the tables and added a registry-coverage regression. A subsequent PostgreSQL backup/restore roundtrip exposed hard-coded expectations for old production head `6c2eaf0b8147`; `3533b83` changed both assertions to derive the checked-in Alembic head. These were resolved without weakening the sparse-checkout boundary or migration coverage.
-  - Final verification evidence: implementation commit `5933c69e2cf1cffdf78a522c1fb67eff1ecdb702` passed GitHub Actions run 38: Quality, contracts and build; isolated PostgreSQL integration tests; and Windows migration-command compatibility. The final roadmap handoff commit `1960a158b3d0d347f87f9580f75ecec794b55962` passed Actions run 39 and its Vercel PR preview. Local `npm run check` passed (592 API passed, 2 skipped; 166 web passed); `npm run test:integration` passed (133 passed, 4 skipped); desktop/mobile E2E passed (55 passed, 11 conditional skips, 0 failed). The E2E proposal-review path is fixture-backed; live production schema/data, hosted authentication and deployed database reads remain unverified. No production write/migration, manual deployment, authoritative Sheets edit or model acceptance occurred.
-  - Product alignment is recorded below; the dependency ordering remains consistent with the approved vision and architecture.
+- **MP2** follows MP1 merge. Onboard a reviewed real template and canonical base.
+  First-model seeding uses the existing guarded path. Real source publication and
+  any model acceptance need their specific owner approval and current recovery.
+- **MP3** follows a proven reviewed lifecycle. Design and test promotion policy,
+  exceptional-change routing, freshness limits and recovery. Policy approval and
+  activation remain separate gates.
+- **M3** remaining work is portfolio/Universe data-quality and browser acceptance.
+  The minimal import tasks were completed by M1.
+- **M4** advances source-backed company research. **M5** proves the hosted agent /
+  reviewer loop after role separation and one accepted model. **M6** expands
+  reviewed model coverage afterward.
+- **M7** covers security, recovery, monitoring and bounded operations. **M8/M9**
+  platform extraction and another application follow a useful, stable Portfolio.
 
-### M0.6 Product-vision reassessment
+Original task definitions, decisions and evidence remain in the
+[roadmap through MP1](docs/history/roadmap-through-mp1.md).
 
-The M1→M2→M3 order matches the product vision and Portfolio architecture: verify target, recovery and private access first; prove one reviewed real-model lifecycle; then establish useful canonical holdings, cash and targets without requiring a whole-workbook import. M4/M5 complete company research and human-reviewed proposals; M6 broadens only proven paths; M7 provides operational reliability; M8/M9 remain deferred until Portfolio is secure and stable. Add an explicit dependency: complete the private hosted identity/session boundary (M1.4/M7.1) before hosted access or any production model/portfolio write in M2.5/M3.4. No investment-policy or methodology changes are proposed.
+## Execution evidence
 
-**Done when:** critical work is version-controlled and integrated, the local test baseline is honest, no sensitive artifacts are tracked, the migration head is unique, and PR/check evidence is captured. M0 is complete; M1 starts from the merged `main` baseline.
+| Date       | Task   | Evidence                                                                                                           | Next action                             |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| 2026-11-07 | MP1.F1 | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger | Check links; complete model-scoped sync |
 
-## Milestone M1 — Verify cloud target and safe delivery controls
+## Upkeep
 
-**Objective:** Verify cloud target and safe delivery controls, then establish the first explicitly reviewed minimal canonical portfolio baseline.
-**Dependencies:** M0 integration baseline; PR #13 is verified merged at `6bd9fa0776130eb7663fe95b8f62aa8b6af478de`. **Exit:** verified target, schema drift plan and recovery procedure.
-
-**Closeout status (2026-11-07): `PRODUCTION_VERIFIED` for the minimal canonical
-portfolio restoration in M1.9.** This does not claim full workbook migration or
-unattended operational readiness. The backup/restore rehearsal skipped in M1.3
-remains an explicit M7.4 reliability task; no restore was executed for this
-import.
-
-- [x] **M1.1** Use authorized read-only Neon control-plane/SQL access; identify exact project/branch/database, current production Alembic head and counts. Do not bypass target guard.
-  - Evidence (2026-11-01; branch `codex/m1-cloud-target-safe-delivery-controls`, based on merged M0 commit `6bd9fa0`): fetched `origin/main` and independently confirmed PR #13 merged to main as `6bd9fa0776130eb7663fe95b8f62aa8b6af478de`; local branches and `stash@{0}` were preserved. The shared read-only database guard verified through both the active PostgreSQL connection and Neon control-plane API: project `delicate-heart-04560404`; primary branch `br-morning-truth-b96361yh`; direct endpoint `ep-snowy-term-b9gr75j6`; database `neondb`; PostgreSQL `18.6` (`server_version_num=180006`); endpoint active and branch ready; TLS `sslmode=verify-full`; current schema `public`. The session and default transaction were read-only. Production/rehearsal write authorization was false; cloud ingestion and recurring operations were false; Sheets polling was `0`.
-  - Exact read-only inventory: 89 public base tables and 20 rows total across them; 85 tables are empty. Non-empty tables are only `alembic_version` (1), `ranking_definitions` (11), `return_methodology_definitions` (4), and `score_definitions` (4). Canonical companies, securities, listings, lifecycle-current rows, portfolios, holdings, cash, targets, score assessments, native models/revisions/outputs and agent proposals are all zero; `agent_model_revision_proposals` is not present. The database is approximately 13.2 MB. The connected role is not superuser, has database CONNECT and schema USAGE/CREATE, and has membership/ownership access to all existing public relations; this is catalog evidence, not a migration rehearsal.
-  - Live Alembic head is `6c2eaf0b8147`; repository head is `9f2a6d4c81b7`. Six repository-mapped tables are absent on production: `agent_model_revision_proposals`, `model_identity_bootstrap_receipts`, `workbook_sync_artifacts`, `workbook_sync_previews`, `workbook_sync_runs`, and `workbook_sync_schema_approvals`. No writes, migrations, provider calls or imports were executed.
-- [x] **M1.2** Map migration chain from last reported prod `6c2eaf0b8147` through relevant local heads; verify order from repository, not from historical reports.
-  - Evidence (2026-11-01; branch `codex/m1-cloud-target-safe-delivery-controls`): `alembic history --verbose` confirms the direct chain `6c2eaf0b8147 → b16d4f8a2c91 → c17a0b9d4e62 → 3e5c8a1d7b42 → 9f2a6d4c81b7`; `alembic heads` reports exactly one head, `9f2a6d4c81b7`. Offline SQL generation for the production-to-repository upgrade succeeded and emitted the expected ordered PostgreSQL DDL. `alembic check` against the configured live production target correctly reported “Target database is not up to date”; it made no schema change.
-  - Migration review: `b16d4f8a2c91` expands the operational-job check constraint and adds four workbook-sync tables; `c17a0b9d4e62` expands the target-environment constraints on market/fundamentals bootstrap ledgers; `3e5c8a1d7b42` adds model identity receipts; `9f2a6d4c81b7` adds agent model proposal storage and foreign keys to existing canonical identities/revisions. These upgrades contain no data backfill or destructive row transformation. Constraint changes require their existing rows to satisfy the revised definitions. Downgrades drop newly introduced tables and can reject rows using newly allowed values; treat downgrade as destructive and use the reviewed recovery/restore procedure rather than assuming application rollback implies schema rollback. Offline DDL generation is static compatibility evidence only, not a migration rehearsal.
-- [ ] **M1.3** Rehearse migrations in disposable PostgreSQL with backup/restore, backward-compatible API checks, data guard and idempotence tests. Prepare scoped production approval package; **do not apply**.
-  - Evidence (2026-11-01): verified `TEST_DATABASE_URL` resolves to loopback PostgreSQL 18.3 database `portfolio_app_test`; the count of non-system schemas remained 10 after the run. `npm run test:integration` completed with `133 passed, 4 skipped, 652 deselected`. `test_migrations.py` passed its fresh upgrade, downgrade to production head, readiness-outdated check, re-upgrade, base downgrade and clean re-upgrade path in a random temporary schema. Database target guards and isolated transaction tests ran. Two tests requiring `CREATEROLE` skipped because the local role lacks that privilege; two PostgreSQL backup/restore tests skipped because `pg_dump`/`pg_restore` are unavailable (the fixture also requires `CREATEDB` and `CREATEROLE`). No existing schemas or production state were modified. Offline DDL generation passed, but it is not a substitute for the skipped backup/restore rehearsal.
-  - Recovery finding: the existing ready Neon child branch was created from the primary at `2026-10-25T09:52:37Z` and expires at `2026-11-24T17:12:00Z`. A guarded read-only connection verified its Alembic head is `12a6f0d9c3e1`, versus the live primary's `6c2eaf0b8147`; its company table is empty. It is not a current-schema recovery point for the proposed migration chain. Do not use it as such or create a replacement without the required separate operator action.
-  - Blockers and next actions: the initial 2026-11-01 environment lacked matching PostgreSQL dump tools. A later 2026-11-03 check found PostgreSQL 18.3 `pg_dump`/`pg_restore` installed; the remaining blocker is temporary `CREATEDB`/`CREATEROLE` capability for the isolated local test role only. Then rerun `npm run test:integration`. No production migration was attempted.
-  - Historical recovery-policy decision (2026-11-04; superseded): the owner accepted loss of nonessential reference rows for the initial schema migration, and the coordinated-release prototype included a narrow no-recovery exception. The later native-deployment direction requires a fresh verified recovery point before every migration, including the initial reference-only baseline. The exception was removed; no existing stale branch is used.
-- [x] **M1.4 (PRODUCTION_VERIFIED)** Verify deployed Vercel/Render topology, API auth and read-only endpoints; document release/rollback procedure and shared-runtime risks.
-  - Evidence (2026-11-01): GitHub's deployment record confirms a successful Render `main - portfolio-api` deployment for merged M0 commit `6bd9fa0`. The live Render API returned `200` from `/health/live`; `/health/ready` returned `503` with `database=connected`, `schema=outdated`; an unauthenticated `/v1/companies` request returned `401`. This matches live Neon `6c2eaf0b8147` versus repository `9f2a6d4c81b7`. The Render control-plane request using configured local credentials returned `401`, so actual deployed environment overrides, worker flags, plan and service settings could not be inspected. Checked-in `render.yaml` remains configured for `main` and disables ingestion/recurrence, but is not evidence of hosted overrides.
-  - At the 2026-11-01 checkpoint, the Vercel preview and API health were unauthenticated 401 responses; authenticated behavior could not then be verified. This is superseded by the 2026-11-07 authenticated routing/API readback below.
-  - The runbook documents liveness versus readiness, preview isolation, shared Render/Neon runtime, the limits of shared Basic Auth, rollback, and disabled jobs. The 2026-11-01 schema=outdated readiness result is historical and was superseded by the verified new production target and current readiness on 2026-11-07.
-  - Current verification (2026-11-07): Render and Vercel production reported the expected merged commit; Render `/health/ready` returned 200. An authenticated API read and the owner's production UI inspection confirmed Portfolio/Universe company and position visibility. A unique authenticated frontend API route was correlated to the expected Render service by its exact logged path and 404 response. This verifies routing and readback, not full financial-data completeness.
-- [ ] **M1.5 (PR_OPEN)** Milestone review, PR and vision alignment; keep approval-needed changes as separate planned operations. Documentation-only [PR #20](https://github.com/paulzwecker/portfolio-app/pull/20) is open; review remains pending.
-  - Interim vision reassessment (2026-11-01; retained): keep M2 as the narrow, provenance-backed first accepted model slice, followed by M3's minimal real holdings/cash/targets baseline; neither should depend on full workbook reconstruction. M4 follows canonical identity and real data. M5 remains gated on private hosted identity/role separation and M2. M6 stays after one proven model/review lifecycle. M7 security, recovery, monitoring and bounded operations remain prerequisites for unattended cloud use, but scheduling stays disabled. M8 shared-platform work and M9's second app remain deferred until Portfolio is useful and stable in the cloud. This preserves the product vision's one-user research cockpit, accepted-state provenance, small vertical slices and explicit investor authority; no financial-method or investment-policy change is proposed.
-  - Historical independent quality review (2026-11-01): `npm run check` passed (web lint, Prettier, Next typecheck, mypy for 172 Python files, 166 web tests, 592 API tests with 2 skips, repository policy, contract check and production build). `npm run test:integration` passed 133 with 4 environment-gated skips. Desktop/mobile E2E passed 55 with 11 conditional skips and no failures. The M1.6 update below supersedes the then-current “docs only” branch status.
-  - Historical operator actions from 2026-11-01 are superseded where later M1 evidence differs. At that checkpoint M1 remained incomplete; the 2026-11-07 M1.9 closeout below records the later production-verified minimal baseline. Backup/restore execution remains unverified and is tracked under M7.4; it does not retroactively change the import evidence.
-
-- [x] **M1.6 (superseded)** Prototype a coordinated single-owner production release workflow.
-  - Historical implementation evidence (2026-11-04): the prototype added `.github/workflows/production-release.yml`, provider-specific deploy scripts and six GitHub environment scopes. It was reviewed, but never configured or dispatched. GitHub Actions runs 47–49 and Vercel Preview passed on earlier PR heads; local `npm run check` and PostgreSQL integration checks passed as recorded at the time. Those results validate the prototype's code only; they do not establish live deployment readiness.
-  - Superseded by owner direction on 2026-11-04: six environment scopes and the custom Render/Vercel release orchestrator are unnecessary for this one-developer repository. M1.7 replaces them with GitHub PR checks, native Render/Vercel Git deployments, and a separate guarded migration procedure. Existing GitHub Environments were not changed and remain unused.
-- [x] **M1.7** Replace the coordinated orchestrator with provider-native deployments and a separately reviewed, recoverable migration procedure.
-  - Implementation (2026-11-04): Render now declares `autoDeployTrigger: checksPass` and `/health/ready`; Vercel's main-branch deployment suppression was removed so native PR Preview and production-branch deployments can operate. Removed the custom release workflow, provider scripts, six-environment design and obsolete release docs/tests. Kept the preflight read-only and migration-specific; the original path required a fresh recovery point for the recorded data-bearing production transition. M1.8 adds a separate empty-target path for first activation only.
-  - Solo-developer policy and ordered first-transition procedure are in `docs/deployment-and-migrations.md`; `docs/cloud-deployment.md`, README and PR template link to or reinforce it. CI is defined for pull requests targeting `main` and pushes to `main`; the required-check branch rule is not yet configured/verified and remains an operator step. The owner records review in the PR checklist. GitHub does not allow PR authors to approve their own PR, so formally required approval needs a second reviewer. Existing provider projects and GitHub Environments remain untouched.
-  - Local verification: `npm run check` passed (166 web; 609 API, 2 skipped; 5 deployment tests; 3 repository-policy tests; TypeScript/mypy, contracts and optimized build). `npm run test:integration` passed (134, 4 skipped; 669 deselected) against loopback PostgreSQL `portfolio_app_test`. `alembic heads` reports the single head `9f2a6d4c81b7`; `alembic history --verbose` confirms the reviewed linear chain. The new preflight CLI help works; no cloud preflight, migration, provider change, deployment or database write was run.
-  - Current production mismatch (last recorded live read-only observation 2026-11-03): Neon `6c2eaf0b8147`, repository `9f2a6d4c81b7`, `/health/ready=503`. That old target must not receive the new deployment before its schema is addressed. The new-empty-target path can prepare a separate fully migrated database before connecting Render, so it does not need freezes or a recovery branch for the empty target. Any migration of existing data remains separately authorized and recovery-first.
-  - Implementation commit `93ad8268f2ca3d88af0a606cb5acc651b85643ff` was the M1.7 baseline pushed to PR #14. M1.8's current amendment is recorded below. No provider setting, GitHub environment, credential, production database, migration, deployment or investment state has been changed. The old target inventory, live Render/Vercel configuration, branch protection and hosted-auth behavior remain unverified.
-  - CI regression correction (2026-11-04): the deployment contract test reads `docs/deployment-and-migrations.md`, which the sparse CI checkout omitted. The first correction added only that runbook, but exposed the source-data boundary's intentional prohibition on the entire `docs/` tree. The policy now allowlists exactly this runbook and continues rejecting other docs/source paths; regression tests cover both. Commits `12435d68be06a9c47ba27a9031c71f7fd41378e0` and `7b1ff4fbab784d78faefc89824167f51c9012637` implement the fix. On the final local tree, `npm run check` passed (166 web, 609 API, 2 skipped; 5 deployment tests; 3 repository-policy tests; lint, format, typechecks, contracts and production build). `npm run test:integration` passed (134, 4 skipped; 669 deselected) against loopback `portfolio_app_test`; one preceding run had a 5-second local PostgreSQL statement-timeout, and the affected test passed both in isolation and in the clean full rerun. The PR is ready for review; current-head CI/Preview evidence remains visible on the PR. This changes CI checkout contents only and does not alter deployment or production behavior.
-
-- [x] **M1.8** Add a first-activation path for a verified empty Neon production database, without changing the data-bearing migration safety path or activating deployment.
-  - A reviewed literal standalone ETF listing identity resolves the formula-derived AUX classification without changing the captured source. The production target-bound preview is `READY_WITH_EXCLUSIONS` and remains read-only; source freshness and explicit approval are still required. The exact private report remains outside Git. No production records or financial models were changed.
-  - Historical status (superseded by the final read-only verification below): restoration preparation was blocked on the held ETF AUX identity and source validation. PR #17 later added a reviewed literal standalone ETF listing identity; no source workbook was edited.
-  - Readiness investigation: the owner reports new Neon head `9f2a6d4c81b7` and a 503 on Render commit `81e883c`. Read-only Render inspection found `sslmode=verify-full`, `PGSSLROOTCERT=system`, and auto-deploy off; recent logs did not expose the failure. Safe error-category logging is locally tested; the actual failure and the Render CA trust paths remain unverified. No live settings or database data were changed.
-  - Readiness investigation (2026-11-05): the owner reports the new Neon database at `9f2a6d4c81b7` and Render commit `95a2350` returning `schema=outdated`. The checked-in migration loader resolves the same expected head from the Render working directory. A focused PR adds sanitized mismatch diagnostics; the actual Render database name, schema and observed revision remain unverified until an authorized deployment or read-only Render session provides them. Automatic deployments remain disabled.
-  - Implementation commit `bd39bfea64021a8ccb07e61444061a3686a3fc46`: the read-only `fresh-bootstrap-preflight` binds a clean pinned `main`/`codex/*` checkout, exact configurable Neon primary/database, production target settings and typed `INITIALIZE` confirmation. It verifies the Neon control plane and PostgreSQL connection, requires default schema `public`, no Alembic head, no user relations in non-system schemas and no public rows, and requires all write/background authorizations disabled. It never requests or verifies a recovery branch. `fresh-bootstrap-schema-check` verifies the exact target, full mapped schema and metadata after the separately authorized migration. The existing `readonly`/`migration-preflight` for the old target remains recovery-first. The production write guard and `alembic upgrade head` command are unchanged.
-  - Render's database name and Neon target IDs are now operator-supplied `sync: false` Blueprint variables rather than pinned to the old target. Docs give the ordered minimum Neon/Render/Vercel setup, reuse existing provider projects and secrets, keep migration owner-authorized and outside deployment, preserve previews/native deploys, and defer retiring the old database until read-only counts on it and the new service are reviewed.
-  - Verification (2026-11-05): 78 focused API preflight/database-target tests passed; `test_postgresql_migration_roundtrip` passed (1), starting with no Alembic heads in a fresh isolated schema and executing the full `upgrade head` chain with no `stamp`; 5 deployment contract tests passed; targeted mypy, Ruff and formatting checks passed. `TEST_DATABASE_URL` was confirmed as loopback `portfolio_app_test`, PostgreSQL 18.3. The test database has existing unrelated test schemas; no new database was created, and the migration test uses/cleans its own random schema. No Neon/Render/Vercel access, provider change, migration or production write occurred. Current PR checks must be reverified after push.
-  - Final minimal-import approval preparation (2026-11-05, merged `main`): fresh read-only Portfolio and Market Data captures passed their metadata/integrity consistency checks. Source-version differences were reported rather than approved: the Portfolio capture changed only an excluded aggregate cash-summary formula cell; the Market Data XLSX raw hash changed while the importer-used Listings rows and normalized ready-listing projection remained identical. A read-only Neon control-plane and PostgreSQL check verified the expected production project/primary branch/endpoint/database, Alembic head `9f2a6d4c81b7`, and empty minimal-import canonical tables. The current target-bound preview is `READY_WITH_EXCLUSIONS`, has zero blockers, resolves all 22 holdings, includes 2 native-currency cash rows and 16 targets totaling 100% with zero difference. Exact row values, source IDs/hashes and report remain in the private approval package outside Git. No source/schema approval, recovery point, production write, provider change or ingestion was performed. Next: owner reviews the source changes and exclusions; separately creates/verifies a pre-import Neon recovery point and explicitly authorizes the exact guarded apply, if desired.
-
-- [x] **M1.9 (PRODUCTION_VERIFIED)** Execute and verify exactly one owner-authorized minimal canonical production restoration.
-  - Evidence (2026-11-07): on the verified production target and exact privately retained approved source pair/input digest, one guarded `db:bootstrap-sheets-minimal apply` completed as `APPLIED_WITH_GAPS`. The durable canonical bootstrap receipt and legacy import batch record the source provenance and approved input digest. Persisted counts are 209 companies, 23 securities, 23 listings, 1 portfolio, 1 holdings snapshot, 22 positions, 2 currency-specific cash rows, 1 target revision and 16 company targets totaling 100%. Lifecycle, scores, rankings, financial models, prices, FX, fundamentals and research were outside scope.
-  - The existing command's read-only replay returned `ALREADY_APPLIED`; the canonical receipt and receipt projection matched, and the private report recorded zero reconciliation differences for identity, holdings, cash and targets. Render `/health/ready` returned 200 and authenticated Portfolio/Universe API reads succeeded. The owner confirmed companies and positions in the production UI. The target-bound approval digest and source/report identifiers remain in private reports and the database receipt, not Git.
-  - Accepted exclusions remain: 10 missing company names, 111 optional listing gaps, 11 invalid and 3 not-ready Market Data listing rows; excluded formula-derived aggregate cash summary; unsupported zero reserve target; and omission of lifecycle, scores, rankings and models. `APPLIED_WITH_GAPS` does not claim full workbook migration. No provider ingestion or recurring work ran.
-  - The verified pre-import recovery branch `br-sparkling-rice-baipcnmc` remained ready and unchanged, parent LSN matched, with expiry 2026-11-14 09:54 CET. Preserve it until owner acceptance of the initial baseline; it is time-limited and no restore was performed. See [canonical production baseline](docs/production-canonical-baseline.md).
-  - No deployment, migration, source edit or investment-model acceptance occurred in this task. Production write authorization was process-scoped and is not persisted; hosted background and ingestion controls remain disabled.
-
-## Milestone M2 — First real reviewed company/model in cloud
-
-**Objective:** Deployed user can see a legitimately accepted P-GOOGL native valuation with revision provenance.  
-**Dependencies:** M0/M1; exact reviewed source acceptance, schema and recovery approvals. **Exit:** production readback and app/browser evidence.
-
-- [x] **M2.1** Revalidate the immutable P-GOOGL source package from the local private snapshot store and confirm its payload hash and current mapping. The last evidence was 30/30 projection and 22/22 output parity; input drift is `PROPOSED_SOURCE_REVISION`, not accepted.
-- [ ] **M2.2** Independently review probability drift, financial methodology, source age and identity mapping; explicitly approve/reject the exact source proposal. No automatic fixture replacement.
-- [ ] **M2.3** Perform guarded **read-only** identity and model preview against verified live Neon; capture exact proposed records, existing/base revision state, compatibility errors and before/after counts.
-- [ ] **M2.4** **OWNER GATE:** Review exact migration, fresh recovery point, identity bootstrap and model acceptance/apply plan. Without explicit approval, mark blocked and work on unrelated ready tasks.
-- [ ] **M2.5** After explicit scoped approval only, apply migration/identity/model transactions; verify receipts, idempotency, immutable revision history and expected counts.
-- [ ] **M2.6** Verify Render/API and browser (desktop/mobile) reads the accepted valuation; confirm enterprise IRR label vs shareholder IRR and unavailable data behavior. Review and open milestone PR for code/docs; production action recorded separately.
-
-### M2 execution evidence — updated 2026-11-07
-
-- [x] **M2.1 (LOCAL_VERIFIED + LIVE_SOURCE_VALIDATED)** The historical immutable package hash revalidated, and a fresh direct-Sheets capture was created and validated privately. Both pass the native 30-projection / 22-output parity contract; the exact package IDs and hashes remain in the private store. The capture has no source revision ID or effective date. The canonical company/listing mapping is unchanged and explicit.
-- [ ] **M2.2 (OWNER_GATED)** Independent review found five changed source inputs and 26 changed published-output fields between the prior and current P-GOOGL packages. Native calculation parity passes; source-input drift remains a proposed revision. Exact values and cell evidence stay in the private review package. The owner must decide whether to accept this exact source revision. No fixture or assumption was modified or accepted. See the [production baseline M2 handoff](docs/production-canonical-baseline.md#m2-handoff-first-model-lifecycle).
-  - Review evidence (2026-11-07): both immutable packages replayed at 30/30 and 22/22 parity. The five recorded input deltas are serialization scale; five of 26 published differences concern the untimestamped reference price and price-dependent return outputs, and 21 are serialization scale. This does not validate the underlying assumptions or identify an effective date. A private owner package includes both assumption sets, every output difference, native-engine sensitivities, fiscal and methodology questions, production read-only counts and the proposed first-revision effect. Recommendation: DEFER until the investor reviews dated source support, scenario probabilities, the capital-investment path and terminal premium. No assumption or model revision was accepted.
-- [ ] **M2.3 (PRODUCTION_PREVIEW_VERIFIED)** Revalidate the exact private P-GOOGL package and run `db:financial-model-package preview` against the verified production target. The minimal portfolio import now provides the canonical Company/Security/Listing identity, so the former `BLOCKED_IDENTITY` state is no longer an assumed blocker. Confirm identity, schema, method, provenance, native calculations and model/base-revision outcome from the live preview. Do not run `accept`.
-  - Evidence (2026-11-07): replayed the privately stored current package by its manifest hash: `PARITY_PASS`, 30 projection and 22 output checks; probability comparison remains `PROPOSED_SOURCE_REVISION`. The guarded production read-only preview returned `READY_FOR_EXPLICIT_ACCEPTANCE` with canonical company and listing found, no existing model or base revision, `UFCF_DCF_10Y_FADE` and `UFCF_ENTERPRISE_IRR`; source effective date and source revision ID are unavailable. The state remains `PROPOSAL_NOT_ACCEPTED`. Windows required a process-local trusted CA bundle while retaining `verify-full`; no settings were persisted. The detailed preview and assumption differences remain private. This validates the proposal path, not investor acceptance or a persisted valuation; explicit before/after model row counts still require review.
-- [ ] **M2.4 (OWNER_GATED)** The portfolio import's recovery branch protects only that operation and expires 2026-11-14. Before any model write, review the exact package/source revision, proposed new revision, current model state, target, and a fresh recovery point appropriate to the then-current production data. No portfolio-import approval carries over to model acceptance.
-- [ ] **M2.5 (NOT PERFORMED, OWNER_GATED)** After separate exact-scope approval only, apply the reviewed model package through the existing guarded lifecycle. Create identity only if the read-only preview proves it absent or inconsistent. Run no migration unless a fresh schema check demonstrates it is required. Verify receipt, immutable revision provenance and idempotent replay.
-- [ ] **M2.6 (PARTIAL)** Synthetic model-proposal review E2E passed in desktop and mobile Playwright projects; model API/identity and proposal tests passed in isolated `portfolio_app_test` schemas. Full `npm run check` passed (166 web tests, 642 API tests, 2 skipped, deployment/repository policy checks, contracts, typechecks and optimized build); full PostgreSQL integration passed (135, 4 skipped). Production valuation readback/browser evidence is unavailable until the exact model revision is explicitly accepted and applied.
-
-## Milestone M3 — Portfolio baseline UX and data-quality completion
-
-**Objective:** Make the verified minimal production baseline useful and understandable in Portfolio and Universe, including its genuine data gaps.
-**Dependencies:** M1.9 production baseline; app contracts. **Exit:** live holdings, cash and targets reconcile in the UI without implying unavailable data or requiring full workbook import.
-
-- [x] **M3.1** Define and review the minimal typed company/listing, holding/cash and target contracts; all 22 held instruments resolve through exact listing identity, including the reviewed AUX cases. Evidence and exclusions are recorded in M1.9 and the canonical baseline document.
-- [x] **M3.2** Implement and test bounded direct Sheets extraction, immutable snapshot replay and sparse-response semantics without relying on XLSX caches. Focused service/API fixtures and isolated PostgreSQL tests cover capture, preview, rollback and replay.
-- [x] **M3.3** Produce the private target-bound read-only reconciliation with source provenance, totals and explicit optional exclusions. The final receipt replay reports `ALREADY_APPLIED` with zero projection differences.
-- [x] **M3.4** Owner approved the exact source pair, input digest, target, recovery point and minimal scope. One guarded apply completed; post-apply reconciliation and receipt are verified in M1.9. No repeat apply is part of this task.
-- [ ] **M3.5** Deliver Portfolio and Universe UI data reconciliation, target gaps, missing-data and stale-source indicators; browser-verify desktop/mobile.
-- [ ] **M3.6** Milestone PR, review product usefulness and revise future sequence.
-
-## Milestone M4 — Decision-ready Company Explorer and research queue
-
-**Objective:** User can investigate and prioritize companies, not merely browse imported tables.  
-**Dependencies:** canonical identities and at least representative real data. **Exit:** end-to-end research workflows.
-
-- [ ] **M4.1** Audit existing Company Explorer/Rankings/Assessments; retain working features and address only demonstrated gaps.
-- [ ] **M4.2** Integrate source-backed fundamentals, estimates/market observations and clear freshness/provenance. Preserve provider conflicts and point-in-time semantics.
-- [ ] **M4.3** Show independent Durability, Quality, Execution and Risk, approved lifecycle and Portfolio/Watchlist/Research ranking logic with explanatory gaps.
-- [ ] **M4.4** Add actionable attention/research queue, thesis evidence and material change history; no automatic lifecycle decisions.
-- [ ] **M4.5** Review desktop/mobile UX, integration, numerical semantics, cross-company comparisons; PR and roadmap reassessment.
-
-## Milestone M5 — End-to-end human-reviewed agent workflow
-
-**Objective:** Research agent can propose a change; reviewer can safely decide; accepted state propagates.  
-**Dependencies:** deployed auth/role separation, model/assessment contracts, M2 first accepted revision. **Exit:** real authorized proposal loop.
-
-- [ ] **M5.1** Verify M7 proposal API code and migrations actually integrated; validate agent/reviewer token separation, authorization negative tests and base revision conflicts.
-- [ ] **M5.2** Confirm agent-authored proposals have method-specific inputs, evidence, rationale, provenance and no implicit acceptance.
-- [ ] **M5.3** Deploy authenticated proposal/read/review APIs only with approved security changes and release gate.
-- [ ] **M5.4** End-to-end reviewer UI: diff, calculation parity, stale/conflict states, explicit accept/reject, immutable history and audit.
-- [ ] **M5.5** Test one realistic proposed model update without uncontrolled mutation; review and PR.
-
-## Milestone M6 — Broaden model and data coverage incrementally
-
-**Objective:** Multiple companies/methods can be used through the same trusted lifecycle.  
-**Dependencies:** proven M2/M5 flows. **Exit:** repeatable documented onboarding, not universal parser.
-
-- [ ] **M6.1** Live-validate scoped UFCF exporters P-CPRT and P-AMZN with distinct methods; correct template assumptions and report drift separately.
-- [ ] **M6.2** Validate owner-cash-flow and residual-income representative models; preserve missing eligible quotes and HDFC legacy/drop status.
-- [ ] **M6.3** Document versioned package schema evolution, compatibility and method onboarding; reject unknown layouts/methods safely.
-- [ ] **M6.4** Expand source/market/FX ingestion under review and operational bounds; measure coverage and quality rather than add providers indiscriminately.
-- [ ] **M6.5** PR, product/ROI review; stop adding methods without clear user demand.
-
-## Milestone M7 — Reliable private cloud operations
-
-**Objective:** Safe daily use, current data and recoverable failure.  
-**Dependencies:** M3–M6 as relevant. **Exit:** monitored, secure and economically reasonable runtime.
-
-- [ ] **M7.1** Select and verify a real supported identity/session provider; enforce backend app/role permissions, trusted proxy, CSRF/session and secret handling.
-- [ ] **M7.2** Establish reviewable scheduled acquisition jobs with timeouts, quotas, refresh metrics and recovery; **OWNER GATE** before activation.
-- [ ] **M7.3** Build Data Health UX for stale provider data, failed packages, pending approvals and source quality.
-- [ ] **M7.4** Test backup/recovery, API/web deploy rollback, auth-negative tests, observability and cost dashboards.
-- [ ] **M7.5** Prove ordinary usage is available in cloud without local computer; PR and release acceptance.
-
-## Milestone M8 — Personal Universe shared platform
-
-**Objective:** Preserve stable Portfolio while introducing reusable foundations.  
-**Dependencies:** Portfolio reliable in cloud. **Exit:** shared boundaries enforced without big-bang migration.
-
-- [ ] **M8.1** Inventory true second-consumer candidates; define module owner/registry and platform boundaries.
-- [ ] **M8.2** Establish shell, shared design tokens/components and API conventions incrementally; cross-app smoke tests.
-- [ ] **M8.3** Introduce private App Hub and route migration with redirects; retain Portfolio deep links.
-- [ ] **M8.4** Implement reviewed app module template/generator and scoped database ownership; avoid moving Portfolio `public.*` just for symmetry.
-- [ ] **M8.5** PR and architecture review against `personal-universe.md`.
-
-## Milestone M9 — Prove second app and finish v1 product acceptance
-
-**Objective:** A second useful private app runs under the same default Neon/Render/Vercel topology while Portfolio remains fully functional.  
-**Dependencies:** M8 and production security. **Exit:** architecture claim demonstrated by actual product.
-
-- [ ] **M9.1** Select a small genuine second app, not a placeholder; document its data owner and minimal CRUD job.
-- [ ] **M9.2** Generate and deliver authenticated web/API/schema/transaction workflow; add cross-app and responsive E2E tests.
-- [ ] **M9.3** Verify shared deployment, isolated domain permissions, migration rollback, cost/operational tradeoffs and app-hub navigation.
-- [ ] **M9.4** Complete Portfolio product-vision acceptance review; document supported functionality, remaining gaps and roadmap v2.
-- [ ] **M9.5** Final milestone PR/release handoff with rollback and production approvals kept distinct.
-
-## Historical evidence — VERIFY, NOT AUTO-ACCEPT
-
-- P-GOOGL v1 real capture: exact run ID and payload hash remain in the local private store and are intentionally omitted from this public repository; 186 cells/17 ranges, computational parity pass (30 projections, 22 outputs), and input drift remains a proposal. Evidence stored privately, not in Git.
-- Identity bootstrap and proposal API were reported locally implemented with migrations `3e5c8a1d7b42` and `9f2a6d4c81b7`; actual integration and prod schema **not verified** here.
-- Exporter v2 supported P-GOOGL/P-CPRT/P-AMZN in tests; package v3 provided UFCF/owner-cash-flow/residual-income transport. Other live captures **not verified**.
-- Model workspace passed unit/build checks; browser E2E was blocked by `spawn EPERM`; do not claim desktop/mobile verification.
-- Neon last reported prod head `6c2eaf0b8147`, initially schema-only, with write controls off. Reverify rather than rely on historical state.
-
-## Decision and blocker log
-
-| ID    | Status                       | Item                                                             | Resolution/owner                                                                                                                                               |
-| ----- | ---------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-001 | AGREED_DIRECTION             | Small reviewed per-model packages, not full workbook import      | Product architecture; method-specific contracts                                                                                                                |
-| D-002 | AGREED_DIRECTION             | Shared Personal Universe modular monolith; Portfolio first       | Existing platform architecture; phase after stable Portfolio                                                                                                   |
-| D-003 | OPEN                         | Accept or reject current P-GOOGL source-input drift              | Owner; needs exact proposal evidence                                                                                                                           |
-| D-004 | RESOLVED_MINIMAL_SCOPE       | Production schema/identity preview, migration and recovery point | Verified head, guarded import receipt, exact reconciliation, and time-limited recovery branch for the minimal baseline; not durable recovery or full migration |
-| D-005 | OPEN                         | Auth provider and trusted Vercel–Render session boundary         | Security review                                                                                                                                                |
-| D-006 | RESOLVED_OWNER_CONFIRMED     | Public-repository privacy review                                 | Owner confirmed reference workbooks are safe for publishing; no workbook content was changed                                                                   |
-| B-001 | RESOLVED_LOCAL               | Uncommitted/inconsistent M2, M5–M8 implementation state          | M0.3 confirmed integrated local code, tests, contracts and migration graph                                                                                     |
-| B-002 | RESOLVED_LOCAL               | Browser E2E was not verified in the earlier sandbox              | M0.5 Playwright desktop/mobile fixture run passed; live DB scenarios remain separate                                                                           |
-| B-003 | RESOLVED_OWNER_CONFIRMED     | Existing workbook XLSX files on public `origin/main`             | Owner confirmed both are safe for publishing; no content was opened or changed here                                                                            |
-| B-004 | RESOLVED_PRODUCTION_VERIFIED | Bootstrap guard rejected the second confirmation validation      | PR #19 fixed operation-scoped confirmation; one separately authorized retry succeeded and read-only receipt replay reconciled with zero differences            |
-
-## Milestone PR template (copy into each PR)
-
-**Outcome:** User-visible result and domain scope.  
-**Implementation:** Commits, migrations and contracts changed.  
-**Evidence:** Tests/checks/browser screenshots or recorded blocker, actual source/target verification, numerical parity.  
-**Safety:** Data ownership, permissions, source provenance, secret scanning, rollback, protected operations not executed.  
-**Known gaps:** Clearly labeled.  
-**Roadmap impact:** Completed IDs, changed priorities, next cursor.  
-**Production authorization:** `NOT REQUESTED` / `PENDING` / `SEPARATELY APPROVED` with reference, never inferred from PR.
-
-## Completed task log
-
-_Add one short row per completed subtask: date | task ID | commit | tests/evidence | decision/blocker | next cursor. Do not paste secrets, source values or huge logs here._
-
-| 2026-11-01 | M0.1 | `f0405f5` (consolidated)| Git inventory; one Alembic head; CI source-data policy PASS | Protected docs, branches and stash preserved; production migrations pending | M0.2 |
-| 2026-11-01 | M0.2 | `f0405f5` (consolidated)| Formatting, diff whitespace and doc targets PASS | Historical architecture scope clarified; no semantic or financial changes | M0.3 |
-| 2026-11-01 | M0.3 | `f0405f5` (consolidated)| Package parity validation; contracts current; focused 71-pass suite; single migration head | Source inputs remain proposed; production schema is behind local head | M0.4 |
-| 2026-11-01 | M0.4 | `f0405f5` (consolidated)| Full local quality checks PASS; PostgreSQL integration 133 passed, 4 skipped | Browser workflow is the remaining local M0 gate; production schema remains behind local head | M0.5 |
-| 2026-11-01 | M0.5 | `f0405f5` (consolidated)| Desktop/mobile Playwright: 55 passed, 11 skipped, 0 failed; focused browser regression corrected; formatting and diff checks pass | Live database/deployed checks remain unverified; no application behavior changed | M0.6 |
-| 2026-11-01 | M0.6 (IN_PROGRESS) | `3533b83` | Corrected Ubuntu pin, CI source-data test classification, migration table-group coverage and stale Alembic-head assertions; `npm run check` passes | Corrected GitHub Actions rerun pending; no merge or production action | Verify checks on PR #13 |
-| 2026-11-04 | M1.7 | `93ad826` | `npm run check` and PostgreSQL integration pass; one Alembic head; native deployment plan in PR #14 | Remote CI/Preview tracked on PR #14; existing-target migration path remains recovery-first | M1.8 |
-| 2026-11-05 | M1.8 | `bd39bfe` | 78 focused API tests; fresh isolated-schema migration roundtrip; 5 deployment contract tests; targeted static/format checks pass | Empty-only initial bootstrap path prepared; live target and deployment configuration remain unverified and unchanged | Owner review/merge, then separately authorized new-target preflight/migration |
-| 2026-11-05 | M1.8 final import-prep | `f3a6478` (merged `main`) | Fresh read-only source captures; exact target-bound preview; 22/22 holdings, 2 cash rows, 16 targets, zero blockers; private exact reconciliation verified | Source-version differences and exclusions require owner review; no apply, recovery point, schema approval or write performed | Owner review; separately create/verify recovery point and authorize exact apply |
-| 2026-11-05 | M2.1–M2.3 | Local M2 branch | Current P-GOOGL capture + parity; full unit/contract/type/build and PostgreSQL integration suites pass; production identity preview `READY_TO_CREATE`; model preview `BLOCKED_IDENTITY`; desktop/mobile model E2E pass | Five model inputs and 26 outputs differ from prior capture; exact proposal remains owner-gated; no production writes | Review PR #18; keep model acceptance/apply owner-gated |
-| 2026-11-06 | M2 handoff | `6d80e2c` | Pushed `codex/m2-first-real-pgoogl-model`; opened one consolidated PR #18 after independent review; sanitized roadmap and identity-preview fix included | All three Actions jobs were blocked before start because the account is locked for billing; Vercel Preview remained pending; no recovery point, production write, model acceptance, migration or deployment | Resolve GitHub billing and rerun checks; review PR #18; owner separately decides the exact source revision and any production operation |
-| 2026-11-07 | Bootstrap guard and M2 reconciliation | `c07b874` | PR #19 merged after CI passed; guard unchanged in PR #18; merged-branch `npm run check` passed and focused guard/model/PostgreSQL suite had 118 passed, 2 skipped | The separately authorized import attempt was rejected before writes; production counts and receipts remained zero on read-only verification. No retry was performed | Review PR #18; reverify inputs, target and recovery and obtain separate owner approval before any import retry |
-| 2026-11-07 | M1.9 | Verified on merged main `21e4d96` | Private apply receipt `APPLIED_WITH_GAPS`; read-only `ALREADY_APPLIED` reconciliation; Render readiness and authenticated API reads; owner UI confirmation | Minimal canonical baseline verified with reviewed exclusions; model and enrichment domains remain absent | M2.3 read-only P-GOOGL package preview |
-| 2026-11-07 | M1 closeout documentation | a1b7fb8 / PR #20 | Private reports inspected; Prettier, git diff --check, link check, and repository source-data policy (3 passed) | Docs-only PR open for review; no production action | Review PR #20; then perform M2.3 read-only preview |
-| 2026-11-07 | M2.3 | `codex/m2-native-pgoogl-lifecycle` | Private package replay: 30/30 projection and 22/22 output parity; guarded production read-only preview `READY_FOR_EXPLICIT_ACCEPTANCE` | Five input changes and 26 published output changes remain owner-gated; source effective date and revision ID unavailable | Owner reviews private evidence and separately authorizes any first model acceptance after recovery verification |
-
-| 2026-11-07 | M2.2 review | `codex/m2-pgoogl-investment-review` | Two immutable package replays pass 30/30 and 22/22; native-engine sensitivity and guarded production model-table counts reviewed privately | Investment validity and source period remain unresolved; recommend DEFER | Owner reviews private evidence and decides whether to revise assumptions |
-
-| 2026-11-07 | MP1 integration gate | `e118c31`, `91887e2` | Full check green; PostgreSQL 137 passed / 4 skipped plus final focused 19; browser desktop/mobile 2 passed; independent review passed | Locally verified two-company publication-to-review slice; real source installation and first-model acceptance remain owner-gated | [Review PR #23](https://github.com/paulzwecker/portfolio-app/pull/23), merge manually, resume MP2 from updated main |
+Update cursor, status, short evidence and next action after each subtask. Put
+stable behavior in canonical references, commands in runbooks and long results in
+dated history. At integration, record tests/skips and review, update the existing
+PR and wait for owner merge. Resume subsequent work from updated main. Report
+implementation, local/source verification, production preview/readiness and
+production application only with the corresponding evidence.

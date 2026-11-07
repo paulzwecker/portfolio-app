@@ -57,7 +57,9 @@ The currently implemented archetypes and representative workbook references are:
 | `OWNER_CASH_FLOW_10Y`      | `W-TOST`           | Owner cash flow, ten-year forecast and Gordon terminal value | USD              |
 | `RESIDUAL_INCOME_10Y_FADE` | `W-HDFC`           | Book value plus residual income with mature-ROE fade         | INR              |
 
-The real native-input population remains deliberately smaller than the set of
+The following population describes historical local-database imports. Current
+production coverage is recorded in [the canonical baseline](production-canonical-baseline.md)
+and [the roadmap](../ROADMAP.md). Native-input coverage remains smaller than the set of
 supported methods. `P-GOOGL` and `W-TOST` were accepted first; the reviewed Portfolio
 DCF sub-batch then accepted `P-ASML`, `P-ISRG`, and `P-MA`. Their listing identities,
 source mappings, revision provenance, idempotent import behavior and detailed

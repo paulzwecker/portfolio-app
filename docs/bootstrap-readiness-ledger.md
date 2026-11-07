@@ -1,5 +1,7 @@
 # Workbook Bootstrap Readiness Ledger
 
+> Historical evidence for the recorded milestone/date. Current production scope is in [production-canonical-baseline.md](production-canonical-baseline.md), and current execution is in [ROADMAP.md](../ROADMAP.md). Retain the safety and provenance details for the workflows they describe.
+
 This document records the sanitized integration status for Recovery Tasks R1 and
 R2. It contains no workbook values, private source identifiers, acquisition
 manifests, or content hashes.
