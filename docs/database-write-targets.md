@@ -55,6 +55,14 @@ non-interactive mode. This confirmation does not replace the authorization setti
 Neon metadata verification, or database privileges. Seed/demo writes are limited to
 development.
 
+One bootstrap guard instance retains a successful confirmation for the same operation
+and verified target across preflight and first-write validation. Each connection still
+passes the target and privilege checks before its first write. A rejected validation
+clears the retained confirmation, and a new command creates a new guard and requires
+another typed confirmation. The minimal Sheets bootstrap separately verifies both
+approved target-bound source hashes before constructing that guard; a different source
+or target requires a new reviewed input hash and a new command invocation.
+
 For remote writes the guard also requires TLS hostname verification
 (`sslmode=verify-full`), a direct endpoint rather than a pooler, an exact match among
 the configured URL and live driver/database identity, and a non-superuser database

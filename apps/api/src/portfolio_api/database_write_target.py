@@ -1033,15 +1033,47 @@ class DatabaseWriteTargetGuard:
         self.settings = settings
         self.operation = operation
         self.operation_kind = operation_kind
+        self._guard_operation = operation
+        self._guard_operation_kind = operation_kind
         self.neon_client: NeonControlPlaneClient | None = None
         self.audit_sink = audit_sink
-        self._bootstrap_confirmed = False
+        self._bootstrap_confirmation: tuple[str, str] | None = None
+        self._bootstrap_production_seen = False
         self._lock = threading.Lock()
         self._guard_id = str(uuid4())
 
     def verify_connection(self, connection: Connection, *, phase: str = "before_write") -> None:
+        if (self.operation, self.operation_kind) != (
+            self._guard_operation,
+            self._guard_operation_kind,
+        ):
+            with self._lock:
+                self._bootstrap_confirmation = None
+            raise DatabaseWriteTargetError(
+                "database_guard_operation_changed",
+                "A database guard cannot be reused for a different operation.",
+            )
         if connection.info.get(_AUDIT_INFO_KEY) == self._guard_id:
-            return
+            if self.operation_kind != "bootstrap" or (
+                self.settings.database_target_environment != "production"
+                and not self._bootstrap_production_seen
+            ):
+                return
+            project = self.settings.neon_project_id
+            branch = self.settings.neon_branch_id
+            endpoint = self.settings.neon_endpoint_id
+            database = self.settings.database_target_database
+            if all((project, branch, endpoint, database)):
+                expected = _bootstrap_confirmation_text(
+                    str(project), str(branch), str(endpoint), str(database)
+                )
+                if (
+                    self.settings.database_target_environment == "production"
+                    and self.settings.database_production_writes_authorized
+                    and self._bootstrap_confirmation == (self.operation, expected)
+                ):
+                    return
+            connection.info.pop(_AUDIT_INFO_KEY, None)
         try:
             identity = _read_live_identity(connection, self.operation_kind)
             url = connection.engine.url
@@ -1070,10 +1102,22 @@ class DatabaseWriteTargetGuard:
                 neon_target = self.neon_client.read_target(
                     str(project_id), str(branch_id), str(endpoint_id)
                 )
-            confirmation_provider = None
             with self._lock:
-                if not self._bootstrap_confirmed and self.operation_kind == "bootstrap":
-                    confirmation_provider = _interactive_confirmation
+                confirmed_phrase: str | None = None
+
+                def confirm(expected: str) -> str:
+                    nonlocal confirmed_phrase
+                    if self._bootstrap_confirmation is not None:
+                        operation, phrase = self._bootstrap_confirmation
+                        if operation != self.operation or not hmac.compare_digest(phrase, expected):
+                            raise DatabaseWriteTargetError(
+                                "production_bootstrap_confirmation_mismatch",
+                                "The verified bootstrap target changed after confirmation.",
+                            )
+                        return phrase
+                    confirmed_phrase = _interactive_confirmation(expected)
+                    return confirmed_phrase
+
                 audit = validate_database_write_target(
                     settings=self.settings,
                     url=connection.engine.url,
@@ -1081,15 +1125,18 @@ class DatabaseWriteTargetGuard:
                     operation=self.operation,
                     operation_kind=self.operation_kind,
                     neon_target=neon_target,
-                    confirmation_provider=confirmation_provider,
+                    confirmation_provider=confirm if self.operation_kind == "bootstrap" else None,
                 )
-                if self.operation_kind == "bootstrap" and audit["environment"] == "production":
-                    self._bootstrap_confirmed = True
-            audit["phase"] = phase
-            self._emit_audit(audit)
+                audit["phase"] = phase
+                self._emit_audit(audit)
+                if confirmed_phrase is not None and audit["environment"] == "production":
+                    self._bootstrap_confirmation = (self.operation, confirmed_phrase.strip())
+                    self._bootstrap_production_seen = True
             if phase == "before_write":
                 connection.info[_AUDIT_INFO_KEY] = self._guard_id
         except DatabaseWriteTargetError as error:
+            with self._lock:
+                self._bootstrap_confirmation = None
             logger.warning(
                 "database_write_target_rejected %s",
                 json.dumps(
@@ -1102,6 +1149,10 @@ class DatabaseWriteTargetGuard:
                     sort_keys=True,
                 ),
             )
+            raise
+        except Exception:
+            with self._lock:
+                self._bootstrap_confirmation = None
             raise
 
     def _emit_audit(self, record: Mapping[str, Any]) -> None:

@@ -224,6 +224,7 @@ The M1→M2→M3 order matches the product vision and Portfolio architecture: ve
 | B-001 | RESOLVED_LOCAL           | Uncommitted/inconsistent M2, M5–M8 implementation state          | M0.3 confirmed integrated local code, tests, contracts and migration graph                   |
 | B-002 | RESOLVED_LOCAL           | Browser E2E was not verified in the earlier sandbox              | M0.5 Playwright desktop/mobile fixture run passed; live DB scenarios remain separate         |
 | B-003 | RESOLVED_OWNER_CONFIRMED | Existing workbook XLSX files on public `origin/main`             | Owner confirmed both are safe for publishing; no content was opened or changed here          |
+| B-004 | LOCAL_VERIFIED           | Bootstrap guard rejects the second confirmation validation       | Review CI; reverify inputs and recovery; obtain owner approval to retry                      |
 
 ## Milestone PR template (copy into each PR)
 
