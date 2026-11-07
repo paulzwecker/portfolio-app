@@ -235,19 +235,7 @@ function publishModelPublication_() {
     const existing = inbox
       .getRange(2, 1, lastRow - 1, SYNC_INBOX_HEADERS.length)
       .getDisplayValues();
-    const sameRevision = existing.filter((row) => row[1] === revisionId);
-    const existingChunks = sameRevision
-      .slice()
-      .sort((left, right) => Number(left[2]) - Number(right[2]));
-    const existingRaw = existingChunks.map((row) => row[4]).join("");
-    const expectedCount = existingChunks.length
-      ? Number(existingChunks[0][3])
-      : 0;
-    if (
-      expectedCount === existingChunks.length &&
-      existingChunks.every((row, index) => Number(row[2]) === index + 1) &&
-      (existingRaw === raw || sameModelPublication_(existingRaw, publication))
-    ) {
+    if (hasModelPublication_(existing, revisionId, publication)) {
       SpreadsheetApp.getUi().alert(
         "This exact external revision is already in the application inbox.",
       );
@@ -280,11 +268,43 @@ function publishModelPublication_() {
   );
 }
 
+function hasModelPublication_(rows, revisionId, publication) {
+  const groups = new Map();
+  for (const row of rows) {
+    if (row[1] !== revisionId || !String(row[0]).trim()) continue;
+    if (!groups.has(row[0])) groups.set(row[0], []);
+    groups.get(row[0]).push(row);
+  }
+  for (const group of groups.values()) {
+    const chunks = group
+      .slice()
+      .sort((left, right) => Number(left[2]) - Number(right[2]));
+    const count = Number(chunks[0][3]);
+    if (
+      count < 1 ||
+      count > 100 ||
+      chunks.length !== count ||
+      chunks.some(
+        (row, index) =>
+          Number(row[2]) !== index + 1 || Number(row[3]) !== count,
+      )
+    )
+      continue;
+    if (
+      sameModelPublication_(chunks.map((row) => row[4]).join(""), publication)
+    )
+      return true;
+  }
+  return false;
+}
+
 function sameModelPublication_(raw, publication) {
   try {
     const prior = JSON.parse(raw);
     return (
       prior.contract_type === publication.contract_type &&
+      prior.state === "PUBLISHED" &&
+      prior.contract_json === publication.contract_json &&
       prior.contract_sha256 === publication.contract_sha256 &&
       JSON.stringify(prior.published_fair_values) ===
         JSON.stringify(publication.published_fair_values)

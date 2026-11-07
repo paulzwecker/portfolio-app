@@ -15,7 +15,11 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
-from synthetic_financial_fixtures import dcf_fixture
+from synthetic_financial_fixtures import (
+    dcf_fixture,
+    owner_cash_flow_fixture,
+    residual_income_fixture,
+)
 from test_google_sheets_sync import (
     SPREADSHEET_ID,
     FakeHttpSession,
@@ -376,3 +380,162 @@ def test_concurrent_discovery_is_bounded_and_records_blocked_run(
         saved = retried.get(GoogleSheetsSyncRun, blocked.run.id)
         assert saved is not None and saved.error_code == "SYNC_IN_PROGRESS"
         assert run_sync_check(retried, settings, reader(settings, [])).run.status == "SUCCEEDED"
+
+
+@pytest.mark.integration
+def test_one_company_methods_publish_and_advance_independent_revisions(
+    postgres_engine: Engine,
+    tmp_path: Path,
+) -> None:
+    credential = tmp_path / "fixture.json"
+    credential.write_text("synthetic")
+    settings = Settings(
+        google_sheets_spreadsheet_id=SPREADSHEET_ID, google_sheets_service_account_file=credential
+    )
+    with (
+        patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
+        TestClient(create_app(Settings(database_url=None))) as client,
+    ):
+        company = client.post(
+            "/v1/companies", json={"name": "Multi-method fixture", "reporting_currency": "USD"}
+        ).json()
+        security = client.post(
+            f"/v1/companies/{company['id']}/securities",
+            json={"name": "Common", "security_type": "COMMON_STOCK"},
+        ).json()
+        listing = client.post(
+            f"/v1/securities/{security['id']}/listings",
+            json={"venue": "NASDAQ", "ticker": "MULTI", "currency": "USD"},
+        ).json()
+        evidence_id, _ = _publish_research_evidence(
+            client,
+            company_id=company["id"],
+            security_id=security["id"],
+            observed_at=datetime.now(UTC),
+            stream_key="multi-method",
+        )
+        contracts = []
+        models = []
+        prefixes = []
+        for method, fixture in [
+            ("dcf", dcf_fixture()),
+            ("owner-cash-flow", owner_cash_flow_fixture()),
+            ("residual-income", residual_income_fixture()),
+        ]:
+            revision = {
+                **copy.deepcopy(fixture["input"]),
+                "effective_at": datetime.now(UTC).isoformat(),
+                "base_revision_id": None,
+                "source_revision_id": None,
+                "actor": "LOCAL_USER",
+                "source": "Synthetic multi-method test",
+                "rationale": "Create independent synthetic method inputs.",
+            }
+            route = (
+                "financial-models" if method == "dcf" else f"canonical-financial-models/{method}"
+            )
+            body = {
+                "model_name": method,
+                "valuation_listing_id": listing["id"],
+                "model_currency": "USD",
+                "source_model_key": method,
+                "initial_revision": revision,
+            }
+            if method == "dcf":
+                body["model_type"] = "UFCF_DCF_10Y_FADE"
+            response = client.post(f"/v1/companies/{company['id']}/{route}", json=body)
+            assert response.status_code == 201, response.text
+            model = response.json()
+            prefix = "financial-models" if method == "dcf" else "canonical-financial-models"
+            contract = client.get(f"/v1/{prefix}/{model['id']}/contract").json()
+            contract["proposal"] = {
+                "author_id": "synthetic-agent",
+                "authored_at": datetime.now(UTC).isoformat(),
+                "source_reference": "https://research.example.test/multi",
+            }
+            contract["supporting_evidence"] = [
+                {
+                    "evidence_type": "RESEARCH_REVISION",
+                    "reference_id": evidence_id,
+                    "relationship": "SUPPORTS",
+                    "note": "Fixture evidence",
+                }
+            ]
+            candidate = contract["candidate_revision"]
+            candidate["source_revision_id"] = "agent-r2"
+            candidate["rationale"] = "Review evidence-backed method-specific changes."
+            if method == "dcf":
+                candidate["scenarios"][1]["years"][0]["revenue_growth"] = "0.21"
+            elif method == "owner-cash-flow":
+                candidate["owner_cash_flow"]["scenarios"][1]["years"][0][
+                    "owner_cash_flow_margin"
+                ] = "0.052"
+            else:
+                candidate["residual_income"]["scenarios"][1]["starting_roe"] = "0.156"
+            preview = client.post(f"/v1/{prefix}/{model['id']}/contract/preview", json=contract)
+            assert preview.status_code == 200, preview.text
+            contracts.append(publication(contract, preview.json()["calculated_outputs"]))
+            models.append(model)
+            prefixes.append(prefix)
+        rows = [
+            [f"method-{i}", "agent-r2", 1, 1, json.dumps(item)] for i, item in enumerate(contracts)
+        ]
+        with Session(postgres_engine) as db, db.begin():
+            malformed = [list(rows[1])]
+            malformed[0][1] = "wrong-transport-revision"
+            # Simulate the older capture's hashing without mutating retained evidence.
+            with patch(
+                "portfolio_api.google_sheets_sync._sha256",
+                side_effect=lambda value: hashlib.sha256(
+                    value.split("|invalid-source|", 1)[0].encode()
+                ).hexdigest(),
+            ):
+                failed_capture = run_sync_check(db, settings, reader(settings, malformed))
+            failed_id = failed_capture.new_candidates[0].id
+            original_invalid = db.get(GoogleSheetsSyncCandidate, failed_id)
+            assert original_invalid is not None and original_invalid.status == "INVALID"
+            captured = run_sync_check(db, settings, reader(settings, rows))
+            assert captured.run.status == "SUCCEEDED"
+            assert captured.run.new_count == 3
+            assert preview_sync_candidate(db, failed_id).status == "INVALID"
+            candidates = {item.model_id: item.id for item in captured.new_candidates}
+            for candidate_id in candidates.values():
+                assert preview_sync_candidate(db, candidate_id).status == "READY"
+            repeated = run_sync_check(db, settings, reader(settings, rows))
+            assert repeated.run.unchanged_count == 3
+        initial_revisions = [model["current_revision"]["id"] for model in models]
+        for i, model in enumerate(models):
+            with Session(postgres_engine) as db, db.begin():
+                accepted = accept_sync_candidate(
+                    db, candidates[UUID(model["id"])], "fixture-owner", "Review synthetic method"
+                )
+                assert accepted.status == "ACCEPTED"
+            for j, other in enumerate(models):
+                read = client.get(f"/v1/{prefixes[j]}/{other['id']}").json()
+                if j > i:
+                    assert read["current_revision"]["id"] == initial_revisions[j]
+                    assert (
+                        read["current_revision"]["outputs"] == other["current_revision"]["outputs"]
+                    )
+                else:
+                    assert read["current_revision"]["revision_number"] == 2
+        with Session(postgres_engine) as db, db.begin():
+            collision = copy.deepcopy(contracts[0])
+            values = collision["published_fair_values"]
+            assert isinstance(values, dict)
+            values["weighted_fv"] = "1"
+            collision_check = run_sync_check(
+                db,
+                settings,
+                reader(settings, [["changed", "agent-r2", 1, 1, json.dumps(collision)]]),
+            )
+            conflict_id = collision_check.new_candidates[0].id
+            assert preview_sync_candidate(db, conflict_id).status == "CONFLICT"
+            assert accept_sync_candidate(db, conflict_id, "owner").status == "CONFLICT"
+            for model in models[1:]:
+                replay = accept_sync_candidate(db, candidates[UUID(model["id"])], "owner")
+                assert replay.status == "ACCEPTED"
+        history = client.get(f"/v1/companies/{company['id']}/expected-return-history").json()
+        calculations = history["current_calculations"]
+        assert {item["model_id"] for item in calculations} == {item["id"] for item in models}
+        assert len({item["outputs"]["return_methodology"]["code"] for item in calculations}) == 3

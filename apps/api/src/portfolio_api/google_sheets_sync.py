@@ -598,23 +598,38 @@ def _record_block(
     material = "|".join(
         [spreadsheet_id, str(sheet_id), external_revision_id or block.publish_id, fingerprint]
     )
-    key = _sha256(material)
+    # Retain invalid transport evidence separately from a corrected publication.
+    source_mismatch = "Inbox revision ID does not match the portable contract"
+    key = _sha256(
+        f"{material}|invalid-source|{block.publish_id}|{block.external_revision_id}"
+        if issue == source_mismatch
+        else material
+    )
     existing = session.scalar(
         select(GoogleSheetsSyncCandidate).where(GoogleSheetsSyncCandidate.idempotency_key == key)
     )
+    if existing and issue is None and existing.issue == source_mismatch:
+        # Older captures used the valid-source key even when their row ID was wrong.
+        key = _sha256(f"{material}|verified-source")
+        existing = session.scalar(
+            select(GoogleSheetsSyncCandidate).where(
+                GoogleSheetsSyncCandidate.idempotency_key == key
+            )
+        )
     if existing:
         existing.last_observed_at = observed_at
         existing.last_seen_run_id = run.id
         return existing, False
 
     status = "PENDING" if parsed is not None and issue is None else "INVALID"
-    if external_revision_id:
+    if external_revision_id and parsed is not None:
         prior = session.scalar(
             select(GoogleSheetsSyncCandidate)
             .where(
                 GoogleSheetsSyncCandidate.spreadsheet_id == spreadsheet_id,
                 GoogleSheetsSyncCandidate.sheet_id == sheet_id,
                 GoogleSheetsSyncCandidate.external_revision_id == external_revision_id,
+                GoogleSheetsSyncCandidate.model_id == parsed.model_id,
             )
             .order_by(GoogleSheetsSyncCandidate.first_observed_at)
             .limit(1)
@@ -781,6 +796,7 @@ def _contract_from_candidate(
             GoogleSheetsSyncCandidate.spreadsheet_id == candidate.spreadsheet_id,
             GoogleSheetsSyncCandidate.sheet_id == candidate.sheet_id,
             GoogleSheetsSyncCandidate.external_revision_id == candidate.external_revision_id,
+            GoogleSheetsSyncCandidate.model_id == candidate.model_id,
             GoogleSheetsSyncCandidate.content_fingerprint != candidate.content_fingerprint,
         )
         .limit(1)

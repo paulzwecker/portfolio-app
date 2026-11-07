@@ -9,8 +9,8 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | ------------- | --------------------------------------------------------------------------------------------------------- |
 | Active work   | MP1 foundation extension on existing PR #23                                                               |
 | Branch        | `codex/model-publication-vertical-slice`                                                                  |
-| Status        | Documentation audit implemented; independent-model synchronization in progress                            |
-| Next task     | Scope source revision identity by canonical model, then verify exact model selection                      |
+| Status        | Independent model sync and UI verified locally; final integrated checks in progress                       |
+| Next task     | Finish full quality/integration checks and record final independent review, then update PR #23            |
 | PR            | [#23](https://github.com/paulzwecker/portfolio-app/pull/23), open and unmerged at inspection              |
 | Approval gate | Owner review/merge, followed by separately authorized source installation and production/model operations |
 
@@ -36,11 +36,11 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
 | MP1.1 Publication contract               | LOCAL_VERIFIED | Frozen typed publication, native parity, bounded capture and durable proposals                    |
 | MP1.2 Reliability                        | LOCAL_VERIFIED | Source lock, replay and immutable conflicts retained through acceptance                           |
-| MP1.F1 Documentation hierarchy           | IMPLEMENTED    | Selective entrypoints, index, original history preserved, stale claims scoped and link validation |
-| MP1.F2 Independent model synchronization | IN_PROGRESS    | Same-company methods may share revision labels; conflicts remain scoped to their model            |
-| MP1.F3 Exact model selection             | READY          | Summary, history and editor preserve the selected model/listing                                   |
-| MP1.F4 Cross-method proof                | READY          | DCF/owner-cash-flow/residual-income retain independent evidence, revisions and return definitions |
-| MP1.F5 Integration gate                  | READY          | Focused/DB/UI checks, independent review, quality checks and one updated PR                       |
+| MP1.F1 Documentation hierarchy           | LOCAL_VERIFIED | Selective entrypoints, index, original history preserved, stale claims scoped and link validation |
+| MP1.F2 Independent model synchronization | LOCAL_VERIFIED | Same-company methods may share revision labels; conflicts remain scoped to their model            |
+| MP1.F3 Exact model selection             | LOCAL_VERIFIED | Summary, history and editor preserve the selected model/listing                                   |
+| MP1.F4 Cross-method proof                | LOCAL_VERIFIED | DCF/owner-cash-flow/residual-income retain independent evidence, revisions and return definitions |
+| MP1.F5 Integration gate                  | IN_PROGRESS    | Focused/DB/UI checks, independent review, quality checks and one updated PR                       |
 
 ## Next milestones
 
@@ -66,6 +66,8 @@ Original task definitions, decisions and evidence remain in the
 | Date       | Task   | Evidence                                                                                                           | Next action                             |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
 | 2026-11-07 | MP1.F1 | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger | Check links; complete model-scoped sync |
+
+| 2026-11-07 | MP1.F2/F4 | Three methods on one synthetic company publish the same revision label; native parity, independent advancement, model-scoped conflicts and corrected source metadata pass PostgreSQL verification. Three Apps Script tests pass | Complete UI verification and final review |
 
 ## Upkeep
 

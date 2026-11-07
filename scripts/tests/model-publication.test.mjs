@@ -74,3 +74,44 @@ test("Apps Script rejects legacy, blank, error and numeric publication fields", 
     );
   }
 });
+
+test("independent model publications sharing a revision label replay by publish block", () => {
+  const values = { bear_fv: "1", base_fv: "2", bull_fv: "3", weighted_fv: "2" };
+  const first = context.modelPublication_(
+    { contract_version: "1.2.0", model: { model_id: "model-a" } },
+    values,
+    "2026-01-01T00:00:00Z",
+  );
+  const second = context.modelPublication_(
+    { contract_version: "2.1.0", model_id: "model-b" },
+    values,
+    "2026-01-01T00:00:00Z",
+  );
+  const rows = [];
+  for (const [publishId, publication] of [
+    ["a", first],
+    ["b", second],
+  ]) {
+    const raw = JSON.stringify(publication);
+    const middle = Math.floor(raw.length / 2);
+    rows.push([publishId, "agent-r2", "1", "2", raw.slice(0, middle)]);
+    rows.push([publishId, "agent-r2", "2", "2", raw.slice(middle)]);
+  }
+  assert.equal(context.hasModelPublication_(rows, "agent-r2", first), true);
+  assert.equal(
+    context.hasModelPublication_(rows.slice().reverse(), "agent-r2", second),
+    true,
+  );
+  assert.equal(
+    context.hasModelPublication_(rows.slice(1), "agent-r2", first),
+    false,
+  );
+  assert.equal(context.hasModelPublication_(rows, "different", first), false);
+  assert.equal(
+    context.hasModelPublication_([...rows, rows[0]], "agent-r2", first),
+    false,
+  );
+  const changed = structuredClone(first);
+  changed.published_fair_values.weighted_fv = "3";
+  assert.equal(context.hasModelPublication_(rows, "agent-r2", changed), false);
+});
