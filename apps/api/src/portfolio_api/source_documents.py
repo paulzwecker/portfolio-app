@@ -776,6 +776,7 @@ async def sync_sec_source_documents(
     settings: Settings,
     company_id: UUID | None = None,
     company_ids: Sequence[UUID] | None = None,
+    max_new_history_files: int | None = None,
 ) -> list[dict[str, object]]:
     if not settings.sec_user_agent:
         raise ValueError("Set SEC_USER_AGENT to an application name and contact email before sync")
@@ -810,11 +811,15 @@ async def sync_sec_source_documents(
         )
     )
     provider = SecSubmissionsProvider(
-        identifiers, settings.sec_user_agent, known_source_record_ids=known_history
+        identifiers,
+        settings.sec_user_agent,
+        known_source_record_ids=known_history,
+        max_new_history_files=max_new_history_files,
     )
     records = await provider.fetch(query)
     result = ingest_sec_submissions(session, query, records, identifiers)
     result["history_files_skipped_as_unchanged"] = provider.skipped_history_files
+    result["history_files_deferred"] = provider.deferred_history_files
     return [result]
 
 

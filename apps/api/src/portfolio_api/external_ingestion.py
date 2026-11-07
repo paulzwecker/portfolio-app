@@ -61,6 +61,12 @@ from portfolio_api.reported_fundamentals import (
     _load_cik_mappings,
     sync_reported_fundamentals,
 )
+from portfolio_api.sec_refresh_scope import (
+    SEC_SCOPE_VERSION,
+    SecRefreshScopeError,
+    capture_sec_refresh_scope,
+    validate_sec_refresh_scope,
+)
 from portfolio_api.settings import Settings
 from portfolio_api.source_documents import sync_sec_source_documents
 from portfolio_api.yahoo_finance import (
@@ -677,8 +683,9 @@ def _fundamentals_operation(
     states: dict[UUID, str],
     *,
     mapping_scope: list[dict[str, Any]] | None = None,
+    ordered_company_ids: list[UUID] | None = None,
 ) -> DomainOutcome:
-    ordered_ids = _company_order(states)
+    ordered_ids = ordered_company_ids if ordered_company_ids is not None else _company_order(states)
     mapped = _load_cik_mappings(session, company_ids=ordered_ids)
     if mapping_scope is not None:
         allowed = {
@@ -785,8 +792,10 @@ def _source_documents_operation(
     states: dict[UUID, str],
     *,
     mapping_scope: list[dict[str, Any]] | None = None,
+    ordered_company_ids: list[UUID] | None = None,
+    max_new_history_files: int | None = None,
 ) -> DomainOutcome:
-    ordered_ids = _company_order(states)
+    ordered_ids = ordered_company_ids if ordered_company_ids is not None else _company_order(states)
     mapped = _load_cik_mappings(session, company_ids=ordered_ids)
     if mapping_scope is not None:
         allowed = {
@@ -824,12 +833,17 @@ def _source_documents_operation(
             "NO_VERIFIED_CIK_MAPPINGS",
             "Active companies have no reviewed SEC CIK mapping.",
         )
-    results = asyncio.run(sync_sec_source_documents(session, settings, company_ids=mapped_ids))
+    source_arguments: dict[str, Any] = {"company_ids": mapped_ids}
+    if max_new_history_files is not None:
+        source_arguments["max_new_history_files"] = max_new_history_files
+    results = asyncio.run(sync_sec_source_documents(session, settings, **source_arguments))
     result = results[0] if results else {}
     reconciliation = result.get("reconciliation", {})
     if not isinstance(reconciliation, dict):
         reconciliation = {}
     raw_history_skips = result.get("history_files_skipped_as_unchanged", 0)
+    raw_deferred = result.get("history_files_deferred", 0)
+    deferred = raw_deferred if isinstance(raw_deferred, int) else 0
     document_count = int(
         reconciliation.get("documents_imported", result.get("documents_imported", 0)) or 0
     ) + int(reconciliation.get("documents_reused", 0) or 0)
@@ -842,7 +856,8 @@ def _source_documents_operation(
     missing_filings = raw_missing_filings if isinstance(raw_missing_filings, list) else []
     issues = reconciliation.get("issues", [])
     issue_count = (
-        len(missing_ids)
+        deferred
+        + len(missing_ids)
         + len(missing_filings)
         + unsupported
         + malformed
@@ -857,6 +872,7 @@ def _source_documents_operation(
         "provider_result": result,
         "mapped_companies_without_supported_filings": missing_filings,
         "normalized_document_count": document_count,
+        "history_files_deferred": deferred,
         "history_files_skipped_as_unchanged": (
             raw_history_skips if isinstance(raw_history_skips, int) else 0
         ),
@@ -1274,6 +1290,7 @@ def run_scheduled(
     listing_key_filter: set[tuple[str, str]] | None = None,
     frozen_yahoo_crosswalk: tuple[YahooListingCrosswalk, str] | None = None,
     retry_failed: bool = False,
+    sec_research_scope: bool = False,
 ) -> dict[str, Any]:
     if replay_scope is not None and replay_scope.get("scope") == "cloud_market_preflight":
         raise ValueError("Cloud preflight diagnostics require a fresh cloud scope check")
@@ -1299,9 +1316,60 @@ def run_scheduled(
     ):
         raise ValueError("Cloud recovery requires its original frozen Yahoo scope")
     ordered = [domain for domain in DAILY_DOMAINS if domain in selected]
-    states: dict[UUID, str] | None = (
-        _states_from_scope(replay_scope) if replay_scope is not None else None
-    )
+    sec_domains = {ExternalDataDomain.REPORTED_FUNDAMENTALS, ExternalDataDomain.SOURCE_DOCUMENTS}
+    if sec_research_scope and not selected.issubset(sec_domains):
+        raise ValueError("A SEC research scope requires SEC-only domains")
+    frozen_sec_scope: dict[str, Any] | None = None
+    if replay_scope is not None and replay_scope.get("scope") == "sec_issuer_refresh":
+        if (
+            not selected.issubset(sec_domains)
+            or company_ids is not None
+            or request_nonce is not None
+        ):
+            raise ValueError("A frozen SEC replay cannot replace its domains, issuers or request")
+        if replay_of_run_id is not None:
+            original = session.get(ExternalIngestionRun, replay_of_run_id)
+            if (
+                original is None
+                or original.provider_id != SEC_PROVIDER_ID
+                or selected != {ExternalDataDomain(original.domain)}
+                or original.request_scope != replay_scope
+            ):
+                raise ValueError("A SEC replay must retain the recorded domain and scope")
+        frozen_sec_scope = replay_scope
+    elif sec_research_scope:
+        if request_nonce is not None:
+            prior_scopes = list(
+                session.scalars(
+                    select(ExternalIngestionRun.request_scope)
+                    .where(
+                        ExternalIngestionRun.provider_id == SEC_PROVIDER_ID,
+                        ExternalIngestionRun.domain.in_([item.value for item in sec_domains]),
+                        ExternalIngestionRun.request_scope["operational_request_id"].as_string()
+                        == str(request_nonce),
+                        ExternalIngestionRun.request_scope["sec_scope_version"].as_string()
+                        == SEC_SCOPE_VERSION,
+                    )
+                    .limit(2)
+                )
+            )
+            if prior_scopes:
+                if any(item != prior_scopes[0] for item in prior_scopes):
+                    raise ValueError("The manual SEC request has conflicting frozen scopes")
+                frozen_sec_scope = cast(dict[str, Any], prior_scopes[0])
+                run_date = date.fromisoformat(frozen_sec_scope["scope_date"])
+                explicit = frozen_sec_scope["selection"]["kind"] == "explicit-companies"
+                if (company_ids is not None) != explicit or (
+                    company_ids is not None
+                    and set(frozen_sec_scope["company_ids"]) != {str(item) for item in company_ids}
+                ):
+                    raise ValueError("The manual SEC request cannot replace its frozen issuers")
+        if frozen_sec_scope is None:
+            frozen_sec_scope = capture_sec_refresh_scope(
+                session, company_ids=company_ids, run_date=run_date, request_id=request_nonce
+            )
+    state_scope = frozen_sec_scope if frozen_sec_scope is not None else replay_scope
+    states = _states_from_scope(state_scope) if state_scope is not None else None
     claims: dict[ExternalDataDomain, RunClaim] = {}
     scopes: dict[ExternalDataDomain, dict[str, Any]] = {}
     for domain in ordered:
@@ -1315,10 +1383,12 @@ def run_scheduled(
             and states is None
         ):
             states = active_company_states(session)
-        scope = (
-            replay_scope
-            if replay_scope is not None and replay_of_run_id is not None
-            else _scope_for_domain(
+        if domain in sec_domains and frozen_sec_scope is not None:
+            scope = frozen_sec_scope
+        elif replay_scope is not None and replay_of_run_id is not None:
+            scope = replay_scope
+        else:
+            scope = _scope_for_domain(
                 session,
                 domain,
                 start_date=start_date,
@@ -1327,7 +1397,6 @@ def run_scheduled(
                 company_ids=company_ids,
                 yahoo_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
             )
-        )
         if domain == ExternalDataDomain.FX and fx_pair_filter is not None:
             scope["required_fx_pairs"] = [list(pair) for pair in sorted(fx_pair_filter)]
         if domain in YAHOO_MARKET_DOMAINS and listing_key_filter is not None:
@@ -1430,11 +1499,11 @@ def run_scheduled(
             }
         mapping_ids = None
         mapping_scope = None
-        if replay_scope is not None and domain in {
+        if (replay_scope is not None or frozen_sec_scope is not None) and domain in {
             ExternalDataDomain.REPORTED_FUNDAMENTALS,
             ExternalDataDomain.SOURCE_DOCUMENTS,
         }:
-            raw_mapping_scope = replay_scope.get("verified_cik_mappings")
+            raw_mapping_scope = claim.request_scope.get("verified_cik_mappings")
             if isinstance(raw_mapping_scope, list):
                 mapping_scope = [item for item in raw_mapping_scope if isinstance(item, dict)]
         if domain == ExternalDataDomain.CONSENSUS_ESTIMATES and replay_scope is not None:
@@ -1445,14 +1514,42 @@ def run_scheduled(
             state_snapshot: dict[UUID, str] = state_snapshot,
             mapping_ids: list[UUID] | None = mapping_ids,
             mapping_scope: list[dict[str, Any]] | None = mapping_scope,
+            request_scope: dict[str, Any] = claim.request_scope,
         ) -> dict[ExternalDataDomain, DomainOutcome]:
+            ordered_sec_ids = None
+            history_limit = None
+            if (
+                request_scope.get("scope") == "sec_issuer_refresh"
+                or "sec_scope_version" in request_scope
+            ):
+                try:
+                    ordered_sec_ids = validate_sec_refresh_scope(session, request_scope)
+                    history_limit = int(request_scope["max_new_history_files"])
+                except SecRefreshScopeError:
+                    return {
+                        domain: DomainOutcome(
+                            "BLOCKED",
+                            {"status": "BLOCKED", "reason": "SEC_SCOPE_INVALID"},
+                            "SEC_SCOPE_INVALID",
+                            "The frozen SEC scope or reviewed issuer identity changed.",
+                        )
+                    }
             if domain == ExternalDataDomain.REPORTED_FUNDAMENTALS:
                 outcome = _fundamentals_operation(
-                    session, settings, state_snapshot, mapping_scope=mapping_scope
+                    session,
+                    settings,
+                    state_snapshot,
+                    mapping_scope=mapping_scope,
+                    ordered_company_ids=ordered_sec_ids,
                 )
             elif domain == ExternalDataDomain.SOURCE_DOCUMENTS:
                 outcome = _source_documents_operation(
-                    session, settings, state_snapshot, mapping_scope=mapping_scope
+                    session,
+                    settings,
+                    state_snapshot,
+                    mapping_scope=mapping_scope,
+                    ordered_company_ids=ordered_sec_ids,
+                    max_new_history_files=history_limit,
                 )
             else:
                 outcome = _consensus_operation(
