@@ -63,15 +63,12 @@ Original task definitions, decisions and evidence remain in the
 
 ## Execution evidence
 
-| Date       | Task   | Evidence                                                                                                           | Next action                             |
-| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| 2026-11-07 | MP1.F1 | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger | Check links; complete model-scoped sync |
-
-| 2026-11-07 | MP1.F2/F4 | Three methods on one synthetic company publish the same revision label; native parity, independent advancement, model-scoped conflicts and corrected source metadata pass PostgreSQL verification. Three Apps Script tests pass | Complete UI verification and final review |
-
-| 2026-11-07 | MP1.F3/F5 | Full check passes (166 web / 659 API unit, two skips); isolated PostgreSQL 139 passed / four skips; focused suite 31; browser six plus two screenshot checks; 133 Markdown files link-clean; independent reviews pass | Owner review of PR #23, then MP2 from merged main |
-
-| 2026-11-07 | Remote integration gate | [GitHub Actions](https://github.com/paulzwecker/portfolio-app/actions/runs/42388954068) passed all three jobs on code commit `c770e0f`; Vercel Preview passed | Owner review of the current PR head |
+| Date       | Task                    | Evidence                                                                                                                                                                                                                        | Next action                                       |
+| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 2026-11-07 | MP1.F1                  | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger                                                                                                              | Check links; complete model-scoped sync           |
+| 2026-11-07 | MP1.F2/F4               | Three methods on one synthetic company publish the same revision label; native parity, independent advancement, model-scoped conflicts and corrected source metadata pass PostgreSQL verification. Three Apps Script tests pass | Complete UI verification and final review         |
+| 2026-11-07 | MP1.F3/F5               | Full check passes (166 web / 659 API unit, two skips); isolated PostgreSQL 139 passed / four skips; focused suite 31; browser six plus two screenshot checks; 133 Markdown files link-clean; independent reviews pass           | Owner review of PR #23, then MP2 from merged main |
+| 2026-11-07 | Remote integration gate | [GitHub Actions](https://github.com/paulzwecker/portfolio-app/actions/runs/42388954068) passed all three jobs on code commit `c770e0f`; Vercel Preview passed                                                                   | Owner review of the current PR head               |
 
 ## Upkeep
 
