@@ -74,10 +74,11 @@
 
 ## Next build steps
 
-1. Rehearse the investor journey against the actual isolated API fixture server
-   (`apps/api/tests/browser_server.py`, explicit `TEST_DATABASE_URL` and loopback API),
-   complementing the route-fixture browser and persisted-provider API tests. Prepare
-   the bounded release/activation handoff after completing local acceptance.
+1. Finish the actual-API browser rehearsal. The fixture server now supports bounded
+   stock/standalone-ETF/FX ingestion and read-only serving in its verified local test
+   schema. Sixteen safety/integration cases and valued/outage desktop/mobile checks
+   pass. Verify unpriced readback and normal lifetime cleanup, then finalize the
+   bounded release/activation handoff. Preserve pre-existing test schemas.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review.
 3. The 90-date/30-subject policy, current-state recovery, provider scope and hosted

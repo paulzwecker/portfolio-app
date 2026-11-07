@@ -117,6 +117,15 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
+- C2.2 isolated browser harness now supports real imported stock/ETF/FX facts and
+  unpriced/outage/valued states. It verifies a loopback `_test` target before schema
+  creation, isolates operator settings, and serves the portfolio fixture through
+  read-only SQL/HTTP. Sixteen focused safety/integration checks pass. Real valued
+  and FX-outage browser cases pass on desktop/mobile. Windows interrupt cleanup
+  proved unreliable, so bounded normal shutdown and cleanup regression checks were
+  added. Existing test schemas are preserved. Complete the remaining unpriced
+  browser pass and final lifecycle verification before updating the release handoff.
+
 - C2.2 investor investigation now links Portfolio valuation gaps directly to the
   Operations market panel. Summary/diagnostics precede manual controls. A shared
   drawer exposes frozen scopes, attempt history, provider issues and backend-owned
