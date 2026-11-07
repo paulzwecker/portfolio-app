@@ -234,6 +234,7 @@ export type PriceHistoryAnalytics =
   components["schemas"]["PriceHistoryAnalyticsRead"];
 export type MarketRefreshStatus =
   components["schemas"]["MarketRefreshStatusRead"];
+export type MarketRefreshRun = components["schemas"]["MarketRefreshRunRead"];
 export type RecurringOperationJob =
   components["schemas"]["RecurringOperationJobRead"];
 export type RecurringOperationsStatus =
@@ -838,7 +839,49 @@ export function isMarketRefreshStatus(v: unknown): v is MarketRefreshStatus {
       timestamp(v.last_successful_update)) &&
     (v.market_run_id === null || uuid(v.market_run_id)) &&
     (v.fx_run_id === null || uuid(v.fx_run_id)) &&
-    nullableString(v.message)
+    nullableString(v.message) &&
+    (v.runs === undefined || array(v.runs, isMarketRefreshRun))
+  );
+}
+
+function isMarketRefreshRun(v: unknown): v is MarketRefreshRun {
+  return (
+    isRecord(v) &&
+    uuid(v.run_id) &&
+    ["MARKET_DATA", "FX", "CORPORATE_ACTIONS"].includes(v.domain as string) &&
+    string(v.status) &&
+    timestamp(v.last_attempt_at) &&
+    (v.finished_at === null || timestamp(v.finished_at)) &&
+    (v.last_successful_at === null || timestamp(v.last_successful_at)) &&
+    Number.isInteger(v.attempt_count) &&
+    Number.isInteger(v.max_attempts) &&
+    [
+      "RUNNING",
+      "COOLDOWN",
+      "ELIGIBLE",
+      "EXHAUSTED",
+      "REVIEW_REQUIRED",
+      "NONE",
+    ].includes(v.retry_state as string) &&
+    (v.retry_eligible_at === null || timestamp(v.retry_eligible_at)) &&
+    nullableString(v.failure_code) &&
+    nullableString(v.failure_message) &&
+    isRecord(v.request_scope) &&
+    !Array.isArray(v.request_scope) &&
+    isRecord(v.report) &&
+    !Array.isArray(v.report) &&
+    array(
+      v.attempts,
+      (attempt) =>
+        isRecord(attempt) &&
+        Number.isInteger(attempt.attempt_number) &&
+        string(attempt.status) &&
+        timestamp(attempt.started_at) &&
+        timestamp(attempt.finished_at) &&
+        typeof attempt.retryable === "boolean" &&
+        nullableString(attempt.failure_code) &&
+        nullableString(attempt.failure_message),
+    )
   );
 }
 

@@ -7181,6 +7181,78 @@ export interface components {
              */
             status: "ok";
         };
+        /** MarketRefreshAttemptRead */
+        MarketRefreshAttemptRead: {
+            /** Attempt Number */
+            attempt_number: number;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Failure Message */
+            failure_message: string | null;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+            /** Retryable */
+            retryable: boolean;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+        };
+        /** MarketRefreshRunRead */
+        MarketRefreshRunRead: {
+            /** Attempt Count */
+            attempt_count: number;
+            /** Attempts */
+            attempts: components["schemas"]["MarketRefreshAttemptRead"][];
+            /**
+             * Domain
+             * @enum {string}
+             */
+            domain: "MARKET_DATA" | "FX" | "CORPORATE_ACTIONS";
+            /** Failure Code */
+            failure_code: string | null;
+            /** Failure Message */
+            failure_message: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Last Attempt At
+             * Format: date-time
+             */
+            last_attempt_at: string;
+            /** Last Successful At */
+            last_successful_at: string | null;
+            /** Max Attempts */
+            max_attempts: number;
+            /** Report */
+            report: {
+                [key: string]: unknown;
+            };
+            /** Request Scope */
+            request_scope: {
+                [key: string]: unknown;
+            };
+            /** Retry Eligible At */
+            retry_eligible_at: string | null;
+            /**
+             * Retry State
+             * @enum {string}
+             */
+            retry_state: "RUNNING" | "COOLDOWN" | "ELIGIBLE" | "EXHAUSTED" | "REVIEW_REQUIRED" | "NONE";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Status */
+            status: string;
+        };
         /** MarketRefreshStatusRead */
         MarketRefreshStatusRead: {
             /** Fx Run Id */
@@ -7193,6 +7265,8 @@ export interface components {
             market_run_id: string | null;
             /** Message */
             message: string | null;
+            /** Runs */
+            runs?: components["schemas"]["MarketRefreshRunRead"][];
             /**
              * State
              * @enum {string}

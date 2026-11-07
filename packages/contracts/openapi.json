@@ -17325,6 +17325,208 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "MarketRefreshAttemptRead": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_number": {
+            "title": "Attempt Number",
+            "type": "integer"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "failure_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Message"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_number",
+          "status",
+          "started_at",
+          "finished_at",
+          "retryable",
+          "failure_code",
+          "failure_message"
+        ],
+        "title": "MarketRefreshAttemptRead",
+        "type": "object"
+      },
+      "MarketRefreshRunRead": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_count": {
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/MarketRefreshAttemptRead"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "domain": {
+            "enum": [
+              "MARKET_DATA",
+              "FX",
+              "CORPORATE_ACTIONS"
+            ],
+            "title": "Domain",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "failure_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Message"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "last_attempt_at": {
+            "format": "date-time",
+            "title": "Last Attempt At",
+            "type": "string"
+          },
+          "last_successful_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Successful At"
+          },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "report": {
+            "additionalProperties": true,
+            "title": "Report",
+            "type": "object"
+          },
+          "request_scope": {
+            "additionalProperties": true,
+            "title": "Request Scope",
+            "type": "object"
+          },
+          "retry_eligible_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Eligible At"
+          },
+          "retry_state": {
+            "enum": [
+              "RUNNING",
+              "COOLDOWN",
+              "ELIGIBLE",
+              "EXHAUSTED",
+              "REVIEW_REQUIRED",
+              "NONE"
+            ],
+            "title": "Retry State",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "domain",
+          "status",
+          "last_attempt_at",
+          "finished_at",
+          "last_successful_at",
+          "attempt_count",
+          "max_attempts",
+          "retry_state",
+          "retry_eligible_at",
+          "failure_code",
+          "failure_message",
+          "request_scope",
+          "report",
+          "attempts"
+        ],
+        "title": "MarketRefreshRunRead",
+        "type": "object"
+      },
       "MarketRefreshStatusRead": {
         "additionalProperties": false,
         "properties": {
@@ -17386,6 +17588,13 @@
               }
             ],
             "title": "Message"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/MarketRefreshRunRead"
+            },
+            "title": "Runs",
+            "type": "array"
           },
           "state": {
             "enum": [

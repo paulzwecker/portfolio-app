@@ -30,6 +30,7 @@ from portfolio_api.domain.models import (
     ExecutionPaceDecision,
     ExecutionPaceRun,
     ExecutionPaceRunStatus,
+    ExternalIngestionAttempt,
     ExternalIngestionRun,
     FinancialModel,
     FinancialModelOutput,
@@ -598,6 +599,8 @@ def _metric_decimal(value: object) -> Decimal | None:
 def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
     """Expose the latest persisted Yahoo market/FX refresh state."""
 
+    from portfolio_api.external_ingestion import cloud_retry_eligible_at
+
     latest = {
         domain: session.scalar(
             select(ExternalIngestionRun)
@@ -615,7 +618,7 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
             )
             .limit(1)
         )
-        for domain in ("MARKET_DATA", "FX")
+        for domain in ("MARKET_DATA", "FX", "CORPORATE_ACTIONS")
     }
     market_run = latest.get("MARKET_DATA")
     fx_run = latest.get("FX")
@@ -651,6 +654,65 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         None,
     )
     message = failed.failure_message if failed else None
+    attempts: dict[UUID, list[ExternalIngestionAttempt]] = defaultdict(list)
+    for attempt in session.scalars(
+        select(ExternalIngestionAttempt)
+        .where(ExternalIngestionAttempt.run_id.in_([run.id for run in latest.values() if run]))
+        .order_by(ExternalIngestionAttempt.attempt_number)
+    ):
+        attempts[attempt.run_id].append(attempt)
+    runs = []
+    current = now()
+    for run in latest.values():
+        if run is None:
+            continue
+        history = attempts[run.id]
+        eligible_at = (
+            cloud_retry_eligible_at(run, history[-1] if history else None)
+            if "crosswalk_sha256" in run.request_scope
+            and run.request_scope.get("end_date") == current.astimezone(UTC).date().isoformat()
+            else None
+        )
+        retry_state: s.MarketRetryState = "NONE"
+        if run.status == "RUNNING":
+            retry_state = "RUNNING"
+        elif run.status in {"FAILED", "PARTIAL", "BLOCKED"}:
+            if run.attempt_count >= run.max_attempts:
+                retry_state = "EXHAUSTED"
+            elif eligible_at is None:
+                retry_state = "REVIEW_REQUIRED"
+            else:
+                retry_state = "COOLDOWN" if current < eligible_at else "ELIGIBLE"
+        runs.append(
+            s.MarketRefreshRunRead(
+                run_id=run.id,
+                domain=cast(s.MarketRefreshDomain, run.domain),
+                status=run.status,
+                last_attempt_at=run.last_attempt_started_at or run.started_at,
+                finished_at=run.finished_at,
+                last_successful_at=run.last_successful_at,
+                attempt_count=run.attempt_count,
+                max_attempts=run.max_attempts,
+                retry_state=retry_state,
+                retry_eligible_at=eligible_at,
+                failure_code=run.failure_code,
+                failure_message=run.failure_message,
+                request_scope=run.request_scope,
+                report=run.report,
+                attempts=[
+                    s.MarketRefreshAttemptRead(
+                        attempt_number=attempt.attempt_number,
+                        status=attempt.status,
+                        started_at=attempt.started_at,
+                        finished_at=attempt.finished_at,
+                        retryable=attempt.retryable,
+                        failure_code=attempt.failure_code,
+                        failure_message=attempt.failure_message,
+                    )
+                    for attempt in history
+                ],
+            )
+        )
     return s.MarketRefreshStatusRead(
         state=state,
         last_attempt_at=last_attempt,
@@ -658,6 +720,7 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         market_run_id=market_run.id if market_run else None,
         fx_run_id=fx_run.id if fx_run else None,
         message=message,
+        runs=runs,
     )
 
 

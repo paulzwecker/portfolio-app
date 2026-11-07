@@ -57,11 +57,16 @@
 
 ## Next build steps
 
-1. Review the synthetic investor journey and data/freshness presentation, then use
+1. Complete the in-progress Portfolio → Operations investigation flow. The existing
+   API now exposes per-domain scope/attempt evidence and shared retry eligibility.
+   Eighteen isolated API cases and nine focused web checks pass. Baseline browser
+   screenshots show status buried below disabled controls, especially on mobile.
+   Finish the diagnostics drawer/layout correction and repeat visual inspection.
+2. Review the synthetic investor journey and data/freshness presentation, then use
    INTEGRATE once the local milestone is complete. The 90-date/30-subject policy
    requires explicit review before production activation. Actual hosted cycles,
    current-state recovery and provider coverage remain separately gated.
-2. After owner merge of #25, integrate its receipt adapter and preserve both sets
+3. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Complete local acceptance before the milestone PR gate.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR

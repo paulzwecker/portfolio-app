@@ -11,7 +11,7 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
 | Implementation              | PARTIAL / BUILD. Bounded importer → EUR valuation/Operations API readback, same-day recovery and durable preflight monitoring locally verified      |
-| Next ready substantial task | C2.2 local investor-journey and freshness presentation review, then milestone integration when its local acceptance is met                          |
+| Next ready substantial task | C2.2 Portfolio → Operations investigation, typed run diagnostics and desktop/mobile review. Milestone integration follows local acceptance          |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -116,6 +116,14 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C2.2 diagnostics contract adds read-only per-domain scopes, attempt history and
+  retry eligibility to the existing Operations status API, including separate
+  corporate-action quality. Eligibility shares the worker policy and excludes old
+  daily scopes. Eighteen isolated API/recovery/preflight checks and nine focused
+  web checks pass, with strict types and generated contract checks. Desktop/mobile
+  baseline review confirms diagnostics are buried below manual controls. Continue
+  the focused presentation correction before declaring the investor journey verified.
 
 - C2.2 preflight diagnostics now persist to existing ingestion run/attempt tables
   under the guarded market lock. Invalid sources, mappings and budgets reach the

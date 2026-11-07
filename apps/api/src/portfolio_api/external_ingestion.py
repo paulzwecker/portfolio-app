@@ -431,6 +431,21 @@ def _mark_interrupted_run(session: Session, run: ExternalIngestionRun, at: datet
     session.commit()
 
 
+def cloud_retry_eligible_at(
+    run: ExternalIngestionRun, attempt: ExternalIngestionAttempt | None
+) -> datetime | None:
+    """Return eligibility within the persisted budget, independently of worker activation."""
+    if (
+        run.status not in {"FAILED", "PARTIAL"}
+        or run.attempt_count >= run.max_attempts
+        or run.finished_at is None
+        or attempt is None
+        or not (attempt.retryable or run.failure_code == "WORKER_INTERRUPTED")
+    ):
+        return None
+    return run.finished_at + CLOUD_RETRY_COOLDOWN
+
+
 def _claim_run(
     session: Session,
     provider_id: str,
@@ -487,14 +502,8 @@ def _claim_run(
             .order_by(ExternalIngestionAttempt.attempt_number.desc())
             .limit(1)
         )
-        if (
-            existing.status in {"FAILED", "PARTIAL"}
-            and existing.attempt_count < existing.max_attempts
-            and existing.finished_at is not None
-            and current >= existing.finished_at + CLOUD_RETRY_COOLDOWN
-            and attempt is not None
-            and (attempt.retryable or existing.failure_code == "WORKER_INTERRUPTED")
-        ):
+        eligible_at = cloud_retry_eligible_at(existing, attempt)
+        if eligible_at is not None and current >= eligible_at:
             existing.status = "RUNNING"
             existing.last_attempt_started_at = current
             existing.finished_at = None

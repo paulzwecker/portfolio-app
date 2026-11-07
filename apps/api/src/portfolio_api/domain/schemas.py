@@ -819,6 +819,40 @@ class PriceHistoryAnalyticsRead(Contract):
     correction_state: str | None
 
 
+MarketRetryState = Literal[
+    "RUNNING", "COOLDOWN", "ELIGIBLE", "EXHAUSTED", "REVIEW_REQUIRED", "NONE"
+]
+MarketRefreshDomain = Literal["MARKET_DATA", "FX", "CORPORATE_ACTIONS"]
+
+
+class MarketRefreshAttemptRead(Contract):
+    attempt_number: int
+    status: str
+    started_at: datetime
+    finished_at: datetime
+    retryable: bool
+    failure_code: str | None
+    failure_message: str | None
+
+
+class MarketRefreshRunRead(Contract):
+    run_id: UUID
+    domain: MarketRefreshDomain
+    status: str
+    last_attempt_at: datetime
+    finished_at: datetime | None
+    last_successful_at: datetime | None
+    attempt_count: int
+    max_attempts: int
+    retry_state: MarketRetryState
+    retry_eligible_at: datetime | None
+    failure_code: str | None
+    failure_message: str | None
+    request_scope: dict[str, object]
+    report: dict[str, object]
+    attempts: list[MarketRefreshAttemptRead]
+
+
 class MarketRefreshStatusRead(Contract):
     state: Literal["AVAILABLE", "STALE", "REFRESHING", "PARTIAL", "UNAVAILABLE"]
     last_attempt_at: datetime | None
@@ -826,6 +860,7 @@ class MarketRefreshStatusRead(Contract):
     market_run_id: UUID | None
     fx_run_id: UUID | None
     message: str | None
+    runs: list[MarketRefreshRunRead] = Field(default_factory=list)
 
 
 RecurringOperationJobName = Literal[
