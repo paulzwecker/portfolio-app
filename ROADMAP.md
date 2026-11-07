@@ -7,16 +7,16 @@
 
 ## Execution cursor — edit after EVERY subtask
 
-| Field                   | Current value                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                     |
-| Next task               | Review and merge the cohesive MP1 publication PR, then begin MP2 from updated main with a reviewed real template and canonical base.  |
-| Status                  | `MP1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED`; real-source rollout and M2 investment acceptance remain owner-gated.                  |
-| Current branch / commit | `codex/model-publication-vertical-slice`, based on merged main `eb14b73`.                                                             |
-| Last verified tests     | npm run check passed; integration 137 passed / 4 skipped; final focused suite 19 passed; desktop/mobile model-review E2E 2 passed.    |
-| Latest PR               | [Investment review PR #22](https://github.com/paulzwecker/portfolio-app/pull/22) merged; publication milestone PR pending.            |
-| Primary blocker         | Investment assumptions, fiscal basis and terminal-value methodology remain unapproved; a private review recommends DEFER.             |
-| Next approval gate      | Owner reviews the exact private P-GOOGL package diff and separately approves any model revision after a read-only production preview. |
+| Field                   | Current value                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                           |
+| Next task               | Review and merge the cohesive MP1 publication PR, then begin MP2 from updated main with a reviewed real template and canonical base.        |
+| Status                  | `MP1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED`; real-source rollout and M2 investment acceptance remain owner-gated.                        |
+| Current branch / commit | `codex/model-publication-vertical-slice`, based on merged main `eb14b73`.                                                                   |
+| Last verified tests     | npm run check passed; integration 137 passed / 4 skipped; final focused suite 19 passed; desktop/mobile model-review E2E 2 passed.          |
+| Latest PR               | [MP1 publication PR #23](https://github.com/paulzwecker/portfolio-app/pull/23) open for owner review.                                       |
+| Primary blocker         | MP1 awaits PR review/merge. Real rollout requires a reviewed canonical base and source installation; M2 investment review recommends DEFER. |
+| Next approval gate      | Owner reviews MP1 PR. Real source installation, model assumption acceptance and production operations each retain explicit approval gates.  |
 
 **Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `PARTIAL`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `REVIEW_PENDING`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
 
@@ -274,4 +274,4 @@ _Add one short row per completed subtask: date | task ID | commit | tests/eviden
 
 | 2026-11-07 | M2.2 review | `codex/m2-pgoogl-investment-review` | Two immutable package replays pass 30/30 and 22/22; native-engine sensitivity and guarded production model-table counts reviewed privately | Investment validity and source period remain unresolved; recommend DEFER | Owner reviews private evidence and decides whether to revise assumptions |
 
-| 2026-11-07 | MP1 integration gate | `e118c31`, `91887e2` | Full check green; PostgreSQL 137 passed / 4 skipped plus final focused 19; browser desktop/mobile 2 passed; independent review passed | Locally verified two-company publication-to-review slice; real source installation and first-model acceptance remain owner-gated | Review MP1 PR, merge manually, resume MP2 from updated main |
+| 2026-11-07 | MP1 integration gate | `e118c31`, `91887e2` | Full check green; PostgreSQL 137 passed / 4 skipped plus final focused 19; browser desktop/mobile 2 passed; independent review passed | Locally verified two-company publication-to-review slice; real source installation and first-model acceptance remain owner-gated | [Review PR #23](https://github.com/paulzwecker/portfolio-app/pull/23), merge manually, resume MP2 from updated main |
