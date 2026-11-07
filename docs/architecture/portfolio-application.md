@@ -77,6 +77,102 @@ This is a direction diagram, not a claim that every path is already deployed. Re
 
 Downstream choices must not silently mutate upstream assumptions. Rankings express prioritization, not authorization to buy/sell. Detailed investment and scoring invariants remain in existing domain docs and scoped AGENTS files.
 
+### Transaction-ledger transition (planned)
+
+C2 adds transaction-based accounting to the existing snapshot portfolio. This is
+a planned domain extension, with status and acceptance in `ROADMAP.md`. Reuse
+SQLAlchemy/Alembic, exact decimal types, canonical identity, import previews,
+receipts, domain transactions, guards and shared UI. A portfolio ledger is an
+explicit accounting domain, not a generic event-sourcing platform.
+
+1. **Retain the observation anchor.** Preserve the verified snapshot, native-currency
+   cash, effective/recorded dates, import receipt and accepted target revision.
+   Pin their IDs/hashes in a private cutover preview. Quantities do not establish
+   acquisition dates, costs, brokers or historical capital contributions.
+2. **Stage an evidenced opening state.** Choose an explicit cutover date. Record
+   opening security/cash balances with provenance, distinct from buys/deposits.
+   Broker/account allocation needs statement evidence or an explicitly reviewed
+   unallocated opening classification. Preserve unknown acquisition lots/costs.
+   Require exact listing quantities and per-currency cash to reconcile to the
+   anchor before owner-approved cutover, with zero unexplained differences.
+3. **Add genuine activity.** Typed records cover buy/sell, dividend/withholding,
+   fees/taxes, deposit/withdrawal, cash/security transfer, FX and reviewed corporate
+   actions. Preserve trade, settlement, effective and recorded times, original
+   currencies, source row, account and linked security/listing. Paired transfer/FX
+   legs reconcile across accounts. Unsupported instruments and incomplete records
+   enter explicit review instead of being discarded or coerced to zero.
+   Executed FX rates, gross/net amounts and charges are transaction evidence;
+   dated valuation FX is a separate input. Current spot rates cannot fill missing
+   historical transaction currencies or acquisition costs.
+4. **Reconcile before changing the current read model.** Run candidate ledger
+   projections alongside observed snapshots. Compare quantities, currency cash,
+   account totals and source coverage. Owner approval selects the dated canonical
+   source and a versioned projection; new dated snapshots retain ledger lineage
+   and the existing investor-confirmation rules. Keep the original accepted
+   snapshots and receipts available for comparison and recovery.
+5. **Review source ownership explicitly.** After a reviewed ledger cutover, Sheets
+   holdings/cash become reconciliation evidence for the covered scope. A later
+   workbook sync must not overwrite ledger-derived state. Until that ownership
+   transfer is implemented and authorized, use the existing workbook contract.
+   Strategic targets, lifecycle and models keep their separate review paths.
+6. **Backfill only evidenced history.** Later broker imports must reproduce the
+   cutover balances before expanding historical coverage. A versioned reconstruction
+   selects one opening boundary per covered scope, avoiding double-counting opening
+   balances plus earlier trades. Missing history stays explicit. Position-history
+   conflicts block promotion rather than being patched with invented transactions.
+
+Broker parsers should onboard one reviewed format at a time through the existing
+staging/review pattern. Pin raw-file hash, parser/contract version and stable source
+record identity. Re-import is idempotent, changed or overlapping rows produce
+conflicts, and acceptance is atomic. Accepted corrections link reversals or
+superseding records with source/rationale. Preserve original accepted history.
+Broker records may contain private account identifiers and belong outside Git.
+
+Public corporate-action observations and actual account activity have different
+authority. A provider dividend is not evidence that an account received cash or
+paid withholding. A split must not adjust an already-adjusted broker position
+twice. Reconcile broker events with verified action evidence and declared price
+adjustment semantics before deriving quantities, income or performance.
+
+### Accounting and performance boundaries (planned)
+
+- **Positions and gains.** Derive holdings and native-currency cash from accepted
+  opening balances/activity. Track lots and carried acquisition evidence through
+  transfers. Version the cost-allocation, fee/tax, FX and rounding policy before
+  calculating realized/unrealized gains. Unknown cost blocks the affected gains,
+  independently of whether market value is available. Portfolio accounting policy
+  and jurisdiction-specific tax reporting require distinct reviewed contracts.
+- **Scope and flows.** Declare account versus consolidated portfolio boundary.
+  Transfers inside the consolidated portfolio are internal; transfers crossing
+  its boundary are external flows, including securities at evidenced valuations.
+  Retained dividends are portfolio income/cash, with separately recorded expenses
+  and withholding. A subsequent withdrawal is a separate external flow. Avoid
+  double-counting dividends, transfers or fees through adjusted prices and ledger
+  events. Report gross/net fee/tax treatment explicitly.
+- **TWR.** Link subperiod returns around external flows using evidenced valuations
+  and an explicit same-day timing convention. If only daily observations support
+  an approximation, declare that methodology and coverage. Missing flow-boundary
+  valuations or invalid denominators must produce an unavailable/qualified result.
+  The methodological reference is the [GIPS calculation handbook](https://www.gipsstandards.org/standards/gips-standards-for-firms/gips-standards-handbook-for-firms/).
+- **XIRR.** Use dated investor-perspective external flows plus the ending portfolio
+  value with a declared 365-day convention. Since-cutover analysis uses opening
+  market value as an analytical boundary, separately labeled from actual deposits
+  in the ledger. Preserve exact flow/FX evidence and handle no-root, ambiguous-root,
+  sign/date and incomplete-coverage cases explicitly. The numerical reference is
+  [Microsoft XIRR](https://support.microsoft.com/en-us/excel/functions/xirr-function?nochrome=true).
+- **Coverage and history.** Separate since-cutover from since-inception performance.
+  An unknown historical cost does not alone prevent since-cutover TWR/XIRR when
+  valuations and actual intervening flows are complete. Full since-inception claims
+  require genuine history. Benchmarks need matching periods, currency and return
+  basis. Version inputs, calculation and corrected historical reports. Model
+  expected cash-flow IRR and enterprise UFCF IRR retain their financial-model meaning.
+
+Owner decisions needed for implementation are the evidenced cutover/account scope,
+lot-allocation policy, fee/tax/FX and same-day timing conventions, supported first
+broker format and history coverage. Local synthetic development may proceed while
+those gates remain open. Production schema, ownership transfer, imports and any
+restatement require their established separate approvals.
+
 ## 4. Canonical identity and currency
 
 - `Company → Security → Listing` is the immutable conceptual boundary; exact security/listing identity is required for holdings and quoted returns.

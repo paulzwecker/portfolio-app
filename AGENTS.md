@@ -30,6 +30,9 @@ behavior, recording the conflict and obtaining a decision where required.
   Durability, Quality, Execution and Risk remain independent. Lifecycle is explicit.
 - Missing values remain unavailable. Keep holdings, strategic targets, investment
   interpretation and execution authority separate.
+- Provider refresh and transaction-based portfolio accounting are core outcomes.
+  Preserve verified snapshots during ledger migration. Never infer past trades,
+  acquisition costs or performance from current holdings. See Portfolio architecture.
 - Sheets is the agent modeling workspace. Completed model publications cross a
   versioned contract into review proposals. PostgreSQL owns accepted revisions.
   See `docs/model-publications.md` and `docs/financial-models.md`.
