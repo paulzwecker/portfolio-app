@@ -361,3 +361,22 @@ def test_native_preflight_replay_and_mutation_rejection(
             )["status"]
             == "SCHEMA_VALID"
         )
+
+
+@pytest.mark.parametrize(
+    "payload,code",
+    [
+        (b"not-json", "PUBLICATION_CONTRACT_INVALID"),
+        (
+            b'{"contract_type":"FinancialModelPublicationV1","state":"DRAFT"}',
+            "PUBLICATION_SCHEMA_INVALID",
+        ),
+    ],
+)
+def test_invalid_contract_has_a_safe_actionable_code(
+    tmp_path: Path, payload: bytes, code: str
+) -> None:
+    source = tmp_path / "invalid.json"
+    source.write_bytes(payload)
+    with pytest.raises(PublicationPreflightError, match=code):
+        load_publication(source, hashlib.sha256(payload).hexdigest())

@@ -9,8 +9,8 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | ------------- | -------------------------------------------------------------------------------------------------------- |
 | Active work   | MP2.1 Read-only publication onboarding preflight                                                         |
 | Branch        | `codex/mp2-readonly-publication-preflight`, from merged PR #23 (`0717498`)                               |
-| Status        | MP2.1 LOCAL_VERIFIED. Final integration checks and independent review in progress                        |
-| Next task     | Finish integration checks and prepare MP2.1 PR. Real template/base review remains owner-gated            |
+| Status        | MP2.1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. Ready for integration review                             |
+| Next task     | Review MP2.1 PR, then prepare the reviewed real publication and canonical base for MP2.2                 |
 | Approval gate | Real source installation/publication, first-model seeding and acceptance require separate owner approval |
 
 ## Baseline and outstanding gates
@@ -48,7 +48,7 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | Task                        | Status         | Evidence and next action                                                                                                                        |
 | --------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | MP2.1 Frozen-file preflight | LOCAL_VERIFIED | Exact bounded hashes, shared validators, private replay report and guarded read-only target preview. 45 focused tests pass across three methods |
-| MP2.1 Integration gate      | In progress    | Full quality checks and independent review, then one focused PR                                                                                 |
+| MP2.1 Integration gate      | LOCAL_VERIFIED | Full check, focused final regression and independent review passed. PR review is next                                                           |
 | MP2.2 Real template/base    | OWNER_GATE     | Review dated source assumptions and authorize any source installation, first-model seed and production review separately                        |
 
 ## Next milestones
@@ -97,6 +97,17 @@ methods, stale bases, parity failures, absent models, target mismatch, determini
 replay, private output and zero table/sequence changes. Independent review corrected
 local reports inheriting unverified Neon IDs. Live-source freshness, inbox discovery
 and investment acceptance retain their separate checks and authorization.
+
+MP2.1 final verification passes `npm run check` on `bb7224b` (169 web tests,
+671 API tests, two environment skips, strict types, contracts and production build).
+The later sanitized diagnostic refinement passes seven focused unit cases and
+29 final publication/preflight regression tests including six isolated PostgreSQL
+cases. The broader focused suite passed 45. All 133 Markdown files have valid
+local links. Independent review passed after the local-target attribution and
+server read-only proof corrections. This CLI-only slice changes no UI. Real source
+freshness, a production-target run and investment acceptance remain unverified and
+owner-gated. Production-write authorization, recurring operations, cloud ingestion
+and polling were confirmed disabled.
 
 ## Upkeep
 

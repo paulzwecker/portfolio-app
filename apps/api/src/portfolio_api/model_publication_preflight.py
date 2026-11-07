@@ -49,8 +49,13 @@ def load_publication(path: Path, expected_sha256: str) -> tuple[str, ParsedContr
         raise PublicationPreflightError("PUBLICATION_TOO_LARGE")
     if hashlib.sha256(payload).hexdigest() != expected_sha256:
         raise PublicationPreflightError("PUBLICATION_HASH_MISMATCH")
-    raw = payload.decode("utf-8")
-    parsed = parse_portable_contract(raw)
+    try:
+        raw = payload.decode("utf-8")
+        parsed = parse_portable_contract(raw)
+    except ValidationError:
+        raise PublicationPreflightError("PUBLICATION_SCHEMA_INVALID") from None
+    except (UnicodeError, ValueError):
+        raise PublicationPreflightError("PUBLICATION_CONTRACT_INVALID") from None
     if parsed.publication is None:
         raise PublicationPreflightError("PUBLICATION_ENVELOPE_REQUIRED")
     return raw, parsed
