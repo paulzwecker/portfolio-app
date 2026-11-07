@@ -12,6 +12,13 @@
 
 ## Current SEC increment
 
+The additive company coverage contract now includes incremental run/attempt IDs,
+trigger, frozen scope counts and separate batch/issuer results. Attribution uses
+retained issuer evidence, with unknown multi-issuer filing outcomes explicit.
+Twenty-eight isolated API/fixture checks pass; retained-data dates stay separate
+from execution and failed attempts. UI and repeated desktop/mobile inspection
+are the current BUILD subtask. Contracts are regenerated and strict API types pass.
+
 `af8c847` incremental SEC refresh selects held issuers without requiring lifecycle,
 then explicit Watchlist, through the existing scheduled/manual ingestion paths.
 It reuses the bootstrap identity/holdings contract and existing durable attempts.

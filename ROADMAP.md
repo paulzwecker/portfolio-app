@@ -117,6 +117,14 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
+- C3.1 company coverage now includes incremental run/attempt IDs, trigger, frozen
+  scope counts and separate batch/issuer outcomes. Attribution uses stored issuer
+  evidence; aggregate multi-issuer filings remain unreported per issuer. Failed
+  attempts cannot advance retained-data dates. Twenty-eight focused API/fixture
+  cases pass, including read-only serving, exact scope membership, legacy/malformed
+  evidence, zero/missing values and an older run's newer attempt. Typed contracts
+  are regenerated. UI and desktop/mobile review continue in this BUILD increment.
+
 - C3.1 `af8c847` incremental SEC selection reuses the reviewed held/Watchlist scope in
   scheduled and existing manual steps, independently of held issuers' lifecycle.
   Domain/day and manual-request scopes freeze identity evidence and mapping hashes

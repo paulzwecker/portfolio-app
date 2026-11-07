@@ -164,6 +164,8 @@ def main(argv: list[str] | None = None) -> None:
             "sec-covered",
             "sec-outage",
             "sec-unmapped",
+            "sec-refresh-partial",
+            "sec-refresh-outage",
         ),
         default="demo",
     )

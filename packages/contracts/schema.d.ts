@@ -10493,6 +10493,58 @@ export interface components {
             latest_retrieved_at: string | null;
             /** Record Count */
             record_count: number;
+            refresh?: components["schemas"]["SecRefreshRead"] | null;
+        };
+        /** SecRefreshRead */
+        SecRefreshRead: {
+            /** Attempt Count */
+            attempt_count: number;
+            /** Attempt Id */
+            attempt_id: string | null;
+            /**
+             * Batch Status
+             * @enum {string}
+             */
+            batch_status: "RUNNING" | "COMPLETE" | "PARTIAL" | "FAILED" | "BLOCKED" | "NOT_APPLICABLE";
+            /** Failure Code */
+            failure_code: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Issuer Outcome
+             * @enum {string}
+             */
+            issuer_outcome: "REPORTED" | "DATA_CHECK" | "UNAVAILABLE" | "UNMAPPED" | "NOT_REPORTED";
+            /** Mapped Company Count */
+            mapped_company_count: number | null;
+            /** Request Id */
+            request_id: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Retryable */
+            retryable: boolean;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Scope Company Count */
+            scope_company_count: number;
+            /** Source Record Count */
+            source_record_count: number | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "MANUAL" | "SCHEDULED" | "LEGACY";
         };
         /** SecurityCreate */
         SecurityCreate: {

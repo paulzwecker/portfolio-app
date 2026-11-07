@@ -1,17 +1,21 @@
-"""Current per-issuer SEC evidence and bootstrap diagnostics, without provider calls."""
+"""Current SEC evidence and attributed refresh diagnostics, without provider calls."""
 
+from contextlib import suppress
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal, cast
 from urllib.parse import urlsplit
 from uuid import UUID
 
 from sqlalchemy import case, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services
 from portfolio_api.domain.models import (
     CompanyProviderIdentifier,
+    ExternalIngestionAttempt,
+    ExternalIngestionRun,
     FundamentalMetric,
     FundamentalsBootstrapCheckpoint,
     FundamentalsBootstrapRun,
@@ -23,6 +27,7 @@ from portfolio_api.fundamentals_bootstrap import (
     _load_reviewed_cik_mappings,
 )
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
+from portfolio_api.sec_refresh_scope import SEC_SCOPE_VERSION
 
 
 def _date(value: date | datetime | None) -> date | None:
@@ -58,6 +63,148 @@ def _bootstrap(
         retryable=item.retryable,
         next_attempt_at=item.next_attempt_at,
         provider_request_count=item.provider_request_count,
+    )
+
+
+def _issuer_result(
+    run: ExternalIngestionRun, company_id: UUID, mapped_ids: set[str] | None
+) -> tuple[
+    Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"], int | None
+]:
+    if mapped_ids is not None and str(company_id) not in mapped_ids:
+        return "UNMAPPED", None
+    # A failed attempt rolls its provider data back. Prior retained facts are separate.
+    if run.status not in {"COMPLETE", "PARTIAL"}:
+        return "NOT_REPORTED", None
+    report = cast(dict[str, Any], run.report)
+    if run.domain == "REPORTED_FUNDAMENTALS":
+        results = report.get("mapped_results", [])
+        if not isinstance(results, list):
+            return "NOT_REPORTED", None
+        matches = [
+            item
+            for item in results
+            if isinstance(item, dict) and item.get("company_id") == str(company_id)
+        ]
+        if len(matches) != 1:
+            return "NOT_REPORTED", None
+        result = matches[0]
+        if result.get("status") == "DATA_CHECK":
+            return "DATA_CHECK", None
+        count_key = "source_fact_count"
+    elif mapped_ids == {str(company_id)}:
+        # The filings adapter currently reports aggregate reconciliation. Attribute
+        # it only when this issuer was the sole mapped provider subject.
+        result = report.get("provider_result", {})
+        count_key = "documents_imported"
+    else:
+        return "NOT_REPORTED", None
+    if not isinstance(result, dict) or not isinstance(result.get("reconciliation"), dict):
+        return "NOT_REPORTED", None
+    reconciliation = result["reconciliation"]
+    count = reconciliation.get(count_key)
+    if type(count) is not int or count < 0:
+        return "NOT_REPORTED", None
+    if run.domain == "SOURCE_DOCUMENTS":
+        reused = reconciliation.get("documents_reused", 0)
+        if type(reused) is not int or reused < 0:
+            return "NOT_REPORTED", None
+        count += reused
+    if count == 0:
+        return "UNAVAILABLE", 0
+    checks = (
+        "data_check_count",
+        "data_check_documents",
+        "unsupported_forms",
+        "malformed_filing_rows",
+        "existing_metadata_conflicts",
+        "amendments_unlinked",
+        "history_files_deferred",
+    )
+    if (
+        reconciliation.get("issues")
+        or any(reconciliation.get(key) for key in checks)
+        or result.get("history_files_deferred")
+    ):
+        return "DATA_CHECK", count
+    return "REPORTED", count
+
+
+def _refresh(session: Session, company_id: UUID, domain: str) -> s.SecRefreshRead | None:
+    run = session.scalar(
+        select(ExternalIngestionRun)
+        .where(
+            ExternalIngestionRun.provider_id == SEC_PROVIDER_ID,
+            ExternalIngestionRun.domain == domain,
+            ExternalIngestionRun.request_scope["company_ids"]
+            .cast(JSONB)
+            .contains([str(company_id)]),
+        )
+        .order_by(
+            func.coalesce(
+                ExternalIngestionRun.finished_at,
+                ExternalIngestionRun.last_attempt_started_at,
+                ExternalIngestionRun.started_at,
+            ).desc(),
+            ExternalIngestionRun.created_at.desc(),
+            ExternalIngestionRun.id,
+        )
+        .limit(1)
+    )
+    if run is None:
+        return None
+    scope = cast(dict[str, Any], run.request_scope)
+    ids = scope.get("company_ids")
+    if not isinstance(ids, list) or not all(isinstance(item, str) for item in ids):
+        return None
+    try:
+        if [str(UUID(item)) for item in ids] != ids or len(set(ids)) != len(ids):
+            return None
+    except ValueError:
+        return None
+    mappings = scope.get("verified_cik_mappings")
+    mapped_ids = None
+    if isinstance(mappings, list) and all(
+        isinstance(item, dict) and isinstance(item.get("company_id"), str) for item in mappings
+    ):
+        mapped_ids = {item["company_id"] for item in mappings}
+        if len(mapped_ids) != len(mappings) or not mapped_ids.issubset(ids):
+            mapped_ids = None
+    attempt = session.scalar(
+        select(ExternalIngestionAttempt)
+        .where(ExternalIngestionAttempt.run_id == run.id)
+        .order_by(ExternalIngestionAttempt.attempt_number.desc())
+        .limit(1)
+    )
+    request_id = None
+    if isinstance(scope.get("operational_request_id"), str):
+        with suppress(ValueError):
+            request_id = UUID(scope["operational_request_id"])
+    trigger: Literal["MANUAL", "SCHEDULED", "LEGACY"] = "LEGACY"
+    if request_id is not None:
+        trigger = "MANUAL"
+    elif (
+        scope.get("sec_scope_version") == SEC_SCOPE_VERSION
+        and scope.get("operational_request_id") is None
+    ):
+        trigger = "SCHEDULED"
+    outcome, count = _issuer_result(run, company_id, mapped_ids)
+    return s.SecRefreshRead(
+        run_id=run.id,
+        attempt_id=attempt.id if attempt else None,
+        request_id=request_id,
+        trigger=trigger,
+        batch_status=run.status,
+        requested_at=run.requested_at,
+        started_at=run.last_attempt_started_at or run.started_at,
+        finished_at=run.finished_at,
+        attempt_count=run.attempt_count,
+        retryable=bool(attempt and attempt.retryable),
+        failure_code=run.failure_code,
+        scope_company_count=len(set(ids)),
+        mapped_company_count=len(mapped_ids) if mapped_ids is not None else None,
+        issuer_outcome=outcome,
+        source_record_count=count,
     )
 
 
@@ -140,6 +287,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             latest_retrieved_at=fact_summary[4],
             latest_recorded_at=fact_summary[5],
             bootstrap=_bootstrap(session, company_id, "REPORTED_FUNDAMENTALS"),
+            refresh=_refresh(session, company_id, "REPORTED_FUNDAMENTALS"),
         ),
         filings=s.SecDomainCoverageRead(
             record_count=filing_summary[0],
@@ -149,6 +297,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             latest_retrieved_at=filing_summary[4],
             latest_recorded_at=filing_summary[5],
             bootstrap=_bootstrap(session, company_id, "SOURCE_DOCUMENTS"),
+            refresh=_refresh(session, company_id, "SOURCE_DOCUMENTS"),
         ),
         metrics_present=[metric for metric in FundamentalMetric if metric in metrics],
         metrics_missing=[metric for metric in FundamentalMetric if metric not in metrics],

@@ -1106,6 +1106,24 @@ class SecBootstrapCheckpointRead(Contract):
     provider_request_count: Annotated[int, Field(ge=0)]
 
 
+class SecRefreshRead(Contract):
+    run_id: UUID
+    attempt_id: UUID | None
+    request_id: UUID | None
+    trigger: Literal["MANUAL", "SCHEDULED", "LEGACY"]
+    batch_status: Literal["RUNNING", "COMPLETE", "PARTIAL", "FAILED", "BLOCKED", "NOT_APPLICABLE"]
+    requested_at: datetime
+    started_at: datetime
+    finished_at: datetime | None
+    attempt_count: Annotated[int, Field(ge=0, le=3)]
+    retryable: bool
+    failure_code: str | None
+    scope_company_count: Annotated[int, Field(ge=1)]
+    mapped_company_count: Annotated[int, Field(ge=0)] | None
+    issuer_outcome: Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"]
+    source_record_count: Annotated[int, Field(ge=0)] | None
+
+
 class SecDomainCoverageRead(Contract):
     record_count: Annotated[int, Field(ge=0)]
     data_check_count: Annotated[int, Field(ge=0)]
@@ -1114,6 +1132,7 @@ class SecDomainCoverageRead(Contract):
     latest_retrieved_at: datetime | None
     latest_recorded_at: datetime | None
     bootstrap: SecBootstrapCheckpointRead | None
+    refresh: SecRefreshRead | None = None
 
 
 class CompanySecCoverageRead(Contract):

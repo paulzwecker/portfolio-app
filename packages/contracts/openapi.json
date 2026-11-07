@@ -28074,6 +28074,16 @@
             "minimum": 0.0,
             "title": "Record Count",
             "type": "integer"
+          },
+          "refresh": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecRefreshRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -28086,6 +28096,163 @@
           "bootstrap"
         ],
         "title": "SecDomainCoverageRead",
+        "type": "object"
+      },
+      "SecRefreshRead": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_count": {
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "attempt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Id"
+          },
+          "batch_status": {
+            "enum": [
+              "RUNNING",
+              "COMPLETE",
+              "PARTIAL",
+              "FAILED",
+              "BLOCKED",
+              "NOT_APPLICABLE"
+            ],
+            "title": "Batch Status",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "issuer_outcome": {
+            "enum": [
+              "REPORTED",
+              "DATA_CHECK",
+              "UNAVAILABLE",
+              "UNMAPPED",
+              "NOT_REPORTED"
+            ],
+            "title": "Issuer Outcome",
+            "type": "string"
+          },
+          "mapped_company_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapped Company Count"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "scope_company_count": {
+            "minimum": 1.0,
+            "title": "Scope Company Count",
+            "type": "integer"
+          },
+          "source_record_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Record Count"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "trigger": {
+            "enum": [
+              "MANUAL",
+              "SCHEDULED",
+              "LEGACY"
+            ],
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempt_id",
+          "request_id",
+          "trigger",
+          "batch_status",
+          "requested_at",
+          "started_at",
+          "finished_at",
+          "attempt_count",
+          "retryable",
+          "failure_code",
+          "scope_company_count",
+          "mapped_company_count",
+          "issuer_outcome",
+          "source_record_count"
+        ],
+        "title": "SecRefreshRead",
         "type": "object"
       },
       "SecurityCreate": {
