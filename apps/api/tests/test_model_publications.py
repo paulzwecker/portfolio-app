@@ -309,7 +309,8 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                 # A refreshed server preview must never authorize another reviewer's older screen.
                 changed = {**preview.preview_data, "review_context": "new synthetic observation"}
                 with patch(
-                    "portfolio_api.google_sheets_sync._preview_contract", return_value=changed
+                    "portfolio_api.google_sheets_sync.preview_portable_contract",
+                    return_value=changed,
                 ):
                     refreshed = accept_sync_candidate(
                         db,

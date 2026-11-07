@@ -2,19 +2,21 @@
 
 ## Status
 
-**Implementation is ready for review; production is not ready to ingest yet.** The
-market-data and SEC bootstrap commands can now target production through the
-shared database write-target guard. No production provider request or production
-database write was made for this change.
+The guarded market and SEC bootstrap implementation is locally verified. Production
+ingestion requires a fresh coverage/target preflight and separate owner authorization.
+The [Nov 7 baseline](production-canonical-baseline.md) records the reconciled minimal
+portfolio and schema `9f2a6d4c81b7`. It does not establish provider coverage.
+Earlier R8 references to pending `b16d4f8a2c91` / `c17a0b9d4e62` migrations describe
+the historical development target. They are ancestors of that recorded head.
+Reverify the live target instead of repeating historical migration prerequisites.
 
 Real ingestion remains blocked until all of the following are true:
 
 1. The canonical portfolio bootstrap has been applied and reconciled with status
    `MATCHED` on the exact production database.
-2. The production schema is at the reviewed Alembic head. In this working tree,
-   the R8 constraint migration follows the pending workbook-sync migration
-   `b16d4f8a2c91`; both must be reviewed and applied in the normal migration
-   procedure before production ingestion.
+2. The production schema matches the reviewed repository head and required ingestion
+   constraints. Use the normal read-only preflight. Any actual drift requires a
+   separately reviewed migration procedure.
 3. The exact target, direct TLS connection, Neon project/primary branch/endpoint,
    database privileges, production-write authorization and interactive target
    confirmation all pass the existing guard.
