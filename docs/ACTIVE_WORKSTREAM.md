@@ -12,6 +12,25 @@
 
 ## Current SEC increment
 
+`af8c847` incremental SEC refresh selects held issuers without requiring lifecycle,
+then explicit Watchlist, through the existing scheduled/manual ingestion paths.
+It reuses the bootstrap identity/holdings contract and existing durable attempts.
+Domain/day and manual-request scopes freeze mappings, including manual steps across
+midnight. Actual mapping drift blocks requests; later additions do not widen old
+scopes. The budget is 30 mapped issuers and five historical files per filings
+attempt. Deferred history stays partial. Existing transport retries remain bounded;
+scheduled retries retain the 15-minute cooldown/two-replay daily budget. Terminal
+and exhausted outcomes stay reused. Manual scopes remain separate from scheduled
+ones. Review corrected abandoned runs skipping interruption detection.
+Fifteen isolated scope tests and 107 existing regressions pass, followed by four
+deterministic-clock reruns. Normal manual-queue execution, next-day/outage recovery,
+concurrent requests and mapping changes between transport attempts are covered.
+Exact Financials/filing readback preserves holdings/cash/targets and lifecycle.
+Strict types, lint, formatting, contracts and documentation checks pass. All checked
+local production-write/ingestion/manual/recurring/sync/FMP flags and Sheets polling
+remain disabled. No hosted scope or provider execution occurred.
+Operational details are in [the worker runbook](recurring-operations.md#held-issuer-sec-refresh).
+
 `1beddc0` adds the current per-company `sec-coverage` read API. A shared panel and
 source drawer now connect Financials/Research to company-focused Operations.
 Counts and economic/filing/retrieval/recording dates remain distinct from bootstrap
@@ -127,12 +146,12 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C3.1 incremental SEC refresh. `external_ingestion.active_company_states`
-   currently selects explicit Portfolio/Watchlist lifecycle only. Reuse the reviewed
-   held-issuer scope for provider-only updates without assigning lifecycle, freeze
-   mappings across retries and retain existing request bounds/receipts. Bootstrap
-   diagnostics are now visible; scheduled/manual per-issuer outcomes need separate
-   coverage. Reviewed real CIK evidence and hosted validation remain outstanding.
+1. Continue C3.1 per-issuer incremental outcomes. Scheduled/manual SEC now selects
+   verified held issuers independently of lifecycle with frozen mappings and bounded
+   recovery. Extend company coverage using its existing request/attempt ledgers.
+   Distinguish actual issuer outcomes from batch-level failure/partial status and
+   bootstrap state. Retained facts must stay visible after failed updates. Reviewed
+   real CIK evidence and hosted validation remain outstanding.
    Mapping persistence and provider ingestion require production authorization.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review. Then

@@ -75,6 +75,42 @@ rehearsal with [the development runbook](codex-cloud-development.md#portfolio-da
 
 ## Jobs and cadence
 
+### Held-issuer SEC refresh
+
+With one canonical portfolio, scheduled SEC domains and all-scope manual SEC
+requests select positive positions in its current complete snapshot, then explicit
+Watchlist companies. They reuse the bootstrap's reviewed CIK validation. Multiple
+listings deduplicate to one issuer. Held companies need no lifecycle assignment.
+Unmapped issuers, zero positions and companyless ETF listings remain disclosed in
+the saved selection. Multiple portfolios or an incomplete snapshot block this
+automatic scope. Before any portfolio exists, lifecycle-only scheduling is retained.
+Company-scoped manual actions retain the existing request eligibility rules.
+
+Each domain's first scheduled run freezes its UTC-day selection and mapping hash
+in `external_ingestion_runs.request_scope`. Later scheduled invocations reuse that
+scope. Manual SEC steps share a frozen selection under their operational request
+ID, including restart across midnight. A newly requested retry has its own request
+ID. Captured identity changes block provider access, while later mapping additions
+remain outside the old scope. Lifecycle changes never rewrite the captured scope
+or assign investment status. Legacy direct ingestion callers retain their scope.
+
+The incremental scope permits at most 30 mapped issuers. Each provider attempt
+fetches at most 30 Company Facts responses or 30 recent submissions responses plus
+five new historical submissions files across the whole batch. Existing sequential
+throttling and up to three transport attempts remain. Scheduled transient failures
+have a 15-minute cooldown and at most two additional runs per UTC day/domain.
+Terminal and exhausted outcomes remain reused even if mappings or holdings change.
+Abandoned claims use the existing interruption ledger. Completed historical raw IDs
+are retained; deferred files keep coverage partial and continue on a later cycle.
+Use the [guarded SEC bootstrap](fundamentals-source-bootstrap.md) for a reviewed
+broader backfill. Its filing-before-facts checkpoints remain independent.
+
+Existing Operations request/attempt histories expose these outcomes. The company
+coverage drawer currently shows retained facts/filings and bootstrap checkpoints.
+Incremental per-issuer attempt presentation remains the next UI/data-contract slice.
+Synthetic local PostgreSQL tests establish these controls. Reviewed real mappings,
+hosted refresh and production activation still require their separate approvals.
+
 Operations places its summary and market diagnostics before manual controls.
 Portfolio's **Review prices and FX** link opens that panel directly. The existing
 status API includes per-domain frozen scope, attempt history and retry eligibility
