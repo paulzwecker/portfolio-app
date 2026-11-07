@@ -225,7 +225,7 @@ def test_malformed_scope_and_request_identity_cannot_imply_scheduled_success(
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "scenario,status", [("sec-refresh-partial", "COMPLETE"), ("sec-refresh-outage", "FAILED")]
+    "scenario,status", [("sec-refresh-partial", "PARTIAL"), ("sec-refresh-outage", "FAILED")]
 )
 def test_real_browser_fixture_exposes_attributed_refresh_scope(
     postgres_engine: Engine, tmp_path: Path, scenario: str, status: str
@@ -238,9 +238,12 @@ def test_real_browser_fixture_exposes_attributed_refresh_scope(
         coverage = company_sec_coverage(session, UUID(str(metadata["company_id"])))
         refresh = coverage.filings.refresh
         assert refresh is not None and refresh.batch_status == status
-        assert refresh.issuer_outcome == "NOT_REPORTED" and refresh.source_record_count is None
+        if status == "PARTIAL":
+            assert refresh.issuer_outcome == "REPORTED" and refresh.source_record_count == 2
+        else:
+            assert refresh.issuer_outcome == "NOT_REPORTED" and refresh.source_record_count is None
         assert coverage.filings.record_count == 4
-        assert refresh.scope_company_count == (2 if status == "COMPLETE" else 1)
+        assert refresh.scope_company_count == (2 if status == "PARTIAL" else 1)
     assert table_counts(postgres_engine) == before
 
 

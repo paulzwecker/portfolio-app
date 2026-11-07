@@ -12,6 +12,13 @@
 
 ## Current SEC increment
 
+Issuer filing reconciliation is implemented in the existing batch ledger under
+`sec-issuer-filings-v1`. It preserves per-issuer response/acceptance/reuse, conflicts
+and quality, with execution-specific history deferrals. Old receipts stay intact.
+The 79-case focused source/coverage/bootstrap regression and strict types/lint pass.
+The current subtask is the real-API desktop/mobile journey. Independent static
+review has no findings.
+
 `4cb4870` adds incremental run/attempt IDs, trigger, frozen scope counts and separate
 batch/issuer results to company coverage. The shared panel/drawer uses that contract
 in Financials, Research and Operations. Compact status follows newer bootstrap/

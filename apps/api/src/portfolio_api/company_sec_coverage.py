@@ -28,6 +28,12 @@ from portfolio_api.fundamentals_bootstrap import (
 )
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
 from portfolio_api.sec_refresh_scope import SEC_SCOPE_VERSION
+from portfolio_api.source_documents import (
+    SEC_ISSUER_RECONCILIATION_VERSION,
+    SecIssuerFilingReconciliation,
+)
+
+IssuerOutcome = Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"]
 
 
 def _date(value: date | datetime | None) -> date | None:
@@ -66,11 +72,64 @@ def _bootstrap(
     )
 
 
+def _filing_issuer_result(
+    result: dict[str, Any], company_id: UUID, mapped_ids: set[str] | None
+) -> tuple[IssuerOutcome, int | None]:
+    reconciliation = result["reconciliation"]
+    if (
+        reconciliation.get("issuer_results_version") != SEC_ISSUER_RECONCILIATION_VERSION
+        or mapped_ids is None
+    ):
+        return "NOT_REPORTED", None
+    raw_items = reconciliation.get("issuer_results")
+    if not isinstance(raw_items, list):
+        return "NOT_REPORTED", None
+    try:
+        items = [SecIssuerFilingReconciliation.model_validate(item) for item in raw_items]
+    except ValueError:
+        return "NOT_REPORTED", None
+    by_company = {str(item.company_id): item for item in items}
+    if len(by_company) != len(items) or set(by_company) != mapped_ids:
+        return "NOT_REPORTED", None
+    item = by_company.get(str(company_id))
+    if item is None or item.response_record_count == 0:
+        return "NOT_REPORTED", None
+    deferred_total = result.get("history_files_deferred", 0)
+    if type(deferred_total) is not int or deferred_total < 0:
+        return "NOT_REPORTED", None
+    deferred = 0
+    if "issuer_history_files_deferred" in result:
+        by_issuer = result["issuer_history_files_deferred"]
+        if (
+            not isinstance(by_issuer, dict)
+            or set(by_issuer) != mapped_ids
+            or not all(type(value) is int and value >= 0 for value in by_issuer.values())
+            or sum(by_issuer.values()) != deferred_total
+        ):
+            return "NOT_REPORTED", None
+        deferred = by_issuer[str(company_id)]
+    elif deferred_total:
+        return "NOT_REPORTED", None
+    count = item.documents_imported + item.documents_reused
+    if any(
+        (
+            item.rejected_payloads,
+            item.unsupported_forms,
+            item.malformed_filing_rows,
+            item.conflicting_accessions,
+            item.existing_metadata_conflicts,
+            item.data_check_documents,
+            item.amendments_unlinked,
+            deferred,
+        )
+    ):
+        return "DATA_CHECK", count
+    return ("REPORTED", count) if count else ("UNAVAILABLE", 0)
+
+
 def _issuer_result(
     run: ExternalIngestionRun, company_id: UUID, mapped_ids: set[str] | None
-) -> tuple[
-    Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"], int | None
-]:
+) -> tuple[IssuerOutcome, int | None]:
     if mapped_ids is not None and str(company_id) not in mapped_ids:
         return "UNMAPPED", None
     # A failed attempt rolls its provider data back. Prior retained facts are separate.
@@ -92,10 +151,17 @@ def _issuer_result(
         if result.get("status") == "DATA_CHECK":
             return "DATA_CHECK", None
         count_key = "source_fact_count"
-    elif mapped_ids == {str(company_id)}:
-        # The filings adapter currently reports aggregate reconciliation. Attribute
-        # it only when this issuer was the sole mapped provider subject.
+    elif run.domain == "SOURCE_DOCUMENTS":
         result = report.get("provider_result", {})
+        reconciliation = result.get("reconciliation") if isinstance(result, dict) else None
+        if isinstance(reconciliation, dict) and (
+            "issuer_results_version" in reconciliation or "issuer_results" in reconciliation
+        ):
+            return _filing_issuer_result(result, company_id, mapped_ids)
+        # Legacy batches retain aggregate-only evidence. Attribution requires a
+        # sole mapped provider subject when issuer-level receipts are absent.
+        if mapped_ids != {str(company_id)}:
+            return "NOT_REPORTED", None
         count_key = "documents_imported"
     else:
         return "NOT_REPORTED", None

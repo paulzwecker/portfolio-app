@@ -16,12 +16,12 @@ import re
 from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from typing import Any, cast
+from typing import Annotated, Any, cast
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -59,6 +59,7 @@ SEC_SUBMISSIONS_BASE = "https://data.sec.gov/submissions"
 SEC_ARCHIVES_BASE = "https://www.sec.gov/Archives/edgar/data"
 SEC_SUBMISSIONS_VERSION = "submissions-v1"
 SEC_DOCUMENT_NORMALIZER_VERSION = "sec-edgar-filings-v1"
+SEC_ISSUER_RECONCILIATION_VERSION = "sec-issuer-filings-v1"
 COMPANY_REFERENCE_PROVIDER_ID = "company_source"
 SUPPORTED_FORMS: dict[str, SourceDocumentType] = {
     "10-K": SourceDocumentType.TEN_K,
@@ -105,6 +106,49 @@ class SecSubmissionNormalization(BaseModel):
     documents: tuple[CanonicalSourceDocument, ...]
     unsupported_form_count: int
     malformed_record_count: int
+
+
+FilingCount = Annotated[int, Field(ge=0, strict=True)]
+
+
+class SecIssuerFilingReconciliation(BaseModel):
+    """Immutable response and acceptance counts for one reviewed issuer in a batch."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    company_id: UUID
+    response_record_count: FilingCount
+    provider_filings_seen: FilingCount
+    documents_imported: FilingCount
+    documents_reused: FilingCount
+    rejected_payloads: FilingCount
+    unsupported_forms: FilingCount
+    malformed_filing_rows: FilingCount
+    conflicting_accessions: FilingCount
+    existing_metadata_conflicts: FilingCount
+    data_check_documents: FilingCount
+    amendments_unlinked: FilingCount
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> SecIssuerFilingReconciliation:
+        accepted = self.documents_imported + self.documents_reused
+        if accepted + self.existing_metadata_conflicts > self.provider_filings_seen:
+            raise ValueError("Accepted/conflicting filing rows exceed observed source rows")
+        if (
+            self.data_check_documents > accepted
+            or self.rejected_payloads > self.response_record_count
+        ):
+            raise ValueError("Filing quality counts exceed their source evidence")
+        if self.response_record_count == 0 and any(
+            value for key, value in self.model_dump().items() if key != "company_id"
+        ):
+            raise ValueError("An issuer without a response cannot have observed filing counts")
+        return self
+
+
+ISSUER_FILING_COUNT_FIELDS = tuple(
+    name for name in SecIssuerFilingReconciliation.model_fields if name != "company_id"
+)
 
 
 class SecSubmissionsProvider:
@@ -523,6 +567,17 @@ def ingest_sec_submissions(
 
     if query.domain != ExternalDataDomain.SOURCE_DOCUMENTS:
         raise ValueError("Source-document ingestion received a different domain query")
+    requested_ids = {
+        subject.id
+        for subject in query.subjects
+        if subject.kind == CanonicalSubjectKind.COMPANY and subject.id is not None
+    }
+    if len(requested_ids) != len(query.subjects) or requested_ids != set(identifiers):
+        raise ValueError("Filing reconciliation requires the exact requested canonical issuers")
+    if len(set(identifiers.values())) != len(identifiers) or any(
+        not re.fullmatch(r"\d{10}", cik) for cik in identifiers.values()
+    ):
+        raise ValueError("Filing reconciliation requires distinct reviewed ten-digit CIKs")
     if any(
         record.provider_id != SEC_PROVIDER_ID
         or record.domain != ExternalDataDomain.SOURCE_DOCUMENTS
@@ -531,6 +586,9 @@ def ingest_sec_submissions(
         raise ValueError("SEC submissions batch contains an unexpected provider record")
     if not records:
         return {"status": "NO_PROVIDER_RECORDS", "documents_imported": 0}
+    identifiers_by_cik = {cik: company_id for company_id, cik in identifiers.items()}
+    for record in records:
+        _record_company(record, identifiers_by_cik)
     digest = raw_batch_fingerprint(SEC_PROVIDER_ID, query, records)
     existing_batch = session.scalar(
         select(SourceDocumentBatch).where(
@@ -546,17 +604,19 @@ def ingest_sec_submissions(
             "reconciliation": existing_batch.reconciliation,
         }
 
-    identifiers_by_cik = {cik: company_id for company_id, cik in identifiers.items()}
     normalized: list[CanonicalSourceDocument] = []
     counters: Counter[str] = Counter()
+    issuer_counts: dict[UUID, Counter[str]] = {company_id: Counter() for company_id in identifiers}
     issues: list[dict[str, object]] = []
     normalizer = SecSubmissionsNormalizer()
     for record in records:
         company_id, cik = _record_company(record, identifiers_by_cik)
+        issuer_counts[company_id]["response_record_count"] += 1
         result = normalizer.normalize(record, company_id, cik)
         if result.disposition == NormalizationDisposition.REJECTED:
             issues.extend(issue.model_dump(mode="json") for issue in result.issues)
             counters["rejected_payloads"] += 1
+            issuer_counts[company_id]["rejected_payloads"] += 1
             continue
         observation = result.observation
         assert observation is not None
@@ -564,14 +624,25 @@ def ingest_sec_submissions(
         counters["provider_filings_seen"] += len(observation.documents)
         counters["unsupported_forms"] += observation.unsupported_form_count
         counters["malformed_filing_rows"] += observation.malformed_record_count
+        issuer_counts[company_id].update(
+            {
+                "provider_filings_seen": len(observation.documents),
+                "unsupported_forms": observation.unsupported_form_count,
+                "malformed_filing_rows": observation.malformed_record_count,
+            }
+        )
 
     # SEC recent/history files can overlap. Preserve one canonical row per accession.
     by_external_id: dict[tuple[str, str], CanonicalSourceDocument] = {}
     conflicting_accessions: set[tuple[str, str]] = set()
+    conflicting_issuers: dict[tuple[str, str], set[UUID]] = {}
     for document in normalized:
         key = (document.provider_id, document.external_identifier)
         previous = by_external_id.get(key)
         if key in conflicting_accessions:
+            if document.company_id not in conflicting_issuers[key]:
+                issuer_counts[document.company_id]["conflicting_accessions"] += 1
+                conflicting_issuers[key].add(document.company_id)
             continue
         if previous is None:
             by_external_id[key] = document
@@ -590,6 +661,9 @@ def ingest_sec_submissions(
             by_external_id.pop(key, None)
             conflicting_accessions.add(key)
             counters["conflicting_accessions"] += 1
+            conflicting_issuers[key] = {previous.company_id, document.company_id}
+            for company_id in conflicting_issuers[key]:
+                issuer_counts[company_id]["conflicting_accessions"] += 1
     normalized = list(by_external_id.values())
     normalized.sort(
         key=lambda item: (item.company_id, item.filed_at or date.min, item.is_amendment)
@@ -634,8 +708,12 @@ def ingest_sec_submissions(
             }
             if prior_fields == expected_fields:
                 reused += 1
+                issuer_counts[document.company_id]["documents_reused"] += 1
+                if existing_doc.data_quality == SourceDocumentQuality.DATA_CHECK:
+                    issuer_counts[document.company_id]["data_check_documents"] += 1
             else:
                 metadata_conflicts += 1
+                issuer_counts[document.company_id]["existing_metadata_conflicts"] += 1
                 issues.append(
                     {
                         "code": "EXISTING_ACCESSION_METADATA_CHANGED",
@@ -653,6 +731,7 @@ def ingest_sec_submissions(
         quality_reason = document.quality_reason
         if document.is_amendment and original is None:
             unlinked += 1
+            issuer_counts[document.company_id]["amendments_unlinked"] += 1
             quality = SourceDocumentQuality.DATA_CHECK
             quality_reason = (
                 "This amended SEC filing has no captured original with the same form and period."
@@ -690,6 +769,9 @@ def ingest_sec_submissions(
         documents_to_store.append(stored)
         pending[key] = stored
         inserted += 1
+        issuer_counts[document.company_id]["documents_imported"] += 1
+        if quality == SourceDocumentQuality.DATA_CHECK:
+            issuer_counts[document.company_id]["data_check_documents"] += 1
 
     existing_document_companies = set(
         session.scalars(
@@ -705,18 +787,48 @@ def ingest_sec_submissions(
     companies_without_supported_filings = sorted(
         str(company_id) for company_id in identifiers if company_id not in companies_with_documents
     )
+    for company_id, counts in issuer_counts.items():
+        if counts["response_record_count"] == 0:
+            issues.append(
+                {
+                    "code": "MISSING_ISSUER_RESPONSE",
+                    "severity": "ERROR",
+                    "company_id": str(company_id),
+                    "message": "The requested issuer has no provider response in this batch.",
+                }
+            )
+        elif not counts["provider_filings_seen"] and not any(
+            counts[key]
+            for key in ("rejected_payloads", "unsupported_forms", "malformed_filing_rows")
+        ):
+            issues.append(
+                {
+                    "code": "NO_SUPPORTED_ISSUER_FILINGS",
+                    "severity": "WARNING",
+                    "company_id": str(company_id),
+                    "message": "The issuer response contains no supported filing rows.",
+                }
+            )
     reconciliation: dict[str, object] = {
         **counters,
         "documents_imported": inserted,
         "documents_reused": reused,
         "companies_without_supported_filings": companies_without_supported_filings,
         "data_check_documents": sum(
-            item.data_quality == SourceDocumentQuality.DATA_CHECK for item in documents_to_store
+            counts["data_check_documents"] for counts in issuer_counts.values()
         ),
         "existing_metadata_conflicts": metadata_conflicts,
         "amendments_linked": linked,
         "amendments_unlinked": unlinked,
         "issues": issues,
+        "issuer_results_version": SEC_ISSUER_RECONCILIATION_VERSION,
+        "issuer_results": [
+            SecIssuerFilingReconciliation(
+                company_id=company_id,
+                **{field: issuer_counts[company_id][field] for field in ISSUER_FILING_COUNT_FIELDS},
+            ).model_dump(mode="json")
+            for company_id in sorted(identifiers, key=str)
+        ],
     }
     batch = SourceDocumentBatch(
         id=batch_id,
@@ -820,6 +932,10 @@ async def sync_sec_source_documents(
     result = ingest_sec_submissions(session, query, records, identifiers)
     result["history_files_skipped_as_unchanged"] = provider.skipped_history_files
     result["history_files_deferred"] = provider.deferred_history_files
+    deferred_by_cik = Counter(item.split(":", 1)[0] for item in provider.deferred_history_file_ids)
+    result["issuer_history_files_deferred"] = {
+        str(company_id): deferred_by_cik[f"CIK{cik}"] for company_id, cik in identifiers.items()
+    }
     return [result]
 
 

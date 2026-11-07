@@ -117,6 +117,15 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
+- C3.1 versioned issuer filing receipts now retain response, accepted/reused and
+  quality counts in the existing immutable batch reconciliation. Exact scope and
+  CIK checks protect replay. History deferrals remain per-issuer execution evidence.
+  The 79-case focused source/coverage/bootstrap regression passes, with strict
+  types/lint. Mixed batches preserve a valid issuer's result,
+  while missing, clean-empty, conflicted and deferred outcomes remain distinct.
+  Legacy receipts are preserved. Independent static review has no findings.
+  Real-API desktop/mobile rehearsal is the current BUILD subtask.
+
 - C3.1 `4cb4870` company coverage includes incremental run/attempt IDs, trigger, frozen
   scope counts and separate batch/issuer outcomes. Attribution uses stored issuer
   evidence; aggregate multi-issuer filings remain unreported per issuer. Failed

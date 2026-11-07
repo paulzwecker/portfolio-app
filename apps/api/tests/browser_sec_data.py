@@ -84,6 +84,8 @@ def prepare_sec_data(engine: Engine, metadata: dict[str, object], scenario: str)
                 data = json.loads(payload.decode().replace(CIK, "0000000002"))
                 data["cik"] = 2
                 data["entityName" if "companyfacts" in url else "name"] = "Other Synthetic Inc."
+                if "companyfacts" not in url:
+                    data["filings"]["recent"]["form"] = ["S-8", "S-8"]
             return json.dumps(data).encode()
 
         with (
