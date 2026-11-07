@@ -5,14 +5,13 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 
 ## Execution cursor
 
-| Field         | Current value                                                                                             |
-| ------------- | --------------------------------------------------------------------------------------------------------- |
-| Active work   | MP1 publication-review completion on existing PR #23                                                      |
-| Branch        | `codex/model-publication-vertical-slice`                                                                  |
-| Status        | IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. Updated PR awaits owner review                                  |
-| Next task     | Review/merge PR #23, then resume MP2 from updated main with a reviewed real template and canonical base   |
-| PR            | [#23](https://github.com/paulzwecker/portfolio-app/pull/23), open and unmerged at inspection              |
-| Approval gate | Owner review/merge, followed by separately authorized source installation and production/model operations |
+| Field         | Current value                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------------- |
+| Active work   | MP2.1 Read-only publication onboarding preflight                                                         |
+| Branch        | `codex/mp2-readonly-publication-preflight`, from merged PR #23 (`0717498`)                               |
+| Status        | MP2.1 LOCAL_VERIFIED. Final integration checks and independent review in progress                        |
+| Next task     | Finish integration checks and prepare MP2.1 PR. Real template/base review remains owner-gated            |
+| Approval gate | Real source installation/publication, first-model seeding and acceptance require separate owner approval |
 
 ## Baseline and outstanding gates
 
@@ -30,7 +29,7 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 - Production synchronization and automatic promotion await authorization. M7
   retains backup/restore privilege/tool skips and hosted role-separation work.
 
-## Current integration milestone
+## Merged MP1 foundation
 
 | Task                                     | Status         | Acceptance                                                                                        |
 | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
@@ -44,9 +43,18 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | MP1.R1 Publication review safeguards     | LOCAL_VERIFIED | Typed source/native values and caller-bound preview hash; stale reviewer tabs remain blocked      |
 | MP1.R2 Reviewer workflow                 | LOCAL_VERIFIED | Actual acceptance outcome, preserved unresolved rationale, explicit parity and immutable identity |
 
+## Current MP2 onboarding slice
+
+| Task                        | Status         | Evidence and next action                                                                                                                        |
+| --------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| MP2.1 Frozen-file preflight | LOCAL_VERIFIED | Exact bounded hashes, shared validators, private replay report and guarded read-only target preview. 45 focused tests pass across three methods |
+| MP2.1 Integration gate      | In progress    | Full quality checks and independent review, then one focused PR                                                                                 |
+| MP2.2 Real template/base    | OWNER_GATE     | Review dated source assumptions and authorize any source installation, first-model seed and production review separately                        |
+
 ## Next milestones
 
-- **MP2** follows MP1 merge. Onboard a reviewed real template and canonical base.
+- **MP2** builds on merged MP1 (`0717498`). Its first slice adds read-only publication
+  onboarding. Real rollout requires a reviewed template and canonical base.
   First-model seeding uses the existing guarded path. Real source publication and
   any model acceptance need their specific owner approval and current recovery.
 - **MP3** follows a proven reviewed lifecycle. Design and test promotion policy,
@@ -82,6 +90,13 @@ The two unit skips cover Windows symlink privileges and POSIX-only credential mo
 bits. Real source onboarding and production review remain owner-gated. Legacy bare
 portable contracts retain their compatibility path, while publication acceptance
 requires the caller-reviewed preview hash.
+
+MP2.1 evidence on 2026-11-07 follows verified merge of PR #23. The new CLI uses
+existing native previews and read-target guards. Synthetic tests verify all three
+methods, stale bases, parity failures, absent models, target mismatch, deterministic
+replay, private output and zero table/sequence changes. Independent review corrected
+local reports inheriting unverified Neon IDs. Live-source freshness, inbox discovery
+and investment acceptance retain their separate checks and authorization.
 
 ## Upkeep
 

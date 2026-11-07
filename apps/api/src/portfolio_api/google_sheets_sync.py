@@ -841,7 +841,7 @@ def _contract_from_candidate(
     return parsed
 
 
-def _preview_contract(
+def preview_portable_contract(
     session: Session, model_id: UUID, parsed: ParsedContract
 ) -> dict[str, object]:
     if parsed.model_id != model_id:
@@ -871,7 +871,7 @@ def preview_sync_candidate(session: Session, candidate_id: UUID) -> s.GoogleShee
     if parsed is None or candidate.model_id is None:
         return _candidate_read(session, candidate)
     try:
-        preview = _preview_contract(session, candidate.model_id, parsed)
+        preview = preview_portable_contract(session, candidate.model_id, parsed)
     except operations.DomainError as error:
         preview = {
             "status": "CONFLICT" if error.status == 409 else "INVALID",
@@ -975,7 +975,7 @@ def accept_sync_candidate(
         )
 
     prior_preview_fingerprint = candidate.preview_fingerprint
-    fresh_preview = _preview_contract(session, candidate.model_id, parsed)
+    fresh_preview = preview_portable_contract(session, candidate.model_id, parsed)
     fresh_fingerprint = _sha256(_canonical_json(fresh_preview))
     candidate.preview_data = fresh_preview
     candidate.preview_status = cast(str | None, fresh_preview.get("status"))
