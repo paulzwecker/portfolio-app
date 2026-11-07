@@ -384,6 +384,9 @@ test("valuation preserves exact model and listing selection through summary and 
   ).toBeVisible();
   await selector.focus();
   await expect(selector).toBeFocused();
+  await page.screenshot({
+    path: testInfo.outputPath("selected-model-viewport.png"),
+  });
   await page.getByRole("button", { name: "Edit accepted assumptions" }).click();
   await expect(selector).toBeDisabled();
   const editor = page.locator("#canonical-models");
