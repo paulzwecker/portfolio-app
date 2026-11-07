@@ -12,7 +12,7 @@ from typing import Any, Protocol, cast
 from urllib.parse import quote
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
@@ -25,6 +25,10 @@ from portfolio_api.domain.models import (
     Listing,
     Security,
     now,
+)
+from portfolio_api.model_publications import (
+    FinancialModelPublicationV1,
+    reconcile_publication,
 )
 from portfolio_api.model_revision_evidence import (
     resolve_model_evidence_reference,
@@ -92,6 +96,7 @@ class ParsedContract:
     source_model_key: str | None
     model_currency: str
     rationale: str | None
+    publication: FinancialModelPublicationV1 | None = None
 
 
 def _canonical_json(value: object) -> str:
@@ -123,6 +128,12 @@ def parse_portable_contract(text: str) -> ParsedContract:
     raw = json.loads(text)
     if not isinstance(raw, dict):
         raise ValueError("The inbox cell must contain one JSON model contract object")
+    publication = None
+    if raw.get("contract_type") == "FinancialModelPublicationV1":
+        publication = FinancialModelPublicationV1.model_validate(raw)
+        raw = json.loads(publication.contract_json)
+        if not isinstance(raw, dict) or raw.get("contract_version") not in {"1.2.0", "2.1.0"}:
+            raise ValueError("Publications require an evidence-capable model contract")
     version = _contract_version(cast(dict[str, object], raw))
     if version not in SUPPORTED_CONTRACT_VERSIONS:
         raise ValueError(f"Unsupported portable model contract version: {version or 'missing'}")
@@ -169,6 +180,7 @@ def parse_portable_contract(text: str) -> ParsedContract:
         source_model_key=source_model_key,
         model_currency=str(currency),
         rationale=rationale,
+        publication=publication,
     )
 
 
@@ -283,8 +295,23 @@ class GoogleSheetsApiReader:
         query = "majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE"
         url = f"{SHEETS_API}/{quote(spreadsheet_id, safe='')}/values/{cell_range}?{query}"
         result = self._get_json(url)
+        repeated = self._get_json(url)
+        after = self.test_connection(spreadsheet_id, sync_tab)
+        if result != repeated or connection != after:
+            raise GoogleSheetsSyncError(
+                "SOURCE_CHANGED", "The model publication inbox changed during capture"
+            )
+        expected_range = _tab_range(sync_tab)
+        unquoted_range = f"{sync_tab}!A2:E{MAX_INBOX_ROWS + 1}"
+        if (
+            result.get("range") not in {expected_range, unquoted_range}
+            or result.get("majorDimension", "ROWS") != "ROWS"
+        ):
+            raise GoogleSheetsSyncError(
+                "INVALID_RESPONSE", "Google returned an invalid publication range"
+            )
         values = result.get("values", [])
-        if not isinstance(values, list):
+        if not isinstance(values, list) or len(values) > MAX_INBOX_ROWS:
             raise GoogleSheetsSyncError(
                 "INVALID_RESPONSE", "The contract inbox did not return rows"
             )
@@ -659,6 +686,20 @@ def run_sync_check(
         return s.GoogleSheetsSyncCheckRead(
             run=s.GoogleSheetsSyncRunRead.model_validate(run), new_candidates=[]
         )
+    # The service lock covers manual API callers as well as the existing worker.
+    # A losing scan retains a diagnostic run without making provider requests.
+    lock_key = int(_sha256(spreadsheet_id)[:8], 16) % (2**31)
+    acquired = session.scalar(
+        text("SELECT pg_try_advisory_xact_lock(:namespace, :lock_key)"),
+        {"namespace": 1297110338, "lock_key": lock_key},
+    )
+    if not acquired:
+        run.error_code = "SYNC_IN_PROGRESS"
+        run.error_message = "Another model publication scan is active for this source."
+        run.completed_at = now()
+        return s.GoogleSheetsSyncCheckRead(
+            run=s.GoogleSheetsSyncRunRead.model_validate(run), new_candidates=[]
+        )
     try:
         client = reader or GoogleSheetsApiReader(settings)
         snapshot = client.read_inbox(spreadsheet_id, settings.google_sheets_sync_tab)
@@ -729,8 +770,28 @@ def run_sync_check(
 
 
 def _contract_from_candidate(
+    session: Session,
     candidate: GoogleSheetsSyncCandidate,
 ) -> ParsedContract | None:
+    if candidate.issue == "Inbox revision ID does not match the portable contract":
+        return None
+    competing = session.scalar(
+        select(GoogleSheetsSyncCandidate.id)
+        .where(
+            GoogleSheetsSyncCandidate.spreadsheet_id == candidate.spreadsheet_id,
+            GoogleSheetsSyncCandidate.sheet_id == candidate.sheet_id,
+            GoogleSheetsSyncCandidate.external_revision_id == candidate.external_revision_id,
+            GoogleSheetsSyncCandidate.content_fingerprint != candidate.content_fingerprint,
+        )
+        .limit(1)
+    )
+    if competing is not None:
+        candidate.status = "CONFLICT"
+        candidate.issue = "This external revision ID was already observed with different content"
+        candidate.preview_status = "CONFLICT"
+        candidate.preview_data = None
+        candidate.preview_fingerprint = None
+        return None
     try:
         parsed = parse_portable_contract(candidate.contract_text)
     except Exception as error:
@@ -758,12 +819,13 @@ def _preview_contract(
         raise operations.DomainError("The stored contract belongs to another model", 409)
     if isinstance(parsed.contract, s.FinancialModelContractV1):
         preview = operations.preview_financial_model_contract(session, model_id, parsed.contract)
-        return cast(dict[str, object], preview.model_dump(mode="json"))
+        result = cast(dict[str, object], preview.model_dump(mode="json"))
     else:
         additional_preview = operations.preview_additional_model_contract(
             session, model_id, parsed.contract
         )
-        return cast(dict[str, object], additional_preview.model_dump(mode="json"))
+        result = cast(dict[str, object], additional_preview.model_dump(mode="json"))
+    return reconcile_publication(parsed.publication, result) if parsed.publication else result
 
 
 def preview_sync_candidate(session: Session, candidate_id: UUID) -> s.GoogleSheetsSyncCandidateRead:
@@ -776,7 +838,7 @@ def preview_sync_candidate(session: Session, candidate_id: UUID) -> s.GoogleShee
         raise operations.DomainError("Google Sheets candidate not found", 404)
     if candidate.status in {"ACCEPTED", "REJECTED"}:
         raise operations.DomainError("This candidate already has a final review decision", 409)
-    parsed = _contract_from_candidate(candidate)
+    parsed = _contract_from_candidate(session, candidate)
     if parsed is None or candidate.model_id is None:
         return _candidate_read(session, candidate)
     try:
@@ -849,6 +911,7 @@ def _candidate_contract_with_source(
         source_model_key=parsed.source_model_key,
         model_currency=parsed.model_currency,
         rationale=parsed.rationale,
+        publication=parsed.publication,
     )
 
 
@@ -869,7 +932,7 @@ def accept_sync_candidate(
         return _candidate_read(session, candidate)
     if candidate.status == "REJECTED":
         raise operations.DomainError("A rejected candidate cannot be accepted", 409)
-    parsed = _contract_from_candidate(candidate)
+    parsed = _contract_from_candidate(session, candidate)
     if parsed is None or candidate.model_id is None:
         return _candidate_read(session, candidate)
 

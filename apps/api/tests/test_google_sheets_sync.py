@@ -196,15 +196,21 @@ def test_read_only_google_api_client_reads_only_configured_inbox(tmp_path: Path)
                     ],
                 }
             ),
-            FakeResponse({"values": [["publish-1", "revision-1", 1, 1, "{}"]]}),
+            FakeResponse(
+                {
+                    "range": "'Application Model Sync Inbox'!A2:E5001",
+                    "values": [["publish-1", "revision-1", 1, 1, "{}"]],
+                }
+            ),
         ]
     )
+    session.responses.extend([session.responses[1], session.responses[0]])
     snapshot = GoogleSheetsApiReader(settings, session).read_inbox(
         SPREADSHEET_ID, "Application Model Sync Inbox"
     )
     assert snapshot.connection.sync_tab_exists
     assert snapshot.blocks[0].contract_text == "{}"
-    assert len(session.requests) == 2
+    assert len(session.requests) == 4
     assert "spreadsheets.readonly" not in session.requests[0][0]
     assert "Application%20Model%20Sync%20Inbox" in session.requests[1][0]
     assert all(

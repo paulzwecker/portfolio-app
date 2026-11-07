@@ -45,6 +45,15 @@ and target revision. They are not canonical Risk scores or deterministic exposur
 calculations and cannot modify portfolio or model state. See
 [risk-assessments.md](risk-assessments.md).
 
+## Explicit model publications
+
+New model publications use [FinancialModelPublicationV1](model-publications.md)
+over the existing portable contract. The publish action freezes the contract and
+four source fair values. Preview and acceptance check native parity. Existing
+bare portable contracts remain replayable. The reader validates two bounded row
+reads and source identity. Reused revision IDs and mismatched inbox identities
+remain blocking throughout review.
+
 ## Workbook inbox contract
 
 The workbook adapter in `tools/google-sheets/CanonicalModelContract.gs` adds an

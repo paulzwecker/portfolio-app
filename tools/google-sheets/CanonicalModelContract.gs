@@ -133,12 +133,76 @@ function publishAgentAcknowledgmentToApplicationInbox() {
 }
 
 function publishToApplicationInbox() {
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(10000);
+  try {
+    publishModelPublication_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function modelPublication_(contract, fairValues, publishedAt) {
+  if (!["1.2.0", "2.1.0"].includes(contract.contract_version))
+    throw new Error(
+      "Export an evidence-capable model contract before publishing.",
+    );
+  const fields = ["bear_fv", "base_fv", "bull_fv", "weighted_fv"];
+  for (const field of fields) {
+    if (
+      typeof fairValues[field] !== "string" ||
+      !/^-?\d+(\.\d+)?$/.test(fairValues[field])
+    )
+      throw new Error("Published fair values must be exact decimal text.");
+  }
+  const raw = JSON.stringify(contract);
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    raw,
+    Utilities.Charset.UTF_8,
+  )
+    .map((byte) => (byte & 255).toString(16).padStart(2, "0"))
+    .join("");
+  return {
+    contract_type: "FinancialModelPublicationV1",
+    contract_version: "1.0.0",
+    state: "PUBLISHED",
+    published_at: publishedAt,
+    contract_json: raw,
+    contract_sha256: digest,
+    published_fair_values: Object.fromEntries(
+      fields.map((field) => [field, fairValues[field]]),
+    ),
+  };
+}
+
+function publishModelPublication_() {
   const contract = readContract_(true);
   const candidate = contract.candidate_revision;
   const revisionId = String(candidate.source_revision_id || "").trim();
   if (!revisionId)
     throw new Error("The candidate has no external revision ID.");
-  const raw = JSON.stringify(contract);
+  const book = SpreadsheetApp.getActive();
+  const fairValueTab = book.getSheetByName("Published Fair Values");
+  if (!fairValueTab)
+    throw new Error(
+      "Create Published Fair Values with bear_fv, base_fv, bull_fv, weighted_fv in A1:D1 and completed model values as decimal text in A2:D2.",
+    );
+  const rows = fairValueTab.getRange("A1:D2").getDisplayValues();
+  const fields = ["bear_fv", "base_fv", "bull_fv", "weighted_fv"];
+  if (fields.some((field, index) => rows[0][index] !== field))
+    throw new Error(
+      "Published Fair Values headers do not match the publication contract.",
+    );
+  const fairValues = Object.fromEntries(
+    fields.map((field, index) => [field, rows[1][index]]),
+  );
+  const publication = modelPublication_(
+    contract,
+    fairValues,
+    new Date().toISOString(),
+  );
+  const raw = JSON.stringify(publication);
   const chunks = [];
   for (let index = 0; index < raw.length; index += SYNC_CHUNK_CHARACTERS) {
     chunks.push(raw.slice(index, index + SYNC_CHUNK_CHARACTERS));
@@ -148,7 +212,6 @@ function publishToApplicationInbox() {
       "The contract is too large for the application sync inbox.",
     );
 
-  const book = SpreadsheetApp.getActive();
   let inbox = book.getSheetByName(SYNC_INBOX_SHEET);
   if (!inbox) inbox = book.insertSheet(SYNC_INBOX_SHEET);
   const header = inbox
@@ -183,7 +246,7 @@ function publishToApplicationInbox() {
     if (
       expectedCount === existingChunks.length &&
       existingChunks.every((row, index) => Number(row[2]) === index + 1) &&
-      existingRaw === raw
+      (existingRaw === raw || sameModelPublication_(existingRaw, publication))
     ) {
       SpreadsheetApp.getUi().alert(
         "This exact external revision is already in the application inbox.",
@@ -215,6 +278,20 @@ function publishToApplicationInbox() {
   SpreadsheetApp.getUi().alert(
     "Candidate appended to the application inbox. The app will validate and preview it; canonical model state changes only after an explicit review and acceptance.",
   );
+}
+
+function sameModelPublication_(raw, publication) {
+  try {
+    const prior = JSON.parse(raw);
+    return (
+      prior.contract_type === publication.contract_type &&
+      prior.contract_sha256 === publication.contract_sha256 &&
+      JSON.stringify(prior.published_fair_values) ===
+        JSON.stringify(publication.published_fair_values)
+    );
+  } catch (_) {
+    return false;
+  }
 }
 
 function publishRiskAssessmentToApplicationInbox() {

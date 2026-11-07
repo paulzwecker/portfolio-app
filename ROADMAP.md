@@ -7,16 +7,16 @@
 
 ## Execution cursor — edit after EVERY subtask
 
-| Field                   | Current value                                                                                                                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                                                                |
-| Next task               | Owner reviews the private P-GOOGL investment assessment and decides whether to revise assumptions; verify fresh recovery and obtain scoped authorization before any model write. |
-| Status                  | `M1 PRODUCTION_VERIFIED`; `M2 PRODUCTION_PREVIEW_VERIFIED`, with P-GOOGL source revision and production acceptance owner-gated.                                                  |
-| Current branch / commit | `codex/m2-pgoogl-investment-review`, based on merged main `7931bb4`.                                                                                                             |
-| Last verified tests     | Package replay: 30/30 projection and 22/22 output parity; guarded production preview READY_FOR_EXPLICIT_ACCEPTANCE.                                                              |
-| Latest PR               | [M2 read-only preview PR #21](https://github.com/paulzwecker/portfolio-app/pull/21) merged; investment review evidence pending.                                                  |
-| Primary blocker         | Investment assumptions, fiscal basis and terminal-value methodology remain unapproved; a private review recommends DEFER.                                                        |
-| Next approval gate      | Owner reviews the exact private P-GOOGL package diff and separately approves any model revision after a read-only production preview.                                            |
+| Field                   | Current value                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                     |
+| Next task               | Finish MP1 integrated checks and second-pass review, then open one publication vertical-slice PR. M2 acceptance remains owner-gated.  |
+| Status                  | `MP1 IN_PROGRESS`; M1 production baseline verified and M2 source/model acceptance owner-gated.                                        |
+| Current branch / commit | `codex/model-publication-vertical-slice`, based on merged main `eb14b73`.                                                             |
+| Last verified tests     | Focused two-company publication, native parity, replay, conflict and failure-retention tests pass; integrated checks pending.         |
+| Latest PR               | [Investment review PR #22](https://github.com/paulzwecker/portfolio-app/pull/22) merged; publication milestone PR pending.            |
+| Primary blocker         | Investment assumptions, fiscal basis and terminal-value methodology remain unapproved; a private review recommends DEFER.             |
+| Next approval gate      | Owner reviews the exact private P-GOOGL package diff and separately approves any model revision after a read-only production preview. |
 
 **Status legend:** `PLANNED`, `READY`, `IN_PROGRESS`, `PARTIAL`, `BLOCKED`, `LOCAL_VERIFIED`, `LIVE_VERIFIED`, `PR_OPEN`, `REVIEW_PENDING`, `MERGED`, `PRODUCTION_VERIFIED`. Mark a subtask complete only with evidence and test commands/results. A PR does not imply merge or deployment.
 

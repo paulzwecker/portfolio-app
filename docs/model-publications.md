@@ -32,6 +32,16 @@ draft or a changed payload hash fails validation. Publication hashes establish
 content integrity. Source access and configured identity establish provenance.
 Producer assertions retain their provenance through the existing inbox record.
 
+Publication v1 compares four source fair values with the native candidate.
+Projection and return-stream parity remain in legacy captured-package validators
+where available. Existing bare portable inbox contracts remain compatible.
+
+Emit the publication JSON Schema offline.
+
+```powershell
+node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_publications
+```
+
 ## Capture and review lifecycle
 
 The Sheets adapter appends the publication using the existing five-column chunk
@@ -44,7 +54,9 @@ This establishes an observed consistent source state. Sheets provides no
 transactional snapshot guarantee across these requests.
 
 Existing sync tables retain raw text, raw hash, semantic fingerprint, source row,
-first/last observation, status and run diagnostics. Exact replay reuses a candidate.
+first/last observation, status and run diagnostics. A source-scoped transaction advisory lock covers worker and manual discovery.
+Concurrent scans record `SYNC_IN_PROGRESS` without provider requests. Exact replay
+reuses a candidate.
 Changed content under a reused revision ID produces a conflict. Preview and
 acceptance replay the same frozen contract and recalculate native outputs.
 Published fair-value mismatch blocks readiness and acceptance. Review decisions,
@@ -84,3 +96,35 @@ workbook downloads are unnecessary.
 Existing Google Sheets contracts, agent APIs, role separation, UI and database
 guards continue to own their current boundaries. No new service, database table
 or scheduler is required for this publication envelope.
+
+## Author and operator instructions
+
+1. Export the existing portable contract from an accepted canonical model.
+2. Complete candidate assumptions, a new source revision ID, rationale, author and
+   canonical evidence references using the existing bound Apps Script input tabs.
+3. Create `Published Fair Values` with headers `bear_fv`, `base_fv`, `bull_fv`,
+   `weighted_fv` in A1:D1. Place completed source model values as plain decimal
+   text in A2:D2, in model currency per listing share with sufficient precision
+   for the `1e-7` comparison. Currency symbols and separators fail validation.
+4. Write candidate edits back to `Contract!A1` and use the explicit publish menu.
+   The script hashes the frozen UTF-8 text, adds the publication timestamp and
+   fair values, takes a document lock and appends one chunk block. Repeating the
+   same content is skipped. Changed content needs a new external revision ID.
+5. In an authorized isolated environment, use Operations / Model sync to check
+   for changes. Run history shows failures and replay counts. Preview shows
+   native input/output differences and parity failures. Review and acceptance
+   use the established explicit controls.
+
+The fair-value staging range belongs to the source adapter. Canonical consumers
+use the typed envelope independently of source coordinates. A future producer can
+supply the same envelope with its frozen portable contract JSON. This milestone
+requires separate operator installation before the workbook script can be used.
+
+The scan uses four bounded Google requests and the existing worker cooldown and
+manual controls. It reads only the configured inbox. Future cursor or retention
+work must preserve raw evidence before pruning a full inbox. Sleeping-runtime
+worker activation remains operator-controlled.
+
+Response validation requires the complete requested range while permitting omitted
+trailing empty rows. Both row sets and source identity must match.
+[Google Sheets ValueRange reference](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets.values)
