@@ -3616,11 +3616,63 @@ const reportedFundamentalMetrics = [
 export type CompanySecCoverage =
   components["schemas"]["CompanySecCoverageRead"];
 type SecDomainCoverage = CompanySecCoverage["fundamentals"];
+type SecRefresh = NonNullable<SecDomainCoverage["refresh"]>;
+
+function isSecRefresh(value: unknown): value is SecRefresh {
+  if (!isRecord(value)) return false;
+  return (
+    uuid(value.run_id) &&
+    (value.attempt_id === null || uuid(value.attempt_id)) &&
+    (value.request_id === null || uuid(value.request_id)) &&
+    ["MANUAL", "SCHEDULED", "LEGACY"].includes(value.trigger as string) &&
+    [
+      "RUNNING",
+      "COMPLETE",
+      "PARTIAL",
+      "FAILED",
+      "BLOCKED",
+      "NOT_APPLICABLE",
+    ].includes(value.batch_status as string) &&
+    timestamp(value.requested_at) &&
+    timestamp(value.started_at) &&
+    (value.finished_at === null || timestamp(value.finished_at)) &&
+    Number.isInteger(value.attempt_count) &&
+    Number(value.attempt_count) >= 0 &&
+    Number(value.attempt_count) <= 3 &&
+    typeof value.retryable === "boolean" &&
+    nullableString(value.failure_code) &&
+    Number.isInteger(value.scope_company_count) &&
+    Number(value.scope_company_count) >= 1 &&
+    (value.mapped_company_count === null ||
+      (Number.isInteger(value.mapped_company_count) &&
+        Number(value.mapped_company_count) >= 0 &&
+        Number(value.mapped_company_count) <=
+          Number(value.scope_company_count))) &&
+    [
+      "REPORTED",
+      "DATA_CHECK",
+      "UNAVAILABLE",
+      "UNMAPPED",
+      "NOT_REPORTED",
+    ].includes(value.issuer_outcome as string) &&
+    (value.source_record_count === null ||
+      (Number.isInteger(value.source_record_count) &&
+        Number(value.source_record_count) >= 0)) &&
+    (!["UNMAPPED", "NOT_REPORTED"].includes(value.issuer_outcome as string) ||
+      value.source_record_count === null) &&
+    (value.issuer_outcome !== "REPORTED" ||
+      Number(value.source_record_count) > 0) &&
+    (value.issuer_outcome !== "UNAVAILABLE" || value.source_record_count === 0)
+  );
+}
 
 function isSecDomainCoverage(value: unknown): value is SecDomainCoverage {
   if (!isRecord(value)) return false;
   const bootstrap = value.bootstrap;
   return (
+    (value.refresh === undefined ||
+      value.refresh === null ||
+      isSecRefresh(value.refresh)) &&
     Number.isInteger(value.record_count) &&
     Number(value.record_count) >= 0 &&
     Number.isInteger(value.data_check_count) &&

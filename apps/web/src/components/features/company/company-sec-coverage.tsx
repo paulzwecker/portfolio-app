@@ -29,6 +29,94 @@ function retainedTime(value: string | null) {
   return value ? dateTime(value) : "Not retained";
 }
 
+type SecRefresh = NonNullable<CompanySecCoverage["fundamentals"]["refresh"]>;
+const issuerOutcomeLabels: Record<SecRefresh["issuer_outcome"], string> = {
+  REPORTED: "Source response reported",
+  DATA_CHECK: "Source response needs review",
+  UNAVAILABLE: "No supported data in response",
+  UNMAPPED: "Unmapped in this frozen scope",
+  NOT_REPORTED: "No issuer-specific result recorded",
+};
+
+function SecRefreshDetails({
+  refresh,
+  filings,
+}: {
+  refresh: SecRefresh;
+  filings: boolean;
+}) {
+  return (
+    <section
+      aria-label="Latest incremental refresh"
+      className="space-y-2 border-t pt-3 text-sm"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="font-medium">Latest incremental refresh</h4>
+        <StatusIndicator status={refresh.batch_status} />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {statusLabel(refresh.trigger)} · {refresh.scope_company_count}{" "}
+        {refresh.scope_company_count === 1 ? "company" : "companies"} in frozen
+        scope
+        {refresh.mapped_company_count !== null &&
+          ` · ${refresh.mapped_company_count} mapped SEC ${refresh.mapped_company_count === 1 ? "issuer" : "issuers"}`}
+      </p>
+      <p>Issuer result · {issuerOutcomeLabels[refresh.issuer_outcome]}</p>
+      {refresh.source_record_count !== null && (
+        <p>
+          {filings
+            ? "Supported filing rows in result"
+            : "Source facts in result"}{" "}
+          · {refresh.source_record_count}
+        </p>
+      )}
+      {refresh.issuer_outcome === "NOT_REPORTED" && (
+        <p className="text-xs text-muted-foreground">
+          The saved batch has no attributable outcome for this issuer. Retained
+          evidence remains available above.
+        </p>
+      )}
+      <dl className="grid gap-2 text-xs sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Refresh requested</dt>
+          <dd>{dateTime(refresh.requested_at)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Latest attempt started</dt>
+          <dd>{dateTime(refresh.started_at)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Refresh finished</dt>
+          <dd>{dateTime(refresh.finished_at)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Recorded attempts in run</dt>
+          <dd>{refresh.attempt_count}</dd>
+        </div>
+      </dl>
+      {refresh.failure_code && (
+        <p className="break-words text-warning">
+          Failure code · {refresh.failure_code}
+        </p>
+      )}
+      {refresh.retryable && (
+        <p className="text-xs text-muted-foreground">
+          Last recorded attempt is retryable. Review Operations for cooldowns,
+          remaining budget and authorized execution.
+        </p>
+      )}
+      <p className="break-all text-xs text-muted-foreground">
+        Run {refresh.run_id}
+      </p>
+      {refresh.request_id && (
+        <p className="break-all text-xs text-muted-foreground">
+          Manual request {refresh.request_id}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
   return (
     <div className="space-y-6">
@@ -111,6 +199,18 @@ export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
                 <dd>{retainedTime(domain.latest_recorded_at)}</dd>
               </div>
             </dl>
+            {domain.refresh ? (
+              <SecRefreshDetails
+                refresh={domain.refresh}
+                filings={key === "filings"}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {domain.refresh === undefined
+                  ? "Incremental refresh history is unavailable from this API version."
+                  : "No incremental refresh recorded for this issuer."}
+              </p>
+            )}
             {attempt ? (
               <div className="space-y-2 border-t pt-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -166,8 +266,10 @@ export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
       </section>
       <p className="text-xs text-muted-foreground">
         Retrieval dates describe retained evidence. Fiscal periods and filing
-        dates describe its economic coverage. Bootstrap checkpoints cover the
-        scoped SEC runner. Other refresh histories are available in Operations.
+        dates describe its economic coverage. Incremental refreshes describe
+        saved execution outcomes; batch status and issuer result retain their
+        separate meanings. Bootstrap checkpoints describe the scoped backfill
+        runner.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" asChild>
@@ -252,7 +354,31 @@ export function CompanySecCoveragePanel({
                 ["filings", "Filings"],
               ] as const
             ).map(([key, label]) => {
+              const refresh = data[key].refresh;
               const checkpoint = data[key].bootstrap;
+              const checkpointAt =
+                checkpoint?.finished_at ??
+                checkpoint?.started_at ??
+                checkpoint?.prepared_at;
+              const refreshAt = refresh?.finished_at ?? refresh?.started_at;
+              if (
+                refresh &&
+                refreshAt &&
+                (!checkpointAt ||
+                  Date.parse(refreshAt) >= Date.parse(checkpointAt))
+              )
+                return (
+                  <p
+                    key={key}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-sm"
+                  >
+                    <span>{label} refresh batch</span>
+                    <StatusIndicator status={refresh.batch_status} />
+                    <span className="text-muted-foreground">
+                      {issuerOutcomeLabels[refresh.issuer_outcome]}
+                    </span>
+                  </p>
+                );
               return checkpoint &&
                 [
                   "FAILED",

@@ -21,9 +21,13 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
   const fixture = await initial.json();
   expect(fixture.test_only).toBe("portfolio-data-v1");
   expect(fixture.schema).toMatch(/^test_browser_[a-f0-9]{32}$/);
-  expect(["sec-covered", "sec-outage", "sec-unmapped"]).toContain(
-    fixture.scenario,
-  );
+  expect([
+    "sec-covered",
+    "sec-outage",
+    "sec-unmapped",
+    "sec-refresh-partial",
+    "sec-refresh-outage",
+  ]).toContain(fixture.scenario);
   const result = await request.get(
     `/api/research/companies/${fixture.company_id}/sec-coverage`,
   );
@@ -62,6 +66,10 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
       .getByText(data.mapping_status, { exact: true })
       .filter({ visible: true }),
   ).toBeVisible();
+  await panel.screenshot({
+    path: info.outputPath(`${fixture.scenario}-summary.png`),
+    scale: "css",
+  });
   await panel.getByRole("button", { name: "Inspect SEC coverage" }).click();
   const drawer = page.getByRole("dialog", {
     name: "SEC coverage and provenance",
@@ -77,6 +85,36 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
     });
     await expect(filings.getByText("FAILED", { exact: true })).toBeVisible();
     await expect(filings.getByText(/Retryable checkpoint/)).toBeVisible();
+  }
+  if (fixture.scenario.startsWith("sec-refresh-")) {
+    const filings = drawer.getByRole("region", {
+      name: "Filing metadata",
+      exact: true,
+    });
+    const refresh = filings.getByRole("region", {
+      name: "Latest incremental refresh",
+      exact: true,
+    });
+    await expect(refresh).toBeVisible();
+    await expect(
+      refresh.getByText("No issuer-specific result recorded", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      filings.getByText("Latest bootstrap checkpoint", { exact: true }),
+    ).toBeVisible();
+    if (fixture.scenario === "sec-refresh-outage") {
+      await expect(refresh.getByText("FAILED", { exact: true })).toBeVisible();
+      await expect(
+        refresh.getByText(/Last recorded attempt is retryable/),
+      ).toBeVisible();
+    } else {
+      await expect(
+        refresh.getByText("COMPLETE", { exact: true }),
+      ).toBeVisible();
+      expect(data.filings.refresh?.scope_company_count).toBe(2);
+      expect(data.filings.refresh?.source_record_count).toBeNull();
+    }
+    await refresh.scrollIntoViewIfNeeded();
   }
   if (fixture.scenario === "sec-unmapped")
     await expect(

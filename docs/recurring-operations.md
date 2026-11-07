@@ -105,9 +105,20 @@ are retained; deferred files keep coverage partial and continue on a later cycle
 Use the [guarded SEC bootstrap](fundamentals-source-bootstrap.md) for a reviewed
 broader backfill. Its filing-before-facts checkpoints remain independent.
 
-Existing Operations request/attempt histories expose these outcomes. The company
-coverage drawer currently shows retained facts/filings and bootstrap checkpoints.
-Incremental per-issuer attempt presentation remains the next UI/data-contract slice.
+Existing Operations request/attempt histories expose these outcomes. Company
+coverage also shows the latest relevant incremental run, attempt, trigger and
+frozen scope counts beside retained evidence and bootstrap history. The compact
+summary follows the newer bootstrap/refresh activity. Retrieval dates remain
+attached to retained data; execution times describe the operational run.
+
+Issuer outcomes use saved per-company Company Facts evidence. Aggregate filing
+results are attributable only for a sole mapped provider subject. Multi-issuer or
+legacy filing batches without direct issuer results remain explicitly unreported.
+Batch COMPLETE/PARTIAL never supplies missing issuer evidence. Integrity conflicts
+with zero accepted rows show DATA_CHECK. A clean empty response remains unavailable.
+Last-attempt retryability is separate from execution eligibility and remaining
+budget, which stay in Operations. Older API responses retain an explicit history
+availability message. Recording per-issuer filing reconciliation is the next slice.
 Synthetic local PostgreSQL tests establish these controls. Reviewed real mappings,
 hosted refresh and production activation still require their separate approvals.
 

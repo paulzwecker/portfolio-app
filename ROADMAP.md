@@ -11,7 +11,7 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C3.1 held-issuer SEC slice — BUILD. C2.2 local checkpoint awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                          |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
 | Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending      |
-| Next ready substantial task | C3.1 incremental per-issuer outcomes in company coverage. Held-issuer refresh is locally verified. C2.2 INTEGRATE follows #25 owner merge           |
+| Next ready substantial task | C3.1 issuer-level filing reconciliation in existing batch reports. C2.2 INTEGRATE follows #25 owner merge and comprehensive local acceptance        |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -117,13 +117,20 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
-- C3.1 company coverage now includes incremental run/attempt IDs, trigger, frozen
+- C3.1 `4cb4870` company coverage includes incremental run/attempt IDs, trigger, frozen
   scope counts and separate batch/issuer outcomes. Attribution uses stored issuer
   evidence; aggregate multi-issuer filings remain unreported per issuer. Failed
-  attempts cannot advance retained-data dates. Twenty-eight focused API/fixture
-  cases pass, including read-only serving, exact scope membership, legacy/malformed
-  evidence, zero/missing values and an older run's newer attempt. Typed contracts
-  are regenerated. UI and desktop/mobile review continue in this BUILD increment.
+  attempts cannot advance retained-data dates. The shared Financials/Research/
+  Operations panel and drawer expose these outcomes. Compact status follows newer
+  bootstrap/refresh activity and keeps historical details inspectable. Eighteen web
+  unit/proxy cases and six real-API desktop/mobile journeys pass, with zero browser
+  writes and unchanged protected-state hashes. Repeated screenshots were inspected
+  after moving technical codes into details. Independent review corrected zero-row
+  integrity conflicts to DATA_CHECK; clean empty responses remain unavailable.
+  The final 45-case API/scope/fixture regression passes after that correction.
+  Typed contracts, strict types, lint, formatting and documentation checks pass.
+  This is LOCAL_VERIFIED using synthetic data. Multi-issuer filing outcomes without
+  direct issuer evidence remain explicit gaps, with no inferred successes/failures.
 
 - C3.1 `af8c847` incremental SEC selection reuses the reviewed held/Watchlist scope in
   scheduled and existing manual steps, independently of held issuers' lifecycle.

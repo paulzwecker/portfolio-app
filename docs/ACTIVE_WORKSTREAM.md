@@ -12,12 +12,18 @@
 
 ## Current SEC increment
 
-The additive company coverage contract now includes incremental run/attempt IDs,
-trigger, frozen scope counts and separate batch/issuer results. Attribution uses
-retained issuer evidence, with unknown multi-issuer filing outcomes explicit.
-Twenty-eight isolated API/fixture checks pass; retained-data dates stay separate
-from execution and failed attempts. UI and repeated desktop/mobile inspection
-are the current BUILD subtask. Contracts are regenerated and strict API types pass.
+`4cb4870` adds incremental run/attempt IDs, trigger, frozen scope counts and separate
+batch/issuer results to company coverage. The shared panel/drawer uses that contract
+in Financials, Research and Operations. Compact status follows newer bootstrap/
+refresh activity, preserving both histories in details. Attribution uses stored
+issuer evidence, with unknown multi-issuer filing outcomes explicit. Retained-data
+dates stay separate from execution. Eighteen web unit/proxy cases and six actual-API
+desktop/mobile journeys pass with zero browser writes and unchanged state hashes.
+Repeated screenshots were inspected under `.cache/c3.1-refresh-coverage` after
+moving technical summary codes into details. Independent review fixed zero-row
+integrity conflicts being classified as unavailable. The final 45-case API/scope/
+fixture regression passes after that correction. Clean empty results stay unavailable. Contracts are current,
+strict types and lint pass. Fixture shutdown removes only its own isolated schema.
 
 `af8c847` incremental SEC refresh selects held issuers without requiring lifecycle,
 then explicit Watchlist, through the existing scheduled/manual ingestion paths.
@@ -153,12 +159,12 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C3.1 per-issuer incremental outcomes. Scheduled/manual SEC now selects
-   verified held issuers independently of lifecycle with frozen mappings and bounded
-   recovery. Extend company coverage using its existing request/attempt ledgers.
-   Distinguish actual issuer outcomes from batch-level failure/partial status and
-   bootstrap state. Retained facts must stay visible after failed updates. Reviewed
-   real CIK evidence and hosted validation remain outstanding.
+1. Continue C3.1 issuer-level filing reconciliation. The current EDGAR adapter
+   reports aggregate batches; record per-issuer evidence in its existing batch
+   reconciliation so multi-issuer refreshes can expose direct outcomes. Keep legacy
+   unknown results and failed-batch attribution explicit. Preserve frozen scopes,
+   independent lifecycle, source dates and bounded retries. Reviewed real CIK
+   evidence and hosted validation remain outstanding.
    Mapping persistence and provider ingestion require production authorization.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review. Then

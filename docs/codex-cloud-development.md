@@ -127,7 +127,10 @@ production activation retain their separate review and authorization gates.
 
 Use the same isolated test database and loopback web/API environment above. Start
 one fixture at a time. The existing bootstrap advisory lock spans test schemas.
-Choose `sec-covered`, `sec-outage` or `sec-unmapped`.
+Choose `sec-covered`, `sec-outage`, `sec-unmapped`, `sec-refresh-partial` or
+`sec-refresh-outage`. The incremental scenarios cover differing batch/issuer
+outcomes and transport failures after retained evidence. Their SEC responses are
+synthetic and pass through the existing real ingestion services.
 
 ```powershell
 npm run test:e2e:api -- --scenario sec-outage --lifetime-seconds 180

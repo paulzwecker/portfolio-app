@@ -248,6 +248,7 @@ def test_real_browser_fixture_exposes_attributed_refresh_scope(
     "result,expected,count",
     [
         ({"reconciliation": {"source_fact_count": 0}}, "UNAVAILABLE", 0),
+        ({"reconciliation": {"source_fact_count": 0, "data_check_count": 1}}, "DATA_CHECK", 0),
         ({"reconciliation": {"source_fact_count": 12}}, "REPORTED", 12),
         ({"reconciliation": {"source_fact_count": 12, "data_check_count": 1}}, "DATA_CHECK", 12),
         ({"status": "DATA_CHECK"}, "DATA_CHECK", None),
@@ -281,6 +282,12 @@ def test_duplicate_or_other_issuer_evidence_is_unattributed() -> None:
     "reconciliation,result,expected,count",
     [
         ({"documents_imported": 0, "documents_reused": 0}, {}, "UNAVAILABLE", 0),
+        (
+            {"documents_imported": 0, "documents_reused": 0, "existing_metadata_conflicts": 1},
+            {},
+            "DATA_CHECK",
+            0,
+        ),
         ({"documents_imported": 0, "documents_reused": 2}, {}, "REPORTED", 2),
         (
             {"documents_imported": 2, "documents_reused": 0},

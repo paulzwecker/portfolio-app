@@ -5,7 +5,15 @@ import {
   isCompanySecCoverage,
   type CompanySecCoverage,
 } from "@/lib/domain-contracts";
-import { SecCoverageDetails } from "./company-sec-coverage";
+import {
+  CompanySecCoveragePanel,
+  SecCoverageDetails,
+} from "./company-sec-coverage";
+
+const coverageState = vi.hoisted(() => ({
+  data: null as CompanySecCoverage | null,
+}));
+vi.mock("@/hooks/use-research", () => ({ useResearch: () => coverageState }));
 
 const id = "11111111-1111-4111-8111-111111111111";
 const data: CompanySecCoverage = {
@@ -58,7 +66,30 @@ const data: CompanySecCoverage = {
   ],
 };
 
+const refresh: NonNullable<CompanySecCoverage["fundamentals"]["refresh"]> = {
+  run_id: id,
+  attempt_id: id,
+  request_id: id,
+  trigger: "MANUAL",
+  batch_status: "PARTIAL",
+  requested_at: "2026-11-07T09:00:00Z",
+  started_at: "2026-11-07T09:01:00Z",
+  finished_at: "2026-11-07T09:02:00Z",
+  attempt_count: 1,
+  retryable: false,
+  failure_code: null,
+  scope_company_count: 3,
+  mapped_company_count: 2,
+  issuer_outcome: "REPORTED",
+  source_record_count: 12,
+};
+
+function withRefresh(value: unknown) {
+  return { ...data, fundamentals: { ...data.fundamentals, refresh: value } };
+}
+
 beforeEach(() => {
+  coverageState.data = null;
   vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("API_ACCESS_TOKEN", "");
@@ -71,6 +102,105 @@ afterEach(() => {
 });
 
 describe("Company SEC coverage", () => {
+  it("keeps a newer bootstrap warning visible over older incremental success", () => {
+    coverageState.data = {
+      ...data,
+      filings: {
+        ...data.filings,
+        refresh: {
+          ...refresh,
+          batch_status: "COMPLETE",
+          requested_at: "2026-10-18T09:00:00Z",
+          started_at: "2026-10-18T09:00:00Z",
+          finished_at: "2026-10-18T09:01:00Z",
+        },
+      },
+    };
+    const html = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(html).toContain("Filings bootstrap");
+    expect(html).toContain("SEC_NETWORK_ERROR");
+    expect(html).not.toContain("Filings refresh batch");
+  });
+  it("replaces an older bootstrap warning with a newer incremental result", () => {
+    coverageState.data = { ...data, filings: { ...data.filings, refresh } };
+    const html = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(html).toContain("Filings refresh batch");
+    expect(html).not.toContain("Filings bootstrap");
+    expect(html.split("<dialog")[0]).not.toContain("SEC_NETWORK_ERROR");
+    expect(html).toContain("SEC_NETWORK_ERROR");
+  });
+  it("accepts old coverage and typed refresh attribution independently of batch status", () => {
+    expect(isCompanySecCoverage(data)).toBe(true);
+    expect(isCompanySecCoverage(withRefresh(refresh))).toBe(true);
+    expect(isCompanySecCoverage(withRefresh(null))).toBe(true);
+    expect(
+      isCompanySecCoverage(
+        withRefresh({
+          ...refresh,
+          issuer_outcome: "NOT_REPORTED",
+          source_record_count: null,
+        }),
+      ),
+    ).toBe(true);
+  });
+  it.each([
+    { ...refresh, scope_company_count: 0 },
+    { ...refresh, mapped_company_count: 4 },
+    { ...refresh, attempt_count: 4 },
+    { ...refresh, batch_status: "ACCEPTED" },
+    { ...refresh, issuer_outcome: "NOT_REPORTED" },
+    { ...refresh, issuer_outcome: "UNAVAILABLE", source_record_count: null },
+    { ...refresh, source_record_count: true },
+    { ...refresh, request_id: "invalid" },
+    { ...refresh, finished_at: "invalid" },
+  ])(
+    "rejects invalid refresh fields or unsupported attribution %#",
+    (value) => {
+      expect(isCompanySecCoverage(withRefresh(value))).toBe(false);
+    },
+  );
+  it("labels issuer evidence separately from batch partials and bootstrap history", () => {
+    const html = renderToStaticMarkup(
+      <SecCoverageDetails
+        data={{ ...data, fundamentals: { ...data.fundamentals, refresh } }}
+      />,
+    );
+    expect(html).toContain("Source response reported");
+    expect(html).toContain("Source facts in result");
+    expect(html).toContain("3 companies in frozen scope");
+    expect(html).toContain("2 mapped SEC issuers");
+    expect(html).toContain("Latest incremental refresh");
+    expect(html).toContain("Latest bootstrap checkpoint");
+  });
+  it("keeps rolled-back and unattributed results missing beside retained evidence", () => {
+    const html = renderToStaticMarkup(
+      <SecCoverageDetails
+        data={{
+          ...data,
+          fundamentals: {
+            ...data.fundamentals,
+            refresh: {
+              ...refresh,
+              batch_status: "FAILED",
+              issuer_outcome: "NOT_REPORTED",
+              source_record_count: null,
+              failure_code: "NETWORK_ERROR",
+              retryable: true,
+            },
+          },
+        }}
+      />,
+    );
+    expect(html).toContain("No issuer-specific result recorded");
+    expect(html).toContain("Retained records");
+    expect(html).toContain("NETWORK_ERROR");
+    expect(html).toContain("Last recorded attempt is retryable");
+    expect(html).not.toContain("Source facts in result");
+  });
   it("validates exact coverage types and rejects incomplete metric inventories", () => {
     expect(isCompanySecCoverage(data)).toBe(true);
     expect(isCompanySecCoverage({ ...data, metrics_missing: [] })).toBe(false);

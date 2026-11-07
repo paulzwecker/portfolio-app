@@ -110,8 +110,6 @@ def _issuer_result(
         if type(reused) is not int or reused < 0:
             return "NOT_REPORTED", None
         count += reused
-    if count == 0:
-        return "UNAVAILABLE", 0
     checks = (
         "data_check_count",
         "data_check_documents",
@@ -127,6 +125,8 @@ def _issuer_result(
         or result.get("history_files_deferred")
     ):
         return "DATA_CHECK", count
+    if count == 0:
+        return "UNAVAILABLE", 0
     return "REPORTED", count
 
 
