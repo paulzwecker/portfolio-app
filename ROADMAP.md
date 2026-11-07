@@ -5,14 +5,14 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 
 ## Execution cursor
 
-| Field         | Current value                                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| Active work   | C2.1 held-listing/FX coverage, canonical ingestion compatibility and recovery assessment                   |
-| Branch        | `codex/c2-canonical-ingestion-readiness`, independently based on merged PR #23                             |
-| Status        | IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED / PRODUCTION_PREVIEW_VERIFIED for the market planning scope       |
-| Next task     | Owner review; current-state recovery and bounded market authorization, plus reviewed SEC issuer mappings   |
-| PR            | New C2 PR pending. Completed [#24](https://github.com/paulzwecker/portfolio-app/pull/24) remains unchanged |
-| Approval gate | Owner merge, current-state recovery and separately authorized ingestion. P-GOOGL acceptance remains DEFER  |
+| Field         | Current value                                                                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active work   | C2.1 held-listing/FX coverage, canonical ingestion compatibility and recovery assessment                                                                              |
+| Branch        | `codex/c2-canonical-ingestion-readiness`, independently based on merged PR #23                                                                                        |
+| Status        | IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED / PRODUCTION_PREVIEW_VERIFIED for the market planning scope                                                                  |
+| Next task     | Owner review; current-state recovery and bounded market authorization, plus reviewed SEC issuer mappings                                                              |
+| PR            | [#25](https://github.com/paulzwecker/portfolio-app/pull/25), owner review/CI gate; completed [#24](https://github.com/paulzwecker/portfolio-app/pull/24) stays stable |
+| Approval gate | Owner merge, current-state recovery and separately authorized ingestion. P-GOOGL acceptance remains DEFER                                                             |
 
 ## Baseline and outstanding gates
 
@@ -95,8 +95,11 @@ Original task definitions, decisions and evidence remain in the
   security/correctness review approved the adapter and regression coverage.
 - CLI/backend scope; existing frontend tests/build passed. Provider availability,
   price quality and refreshed browser valuations await separately authorized real
-  ingestion. Next action: owner review of the C2 PR, then current-state recovery
+  ingestion. Next action: CI and owner review of PR #25, then current-state recovery
   and a bounded execution decision. Production ingestion remains unauthorized.
+- Commits `0324ba7` (receipt adapter/tests) and `b799093` (coverage/recovery
+  runbook) form this independent integration checkpoint. When integrating PR #24
+  and #25, retain its capability roadmap plus this verified C2 outcome.
 
 | Date       | Task                    | Evidence                                                                                                                                                                                                                                                                                                                                                                  | Next action                                             |
 | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
