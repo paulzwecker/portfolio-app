@@ -88,13 +88,16 @@ merge; do not configure a required approving-review count that would deadlock th
 owner. A formally enforced independent approving review requires a second GitHub
 reviewer. See [GitHub's required-review behavior](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/approving-a-pull-request-with-required-reviews).
 
-## Current schema mismatch and safety behavior
+## Historical initial schema mismatch and safety behavior
 
-The last recorded live read-only observation (2026-11-03) found Neon production at
-Alembic `6c2eaf0b8147`, while this repository expects `9f2a6d4c81b7`; the API
-reported `/health/live = 200` and `/health/ready = 503` (`schema=outdated`). This is
-historical evidence, not a substitute for fresh verification. Recheck Neon identity,
-schema, data inventory and Render/Vercel settings before any future release action.
+The last recorded live read-only observation of the previous Neon target
+(2026-11-03) found Alembic `6c2eaf0b8147`, while the repository expected
+`9f2a6d4c81b7`; the API reported `/health/live = 200` and `/health/ready = 503`
+(`schema=outdated`). That target was not the new production database. The current
+minimal canonical portfolio baseline and its production target are documented in
+the [canonical production baseline](production-canonical-baseline.md). These
+historical observations must not be used as current target evidence; reverify the
+live identity/schema before any future release or migration.
 
 Do **not** point the application at this older database with code that requires the
 newer schema. For a first activation on a separate, verified-empty Neon database,

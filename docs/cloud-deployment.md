@@ -40,10 +40,17 @@ separately authorized operator command with a fresh recovery point.
   produced it. No Vercel CLI, project link, API token or production domain is
   configured locally, so authenticated behavior and production environment
   settings remain unverified.
-- The existing Neon recovery branch is ready and is a child of the primary
-  branch, but its snapshot has Alembic head `12a6f0d9c3e1`, while current
-  production is at `6c2eaf0b8147`. It expires on 2026-11-24. It is not a current
-  pre-migration recovery point for an upgrade from the live production schema.
+- The existing Neon recovery branch was ready and a child of the primary
+  branch, but its snapshot had Alembic head `12a6f0d9c3e1`, while the previous
+  production target was at `6c2eaf0b8147`. It expired on 2026-11-24. It was not
+  a current pre-migration recovery point for an upgrade from that live schema.
+
+That M1 snapshot describes the previous Neon project and is historical. The
+minimal Portfolio baseline was later restored to the new production target. Its
+verified scope, current table counts, owner-visible UI readback and the
+short-lived pre-import recovery branch expiration are recorded in the
+[canonical production baseline](production-canonical-baseline.md). Do not treat
+that branch as a durable backup or reuse it after its recorded expiration.
 
 ### Historical M1 deployment and recovery notes
 
@@ -211,7 +218,7 @@ Then check `https://<your-vercel-domain>/api/health`; it should report `database
 
 ### Backup-first procedure for any later data transfer
 
-No portfolio data was copied or transferred by this milestone. A read-only sizing check against the local PostgreSQL database reported 289 MB total database size, 178 MB table/TOAST size and 100 MB index size (278 MB total relation size). The measured database is below Neon Free's current 1 GB project allowance, but the final transfer decision still requires a backup and explicit approval.
+At the 2026-10-17 Milestone 13B snapshot, no portfolio data had been copied or transferred. A read-only sizing check against the local PostgreSQL database reported 289 MB total database size, 178 MB table/TOAST size and 100 MB index size (278 MB total relation size). Those historical sizing figures are not current production measurements; the later minimal import is documented in the [canonical production baseline](production-canonical-baseline.md).
 
 When the local database is reachable, use an approved, read-only account to measure database and user-table/index sizes:
 
