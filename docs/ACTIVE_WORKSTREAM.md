@@ -8,22 +8,28 @@
 - Objective: provider-only cloud refresh → durable outcomes → trustworthy portfolio
   valuation/freshness, reusing existing adapters, jobs and domain calculations.
 
-## Current increment
+## Completed build increments
 
-`run_recurring_cycle(provider_only=True)` runs SEC and explicitly enabled FMP jobs
-with existing locks/cadences/receipts. It leaves the manual queue and Sheets,
-research, agent-feed and decision workflows alone. Existing callers default to
-their full cycle. Two synthetic PostgreSQL tests verify cadence, optional consensus,
-queued work and unchanged counts outside worker/run tables. Focused lint/types pass.
+- `1e70d66` adds provider-only recurring cycles with existing locks/cadences/receipts,
+  optional FMP and preserved manual queue/unrelated tables.
+- Cloud CLI defaults to `--scope market-data`. `provider-data` adds due SEC and
+  explicitly enabled FMP. `all-operations` explicitly selects the full legacy cycle.
+  Cloud calls retain configured proxy routing and print safe status/class summaries.
+- Partial/nested failures exit nonzero. Fixed an unset retry-delay variable after
+  provider exceptions and protected another instance's heartbeat during overlap.
+- Focused worker/guard/market regression passed 106 cases. Final cloud regression
+  passed 27 cases. Strict types passed for five files, plus lint, formatting,
+  documentation links and whitespace checks.
+  Existing detailed outcomes remain in database run ledgers. No UI changed.
 
 ## Next build steps
 
-1. Add explicit cloud-runner scopes, safe status summaries and nonzero exit for
-   nested failures/partial results. Respect configured cloud proxy routing.
-2. Reconcile market startup scope with the reviewed held-listing/FX plan. Existing
+1. Reconcile market startup scope with the reviewed held-listing/FX plan. Existing
    startup/scheduled paths add TWD/EUR for legacy model use and can cold-backfill
-   ten years. Resolve explicit scope/resource policy before production activation.
-3. Prove synthetic refresh → EUR valuation and Operations readback, including
+   ten years. Inspect `market_data_startup.py` and `external_ingestion._scope_for_domain`.
+   Preserve justified model FX requirements through an explicit reviewed policy. Pin
+   scope, history overlap and per-cycle budgets before production activation.
+2. Prove synthetic refresh → EUR valuation and Operations readback, including
    restart, partial/outage/retry behavior. Inspect desktop/mobile when UI changes.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR

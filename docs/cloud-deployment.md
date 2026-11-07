@@ -130,7 +130,7 @@ On Render Free, the API sleeps after 15 minutes without traffic and may take abo
 - [`render.yaml`](../render.yaml): native Python web service on Render Free, pinned to `main`, with ingestion disabled.
 - [`apps/web/vercel.json`](../apps/web/vercel.json): Next.js framework and npm workspace commands from the monorepo root.
 - [`apps/web/src/proxy.ts`](../apps/web/src/proxy.ts) and [`server-access.ts`](../apps/web/src/lib/server-access.ts): fail-closed shared-password gate for production and preview requests.
-- [`cloud_cron.py`](../apps/api/src/portfolio_api/cloud_cron.py): one bounded market refresh plus one recurring-operations cycle. It exits when complete, reuses the existing services and PostgreSQL advisory locks, and is inert until `CLOUD_INGESTION_ENABLED=true`.
+- [`cloud_cron.py`](../apps/api/src/portfolio_api/cloud_cron.py): one market/FX cycle by default, with explicit provider-data and full-operation scopes. It exits when complete, reuses the existing services and PostgreSQL advisory locks, and is inert until `CLOUD_INGESTION_ENABLED=true`.
 
 There is no Docker requirement. Render uses its native Python runtime and `uv`; Vercel builds the Next.js npm workspace.
 
@@ -257,7 +257,7 @@ Do not add a Cron service until scheduled ingestion is explicitly approved. When
 - Runtime: Python; Root Directory: `apps/api`
 - Build Command: `uv sync --locked --no-dev`
 - Schedule: `0 * * * *` (once hourly, UTC)
-- Command: `uv run --locked --no-dev python -m portfolio_api.cloud_cron`
+- Command: `uv run --locked --no-dev python -m portfolio_api.cloud_cron --scope market-data`
 - Plan: smallest Cron plan available
 - `PYTHON_VERSION=3.13.16`
 - `APP_ENV=production`
@@ -268,7 +268,7 @@ Do not add a Cron service until scheduled ingestion is explicitly approved. When
 - `GOOGLE_SHEETS_POLL_SECONDS=3600` only if Sheets polling was approved
 - Provider credentials only when each data source and its terms are approved
 
-Set `RECURRING_OPERATIONS_ENABLED=true` on the API service at the same time if the UI should accept manual jobs. Keep FMP consensus off unless storage/display rights are confirmed. The entrypoint runs one market refresh and one due-jobs cycle, prints sanitized status and exits; existing PostgreSQL advisory locks and idempotent domain services remain authoritative. It is safe to rerun after a transient failure. Render guarantees one active run per Cron service, while the database locks also coordinate with other worker processes.
+Review the [cloud scope contract](recurring-operations.md#cloud-cycle-scopes) before activation. The default market/FX scope leaves the manual queue and unrelated workflows outside its cycle. Manual requests require their enable flag and the existing exact-request runner or a separately approved full worker. Keep FMP consensus off until storage/display rights are confirmed. Scope limits, target/recovery verification and production authorization precede scheduling. Current C2.2 implementation remains in BUILD.
 
 ## Setup guide: exact dashboard fields
 

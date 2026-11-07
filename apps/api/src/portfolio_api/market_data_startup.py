@@ -183,6 +183,7 @@ def run_startup_refresh(
     *,
     ready_wait_seconds: int = DEFAULT_READY_WAIT_SECONDS,
     ready_poll_seconds: int = DEFAULT_READY_POLL_SECONDS,
+    allow_local_proxy_bypass: bool = True,
 ) -> dict[str, object]:
     engine = create_database_engine(
         settings,
@@ -199,7 +200,7 @@ def run_startup_refresh(
                 "reason": "Database or Alembic schema did not become ready before timeout.",
                 "wait_seconds": ready_wait_seconds,
             }
-        bypassed = configure_yahoo_no_proxy()
+        bypassed = configure_yahoo_no_proxy() if allow_local_proxy_bypass else False
         with engine.connect() as connection:
             lock_acquired: bool = connection.execute(
                 text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"),

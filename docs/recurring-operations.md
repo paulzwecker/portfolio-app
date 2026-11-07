@@ -33,6 +33,23 @@ only the SEC and Google API hosts it uses to its own `NO_PROXY` variables. Other
 proxy configurations are untouched. This keeps worker routing local to its
 process and avoids changing machine-wide proxy settings.
 
+## Cloud cycle scopes
+
+The one-cycle `python -m portfolio_api.cloud_cron` entrypoint defaults to
+`--scope market-data` for market/FX only. `--scope provider-data` adds due SEC
+facts/filings and separately enabled FMP consensus. It preserves provider cadence,
+locks and run receipts while leaving manual requests, Sheets, research feeds and
+decision jobs outside that cycle. `--scope all-operations` explicitly selects the
+legacy full cycle and requires its separately reviewed source/write authority.
+
+All scopes retain the cloud/recurring enable flags and production target guards.
+Cloud execution preserves configured proxy routing. Terminal output contains
+operational statuses and exception classes, with detailed results in existing
+private database ledgers. Partial, blocked, failed and malformed outcomes return a
+nonzero process exit, including failed nested jobs. Overlapping cycles preserve
+the active worker's heartbeat. Scope/resource reconciliation and hosted activation
+remain pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md).
+
 ## Jobs and cadence
 
 The table lists cadences used when recurring operations are explicitly enabled.

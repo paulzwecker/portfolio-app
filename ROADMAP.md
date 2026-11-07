@@ -6,14 +6,14 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | PARTIAL. Provider-only recurring cycle locally verified; cloud entrypoint, scope/resource policy and end-to-end readback in progress                |
-| Next ready substantial task | Continue C2.2 cloud runner scopes, failure reporting and synthetic valuation workflow                                                               |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
+| Field                       | Current value                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                                           |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                                          |
+| Implementation              | PARTIAL / BUILD. Provider-only cycle, explicit cloud scopes and safe failure reporting locally verified. Scope/resource policy and end-to-end valuation readback pending |
+| Next ready substantial task | Continue C2.2 market/FX scope and cold-backfill budget, then synthetic refresh → EUR valuation/Operations readback                                                       |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                                   |
+| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR                      |
 
 ## How to choose work
 
@@ -119,8 +119,11 @@ policy decision. It has lower priority than useful market, research and decision
 
 - C2.2 BUILD increment: provider-only recurring cycles preserve existing locks,
   cadence and durable run records, with queued/unrelated workflows excluded.
-  Two isolated PostgreSQL cases, focused lint and strict types pass. Continue via
-  the active handoff; production execution and milestone integration remain gated.
+  Two isolated PostgreSQL cases, focused lint and strict types pass. Cloud scopes
+  now default to market/FX, with explicit broader choices, safe output and nonzero
+  nested/partial failures. Exception retry and overlapping-heartbeat regressions
+  are covered. The 106-case focused worker/guard/market run passed. Continue via
+  the active handoff. Production execution and milestone integration remain gated.
 
 - 2026-11-07 capability audit inspected ORM/API, Portfolio UI, provider adapters,
   manual/recurring/cloud runners, settings, Render template and existing tests.

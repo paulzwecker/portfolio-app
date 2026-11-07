@@ -48,8 +48,10 @@ Choose the highest-value ready capability in `ROADMAP.md`, checking its actual
 data, code and authorization dependencies. Prefer a complete investor workflow over
 another preparation layer. If an owner gate blocks it, advance an independent ready
 capability. Shared foundations may emerge early from demonstrated Portfolio needs.
-Commit coherent increments. Verify focused behavior, integration and
-security, then perform an independent second-pass review. Validate desktop/mobile
+BUILD is the default. Commit coherent increments with focused tests and a concise
+active handoff. Reserve comprehensive tests and one cohesive PR for INTEGRATE at
+a completed major milestone. Freeze passing PRs for owner review. Verify relevant
+behavior, integration and security, then perform an independent second-pass review. Validate desktop/mobile
 for UI changes. Fix findings before declaring completion.
 
 Update the concise roadmap after each subtask with actual evidence and the next

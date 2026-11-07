@@ -306,6 +306,7 @@ def _run_one_job(
         if not operation_due(session, job_name, now_at, cadence_seconds, settings):
             return {"status": "NOT_DUE", "job_name": job_name}
     run_id = _begin_operation(engine, job_name, now_at)
+    retry_after_seconds: object = None
     try:
         result = action()
         status = _classified_status(result)
@@ -319,11 +320,14 @@ def _run_one_job(
         if status == "FAILED" and failure_code is None:
             failure_code = "OPERATION_FAILED"
     except Exception as error:  # keep one failed integration from stopping other jobs
-        logger.exception("Recurring job %s failed", job_name)
+        logger.error(
+            "Recurring job failed",
+            extra={"job_name": job_name, "error_type": type(error).__name__},
+        )
         result = {"status": "FAILED", "failure_code": type(error).__name__}
         status = "FAILED"
         failure_code = type(error).__name__
-        failure_message = str(error)
+        failure_message = "Unexpected operation failure. Inspect the recorded failure code."
     _finish_operation(
         engine,
         run_id,
@@ -1083,7 +1087,7 @@ def _record_heartbeat(
     stopped: bool = False,
 ) -> None:
     with Session(engine) as session:
-        state = session.get(RecurringOperationsWorkerState, "primary")
+        state = session.get(RecurringOperationsWorkerState, "primary", with_for_update=True)
         if state is None:
             state = RecurringOperationsWorkerState(
                 worker_key="primary",
@@ -1095,6 +1099,8 @@ def _record_heartbeat(
                 last_error=error,
             )
             session.add(state)
+        elif stopped and state.instance_id != instance_id:
+            return
         else:
             state.instance_id = instance_id
             state.status = status
