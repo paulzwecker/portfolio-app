@@ -100,6 +100,12 @@ Each supported method has a versioned, discriminated, validated contract with:
 
 Existing engines include a 10-year UFCF DCF, owner cash flow and residual income paths. Verify actual availability and behavior. A P-GOOGL Google Sheets capture was live-validated and passed 30 projection + 22 output checks, but its probability inputs differ from an older fixture and it remains an **unaccepted proposed source revision**. UFCF enterprise IRR is not shareholder IRR. Method-specific return metrics must not be displayed or ranked as equivalent without an approved bridge.
 
+### Published-model boundary
+
+Google Sheets is the current agent modeling workspace. Agents explicitly publish completed, versioned contracts. The application discovers publications through the existing bounded inbox adapter, validates native calculations and records review candidates before acceptance. Canonical contracts and engines remain independent of Sheets coordinates. A future producer can deliver the same publication as JSON. The publication protocol and implementation boundaries are specified in [model-publications.md](../model-publications.md).
+
+Routine policy-controlled promotion is a future authority transition requiring separate owner approval and activation. Existing reviewed acceptance remains the operational rule.
+
 ### Package boundary and migration strategy
 
 - Prefer **one reviewed worksheet/model at a time** with declared ranges/fields, directly reading Sheets effective values. Do not turn XLSX formula fidelity or full-workbook cell equivalence into a dependency for first value.

@@ -51,6 +51,12 @@ Initially Google Sheets remains authoritative for the legacy portfolio research/
 
 A working real P-GOOGL package has been captured and numerically checked, **but its source-input drift is a proposed revision, not accepted production state**. Other model archetype adapters and proposal review are implemented locally but not thereby production-active. Verify current repository state before relying on any report.
 
+## Agent modeling and publication direction
+
+Agents research and maintain financial models in Google Sheets, using common versioned contracts per methodology. An explicit publication freezes a complete candidate. The application detects publications, validates native calculations and preserves accepted revisions and decision history in PostgreSQL. Producer adapters are replaceable, allowing future in-app agents to publish the same contracts. The implementation contract is [model-publications.md](model-publications.md).
+
+Future routine updates may be promoted under an approved policy, with exceptional changes escalated for review. Policy design, validation and production authorization precede that authority change.
+
 ## Platform fit
 
 Portfolio is the first app within the Personal Universe modular monolith: one Next.js deployable, one FastAPI deployable and initially one Neon PostgreSQL database; private App Hub and common auth/design/API/DB conventions develop incrementally **after Portfolio is useful and stable in the cloud**. Preserve legacy Portfolio `public.*` tables initially. Avoid premature platform extraction and mass rename.

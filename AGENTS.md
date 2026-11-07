@@ -30,6 +30,10 @@ Read only documents relevant to the change. Existing detailed financial/domain d
 - Google Sheets remains authoritative for legacy workflows until explicitly migrated. Accepted canonical application revisions live in PostgreSQL. Use versioned, hash-verified, typed transfer packages and reviewed ownership transitions; never silently overwrite newer accepted state.
 - One shared web/API/DB deployment is the long-term platform direction, **not** permission for mass restructuring, cross-app table access or changes to production.
 
+## Financial-model publication direction
+
+Agents maintain methodology-specific models in Google Sheets and explicitly publish complete revisions. Use producer-neutral, versioned model contracts and source adapters. Ordinary worksheet edits stay drafts. Reuse the model inbox, native engines and immutable review workflow. See `docs/model-publications.md`. Future policy-controlled promotion requires a separately approved policy, tests and activation authorization.
+
 ## Technical ownership
 
 - Next.js owns presentation and interaction; it does not implement financial, ranking, scoring, portfolio or reconciliation calculations. FastAPI owns validation, deterministic models and analytics; PostgreSQL owns migrated canonical state and history.

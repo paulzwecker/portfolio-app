@@ -9,7 +9,7 @@
 
 | Field                   | Current value                                                                                                                                                                    |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active milestone        | `M2` — First reviewed company/model lifecycle in cloud                                                                                                                           |
+| Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                                                                |
 | Next task               | Owner reviews the private P-GOOGL investment assessment and decides whether to revise assumptions; verify fresh recovery and obtain scoped authorization before any model write. |
 | Status                  | `M1 PRODUCTION_VERIFIED`; `M2 PRODUCTION_PREVIEW_VERIFIED`, with P-GOOGL source revision and production acceptance owner-gated.                                                  |
 | Current branch / commit | `codex/m2-pgoogl-investment-review`, based on merged main `7931bb4`.                                                                                                             |
