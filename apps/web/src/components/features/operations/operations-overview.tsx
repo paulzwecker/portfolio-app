@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ManualRefreshPanel } from "@/components/features/operations/manual-refresh-panel";
 import { MarketRefreshPanel } from "@/components/features/operations/market-refresh-panel";
 import { CompanySecCoveragePanel } from "@/components/features/company/company-sec-coverage";
+import { CompanyRefreshAction } from "@/components/features/operations/company-refresh-action";
 import { useResearch } from "@/hooks/use-research";
 import {
   isGoogleSheetsResearchCandidate,
@@ -282,7 +283,10 @@ export function OperationsOverview({ companyId }: { companyId?: string } = {}) {
     <div className="space-y-8">
       {header}
       {companyId && (
-        <CompanySecCoveragePanel companyId={companyId} operations />
+        <section aria-label="Company SEC refresh" className="space-y-4">
+          <CompanySecCoveragePanel companyId={companyId} operations />
+          <CompanyRefreshAction key={companyId} companyId={companyId} secOnly />
+        </section>
       )}
 
       <section

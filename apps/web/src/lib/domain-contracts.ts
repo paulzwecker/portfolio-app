@@ -241,6 +241,8 @@ export type RecurringOperationsStatus =
   components["schemas"]["RecurringOperationsStatusRead"];
 export type OperationalJobRequestCreate =
   components["schemas"]["OperationalJobRequestCreate"];
+export type CompanyRefreshOptions =
+  components["schemas"]["CompanyRefreshOptionsRead"];
 export type OperationalJobName = OperationalJobRequestCreate["job_name"];
 export type OperationalJobRequest =
   components["schemas"]["OperationalJobRequestRead"];
@@ -939,6 +941,52 @@ function isOperationalJobAttempt(value: unknown): boolean {
     isRecord(value.result) &&
     nullableString(value.error_code) &&
     nullableString(value.error_message)
+  );
+}
+
+export function isCompanyRefreshOptions(
+  value: unknown,
+): value is CompanyRefreshOptions {
+  if (
+    !isRecord(value) ||
+    !uuid(value.company_id) ||
+    !string(value.company_name) ||
+    !(value.lifecycle === null || lifecycle(value.lifecycle)) ||
+    !array(value.eligible_job_names, (name) =>
+      ["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS"].includes(
+        name as string,
+      ),
+    ) ||
+    !["WORKER", "OPERATOR", "DISABLED"].includes(
+      value.execution_mode as string,
+    ) ||
+    !nullableString(value.sec_unavailable_reason)
+  )
+    return false;
+  const jobs = value.eligible_job_names as string[];
+  if (new Set(jobs).size !== jobs.length) return false;
+  if (value.sec_eligibility_basis === "ACTIVE_LIFECYCLE")
+    return (
+      ["PORTFOLIO", "WATCHLIST"].includes(value.lifecycle as string) &&
+      jobs.length === 3 &&
+      value.sec_unavailable_reason === null &&
+      value.portfolio_id === null &&
+      value.holding_snapshot_id === null
+    );
+  if (value.sec_eligibility_basis === "VERIFIED_HOLDING")
+    return (
+      jobs.length === 2 &&
+      !jobs.includes("COMPANY_REFRESH") &&
+      uuid(value.portfolio_id) &&
+      uuid(value.holding_snapshot_id) &&
+      value.sec_unavailable_reason === null
+    );
+  return (
+    value.sec_eligibility_basis === null &&
+    jobs.length === 0 &&
+    string(value.sec_unavailable_reason) &&
+    value.portfolio_id === null &&
+    value.holding_snapshot_id === null
   );
 }
 

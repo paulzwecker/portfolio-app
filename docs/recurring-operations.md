@@ -84,7 +84,22 @@ listings deduplicate to one issuer. Held companies need no lifecycle assignment.
 Unmapped issuers, zero positions and companyless ETF listings remain disclosed in
 the saved selection. Multiple portfolios or an incomplete snapshot block this
 automatic scope. Before any portfolio exists, lifecycle-only scheduling is retained.
-Company-scoped manual actions retain the existing request eligibility rules.
+Company-scoped SEC Fundamentals and SEC Filings requests also accept a verified
+positive held issuer without an assigned lifecycle. Admission records the exact
+portfolio and holdings snapshot. An explicit retry rechecks current eligibility;
+an interrupted request retains its frozen provider scope. Other company jobs keep
+their explicit Portfolio/Watchlist lifecycle requirement. Zero positions,
+companyless ETFs, incomplete or unverified snapshots and ambiguous portfolios
+cannot supply this exception. Reviewed CIK/contact and provider guards still apply
+at execution; an unmapped held issuer produces an explicit blocked result.
+
+`GET /v1/companies/{company_id}/refresh-options` reports backend eligibility,
+holding evidence and disabled/operator/worker execution mode without queuing work.
+Company Explorer and company-focused Operations consume this read contract and
+reuse the existing job request/status controls. Queuing still requires the manual
+or recurring flag and the normal database write authorization. Terminal outcomes
+refresh open coverage views, including blocked/failed attempts. UI cooldowns follow
+the returned request timestamp; the server remains authoritative for deduplication.
 
 Each domain's first scheduled run freezes its UTC-day selection and mapping hash
 in `external_ingestion_runs.request_scope`. Later scheduled invocations reuse that
@@ -122,8 +137,7 @@ Batch COMPLETE/PARTIAL never supplies missing issuer evidence. Integrity conflic
 with zero accepted rows show DATA_CHECK. A clean empty response remains unavailable.
 Last-attempt retryability is separate from execution eligibility and remaining
 budget, which stay in Operations. Older API responses retain an explicit history
-availability message. Company-scoped SEC eligibility for verified holdings without
-an assigned lifecycle is the next slice.
+availability message.
 Synthetic local PostgreSQL tests establish these controls. Reviewed real mappings,
 hosted refresh and production activation still require their separate approvals.
 
@@ -260,8 +274,8 @@ last attempt, last success, next attempt, failures and blockers. Existing
 domain-specific review surfaces.
 
 Manual request records and step outcomes appear on the Operations page. The
-Company Explorer offers only its relevant company-scoped refresh. A successful
-or partial company request signals open frontend data hooks to refetch; provider
+Company Explorer offers only its relevant company-scoped refresh. Terminal
+company outcomes signal open frontend data hooks to refetch; provider
 outages do not erase previously stored observations.
 When `RECURRING_OPERATIONS_ENABLED=false`, Operations displays the disabled
 recurring-worker state. New requests remain disabled unless

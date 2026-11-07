@@ -1,6 +1,6 @@
 # Active workstream
 
-## C3.1 — Held-issuer SEC slice (BUILD)
+## C3.1 — Held-issuer SEC slice (BUILD checkpoint complete)
 
 - Branch `codex/portfolio-data-ledger-capabilities`, based on main `395f842`.
 - PR #25 is complete and awaiting owner review. Keep it frozen. Integrate its
@@ -12,13 +12,24 @@
 
 ## Current SEC increment
 
-Company-scoped SEC admission and the read-only `refresh-options` contract are
+`1356944` company-scoped SEC admission and the read-only `refresh-options` contract are
 LOCAL_VERIFIED. Twenty admission/manual API tests plus 27 existing incremental/
 portfolio-scope regressions pass on isolated local schemas. Verified positive
 holdings permit SEC-only work, retaining actual lifecycle and snapshot provenance.
 Retries recheck eligibility. Other jobs retain prior lifecycle rules. Independent
-backend review found no defects. The shared UI controls and browser review are
-in progress. No provider or production execution occurred.
+backend review found no defects. Shared Company Explorer/Operations controls now
+consume backend eligibility and execution mode, preserving disabled/operator states,
+per-job cooldown and scoped request identity. Terminal outcomes refetch coverage.
+Review corrected stale/overlapping polls using cancellation and serialization.
+Eighty focused web tests, strict types, lint, formatting, contracts and documentation
+checks pass. Eight mixed/outage desktop/mobile journeys pass across two fixtures;
+the four final outage cases include slow polls. Enabled submissions/statuses are
+synthetic HTTP receipts; PostgreSQL tests separately exercise real queue/worker
+execution. Browser serving remains SQL read-only with unchanged protected-state
+hashes. Both fixtures remove only their own schema on normal bounded shutdown.
+Repeated screenshots were inspected under ignored `.cache/c3.1-company-refresh*`.
+Local production-write, ingestion, recurring/manual/sync/FMP and polling flags
+remain disabled. No hosted source or production execution occurred.
 
 `197254a` adds issuer filing reconciliation to the existing batch ledger under
 `sec-issuer-filings-v1`. It preserves per-issuer response/acceptance/reuse, conflicts
@@ -180,14 +191,15 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C3.1 company-scoped SEC refresh eligibility. `manual_operations`
-   currently requires explicit Portfolio/Watchlist lifecycle even for verified held
-   issuers. Reuse the complete holdings identity scope for SEC-only requests,
-   preserving explicit lifecycle, existing rules for other jobs, cooldowns,
-   authentication and write-target guards. Align company/Operations controls with
-   that backend eligibility. Reviewed real CIK evidence and hosted validation
-   remain outstanding.
-   Mapping persistence and provider ingestion require production authorization.
+1. Begin C2.3's isolated ledger vertical slice. Reuse canonical listing, portfolio
+   and verified snapshot contracts for typed opening balances plus manual activity,
+   exact position/cash projection and reconciliation. Preserve unknown cost basis,
+   the existing snapshot and independent targets. Prove synthetic buy/sell,
+   deposit/withdrawal and fee cases before proposing a reviewed dated cutover.
+   Production schema/ownership/import changes remain owner-gated. This is the next
+   high-value independent capability while #25 review and data activation wait.
+   C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;
+   mapping persistence/provider ingestion require separate production authorization.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review. Then
    enter INTEGRATE for comprehensive local checks and one cohesive C2.2 PR.

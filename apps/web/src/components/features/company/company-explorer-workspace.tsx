@@ -91,7 +91,12 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
       <CompanyIdentityHeader
         detail={detail}
         marketState={marketState}
-        actions={<CompanyRefreshAction companyId={detail.company.id} />}
+        actions={
+          <CompanyRefreshAction
+            key={detail.company.id}
+            companyId={detail.company.id}
+          />
+        }
       />
       <CompanyViewTabs value={view} onChange={selectView} />
       <div

@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C3.1 held-issuer SEC slice — BUILD. C2.2 local checkpoint awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                          |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending      |
-| Next ready substantial task | C3.1 finish company/Operations scoped SEC controls and desktop/mobile review. Backend admission is LOCAL_VERIFIED. C2.2 INTEGRATE awaits #25 merge |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
+| Field                       | Current value                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C3.1 held-issuer scoped refresh LOCAL_VERIFIED — BUILD checkpoint. C2.2 integration awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                             |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                                  |
+| Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending                   |
+| Next ready substantial task | C2.3 isolated opening-balance/manual-activity → position/cash reconciliation vertical slice. Preserve canonical snapshot/targets. Integrate C2.2 after #25 merge |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                           |
+| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR              |
 
 ## How to choose work
 
@@ -117,14 +117,25 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
-- C3.1 company-scoped SEC admission now reuses verified positive holdings from the
+- C3.1 `1356944` company-scoped SEC admission reuses verified positive holdings from the
   current complete snapshot independently of lifecycle. Only the two SEC jobs gain
   this path. Snapshot provenance, explicit retry checks and disabled/authenticated
   API behavior are covered. Twenty admission/manual API cases and 27 existing
   incremental/portfolio-scope regressions pass in isolated local PostgreSQL schemas.
   Future effective/recording times, zero/missing quantities, ambiguous portfolios,
   unmapped blocked outcomes and unchanged holdings/targets/lifecycle are verified.
-  Strict types and independent backend review pass. Company UI wiring is in progress.
+  Strict types and independent backend review pass. Shared Company Explorer and
+  company-focused Operations controls consume backend eligibility and execution mode.
+  Eight mixed/outage desktop/mobile journeys pass across the two fixtures. The four
+  final outage journeys cover delayed polls, scoped submission, partial/failed status,
+  cooldowns and terminal refetch. Enabled submissions use synthetic HTTP receipts;
+  real SQL/API/worker execution is covered by the PostgreSQL tests. Browser serving
+  stays read-only with unchanged protected-state hashes. Eighty focused web cases,
+  strict types, lint, formatting, contracts and documentation checks pass. Independent
+  frontend review exposed a polling race, corrected with cancellation/serialization
+  and a delayed-response regression. Repeated screenshot inspection confirms exact
+  job/lifecycle labels and mobile readability. Evidence remains in ignored
+  `.cache/c3.1-company-refresh*`. Real issuer coverage and hosted execution remain gated.
 
 - C3.1 `197254a` issuer filing receipts retain response, accepted/reused and
   quality counts in the existing immutable batch reconciliation. Exact scope and

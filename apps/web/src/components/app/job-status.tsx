@@ -30,7 +30,7 @@ export function JobStatus({
         {job.company_name ?? statusLabel(job.job_name)}
         <span className="font-normal text-muted-foreground">
           {job.scope_kind === "COMPANY"
-            ? ` · ${statusLabel(job.lifecycle ?? "company")}`
+            ? ` · ${statusLabel(job.job_name)} · ${job.lifecycle ? statusLabel(job.lifecycle) : "Lifecycle unassigned"}`
             : " · Active universe"}
         </span>
       </p>
