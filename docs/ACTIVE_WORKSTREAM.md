@@ -43,7 +43,7 @@
   Focused recovery/importer regression passes 33 cases, including five isolated
   recovery scenarios, scope escape and retained-success checks. Strict types and
   lint pass. No production execution occurred.
-- Preflight blockers now persist under the guarded market advisory lock to existing
+- `a681b2e` persists preflight blockers under the guarded market advisory lock to existing
   ingestion runs/attempts. Operations keeps previous success and other-domain history,
   including after more than 40 failures. Corrected scopes resolve active diagnostics
   without rewriting their original failures or advancing data freshness. Seven isolated

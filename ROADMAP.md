@@ -125,8 +125,8 @@ policy decision. It has lower priority than useful market, research and decision
   selection losing prior success/FX history after many blocked checks. Status follows
   attempt time when an older run retries. Seven isolated PostgreSQL/API cases pass.
   Diagnostic records reject provider replay and require
-  a fresh scoped check. Focused worker/importer/guard regression passes 142 cases;
-  strict types, lint, documentation links/tests and whitespace checks pass.
+  a fresh scoped check. Focused worker/importer/guard regression passes 142 cases.
+  Strict types, lint, documentation links/tests and whitespace checks pass.
   Final preflight/importer rerun passes 36 cases after the replay/order corrections.
   Browser investor-journey review is the next BUILD step.
   Hosted activation and production data coverage remain unverified and owner-gated.
