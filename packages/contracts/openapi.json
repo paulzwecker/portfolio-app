@@ -3327,6 +3327,114 @@
         "title": "CompanyRead",
         "type": "object"
       },
+      "CompanyRefreshOptionsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "eligible_job_names": {
+            "items": {
+              "enum": [
+                "COMPANY_REFRESH",
+                "SEC_FUNDAMENTALS",
+                "SEC_FILINGS"
+              ],
+              "type": "string"
+            },
+            "title": "Eligible Job Names",
+            "type": "array"
+          },
+          "execution_mode": {
+            "enum": [
+              "WORKER",
+              "OPERATOR",
+              "DISABLED"
+            ],
+            "title": "Execution Mode",
+            "type": "string"
+          },
+          "holding_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Snapshot Id"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Id"
+          },
+          "sec_eligibility_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ACTIVE_LIFECYCLE",
+                  "VERIFIED_HOLDING"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Eligibility Basis"
+          },
+          "sec_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Unavailable Reason"
+          }
+        },
+        "required": [
+          "company_id",
+          "company_name",
+          "lifecycle",
+          "eligible_job_names",
+          "sec_eligibility_basis",
+          "sec_unavailable_reason",
+          "portfolio_id",
+          "holding_snapshot_id",
+          "execution_mode"
+        ],
+        "title": "CompanyRefreshOptionsRead",
+        "type": "object"
+      },
       "CompanyReportedFundamentalsRead": {
         "additionalProperties": false,
         "properties": {
@@ -33157,6 +33265,49 @@
           }
         },
         "summary": "Get Company Rankings",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/refresh-options": {
+      "get": {
+        "operationId": "get_company_refresh_options_v1_companies__company_id__refresh_options_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyRefreshOptionsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Refresh Options",
         "tags": [
           "Portfolio research"
         ]

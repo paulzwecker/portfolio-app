@@ -56,6 +56,7 @@ from portfolio_api.investment_thesis import (
     thesis_revision_read,
 )
 from portfolio_api.manual_operations import (
+    company_refresh_options,
     create_job_request,
     job_request_read,
     list_job_requests,
@@ -849,6 +850,22 @@ def get_market_refresh_status(db: Db) -> s.MarketRefreshStatusRead:
 def get_recurring_operations_status(request: Request, db: Db) -> s.RecurringOperationsStatusRead:
     settings = cast(Settings, request.app.state.settings)
     return recurring_operations_status(db, settings)
+
+
+@router.get("/companies/{company_id}/refresh-options", response_model=s.CompanyRefreshOptionsRead)
+def get_company_refresh_options(
+    company_id: UUID, request: Request, db: Db
+) -> s.CompanyRefreshOptionsRead:
+    settings = cast(Settings, request.app.state.settings)
+    mode: Literal["WORKER", "OPERATOR", "DISABLED"] = "DISABLED"
+    if settings.recurring_operations_enabled:
+        mode = "WORKER"
+    elif settings.manual_operations_enabled:
+        mode = "OPERATOR"
+    try:
+        return company_refresh_options(db, company_id, execution_mode=mode)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from None
 
 
 @router.get("/operations/job-requests", response_model=list[s.OperationalJobRequestRead])

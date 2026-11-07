@@ -12,6 +12,14 @@
 
 ## Current SEC increment
 
+Company-scoped SEC admission and the read-only `refresh-options` contract are
+LOCAL_VERIFIED. Twenty admission/manual API tests plus 27 existing incremental/
+portfolio-scope regressions pass on isolated local schemas. Verified positive
+holdings permit SEC-only work, retaining actual lifecycle and snapshot provenance.
+Retries recheck eligibility. Other jobs retain prior lifecycle rules. Independent
+backend review found no defects. The shared UI controls and browser review are
+in progress. No provider or production execution occurred.
+
 `197254a` adds issuer filing reconciliation to the existing batch ledger under
 `sec-issuer-filings-v1`. It preserves per-issuer response/acceptance/reuse, conflicts
 and quality, with execution-specific history deferrals. Old receipts stay intact.

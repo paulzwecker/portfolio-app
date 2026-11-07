@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C3.1 held-issuer SEC slice — BUILD. C2.2 local checkpoint awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                          |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
 | Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending      |
-| Next ready substantial task | C3.1 company-scoped SEC refresh for verified held issuers without lifecycle. C2.2 INTEGRATE follows #25 owner merge and comprehensive acceptance    |
+| Next ready substantial task | C3.1 finish company/Operations scoped SEC controls and desktop/mobile review. Backend admission is LOCAL_VERIFIED. C2.2 INTEGRATE awaits #25 merge |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -116,6 +116,15 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C3.1 company-scoped SEC admission now reuses verified positive holdings from the
+  current complete snapshot independently of lifecycle. Only the two SEC jobs gain
+  this path. Snapshot provenance, explicit retry checks and disabled/authenticated
+  API behavior are covered. Twenty admission/manual API cases and 27 existing
+  incremental/portfolio-scope regressions pass in isolated local PostgreSQL schemas.
+  Future effective/recording times, zero/missing quantities, ambiguous portfolios,
+  unmapped blocked outcomes and unchanged holdings/targets/lifecycle are verified.
+  Strict types and independent backend review pass. Company UI wiring is in progress.
 
 - C3.1 `197254a` issuer filing receipts retain response, accepted/reused and
   quality counts in the existing immutable batch reconciliation. Exact scope and

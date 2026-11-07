@@ -944,6 +944,21 @@ class OperationalJobRequestCreate(Contract):
         return self
 
 
+CompanyRefreshJobName = Literal["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS"]
+
+
+class CompanyRefreshOptionsRead(Contract):
+    company_id: UUID
+    company_name: str
+    lifecycle: Lifecycle | None
+    eligible_job_names: list[CompanyRefreshJobName]
+    sec_eligibility_basis: Literal["ACTIVE_LIFECYCLE", "VERIFIED_HOLDING"] | None
+    sec_unavailable_reason: str | None
+    portfolio_id: UUID | None
+    holding_snapshot_id: UUID | None
+    execution_mode: Literal["WORKER", "OPERATOR", "DISABLED"]
+
+
 class OperationalJobAttemptRead(Contract):
     id: UUID
     attempt_number: int

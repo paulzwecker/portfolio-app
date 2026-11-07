@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select, text
@@ -19,6 +19,11 @@ from portfolio_api.domain.models import (
     LifecycleEvent,
     OperationalJobAttempt,
     OperationalJobRequest,
+    Portfolio,
+)
+from portfolio_api.fundamentals_bootstrap import (
+    FundamentalsBootstrapError,
+    _portfolio_research_selection,
 )
 
 JOB_DOMAINS: dict[str, list[str]] = {
@@ -64,6 +69,7 @@ GLOBAL_ONLY = {
     "REFRESH_ALL",
 }
 COMPANY_ONLY = {"COMPANY_REFRESH"}
+SEC_COMPANY_JOBS: tuple[s.CompanyRefreshJobName, ...] = ("SEC_FUNDAMENTALS", "SEC_FILINGS")
 MAX_ACTIVE_REQUESTS = 8
 MANUAL_QUEUE_LOCK_ID = int.from_bytes(
     hashlib.sha256(b"portfolio-manual-operational-job-queue").digest()[:8],
@@ -95,6 +101,73 @@ def _fingerprint(job_name: str, scope_kind: str, company_id: UUID | None) -> str
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def company_refresh_options(
+    session: Session,
+    company_id: UUID,
+    *,
+    execution_mode: Literal["WORKER", "OPERATOR", "DISABLED"] = "DISABLED",
+) -> s.CompanyRefreshOptionsRead:
+    identity = session.execute(
+        select(Company, LifecycleEvent.new_state)
+        .outerjoin(CurrentLifecycle, CurrentLifecycle.company_id == Company.id)
+        .outerjoin(LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id)
+        .where(Company.id == company_id)
+    ).one_or_none()
+    if identity is None:
+        raise LookupError("The company was not found in the canonical universe.")
+    company, lifecycle = identity
+    result = s.CompanyRefreshOptionsRead(
+        company_id=company.id,
+        company_name=company.name,
+        lifecycle=lifecycle,
+        eligible_job_names=[],
+        sec_eligibility_basis=None,
+        sec_unavailable_reason=(
+            "No positive verified holding supports SEC refresh for this company."
+        ),
+        portfolio_id=None,
+        holding_snapshot_id=None,
+        execution_mode=execution_mode,
+    )
+    if lifecycle in {"PORTFOLIO", "WATCHLIST"}:
+        return result.model_copy(
+            update={
+                "eligible_job_names": ["COMPANY_REFRESH", *SEC_COMPANY_JOBS],
+                "sec_eligibility_basis": "ACTIVE_LIFECYCLE",
+                "sec_unavailable_reason": None,
+            }
+        )
+    portfolios = list(session.scalars(select(Portfolio.id).limit(2)))
+    if len(portfolios) != 1:
+        return result.model_copy(
+            update={
+                "sec_unavailable_reason": (
+                    "Holdings-based SEC refresh requires one canonical portfolio "
+                    "with a current complete snapshot."
+                )
+            }
+        )
+    try:
+        selection = _portfolio_research_selection(session, portfolios[0])
+    except FundamentalsBootstrapError as error:
+        return result.model_copy(update={"sec_unavailable_reason": str(error)})
+    held = any(
+        item["company_id"] == str(company_id) and "HELD" in item["selection_basis"]
+        for item in selection["companies"]
+    )
+    if held:
+        return result.model_copy(
+            update={
+                "eligible_job_names": list(SEC_COMPANY_JOBS),
+                "sec_eligibility_basis": "VERIFIED_HOLDING",
+                "sec_unavailable_reason": None,
+                "portfolio_id": portfolios[0],
+                "holding_snapshot_id": UUID(selection["holding_snapshot_id"]),
+            }
+        )
+    return result
+
+
 def create_job_request(
     session: Session,
     value: s.OperationalJobRequestCreate,
@@ -120,21 +193,28 @@ def create_job_request(
     lifecycle = None
     scope_detail: dict[str, object] = {"scope_kind": scope_kind}
     if company_id is not None:
-        identity = session.execute(
-            select(Company, LifecycleEvent.new_state)
-            .join(CurrentLifecycle, CurrentLifecycle.company_id == Company.id)
-            .join(LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id)
-            .where(Company.id == company_id)
-        ).one_or_none()
-        if identity is None:
-            raise ValueError("The company was not found in the canonical universe.")
-        company, lifecycle = identity
-        if lifecycle not in {"PORTFOLIO", "WATCHLIST"}:
+        try:
+            options = company_refresh_options(session, company_id)
+        except LookupError as error:
+            raise ValueError(str(error)) from None
+        lifecycle = options.lifecycle
+        if job_name in SEC_COMPANY_JOBS:
+            if job_name not in options.eligible_job_names:
+                raise ValueError(options.sec_unavailable_reason)
+        elif lifecycle not in {"PORTFOLIO", "WATCHLIST"}:
             raise ValueError("Company-scoped refresh is limited to Portfolio and Watchlist.")
-        company_name = company.name
+        company_name = options.company_name
         scope_detail.update(
             {"company_id": str(company_id), "company_name": company_name, "lifecycle": lifecycle}
         )
+        if job_name in SEC_COMPANY_JOBS and options.sec_eligibility_basis == "VERIFIED_HOLDING":
+            scope_detail.update(
+                {
+                    "selection_basis": "VERIFIED_HOLDING",
+                    "portfolio_id": str(options.portfolio_id),
+                    "holding_snapshot_id": str(options.holding_snapshot_id),
+                }
+            )
 
     fingerprint = _fingerprint(job_name, scope_kind, company_id)
     if session.get_bind().dialect.name == "postgresql":

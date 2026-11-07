@@ -646,6 +646,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/refresh-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Refresh Options */
+        get: operations["get_company_refresh_options_v1_companies__company_id__refresh_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/reported-fundamentals": {
         parameters: {
             query?: never;
@@ -3303,6 +3320,32 @@ export interface components {
             name: string;
             /** Reporting Currency */
             reporting_currency?: string | null;
+        };
+        /** CompanyRefreshOptionsRead */
+        CompanyRefreshOptionsRead: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Company Name */
+            company_name: string;
+            /** Eligible Job Names */
+            eligible_job_names: ("COMPANY_REFRESH" | "SEC_FUNDAMENTALS" | "SEC_FILINGS")[];
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "WORKER" | "OPERATOR" | "DISABLED";
+            /** Holding Snapshot Id */
+            holding_snapshot_id: string | null;
+            lifecycle: components["schemas"]["Lifecycle"] | null;
+            /** Portfolio Id */
+            portfolio_id: string | null;
+            /** Sec Eligibility Basis */
+            sec_eligibility_basis: ("ACTIVE_LIFECYCLE" | "VERIFIED_HOLDING") | null;
+            /** Sec Unavailable Reason */
+            sec_unavailable_reason: string | null;
         };
         /** CompanyReportedFundamentalsRead */
         CompanyReportedFundamentalsRead: {
@@ -12520,6 +12563,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyRankingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_refresh_options_v1_companies__company_id__refresh_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRefreshOptionsRead"];
                 };
             };
             /** @description Validation Error */
