@@ -1112,6 +1112,7 @@ def run_recurring_cycle(
     engine: Engine | None = None,
     instance_id: UUID | None = None,
     process_started_at: datetime | None = None,
+    provider_only: bool = False,
 ) -> dict[str, object]:
     """Run due jobs once; the scheduler lock prevents duplicate concurrent cycles."""
 
@@ -1148,7 +1149,11 @@ def run_recurring_cycle(
                     started_at=started,
                     now_at=current,
                 )
-                manual = process_manual_job_requests(current_engine, settings, now_at=current)
+                manual = (
+                    None
+                    if provider_only
+                    else process_manual_job_requests(current_engine, settings, now_at=current)
+                )
                 jobs: list[dict[str, object]] = []
                 jobs.append(
                     _run_one_job(
@@ -1188,47 +1193,48 @@ def run_recurring_cycle(
                             lambda: _run_fmp_consensus(current_engine, settings, current),
                         )
                     )
-                if settings.google_sheets_poll_seconds != 0:
+                if not provider_only:
+                    if settings.google_sheets_poll_seconds != 0:
+                        jobs.append(
+                            _run_one_job(
+                                current_engine,
+                                settings,
+                                SHEETS_DISCOVERY,
+                                settings.google_sheets_poll_seconds,
+                                current,
+                                lambda: _run_sheets_discovery(current_engine, settings),
+                            )
+                        )
                     jobs.append(
                         _run_one_job(
                             current_engine,
                             settings,
-                            SHEETS_DISCOVERY,
-                            settings.google_sheets_poll_seconds,
+                            RESEARCH_TRIGGER_SCAN,
+                            JOB_CADENCES_SECONDS[RESEARCH_TRIGGER_SCAN],
                             current,
-                            lambda: _run_sheets_discovery(current_engine, settings),
+                            lambda: _run_trigger_scan(current_engine, current),
                         )
                     )
-                jobs.append(
-                    _run_one_job(
-                        current_engine,
-                        settings,
-                        RESEARCH_TRIGGER_SCAN,
-                        JOB_CADENCES_SECONDS[RESEARCH_TRIGGER_SCAN],
-                        current,
-                        lambda: _run_trigger_scan(current_engine, current),
+                    jobs.append(
+                        _run_one_job(
+                            current_engine,
+                            settings,
+                            AGENT_WORK_FEED,
+                            JOB_CADENCES_SECONDS[AGENT_WORK_FEED],
+                            current,
+                            lambda: _publish_agent_feeds(current_engine, settings, current),
+                        )
                     )
-                )
-                jobs.append(
-                    _run_one_job(
-                        current_engine,
-                        settings,
-                        AGENT_WORK_FEED,
-                        JOB_CADENCES_SECONDS[AGENT_WORK_FEED],
-                        current,
-                        lambda: _publish_agent_feeds(current_engine, settings, current),
+                    jobs.append(
+                        _run_one_job(
+                            current_engine,
+                            settings,
+                            DECISION_RECOMPUTE,
+                            JOB_CADENCES_SECONDS[DECISION_RECOMPUTE],
+                            current,
+                            lambda: _run_decision_recompute(current_engine),
+                        )
                     )
-                )
-                jobs.append(
-                    _run_one_job(
-                        current_engine,
-                        settings,
-                        DECISION_RECOMPUTE,
-                        JOB_CADENCES_SECONDS[DECISION_RECOMPUTE],
-                        current,
-                        lambda: _run_decision_recompute(current_engine),
-                    )
-                )
                 return {
                     "status": "COMPLETE",
                     "at": current.isoformat(),

@@ -11,7 +11,8 @@ behavior, recording the conflict and obtaining a decision where required.
 
 ## Read selectively
 
-1. Read `ROADMAP.md` for the execution cursor and inspect Git/worktrees before work.
+1. Read `ROADMAP.md` for the cursor and `docs/ACTIVE_WORKSTREAM.md` for current
+   build context, then inspect Git/worktrees before work.
 2. Use `docs/README.md` to find the applicable contract or runbook.
 3. Read `docs/PRODUCT_VISION.md` for product outcomes and
    `docs/architecture/portfolio-application.md` for Portfolio architecture.

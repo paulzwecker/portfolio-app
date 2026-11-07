@@ -2,17 +2,21 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from portfolio_api.database import Base
 from portfolio_api.domain.models import (
     ExternalIngestionAttempt,
     ExternalIngestionRun,
+    OperationalJobRequest,
     RecurringOperationRun,
 )
+from portfolio_api.domain.schemas import OperationalJobRequestCreate
 from portfolio_api.external_data import ExternalDataDomain
 from portfolio_api.external_ingestion import PROVIDERS
+from portfolio_api.manual_operations import create_job_request
 from portfolio_api.recurring_operations import (
     FAILURE_BACKOFF_INITIAL,
     LOCK_KEY,
@@ -29,6 +33,83 @@ from portfolio_api.recurring_operations import (
     run_recurring_cycle,
 )
 from portfolio_api.settings import Settings
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("consensus_enabled", [False, True])
+def test_provider_only_cycle_is_durable_and_leaves_unrelated_work_queued(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch, consensus_enabled: bool
+) -> None:
+    at = datetime.now(UTC)
+    settings = Settings(
+        _env_file=None,
+        recurring_operations_enabled=True,
+        manual_operations_enabled=True,
+        google_sheets_poll_seconds=60,
+        fmp_consensus_ingestion_enabled=consensus_enabled,
+    )
+    calls: list[str] = []
+
+    def sec(
+        _engine: Engine, _settings: Settings, domain: ExternalDataDomain, _at: datetime
+    ) -> dict[str, object]:
+        calls.append(domain.value)
+        return {"status": "COMPLETE"}
+
+    def consensus(*_args: object) -> dict[str, object]:
+        calls.append("CONSENSUS")
+        return {"status": "COMPLETE"}
+
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("Provider-only execution reached an unrelated workflow")
+
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_sec_domain", sec)
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_fmp_consensus", consensus)
+    for name in (
+        "process_manual_job_requests",
+        "_run_sheets_discovery",
+        "_run_trigger_scan",
+        "_publish_agent_feeds",
+        "_run_decision_recompute",
+    ):
+        monkeypatch.setattr(f"portfolio_api.recurring_operations.{name}", forbidden)
+    protected = [
+        table
+        for table in Base.metadata.sorted_tables
+        if table.name not in {"recurring_operation_runs", "recurring_operations_worker_state"}
+    ]
+    with Session(postgres_engine) as session, session.begin():
+        request, _duplicate = create_job_request(
+            session,
+            OperationalJobRequestCreate(job_name="SHEETS_DISCOVERY", scope_kind="ACTIVE_UNIVERSE"),
+            now_at=at,
+        )
+        request_id = request.id
+        before = {
+            table.name: session.scalar(select(func.count()).select_from(table))
+            for table in protected
+        }
+
+    first = run_recurring_cycle(settings, engine=postgres_engine, now_at=at, provider_only=True)
+    second = run_recurring_cycle(
+        settings, engine=postgres_engine, now_at=at + timedelta(minutes=1), provider_only=True
+    )
+    assert first["manual_request"] is second["manual_request"] is None
+    assert calls == ["REPORTED_FUNDAMENTALS", "SOURCE_DOCUMENTS"] + (
+        ["CONSENSUS"] if consensus_enabled else []
+    )
+    assert all(job["status"] == "NOT_DUE" for job in cast(list[dict[str, object]], second["jobs"]))
+    with Session(postgres_engine) as session:
+        persisted_request = session.get(OperationalJobRequest, request_id)
+        assert persisted_request is not None and persisted_request.status == "QUEUED"
+        runs = session.scalars(select(RecurringOperationRun)).all()
+        assert len(runs) == (3 if consensus_enabled else 2)
+        assert all(run.status == "SUCCEEDED" for run in runs)
+        after = {
+            table.name: session.scalar(select(func.count()).select_from(table))
+            for table in protected
+        }
+        assert after == before
 
 
 def test_recurring_worker_adds_sec_google_exclusions_only_for_known_local_proxy(
