@@ -73,7 +73,7 @@ def test_read_only_diagnostics_follow_cooldown_and_preserve_recovered_attempts(
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("problem", ["exhausted", "identity", "previous_day", "running"])
+@pytest.mark.parametrize("problem", ["exhausted", "identity", "previous_day", "running", "replay"])
 def test_diagnostics_never_offer_an_unsupported_automatic_retry(
     postgres_engine: Engine,
     market_scope: object,
@@ -100,6 +100,15 @@ def test_diagnostics_never_offer_an_unsupported_automatic_retry(
             ).one()
             running.status = "RUNNING"
             running.finished_at = None
+    elif problem == "replay":
+        with Session(postgres_engine) as session, session.begin():
+            replay = session.scalars(
+                select(ExternalIngestionRun).where(ExternalIngestionRun.domain == "FX")
+            ).one()
+            replay.idempotency_key = "replay:synthetic-manual-request"
+            replay.replay_of_run_id = session.scalars(
+                select(ExternalIngestionRun.id).where(ExternalIngestionRun.domain == "MARKET_DATA")
+            ).one()
     with Session(postgres_engine) as session:
         report = queries.market_refresh_status(session)
     run = next(
@@ -114,6 +123,7 @@ def test_diagnostics_never_offer_an_unsupported_automatic_retry(
             "identity": "REVIEW_REQUIRED",
             "previous_day": "REVIEW_REQUIRED",
             "running": "RUNNING",
+            "replay": "REVIEW_REQUIRED",
         }[problem]
     )
     assert run.retry_eligible_at is None

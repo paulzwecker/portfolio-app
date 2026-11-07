@@ -14,6 +14,7 @@ import { StatusIndicator } from "@/components/app/status-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ManualRefreshPanel } from "@/components/features/operations/manual-refresh-panel";
+import { MarketRefreshPanel } from "@/components/features/operations/market-refresh-panel";
 import { useResearch } from "@/hooks/use-research";
 import {
   isGoogleSheetsResearchCandidate,
@@ -277,16 +278,6 @@ export function OperationsOverview() {
     <div className="space-y-8">
       {header}
 
-      <ManualRefreshPanel
-        workerEnabled={data.enabled}
-        manualRunnerEnabled={data.manual_operations_enabled}
-        workbookSyncEnabled={data.workbook_sync_enabled}
-        workbookSourceConfigured={data.portfolio_workbook_source_configured}
-        workbookCredentialsAvailable={
-          data.portfolio_workbook_credentials_available
-        }
-      />
-
       <section
         aria-label="Operational summary"
         className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
@@ -335,7 +326,8 @@ export function OperationsOverview() {
         title="Worker and market data"
         description="Worker heartbeat and market-data freshness are independent checks. Configured credentials do not prove that a provider request succeeded."
       >
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <MarketRefreshPanel status={data.market_data} />
           <Card className="shadow-none">
             <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
               <CardTitle className="text-base">Recurring worker</CardTitle>
@@ -390,40 +382,18 @@ export function OperationsOverview() {
               </dl>
             </CardContent>
           </Card>
-
-          <Card className="shadow-none">
-            <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
-              <CardTitle className="text-base">Market data refresh</CardTitle>
-              <StatusIndicator status={data.market_data.state} />
-            </CardHeader>
-            <CardContent>
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <StatusField
-                  label="Last successful update"
-                  value={dateTime(data.market_data.last_successful_update)}
-                />
-                <StatusField
-                  label="Last attempt"
-                  value={dateTime(data.market_data.last_attempt_at)}
-                />
-                <StatusField
-                  label="Market run"
-                  value={data.market_data.market_run_id ?? "Not recorded"}
-                />
-                <StatusField
-                  label="FX run"
-                  value={data.market_data.fx_run_id ?? "Not recorded"}
-                />
-              </dl>
-              {data.market_data.message && (
-                <p className="mt-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-                  {data.market_data.message}
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </PageSection>
+
+      <ManualRefreshPanel
+        workerEnabled={data.enabled}
+        manualRunnerEnabled={data.manual_operations_enabled}
+        workbookSyncEnabled={data.workbook_sync_enabled}
+        workbookSourceConfigured={data.portfolio_workbook_source_configured}
+        workbookCredentialsAvailable={
+          data.portfolio_workbook_credentials_available
+        }
+      />
 
       <PageSection
         title="Recurring jobs"

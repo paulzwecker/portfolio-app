@@ -72,6 +72,15 @@ journey review remain pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md).
 
 ## Jobs and cadence
 
+Operations places its summary and market diagnostics before manual controls.
+Portfolio's **Review prices and FX** link opens that panel directly. The existing
+status API includes per-domain frozen scope, attempt history and retry eligibility
+through an additive `market_data.runs` field. The detail drawer keeps original
+failures inspectable. Eligibility follows the worker's persisted budget and cooldown
+for the current daily scope. Manual replays require operator review. An authorized
+worker invocation executes eligible retries. The summary's latest price/FX success
+and each domain's last success retain their separate meanings.
+
 The table lists cadences used when recurring operations are explicitly enabled.
 The default configuration sets `RECURRING_OPERATIONS_ENABLED=false` and does not
 poll Sheets (`GOOGLE_SHEETS_POLL_SECONDS=0`).

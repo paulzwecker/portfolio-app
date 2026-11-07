@@ -10,8 +10,8 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | PARTIAL / BUILD. Bounded importer → EUR valuation/Operations API readback, same-day recovery and durable preflight monitoring locally verified      |
-| Next ready substantial task | C2.2 Portfolio → Operations investigation, typed run diagnostics and desktop/mobile review. Milestone integration follows local acceptance          |
+| Implementation              | PARTIAL / BUILD. Importer/API recovery and desktop/mobile diagnostic journey locally verified. Hosted data and refresh cycles pending               |
+| Next ready substantial task | C2.2 real-API browser rehearsal and release/activation handoff. Integrate #25 after owner merge and complete local acceptance                       |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -116,6 +116,20 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C2.2 investor investigation now links Portfolio valuation gaps directly to the
+  Operations market panel. Summary/diagnostics precede manual controls. A shared
+  drawer exposes frozen scopes, attempt history, provider issues and backend-owned
+  cooldown/eligibility, including corporate-action quality. Sixteen desktop/mobile
+  fixture browser cases and four final reruns pass, with screenshot inspection
+  before/after refinements, keyboard focus return, responsive overflow and zero
+  write requests. Eighteen isolated API cases passed initially, followed by a
+  14-case status/importer review regression that excludes manual replays from
+  automatic eligibility. Nine focused web tests, strict types, lint and contracts
+  pass. Evidence is synthetic/local. Real-API browser and hosted activation remain
+  separate checks. Second visual inspection fixed shared drawer placement and
+  verified actual right-edge bounds. Six focused drawer/design-system reruns pass.
+  Screenshots are retained in the ignored local cache.
 
 - C2.2 diagnostics contract adds read-only per-domain scopes, attempt history and
   retry eligibility to the existing Operations status API, including separate

@@ -39,7 +39,7 @@ export function DetailDrawer({
       onClick={(event) => {
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
-      className="fixed inset-y-0 right-0 m-0 h-dvh max-h-dvh w-full max-w-xl border-l border-border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/35 backdrop:backdrop-blur-[1px]"
+      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-xl border-l border-border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/35 backdrop:backdrop-blur-[1px]"
     >
       <div className="flex h-full min-h-0 flex-col">
         <header className="flex items-start justify-between gap-4 border-b px-5 py-4">

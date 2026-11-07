@@ -670,6 +670,8 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         eligible_at = (
             cloud_retry_eligible_at(run, history[-1] if history else None)
             if "crosswalk_sha256" in run.request_scope
+            and run.idempotency_key.startswith("daily:")
+            and run.replay_of_run_id is None
             and run.request_scope.get("end_date") == current.astimezone(UTC).date().isoformat()
             else None
         )
