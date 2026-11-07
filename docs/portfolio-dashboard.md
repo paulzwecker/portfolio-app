@@ -79,8 +79,9 @@ for thresholds and coverage limits.
   but Portfolio Rank and Execution Pace remain in data-check/review until holdings
   are reconfirmed. Partial valuations keep aggregate totals, weights and gaps null.
 - Missing targets for held Portfolio companies are surfaced as investor decisions.
-  The dashboard assigns no default weight; the five current gaps are AMD, CELH,
-  HIMS, MSCI and NVO. Analytical runs remain append-only and are enabled only
+  The dashboard assigns no default weight. Query the current canonical target
+  revision to identify gaps. Historical gap lists describe their dated population.
+  Analytical runs remain append-only and are enabled only
   after the holdings baseline and current valuation pass structural checks.
 - Portfolio Rank and Execution Pace run actions are explicitly gated while the
   holdings confirmation is not fresh or the valuation is incomplete. The UI

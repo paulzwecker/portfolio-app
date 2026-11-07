@@ -1,79 +1,131 @@
-# Portfolio Research Platform — Product Vision
+# Personal Universe product vision
 
-**Status:** Working product charter; confirm inferred priorities before changing strategic direction.  
-**Parent architecture:** `docs/architecture/personal-universe.md`  
-**Application architecture:** `docs/architecture/portfolio-application.md`  
-**Execution:** `ROADMAP.md`
+Owner-confirmed direction, updated 2026-11-07. This document owns product outcomes.
+[ROADMAP.md](../ROADMAP.md) owns capability status, priority and the execution cursor.
+The [platform architecture](architecture/personal-universe.md) and
+[Portfolio architecture](architecture/portfolio-application.md) own technical boundaries.
+Detailed financial and source contracts retain authority over their domains.
 
-## North star
+## Destination
 
-A private, professional-grade investment research cockpit where one investor can understand every business, challenge the investment thesis, evaluate model-driven expected returns, allocate capital deliberately, and trace **why and when** decisions changed. Day-to-day use should be possible in the deployed app without relying on a local development machine. AI agents accelerate research and propose revisions; deterministic calculation, provenance, permissions and approval remain in the application.
+Personal Universe is a private, extensible personal app store. One authenticated
+App Hub lets the owner discover and launch their reviewed applications, with
+consistent navigation, design, settings, security and operational visibility.
+Adding a useful app should primarily require its domain behavior and workflows.
+Proven identity, UI, API, database, testing and release conventions should be reusable.
 
-**The app is not an Excel clone**, autonomous trading bot, unattended investment decision maker or generalized enterprise portfolio management SaaS.
+Prefer one Next.js application on Vercel, one FastAPI service on Render and one
+Neon PostgreSQL database. Apps remain bounded modules with explicit ownership and
+versioned contracts. Sharing infrastructure never grants cross-app table access.
+Separate a workload when measured security, reliability, performance or total-cost
+needs justify it. Preserve Portfolio's existing URLs and `public.*` ownership
+through incremental migration.
 
-## Users and core jobs
+The app store is a private catalog of reviewed modules. Public distribution,
+billing, arbitrary runtime code installation and enterprise multi-tenancy are
+outside the initial product scope.
 
-**Primary user:** portfolio owner/researcher; one-user-first access model. **Secondary actor:** restricted research agent proposing changes. **Reviewer:** separately authorized human role (may be the owner, not the proposing agent).
+## Portfolio first
 
-1. **Portfolio pulse:** See current holdings, cash, total value, portfolio weights, target gaps, concentrations, attribution, exposure, fresh/stale coverage and operational alerts; know what needs attention next.
-2. **Company investigation:** Open one canonical company, recognize exact securities/listings, browse thesis, scores, business quality, risks, financial trends, market facts, corporate actions, source provenance and historical research.
-3. **Valuation:** Inspect method-specific models with explicit inputs, scenarios, fair values, return bases, sensitivities and native calculations. Compare current accepted version with proposals and prior revisions. Avoid confusing enterprise UFCF IRR with shareholder IRR.
-4. **Prioritization:** Rank Portfolio, Watchlist and Research separately, reflecting approved durability/quality/valuation/risk rules, with explainable scores and meaningful missing-data statuses.
-5. **Capital allocation:** Compare strategic target weights against actual holdings and execution opportunities, without letting price movements silently change long-term conviction or target architecture.
-6. **Research loop:** Agent collects evidence, proposes structured assumption/score/thesis changes with rationale and base-revision linkage; reviewer validates, accepts or rejects; accepted changes persist as auditable revisions.
-7. **History:** Reconstruct what was known at a date, which model version and market observations supported a decision, and how rankings, valuations, scores and allocations evolved.
-8. **Operations:** Inspect source freshness, import/sync failures, provider coverage, scheduled-job health and changes requiring approval; recover safely from failure.
+Portfolio Research is the flagship application and first proof of the platform.
+It should become a dependable daily research and investment workspace before major
+platform extraction, a generator or a second app absorbs development effort.
+Security, useful shared primitives and operating safeguards can improve earlier
+when they solve a demonstrated Portfolio need.
 
-## Domain principles / investment contract
+Portfolio serves the existing concentrated, durable, high-quality, long-duration
+compounding strategy. Approved investment rules remain in the
+[domain contract](domain-model.md) and [financial models](financial-models.md).
 
-- Optimize for a concentrated portfolio of durable, high-quality, long-duration compounders, consistent with the existing approved investment framework; **do not invent new buy/sell policy in code**.
-- Preserve the decision chain: reported facts/estimates → financial models → investment interpretation → portfolio construction → execution timing.
-- Independent metrics include 10Y Durability (0–5), Compounder Quality (0–5), Execution (1–5), Risk (1–5, higher is riskier); do not collapse into an unapproved opaque score.
-- Explicit lifecycle: `PORTFOLIO`, `WATCHLIST`, `CANDIDATE`, `DROP`; never inferred from holdings or rankings.
-- Canonical `Company → Security → Listing`; currencies and return methodologies are distinct. Expected Excess = Expected IRR − investor hurdle; hurdle is distinct from WACC. Weighted Fair Value is a valuation reference, not a fixed-horizon price forecast. For details, existing approved domain documentation prevails.
-- Data gaps must remain visible. Missing is never zero; an unapproved proposal is never displayed as accepted valuation.
+A useful Portfolio release lets the investor complete these jobs with real,
+reconciled information in the hosted application.
 
-## Product experience
+| Investor job          | Required outcome                                                                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Understand ownership  | Exact holdings and currency-specific cash, EUR valuation, current weights, strategic target gaps, concentration and visible freshness/coverage                       |
+| Understand a business | Financial statements and fundamentals, original filings, consensus where permitted, thesis claims, evidence, risks, unresolved questions and independent assessments |
+| Challenge valuation   | Method-specific assumptions, scenarios, per-share fair values, appropriate expected returns, sensitivities, evidence and revision comparisons                        |
+| Prioritize action     | Explainable Universe/research comparisons, valid ranking cohorts, allocation context, Execution Pace rationale and actionable in-app alerts                          |
+| Learn from history    | Genuine prices, estimate/model/thesis revisions and recorded decisions with their original dates, inputs and methodology                                             |
+| Operate safely        | Observable manual refresh, reproducible source transfers, clear blockers, explicit review, recovery and bounded cloud operation without a workstation                |
 
-- **Home / Overview:** actionable scorecard of portfolio, target gaps, new information and research queue; not a wall of repeated KPIs.
-- **Portfolio:** holdings, cash, allocation/targets, exposures, concentration, performance and reconciliation/freshness flags.
-- **Universe & Research Queue:** powerful search, lifecycle and ranking filters, explicit confidence/coverage and clear next research actions.
-- **Company Explorer:** coherent tabs/sections for Overview, Business & Thesis, Fundamentals, Market, Valuation, Assessments, Portfolio context and Change History. Labels/routes are proposals, not assumed current implementation.
-- **Model workspace:** method-appropriate Bear/Base/Bull analyses, scenario probabilities, WFV, appropriately labeled IRR/excess, historical revision comparisons and agent proposal review.
-- **Admin / Data Health:** source status, schema/contracts, synchronization/import previews, approvals, audit and recovery diagnostics.
-- **Agent workflows:** structured, typed, authenticated proposal APIs; no free-form SQL or direct production mutation.
+## Complete data foundation
 
-Interaction standards: action-first layouts, responsive desktop/mobile, accessible keyboard interactions, progressive disclosure, compact analytic density, interpretable charts, and meaningful loading/empty/error/stale states. Calculations reside server-side and are not duplicated in React.
+Reliable pipelines must cover current and historical stock prices, dated FX,
+splits/dividends and other supported corporate actions, financial statements,
+reported fundamentals, filings, third-party consensus and agent-maintained models.
+Each pipeline needs exact identity, units, currencies, fiscal/session dates,
+source rights, provenance, raw observation retention, idempotent refresh,
+reconciliation, freshness and failure visibility.
 
-## Data lifecycle and source-of-truth transition
+Prioritize held listings and active Watchlist businesses, then expand the research
+universe. Define and review coverage by issuer, instrument, metric and period.
+SEC coverage alone cannot establish international coverage. An installed consensus
+adapter cannot establish provider access or data-use rights. Surface unsupported
+coverage explicitly and retain it as a gap until the agreed scope is met.
 
-Initially Google Sheets remains authoritative for the legacy portfolio research/workbook workflow; Market Data workbook/providers contribute source observations. A **small, versioned, source-authenticated package per domain or financial model** crosses into canonical application contracts. Native engines validate and compute; accept/reject workflow controls canonical revision state. PostgreSQL becomes authoritative for **explicitly migrated and accepted** app domains, not retroactively for every workbook field. Each transfer has a named owner, identity, timestamp, hash, preview/reconciliation and conflict policy. No wholesale workbook fidelity requirement or silent bidirectional writes.
+Sector, geography and business-model exposure require canonical classifications.
+Transaction/cash-flow history must support genuine portfolio performance and
+benchmarking. Current-holdings hypothetical price history has a separate meaning.
 
-A working real P-GOOGL package has been captured and numerically checked, **but its source-input drift is a proposed revision, not accepted production state**. Other model archetype adapters and proposal review are implemented locally but not thereby production-active. Verify current repository state before relying on any report.
+## Hybrid agent and model lifecycle
 
-## Agent modeling and publication direction
+Finance agents continue research and model authoring in Google Sheets for cost
+efficiency. They explicitly publish complete, versioned method contracts. The
+application captures immutable publications, validates identity, evidence, units,
+revision ancestry and native calculation, then presents a reviewable proposal.
+PostgreSQL owns accepted canonical revisions and audit history.
 
-Agents research and maintain financial models in Google Sheets, using common versioned contracts per methodology. An explicit publication freezes a complete candidate. The application detects publications, validates native calculations and preserves accepted revisions and decision history in PostgreSQL. Producer adapters are replaceable, allowing future in-app agents to publish the same contracts. The implementation contract is [model-publications.md](model-publications.md).
+Every company may have multiple independent valuation methodologies. Each model
+owns its assumptions, source evidence, scenarios, calculation outputs and revision
+history. The current identity is company, exact listing and model type. Company
+valuation synthesis or choosing a decision model requires an explicit versioned,
+economically justified contract and owner approval.
 
-Future routine updates may be promoted under an approved policy, with exceptional changes escalated for review. Policy design, validation and production authorization precede that authority change.
+Calculation parity, source freshness and investment validity are separate review
+questions. A publication or successful calculation never accepts changed assumptions.
+Routine automatic promotion requires an approved policy and separate activation.
+Future in-app agents can produce the same typed contracts and use restricted
+proposal APIs. Research execution stays outside the application until a concrete
+benefit justifies moving it.
 
-## Platform fit
+## Financial and decision integrity
 
-Portfolio is the first app within the Personal Universe modular monolith: one Next.js deployable, one FastAPI deployable and initially one Neon PostgreSQL database; private App Hub and common auth/design/API/DB conventions develop incrementally **after Portfolio is useful and stable in the cloud**. Preserve legacy Portfolio `public.*` tables initially. Avoid premature platform extraction and mass rename.
+- Preserve Company → Security → Listing, reporting/model/quote/portfolio currencies,
+  share bases, fiscal periods and effective/observed/recorded dates.
+- Preserve the chain from facts through models, investment interpretation,
+  portfolio construction and execution. Targets express strategic intent.
+  Execution states carry rationale and require investor action.
+- Keep 10Y Durability and Compounder Quality (0–5), Execution (1–5) and Risk
+  (1–5, higher is riskier) independent. Lifecycle is explicitly `PORTFOLIO`,
+  `WATCHLIST`, `CANDIDATE` or `DROP`. Scores need supporting evidence and approved definitions.
+- Keep reported actuals, external consensus, agent forecasts and accepted model
+  projections distinct. Missing values remain unavailable.
+- Expected shareholder cash-flow IRR uses its reviewed probability-weighted cash
+  flows. Legacy enterprise UFCF returns retain their distinct economics. The
+  investor hurdle differs from WACC. Fair Value is a valuation reference.
+- Preserve immutable accepted history, contradictions, conflict detection and
+  source ownership. Later-known facts cannot populate an earlier decision state.
+- Keep private evidence outside public Git. Guard production writes, migrations,
+  deployments, source edits, acceptance and recurring activation separately.
 
-## Outcomes / acceptance signals
+## Delivery order and success gates
 
-- **Useful cloud baseline:** actual verified company/listing/holdings/cash/targets information appears in the hosted app with freshness, identity and error states; normal usage needs no local laptop.
-- **Trustworthy model flow:** at least one reviewed real-source financial model is accepted via scoped, audited transaction and visible with native calculation parity and revision history.
-- **Safe agent loop:** an agent can submit a structured evidence-backed proposal, cannot self-approve, and a reviewer can accept/reject safely with correct conflict behavior.
-- **Daily decisions:** user can quickly identify priority research, portfolio gaps and changes that matter, with traceable calculation inputs.
-- **Reliability:** production target verification, tested migrations/recovery, role separation, CI/E2E and no silent data corruption.
-- **Reusable foundation:** second personal app can reuse platform services without a second default Neon/Render/Vercel stack, once Portfolio reaches a stable v1.
+1. Complete useful Portfolio workflows on the agreed real-data scope. The hosted
+   app must support daily ownership, business investigation, valuation and decision
+   review with explicit exceptions. A minimal identity import is one foundation.
+2. Mature operations alongside that work. Require effective authentication,
+   reviewer authority, current recovery protection, bounded jobs, monitoring and
+   controlled releases before broader or unattended operation.
+3. Extract proven shared foundations incrementally, introduce a private App Hub
+   and enforce module/API/schema ownership while preserving Portfolio workflows.
+4. Prove reuse with one genuinely useful second app on the shared stack. Its
+   authenticated end-to-end workflow and cross-app regressions validate the module
+   conventions. Introduce a generator only where repeatable structure is proven.
 
-## Explicitly deferred / non-goals
-
-Autonomous trading, unattended model acceptance, full replication of spreadsheet UI and formula caching, arbitrary agent database access, importing every historical research artifact before basic utility, enterprise IAM, microservices, generic workflow engines, speculative model methodologies, and moving Portfolio tables to `portfolio.*` as a launch prerequisite.
-
-## Decisions to confirm through roadmap gates
-
-Exact production identity/session provider; detailed exposure/performance data sources; which workbook domains transition first; acceptance process for proposed source revisions; production release approvals; whether and when the app becomes primary model-authoring UI; realistic cost/latency budgets. Record decisions, owners and ADR links in `ROADMAP.md`; never silently guess.
+Acceptance uses unit, integration, contract, authorization and responsive browser
+evidence, followed by reconciled live readback for operational claims. The roadmap
+separates implementation, local verification, live-source validation, production
+preview and operational verification. Gated tasks stay visible while independent
+ready work progresses. Coverage targets, source licensing, new financial policy
+and investment acceptance remain explicit owner decisions.

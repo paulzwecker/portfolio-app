@@ -1,120 +1,112 @@
-# Portfolio execution roadmap
+# Capability roadmap and execution ledger
 
-Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns outcomes.
-The [documentation index](docs/README.md) routes detailed contracts and runbooks.
+Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+[Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
+[Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field         | Current value                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------------- |
-| Active work   | MP2.1 Read-only publication onboarding preflight                                                         |
-| Branch        | `codex/mp2-readonly-publication-preflight`, from merged PR #23 (`0717498`)                               |
-| Status        | MP2.1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. Ready for integration review                             |
-| Next task     | Review/merge PR #24, then prepare the reviewed real publication and canonical base for MP2.2             |
-| PR            | [#24](https://github.com/paulzwecker/portfolio-app/pull/24), open for owner review                       |
-| Approval gate | Real source installation/publication, first-model seeding and acceptance require separate owner approval |
+| Field                       | Current value                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | MP2.1 read-only model publication preflight plus owner-requested capability/vision alignment                                                                                    |
+| Branch / PR                 | `codex/mp2-readonly-publication-preflight`, [PR #24](https://github.com/paulzwecker/portfolio-app/pull/24), open and unmerged at inspection                                     |
+| Implementation              | MP2.1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. PR #23 is merged as `0717498`                                                                                                   |
+| Next ready substantial task | C2.1 read-only held-listing/FX coverage and current-state recovery assessment using existing bootstrap previews                                                                 |
+| Parallel owner gate         | C1.2 dated P-GOOGL source/template and assumption review, then separately authorized canonical seed/publication lifecycle                                                       |
+| Integration rule            | Finish this documentation checkpoint in PR #24. Keep it stable during review. Resume from merged main, or take independent C2 work without depending on unmerged implementation |
 
-## Baseline and outstanding gates
+## How to choose work
 
-- M0 merged as PR #13. M1 is `PRODUCTION_VERIFIED` for the minimal portfolio scope.
-  The [canonical baseline](docs/production-canonical-baseline.md) records 209
-  companies, 23 securities/listings, 22 holdings, two cash rows and 16 targets.
-- M2 P-GOOGL is `PRODUCTION_PREVIEW_VERIFIED` and unaccepted. Native parity passes.
-  The private investment review recommends DEFER pending dated assumptions, fiscal
-  alignment and methodology evidence. PR #22 merged.
-- Last recorded production schema is `9f2a6d4c81b7`. Reverify live target/schema
-  before operations. The portfolio recovery branch expires 2026-11-14 at 09:54 CET.
-- Earlier MP1 local verification passed full quality/build checks (166 web and
-  659 API tests, two skips), PostgreSQL (137 passed, four skips), focused sync
-  tests (19 passed), and desktop/mobile model review (two passed).
-- Production synchronization and automatic promotion await authorization. M7
-  retains backup/restore privilege/tool skips and hosted role-separation work.
+Choose a reasonably substantial ready slice of the highest-value incomplete
+capability below. Inspect its actual code, data, source rights and approvals first.
+Deliver an end-to-end user outcome with reconciliation and readable failure states.
+A new abstraction or preview layer needs a demonstrated missing capability.
+An owner gate on one model does not block independent market/fundamental work.
 
-## Merged MP1 foundation
+Implementation means code exists. `LOCAL_VERIFIED` requires applicable isolated
+checks. `LIVE_SOURCE_VALIDATED` requires actual source evidence.
+`PRODUCTION_PREVIEW_VERIFIED` establishes a read-only proposal on a verified target.
+`OPERATIONALLY_VERIFIED` / existing `PRODUCTION_VERIFIED` requires reconciled hosted
+readback for the stated scope. `PARTIAL`, `MISSING` and `UNVERIFIED` describe gaps.
+A capability may be locally verified while its production population is unverified.
 
-| Task                                     | Status         | Acceptance                                                                                        |
-| ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
-| MP1.1 Publication contract               | LOCAL_VERIFIED | Frozen typed publication, native parity, bounded capture and durable proposals                    |
-| MP1.2 Reliability                        | LOCAL_VERIFIED | Source lock, replay and immutable conflicts retained through acceptance                           |
-| MP1.F1 Documentation hierarchy           | LOCAL_VERIFIED | Selective entrypoints, index, original history preserved, stale claims scoped and link validation |
-| MP1.F2 Independent model synchronization | LOCAL_VERIFIED | Same-company methods may share revision labels; conflicts remain scoped to their model            |
-| MP1.F3 Exact model selection             | LOCAL_VERIFIED | Summary, history and editor preserve the selected model/listing                                   |
-| MP1.F4 Cross-method proof                | LOCAL_VERIFIED | DCF/owner-cash-flow/residual-income retain independent evidence, revisions and return definitions |
-| MP1.F5 Integration gate                  | LOCAL_VERIFIED | Focused/DB/UI checks, independent review, quality checks and one updated PR                       |
-| MP1.R1 Publication review safeguards     | LOCAL_VERIFIED | Typed source/native values and caller-bound preview hash; stale reviewer tabs remain blocked      |
-| MP1.R2 Reviewer workflow                 | LOCAL_VERIFIED | Actual acceptance outcome, preserved unresolved rationale, explicit parity and immutable identity |
+## Evidence-backed capability inventory
 
-## Current MP2 onboarding slice
+This is a repository/evidence audit, not a new live-cloud inventory. The
+[Nov 7 baseline](docs/production-canonical-baseline.md) verifies 209 companies,
+23 securities/listings, 22 holdings, two currency-specific cash rows and 16 targets.
+M1 imported no enrichment or models. That exclusion does not prove their current
+live tables are empty. October local coverage reports cannot establish new Neon
+coverage. Reverify target, source versions and actual counts before operations.
 
-| Task                        | Status         | Evidence and next action                                                                                                                        |
-| --------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| MP2.1 Frozen-file preflight | LOCAL_VERIFIED | Exact bounded hashes, shared validators, private replay report and guarded read-only target preview. 45 focused tests pass across three methods |
-| MP2.1 Integration gate      | LOCAL_VERIFIED | Full check, focused final regression and independent review passed. PR review is next                                                           |
-| MP2.2 Real template/base    | OWNER_GATE     | Review dated source assumptions and authorize any source installation, first-model seed and production review separately                        |
+| Capability                           | Implemented / verified outcome                                                                                                         | Outstanding outcome                                                                                                                                                                           |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity, holdings, cash, targets    | OPERATIONALLY_VERIFIED for M1 minimal scope, receipts, zero reconciliation differences and owner UI readback                           | Ongoing source synchronization and decision-grade valuation                                                                                                                                   |
+| Prices, FX, corporate actions        | Implemented / LOCAL_VERIFIED, bounded Yahoo/FX bootstrap, exact listings, checkpoints and action provenance                            | Production coverage/refresh UNVERIFIED. Action verification and FX/ADR exceptions remain explicit. [Contract](docs/historical-market-data-bootstrap.md)                                       |
+| Statements, fundamentals, filings    | Implemented / LOCAL_VERIFIED SEC facts/submissions and financial explorer                                                              | PARTIAL international coverage. Production scope UNVERIFIED. [Contract](docs/fundamentals-source-bootstrap.md)                                                                                |
+| Consensus                            | Implemented domain/adapter and local tests                                                                                             | Approved provider access/rights and live coverage UNVERIFIED. Keep unapproved FMP disabled. [Contract](docs/consensus-estimates.md)                                                           |
+| Independent native models            | Three methods LOCAL_VERIFIED, real P-GOOGL package parity and recorded production preview, merged publication foundation               | First accepted production-native model has no recorded acceptance evidence. Dated assumptions, fiscal alignment and method review remain owner-gated. [Contract](docs/model-publications.md)  |
+| Thesis, research, assessments        | Implemented / LOCAL_VERIFIED claims, evidence, contradictions, histories and review                                                    | Representative real research-to-thesis-to-model workflow and population UNVERIFIED. [Contract](docs/research-to-model.md)                                                                     |
+| Rankings, allocation, Execution Pace | Implemented / LOCAL_VERIFIED engines and decision UI                                                                                   | Eligible current models, market facts, lifecycle, independent scores and confirmed holdings. Multi-model ambiguity stays blocked until approved policy. [Semantics](docs/return-semantics.md) |
+| Alerts and temporal history          | Implemented in-app attention/trigger/history views                                                                                     | Real source-backed coverage UNVERIFIED. Notification delivery MISSING and channel/policy undecided. [Contract](docs/attention-center.md)                                                      |
+| Exposure and performance             | PARTIAL company/listing/cash composition and concentration                                                                             | Broader classifications/exposure and genuine transaction-backed performance MISSING. [Limits](docs/portfolio-dashboard.md)                                                                    |
+| Cloud operations and security        | Durable manual jobs, workers, sync receipts, CI, guards and model role separation locally verified. M1 authenticated readback recorded | Current-state recovery, hosted roles, monitoring, retention and workstation-independent job execution need operational proof. [Runbook](docs/recurring-operations.md)                         |
+| Personal Universe                    | Existing design tokens, shell, typed contracts and shared web/API/DB footprint are foundations                                         | App Hub, app registry, reusable module template, unified personal sessions and second app MISSING. [Target](docs/architecture/personal-universe.md)                                           |
 
-## Next milestones
+## Capability milestones and acceptance
 
-- **MP2** builds on merged MP1 (`0717498`). Its first slice adds read-only publication
-  onboarding. Real rollout requires a reviewed template and canonical base.
-  First-model seeding uses the existing guarded path. Real source publication and
-  any model acceptance need their specific owner approval and current recovery.
-- **MP3** follows a proven reviewed lifecycle. Design and test promotion policy,
-  exceptional-change routing, freshness limits and recovery. Policy approval and
-  activation remain separate gates.
-- **M3** remaining work is portfolio/Universe data-quality and browser acceptance.
-  The minimal import tasks were completed by M1.
-- **M4** advances source-backed company research. **M5** proves the hosted agent /
-  reviewer loop after role separation and one accepted model. **M6** expands
-  reviewed model coverage afterward.
-- **M7** covers security, recovery, monitoring and bounded operations. **M8/M9**
-  platform extraction and another application follow a useful, stable Portfolio.
+C identifiers organize outcomes. Historical M/MP/R identifiers remain valid evidence
+references through the linked ledgers. They do not create a second execution queue.
 
-Original task definitions, decisions and evidence remain in the
-[roadmap through MP1](docs/history/roadmap-through-mp1.md).
+| Milestone                                 | Acceptance and dependencies                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C0 Canonical ownership baseline           | COMPLETE for M1 scope. Preserve accepted identities, holdings/cash/targets and receipts. Enrichment remains separate                                                                                                                                                                                                                                                                                                                     |
+| C1 Trustworthy model lifecycle            | Existing M2/MP1/MP2 implementation. Review one real model's dated assumptions, establish approved base, prove published revision → native validation → independent review → immutable accepted revision → hosted history/readback. Verify replay/conflicts and separate computational parity from investment judgment. Owner acceptance and a current recovery point gate production operations                                          |
+| C2 Useful daily portfolio                 | Build on C0. Reconcile current/historical exact-listing prices, dated FX and corporate-action evidence for reviewed holdings/Watchlist scope. Verify EUR value, weights, cash, strategic gaps, freshness and confirmation workflow on desktop/mobile. C2.1 previews/recovery assessment are ready independently of C1 acceptance. Ingestion/apply need separate authorization                                                            |
+| C3 Source-backed business research        | SEC and reviewed international filings/statements, permitted consensus, source dates and fiscal/currency semantics. Populate representative claims, thesis breakers, questions and independent assessments with history and evidence. Review coverage and exclusions explicitly. Financials → thesis/research → valuation drill-down must work. Source rights and each ingestion/research acceptance gate their operations               |
+| C4 Explainable investment decisions       | Depends on relevant C1–C3 inputs. Prove valid methodology cohorts, rankings, target/current allocation context, research queue, actionable alerts and Execution Pace with evidence and blockers. Verify agent publication/proposal → separate reviewer decision. Preserve actual decision inputs/history. Genuine performance and broader exposures require their source history/classifications and remain visible gaps until supported |
+| C5 Operational maturity                   | Cross-cutting from C1 onward. Before writes verify authenticated authority, current-state recovery and rollback. Before unattended jobs prove bounded cloud execution, idempotent retries, retention, monitoring, failure recovery and costs without a Windows workstation. Verify current hosted roles, production read-only journeys and restore in disposable infrastructure. Policy/scheduling activation stays owner-gated          |
+| C6 Shared foundations and private App Hub | Follows useful Portfolio C1–C4 scope and sufficient C5 safeguards. Extract proven generic UI/auth/API/DB patterns incrementally. Deliver authenticated app registry/launcher and app-scoped navigation/permissions while preserving Portfolio deep links, ownership and regression coverage. Prefer the existing shared stack. Earlier foundation work needs a concrete Portfolio consumer                                               |
+| C7 Additional personal apps               | After C6, prove one useful second app with an authenticated complete workflow, app-owned data/migrations, audit and cross-app tests on the shared deployment. Add a generator/template when proven repetition warrants it. Review any infrastructure split against cost/isolation evidence                                                                                                                                               |
 
-## Execution evidence
+## Immediate priorities and gates
 
-| Date       | Task                    | Evidence                                                                                                                                                                                                                                                                                                                                                                  | Next action                                             |
-| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 2026-11-07 | MP1.F1                  | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger                                                                                                                                                                                                                                                        | Check links; complete model-scoped sync                 |
-| 2026-11-07 | MP1.F2/F4               | Three methods on one synthetic company publish the same revision label; native parity, independent advancement, model-scoped conflicts and corrected source metadata pass PostgreSQL verification. Three Apps Script tests pass                                                                                                                                           | Complete UI verification and final review               |
-| 2026-11-07 | MP1.F3/F5               | Full check passes (166 web / 659 API unit, two skips); isolated PostgreSQL 139 passed / four skips; focused suite 31; browser six plus two screenshot checks; 133 Markdown files link-clean; independent reviews pass                                                                                                                                                     | Owner review of PR #23, then MP2 from merged main       |
-| 2026-11-07 | Remote integration gate | [GitHub Actions](https://github.com/paulzwecker/portfolio-app/actions/runs/42388954068) passed all three jobs on code commit `c770e0f`; Vercel Preview passed                                                                                                                                                                                                             | Owner review of the current PR head                     |
-| 2026-11-07 | MP1.R1/R2 inspection    | PR #23 remains open. Clean branch/worktree and preserved stash. Independent review found false acceptance feedback and server-only preview approval. Baseline desktop/mobile review tests pass                                                                                                                                                                            | Verify caller-bound acceptance and reviewer evidence    |
-| 2026-11-07 | MP1.R1                  | Typed parity evidence, 14 unit cases, six isolated PostgreSQL checks plus three API/replay checks, strict backend types and lint pass. Production controls remain disabled                                                                                                                                                                                                | Verify reviewer feedback and desktop/mobile interaction |
-| 2026-11-07 | MP1.R2 / review         | Exact source/native values, signed deltas, hashes and timestamps are visible through shared responsive tables. Six affected desktop/mobile checks pass, including refreshed/conflicted acceptance feedback, keyboard disclosure, preserved rationale and explicit reconfirmation. Independent review correction passes 16 API unit cases and 14 isolated PostgreSQL tests | Complete integration checks and update PR #23           |
-| 2026-11-07 | MP1.R integration       | Code `1c5e712` passes full check (169 web, 666 API, two environment-specific skips), strict types, contracts and build. Focused PostgreSQL 14 passed. Six affected browser checks and final review reruns pass. Independent review and 133 Markdown links pass                                                                                                            | Owner review/merge of updated PR #23, then MP2          |
+1. **Daily portfolio data.** C2.1 assesses current held-listing mappings, prices,
+   dated FX, ADR/action evidence, bounded ingestion scope and current-state recovery
+   read-only. Reuse existing tools. After separate authorization, reconcile actual
+   values/weights and verify the investor journey. This can advance during C1 review.
+2. **First real model lifecycle.** C1.2 uses private P-GOOGL review evidence to
+   resolve dated assumptions/fiscal/method issues. The recorded recommendation is
+   DEFER. Preserve it until an explicit owner decision. MP2.1 preflight is locally
+   verified in PR #24. Real onboarding still needs reviewed source/base and acceptance.
+3. **Company evidence to decisions.** C3 first verifies issuer coverage and a bounded
+   filings/fundamentals plan, then proves a real thesis/research/assessment workflow.
+   Consensus needs permitted access. Feed C4 only through approved domain inputs.
 
-Browser evidence uses synthetic API responses on the local application. Desktop/mobile
-screenshots remain in ignored `apps/web/test-results/**/publication-review*.png`.
-The two unit skips cover Windows symlink privileges and POSIX-only credential mode
-bits. Real source onboarding and production review remain owner-gated. Legacy bare
-portable contracts retain their compatibility path, while publication acceptance
-requires the caller-reviewed preview hash.
+C5 is a prerequisite within each applicable priority. The recorded pre-import
+recovery branch expires **2026-11-14 09:54 CET** and predates accepted holdings.
+It is not evidence of recoverability of the current canonical portfolio. Reverify
+retention and prepare an owner-approved current-state recovery procedure before
+further production writes. No branch creation/restore is authorized by this plan.
+Automatic promotion (historical MP3) follows proven reviewed history and an explicit
+policy decision. It has lower priority than useful market, research and decision coverage.
 
-MP2.1 evidence on 2026-11-07 follows verified merge of PR #23. The new CLI uses
-existing native previews and read-target guards. Synthetic tests verify all three
-methods, stale bases, parity failures, absent models, target mismatch, deterministic
-replay, private output and zero table/sequence changes. Independent review corrected
-local reports inheriting unverified Neon IDs. Live-source freshness, inbox discovery
-and investment acceptance retain their separate checks and authorization.
+## Evidence and upkeep
 
-MP2.1 final verification passes `npm run check` on `bb7224b` (169 web tests,
-671 API tests, two environment skips, strict types, contracts and production build).
-The later sanitized diagnostic refinement passes seven focused unit cases and
-29 final publication/preflight regression tests including six isolated PostgreSQL
-cases. The broader focused suite passed 45. All 133 Markdown files have valid
-local links. Independent review passed after the local-target attribution and
-server read-only proof corrections. This CLI-only slice changes no UI. Real source
-freshness, a production-target run and investment acceptance remain unverified and
-owner-gated. Production-write authorization, recurring operations, cloud ingestion
-and polling were confirmed disabled.
+- [Production baseline](docs/production-canonical-baseline.md) owns M1 scope and recovery history.
+- PR #23 merged with independent models/publication review and passing CI. PR #24
+  contains MP2.1 preflight on `c7b9fb2` with passing [CI](https://github.com/paulzwecker/portfolio-app/actions/runs/42395071764), isolated tests and private replay semantics.
+- Owner-requested vision/capability alignment on 2026-11-07 inspected code and dated
+  evidence, corrected stale release/auth/migration claims and preserved the prior
+  ledger. Independent review, 134-file link validation, documentation tests, five
+  deployment-policy tests and whitespace checks pass. This assessment is read-only
+  and establishes no new live production coverage.
+- [Ledger through MP2.1](docs/history/roadmap-through-mp2-preflight-2026-11-07.md)
+  preserves detailed implementation/test evidence. [Original ledger](docs/history/roadmap-through-mp1.md)
+  preserves earlier task definitions. Dated reconciliation reports retain their original scope.
 
-## Upkeep
-
-Update cursor, status, short evidence and next action after each subtask. Put
-stable behavior in canonical references, commands in runbooks and long results in
-dated history. At integration, record tests/skips and review, update the existing
-PR and wait for owner merge. Resume subsequent work from updated main. Report
-implementation, local/source verification, production preview/readiness and
-production application only with the corresponding evidence.
+After each substantial slice, update this cursor and the affected capability row
+with evidence, limitation and next ready action. Keep commands in runbooks, outcomes
+in the vision, boundaries in architecture and long results in dated history.
+Reassess C1–C7 at integration. Keep completed PRs stable for owner review. A green
+PR never grants production, source-edit, acceptance, migration or activation authority.

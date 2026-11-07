@@ -2,14 +2,14 @@
 
 ## Authority and maintenance
 
-| Information                        | Canonical owner                                       |
-| ---------------------------------- | ----------------------------------------------------- |
-| Agent rules                        | [AGENTS.md](../AGENTS.md) and scoped API/web guidance |
-| Product outcomes                   | [PRODUCT_VISION.md](PRODUCT_VISION.md)                |
-| Current work and verified status   | [ROADMAP.md](../ROADMAP.md)                           |
-| Financial/domain behavior          | Applicable reference below                            |
-| Operational procedures             | Safety/runbooks below                                 |
-| Long results and past environments | Dated history and reconciliation records              |
+| Information                              | Canonical owner                                       |
+| ---------------------------------------- | ----------------------------------------------------- |
+| Agent rules                              | [AGENTS.md](../AGENTS.md) and scoped API/web guidance |
+| Personal Universe and Portfolio outcomes | [PRODUCT_VISION.md](PRODUCT_VISION.md)                |
+| Current work and verified status         | [ROADMAP.md](../ROADMAP.md)                           |
+| Financial/domain behavior                | Applicable reference below                            |
+| Operational procedures                   | Safety/runbooks below                                 |
+| Long results and past environments       | Dated history and reconciliation records              |
 
 Read only the references needed for the task. Each PR updates its canonical
 reference and a short roadmap entry. Preserve long results in dated history when
@@ -118,6 +118,7 @@ For database operations use [write targets](database-write-targets.md) and
 
 ## Evidence, design and adapter directories
 
+- [Implementation ledger through MP2.1](history/roadmap-through-mp2-preflight-2026-11-07.md)
 - [Complete original roadmap](history/roadmap-through-mp1.md)
 - [Historical verification](history/verification-through-2026-10.md)
 - [Legacy architecture](history/architecture-through-2c.md)

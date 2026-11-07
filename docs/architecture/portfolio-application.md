@@ -150,17 +150,19 @@ Routine policy-controlled promotion is a future authority transition requiring s
 5. Secrets/private financial evidence must stay out of Git, logs and PRs. Check repository visibility/history before pushing.
 6. Human approval is mandatory for prod migration/import, model acceptance, authoritative Sheets edits, auth changes, deployment and unattended ingest.
 
-## 9. Migration and implementation phases
+## 9. Delivery boundaries
 
-1. **Stabilize current repository:** inventory uncommitted model packages, migration heads, API contracts and UI; commit coherent changes; pass integration tests and browser review.
-2. **Verify cloud topology and schema:** read-only Neon verification, migration graph and recovery rehearsal without authorization bypass.
-3. **First real accepted end-to-end model:** reviewed P-GOOGL package, canonical identity, schema compatibility, scoped preview, separately approved identity/model apply and deployed readback.
-4. **Useful portfolio state:** typed, small source contracts for holdings/cash/targets plus company/listing identities; review and sync, not full workbook.
-5. **Research-to-decision loop:** work with real assessments, ranks, thesis/history, independent proposals and reviewer UI.
-6. **Operational maturity:** security, source freshness, provider quality, failure/recovery UX, cost controls.
-7. **Personal Universe extraction:** platform modules/auth/UI/App Hub/app factory only after Portfolio cloud baseline, per parent architecture.
+[ROADMAP.md](../../ROADMAP.md) owns capability status, dependencies and execution.
+The [product vision](../PRODUCT_VISION.md) defines a useful Portfolio release.
+The minimal canonical portfolio restoration is recorded in the
+[production baseline](../production-canonical-baseline.md). Broader model, market,
+research and decision coverage requires its own reconciled operational evidence.
 
-Roadmap sequencing, task IDs and evidence live **only** in `ROADMAP.md`; this document describes architecture, not task progress.
+Complete source-backed investor workflows before major platform extraction.
+Security, recovery, bounded refresh and proven reusable components develop alongside
+those workflows. Native provider deployments and separate migration/data approvals
+follow the [deployment runbook](../deployment-and-migrations.md). Keep production
+activation separate from implementation and local tests.
 
 ## 10. Architecture decision process
 
@@ -168,4 +170,13 @@ For material change, write short ADR under `docs/architecture/decisions/` with c
 
 ## 11. Open decisions
 
-Exact identity/auth provider and Vercel–Render trust path; initial portfolio bootstrap source contracts; final domain ownership handoff stages; how legacy enterprise return metrics coexist with canonical shareholder IRR in rankings; price/FX/estimate provider precedence; accepted P-GOOGL drift; feature/release cost targets. Resolve with evidence and reviewed decisions, not agent guesswork.
+Outstanding decisions include dated P-GOOGL assumptions and first-model acceptance,
+permitted consensus/international sources, classification and transaction-history
+coverage, model selection/synthesis for decisions, source-ownership transitions,
+hosted reviewer identity, reliable cloud job operation and resource budgets.
+
+Current code uses a production web Basic Auth gate, a trusted server-to-server API
+token and dedicated model proposal roles. Shared personal OIDC/session and app-scoped
+permissions are platform targets. Hosted role configuration still needs operational
+verification. These are distinct from the already recorded authenticated M1 readback.
+Resolve each change through evidence and its review/authorization boundary.
