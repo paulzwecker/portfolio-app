@@ -8,10 +8,10 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                       |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
+| Active checkpoint           | C3.1 held-issuer SEC slice — BUILD. C2.2 local checkpoint awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                          |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | PARTIAL / BUILD. Real importer → PostgreSQL → API → web proxy → desktop/mobile locally verified. Hosted data and refresh cycles pending             |
-| Next ready substantial task | C2.2 INTEGRATE gate after owner merge of #25. Integrate receipt adapter, run comprehensive local acceptance and prepare bounded activation review   |
+| Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 portfolio-scoped SEC bootstrap locally verified. Hosted data/refresh cycles pending     |
+| Next ready substantial task | Finish C3.1 portfolio isolation and dependent-stage failure checks. C2.2 INTEGRATE follows owner merge of #25 and comprehensive local acceptance    |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -116,6 +116,18 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C3.1 adds explicit `db:bootstrap-fundamentals -- preview/prepare --portfolio-id`
+  selection using the exact portfolio's current complete snapshot and explicit
+  Watchlist. Held issuers lead, multiple listings deduplicate to one issuer, and
+  missing CIKs/companyless ETFs remain disclosed. Lifecycle is preserved. Frozen
+  selection survives later holdings/lifecycle changes, while mapping drift stops
+  provider access. Resume now uses the prepared mapping order instead of letting
+  lifecycle ordering invalidate an unchanged identity hash. Twenty-three focused
+  scope/bootstrap tests pass, including isolated importer → Financials/filings API
+  readback, exact decimals, reconciliation and unchanged holdings/targets. This is
+  synthetic/local evidence. Reviewed real CIK mappings and hosted coverage remain
+  outstanding. Complete the dependent-stage and cross-portfolio review next.
 
 - C2.2 actual-API browser rehearsal is LOCAL_VERIFIED for unpriced, FX-outage and
   valued states on desktop/mobile. Synthetic stock/standalone-ETF/FX payloads pass

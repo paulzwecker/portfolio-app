@@ -47,9 +47,14 @@ from portfolio_api.domain.models import (
     ExternalRawPayload,
     FundamentalsBootstrapCheckpoint,
     FundamentalsBootstrapRun,
+    HoldingPosition,
+    HoldingSnapshot,
     LifecycleEvent,
+    Listing,
+    Portfolio,
     ReportedFundamentalBatch,
     ReportedFundamentalObservation,
+    Security,
     SourceDocument,
     SourceDocumentBatch,
 )
@@ -324,17 +329,113 @@ def _mapping_sha256(mappings: Sequence[ReviewedCikMapping]) -> str:
     return _sha256(_canonical_json(manifest).encode("utf-8"))
 
 
+def _portfolio_research_selection(session: Session, portfolio_id: UUID) -> dict[str, Any]:
+    if session.get(Portfolio, portfolio_id) is None:
+        raise FundamentalsBootstrapError("The selected canonical portfolio does not exist.")
+    at = _now()
+    snapshot = session.scalar(
+        select(HoldingSnapshot)
+        .where(
+            HoldingSnapshot.portfolio_id == portfolio_id,
+            HoldingSnapshot.effective_at <= at,
+            HoldingSnapshot.recorded_at <= at,
+        )
+        .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
+        .limit(1)
+    )
+    if snapshot is None or snapshot.completeness != "COMPLETE":
+        raise FundamentalsBootstrapError(
+            "Portfolio-scoped SEC work requires a current complete holdings snapshot."
+        )
+    rows = session.execute(
+        select(HoldingPosition, Listing, Security)
+        .join(Listing, HoldingPosition.listing_id == Listing.id)
+        .join(Security, Listing.security_id == Security.id)
+        .where(HoldingPosition.snapshot_id == snapshot.id)
+        .order_by(Listing.id)
+    ).all()
+    if any(position.quantity is None for position, _listing, _security in rows):
+        raise FundamentalsBootstrapError(
+            "Portfolio-scoped SEC work requires verified quantities in its complete snapshot."
+        )
+    held = {
+        security.company_id
+        for position, _listing, security in rows
+        if security.company_id is not None
+        and position.quantity is not None
+        and position.quantity > 0
+    }
+    lifecycle = _current_lifecycle(session)
+    watchlist = {company_id for company_id, state in lifecycle.items() if state == "WATCHLIST"}
+    companies = session.scalars(select(Company).where(Company.id.in_(held | watchlist))).all()
+    ordered = sorted(
+        companies,
+        key=lambda company: (company.id not in held, company.name.casefold(), str(company.id)),
+    )
+    return {
+        "kind": "held-and-watchlist",
+        "portfolio_id": str(portfolio_id),
+        "holding_snapshot_id": str(snapshot.id),
+        "companies": [
+            {
+                "company_id": str(company.id),
+                "company_name": company.name,
+                "lifecycle": lifecycle.get(company.id),
+                "selection_basis": [
+                    basis
+                    for basis, selected in (("HELD", held), ("WATCHLIST", watchlist))
+                    if company.id in selected
+                ],
+            }
+            for company in ordered
+        ],
+        "companyless_held_listings": [
+            {
+                "listing_id": str(listing.id),
+                "security_id": str(security.id),
+                "ticker": listing.ticker,
+                "venue": listing.venue,
+                "currency": listing.currency,
+                "security_type": security.security_type,
+                "reason": "NO_CANONICAL_COMPANY_ISSUER",
+            }
+            for position, listing, security in rows
+            if security.company_id is None
+            and position.quantity is not None
+            and position.quantity > 0
+        ],
+        "excluded_zero_quantity_listing_ids": [
+            str(listing.id) for position, listing, _security in rows if position.quantity == 0
+        ],
+    }
+
+
 def preview_fundamentals_bootstrap(
     session: Session,
     *,
     target_environment: str,
     company_id: UUID | None = None,
+    portfolio_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Return a request inventory from reviewed database mappings without network access."""
     if target_environment not in {"development", "rehearsal", "production"}:
         raise FundamentalsBootstrapError("The requested SEC bootstrap target is unsupported.")
+    if company_id is not None and portfolio_id is not None:
+        raise FundamentalsBootstrapError("Select a company or a portfolio, separately.")
     mappings = _load_reviewed_cik_mappings(session, company_id)
     unmapped = _unmapped_active_companies(session, mappings) if company_id is None else []
+    selection: dict[str, Any] = {"kind": "company" if company_id else "all-reviewed"}
+    if company_id is not None:
+        selection["company_id"] = str(company_id)
+    if portfolio_id is not None:
+        selection = _portfolio_research_selection(session, portfolio_id)
+        order = {item["company_id"]: index for index, item in enumerate(selection["companies"])}
+        mappings = sorted(
+            (item for item in mappings if str(item.company_id) in order),
+            key=lambda item: order[str(item.company_id)],
+        )
+        mapped_ids = {str(item.company_id) for item in mappings}
+        unmapped = [item for item in selection["companies"] if item["company_id"] not in mapped_ids]
     canonical_import = (
         canonical_import_readiness(session) if target_environment == "production" else None
     )
@@ -349,6 +450,7 @@ def preview_fundamentals_bootstrap(
         "target_environment": target_environment,
         "canonical_import_readiness": canonical_import,
         "bootstrap_version": BOOTSTRAP_VERSION,
+        "selection": selection,
         "mapping_sha256": _mapping_sha256(mappings),
         "provider": SEC_PROVIDER_ID,
         "stages": list(STAGE_ORDER),
@@ -372,14 +474,29 @@ def prepare_fundamentals_bootstrap(
     *,
     target_environment: str,
     company_id: UUID | None = None,
+    portfolio_id: UUID | None = None,
 ) -> FundamentalsBootstrapRun:
     preview = preview_fundamentals_bootstrap(
-        session, target_environment=target_environment, company_id=company_id
+        session,
+        target_environment=target_environment,
+        company_id=company_id,
+        portfolio_id=portfolio_id,
     )
-    mappings = _load_reviewed_cik_mappings(session, company_id)
+    order = {item["mapping_identifier_id"]: index for index, item in enumerate(preview["mappings"])}
+    mappings = sorted(
+        (
+            item
+            for item in _load_reviewed_cik_mappings(session, company_id)
+            if str(item.mapping_id) in order
+        ),
+        key=lambda item: order[str(item.mapping_id)],
+    )
     mapping_hash = str(preview["mapping_sha256"])
+    if _mapping_sha256(mappings) != mapping_hash:
+        raise FundamentalsBootstrapError("The reviewed SEC mappings changed during preparation.")
     scope = {
         "bootstrap_version": BOOTSTRAP_VERSION,
+        "selection": preview["selection"],
         "provider_id": SEC_PROVIDER_ID,
         "company_facts_provider_schema_version": "companyfacts-v1",
         "company_facts_normalizer_version": SEC_NORMALIZER_VERSION,
@@ -1047,12 +1164,16 @@ def execute_fundamentals_bootstrap(
             }
             session.commit()
             return run.report
-        scoped_ids = {
-            item.get("mapping_identifier_id") for item in _dict_items(run.scope.get("mappings"))
+        mapping_order = {
+            item.get("mapping_identifier_id"): index
+            for index, item in enumerate(_dict_items(run.scope.get("mappings")))
         }
-        scoped_mappings = [item for item in current_mappings if str(item.mapping_id) in scoped_ids]
+        scoped_mappings = sorted(
+            (item for item in current_mappings if str(item.mapping_id) in mapping_order),
+            key=lambda item: mapping_order[str(item.mapping_id)],
+        )
         if (
-            len(scoped_mappings) != len(scoped_ids)
+            len(scoped_mappings) != len(mapping_order)
             or _mapping_sha256(scoped_mappings) != run.mapping_sha256
         ):
             run.status = "BLOCKED"
@@ -1424,6 +1545,7 @@ def _run_report(
         "mapping_sha256": run.mapping_sha256,
         "bootstrap_version": run.bootstrap_version,
         "target_environment": run.target_environment,
+        "selection": run.scope.get("selection", {"kind": "legacy-reviewed"}),
         "canonical_import_readiness": (
             canonical_import_readiness(session, run_prepared_at=run.prepared_at)
             if run.target_environment == "production"
@@ -1589,7 +1711,13 @@ def _parser() -> argparse.ArgumentParser:
             choices=("development", "rehearsal", "production"),
             required=True,
         )
-        subparser.add_argument("--company-id", type=UUID)
+        scope = subparser.add_mutually_exclusive_group()
+        scope.add_argument("--company-id", type=UUID)
+        scope.add_argument(
+            "--portfolio-id",
+            type=UUID,
+            help="Select held issuers in this portfolio, then explicit Watchlist companies.",
+        )
         subparser.add_argument("--report", type=Path)
     for command in ("run", "resume", "status", "reconcile"):
         subparser = commands.add_parser(command)
@@ -1670,6 +1798,7 @@ def main(argv: list[str] | None = None) -> int:
                     session,
                     target_environment=args.target_environment,
                     company_id=args.company_id,
+                    portfolio_id=args.portfolio_id,
                 )
             elif args.command == "prepare":
                 with session.begin():
@@ -1677,6 +1806,7 @@ def main(argv: list[str] | None = None) -> int:
                         session,
                         target_environment=args.target_environment,
                         company_id=args.company_id,
+                        portfolio_id=args.portfolio_id,
                     )
                 session.refresh(prepared_run)
                 report = _run_report(session, prepared_run)
