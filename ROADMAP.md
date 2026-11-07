@@ -42,7 +42,7 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | MP1.F4 Cross-method proof                | LOCAL_VERIFIED | DCF/owner-cash-flow/residual-income retain independent evidence, revisions and return definitions |
 | MP1.F5 Integration gate                  | LOCAL_VERIFIED | Focused/DB/UI checks, independent review, quality checks and one updated PR                       |
 | MP1.R1 Publication review safeguards     | LOCAL_VERIFIED | Typed source/native values and caller-bound preview hash; stale reviewer tabs remain blocked      |
-| MP1.R2 Reviewer workflow                 | In progress    | Actual acceptance outcome, preserved unresolved rationale, explicit parity and immutable identity |
+| MP1.R2 Reviewer workflow                 | LOCAL_VERIFIED | Actual acceptance outcome, preserved unresolved rationale, explicit parity and immutable identity |
 
 ## Next milestones
 
@@ -74,6 +74,8 @@ Original task definitions, decisions and evidence remain in the
 | 2026-11-07 | MP1.R1/R2 inspection    | PR #23 remains open; clean branch/worktree and preserved stash. Independent review found false acceptance feedback and server-only preview approval. Baseline desktop/mobile review tests pass                                  | Verify caller-bound acceptance and reviewer evidence |
 
 | 2026-11-07 | MP1.R1 | Typed parity evidence, 14 unit cases, six isolated PostgreSQL checks plus three API/replay checks, strict backend types and lint pass. Production controls remain disabled | Verify reviewer feedback and desktop/mobile interaction |
+
+| 2026-11-07 | MP1.R2 / review | Exact source/native values, signed deltas, hashes and timestamps are visible through shared responsive tables. Six affected desktop/mobile checks pass, including refreshed/conflicted acceptance feedback, keyboard disclosure, preserved rationale and explicit reconfirmation. Independent review correction passes 16 API unit cases and 14 isolated PostgreSQL tests | Run final integration checks; update existing PR #23 |
 
 ## Upkeep
 

@@ -5,6 +5,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from decimal import localcontext
 from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
@@ -159,6 +160,21 @@ def test_publication_review_keeps_full_precision_signed_differences() -> None:
         }
         for field in fields
     ]
+
+
+@pytest.mark.parametrize("native", ["0.000000100000000001", "-0.000000100000000001"])
+def test_publication_parity_tolerance_is_independent_of_ambient_precision(native: str) -> None:
+    fields = ("bear_fv", "base_fv", "bull_fv", "weighted_fv")
+    item = FinancialModelPublicationV1.model_validate(publication({}, dict.fromkeys(fields, "0")))
+    with localcontext() as context:
+        context.prec = 6
+        result = reconcile_publication(
+            item, {"status": "READY", "calculated_outputs": dict.fromkeys(fields, native)}
+        )
+    evidence = result["publication"]
+    assert isinstance(evidence, dict)
+    assert evidence["parity_status"] == "MISMATCH"
+    assert result["status"] == "INVALID"
 
 
 @pytest.mark.parametrize("change", ["values", "metadata", "outage"])

@@ -69,7 +69,7 @@ def reconcile_publication(
                     "published_value": published,
                     "native_value": native_value,
                     "difference": difference,
-                    "matches": abs(difference) <= PARITY_TOLERANCE
+                    "matches": difference.copy_abs() <= PARITY_TOLERANCE
                     if difference is not None
                     else None,
                 }

@@ -4351,6 +4351,22 @@ test("Research proposal review requires an explicit final acceptance and stale-b
       ],
     },
     previewed_at: observedAt,
+    preview_fingerprint: "a".repeat(64),
+    publication: {
+      contract_sha256: "d".repeat(64),
+      published_at: observedAt,
+      parity_status: "MATCH",
+      absolute_tolerance: "0.0000001",
+      comparisons: ["bear_fv", "base_fv", "bull_fv", "weighted_fv"].map(
+        (field) => ({
+          field,
+          published_value: "125.123456789012345678",
+          native_value: "125.123456789012345678",
+          difference: "0",
+          matches: true,
+        }),
+      ),
+    },
     accepted_revision_id: null,
     reviewer: null,
     decision_note: null,
@@ -4439,7 +4455,18 @@ test("Research proposal review requires an explicit final acceptance and stale-b
     }),
   );
   await page.route("**/api/research/google-sheets-sync/candidates", (route) =>
-    route.fulfill({ json: [baseModel, conflictedModel] }),
+    route.fulfill({
+      json: [
+        baseModel,
+        {
+          ...conflictedModel,
+          status: "READY",
+          issue: null,
+          preview_status: "READY",
+          preview_data: { status: "READY", changes: [] },
+        },
+      ],
+    }),
   );
   await page.route(
     "**/api/research/google-sheets-research-sync/candidates",
@@ -4458,8 +4485,21 @@ test("Research proposal review requires an explicit final acceptance and stale-b
       expect(route.request().postDataJSON()).toEqual({
         reviewer: "Research reviewer",
         decision_note: "Reviewed the source and deterministic impact preview.",
+        preview_fingerprint: (acceptCalls === 0 ? "a" : "b").repeat(64),
       });
       acceptCalls += 1;
+      if (acceptCalls === 1) {
+        await route.fulfill({
+          json: {
+            ...baseModel,
+            status: "READY",
+            preview_fingerprint: "b".repeat(64),
+            issue:
+              "Preview changed since it was last reviewed. Review the refreshed differences before accepting.",
+          },
+        });
+        return;
+      }
       await route.fulfill({
         json: {
           ...baseModel,
@@ -4472,6 +4512,10 @@ test("Research proposal review requires an explicit final acceptance and stale-b
         },
       });
     },
+  );
+  await page.route(
+    `**/api/research/google-sheets-sync/candidates/${conflictedModel.id}/accept`,
+    (route) => route.fulfill({ json: conflictedModel }),
   );
   await page.route(
     `**/api/research/google-sheets-sync/candidates/${conflictedModel.id}/reject`,
@@ -4501,6 +4545,37 @@ test("Research proposal review requires an explicit final acceptance and stale-b
   ).toBeVisible();
   await expect(page.getByText("3 proposals awaiting a decision")).toBeVisible();
   await expect(page.getByText("Research basis for the proposal")).toBeVisible();
+  const calculationCheck = page.getByRole("region", {
+    name: "Published model calculation check",
+  });
+  await expect(
+    calculationCheck.getByText("Values match", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    calculationCheck
+      .getByText("125.123456789012345678", { exact: true })
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await calculationCheck
+    .getByText("Publication identity and review context")
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    calculationCheck.getByText("d".repeat(64), { exact: true }),
+  ).toBeVisible();
+  await expect(
+    calculationCheck.getByText("a".repeat(64), { exact: true }),
+  ).toBeVisible();
+  await calculationCheck.screenshot({
+    path: test.info().outputPath("publication-review.png"),
+  });
+  await calculationCheck
+    .getByRole("heading", { name: "Source calculation check" })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: test.info().outputPath("publication-review-viewport.png"),
+  });
   await expect(
     page.getByText(
       "No supporting research evidence was linked to this model proposal.",
@@ -4520,9 +4595,28 @@ test("Research proposal review requires an explicit final acceptance and stale-b
   expect(acceptCalls).toBe(0);
   await page.getByRole("button", { name: "Confirm acceptance" }).click();
   await expect(
+    page.getByText("Accepted into canonical history.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByText(
+        "Preview changed since it was last reviewed. Review the refreshed differences before accepting.",
+      )
+      .first(),
+  ).toBeVisible();
+  await expect(page.getByLabel("Review rationale")).toHaveValue(
+    "Reviewed the source and deterministic impact preview.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Confirm acceptance" }),
+  ).toHaveCount(0);
+  expect(acceptCalls).toBe(1);
+  await page.getByRole("button", { name: "Accept proposal" }).click();
+  await page.getByRole("button", { name: "Confirm acceptance" }).click();
+  await expect(
     page.getByText("Accepted into canonical history."),
   ).toBeVisible();
-  expect(acceptCalls).toBe(1);
+  expect(acceptCalls).toBe(2);
 
   await page.getByRole("button", { name: /Portfolio assessment/ }).click();
   await page.getByLabel("Reviewer", { exact: true }).fill("Risk reviewer");
@@ -4535,13 +4629,26 @@ test("Research proposal review requires an explicit final acceptance and stale-b
     .getByRole("checkbox", { name: /stale portfolio baseline/i })
     .check();
   await expect(acceptRisk).toBeEnabled();
-  expect(acceptCalls).toBe(1);
+  expect(acceptCalls).toBe(2);
 
   await page.getByRole("button", { name: /Conflicted Company/ }).click();
+  await page
+    .getByLabel("Review rationale")
+    .fill("Inspect the concurrent revision conflict.");
+  await page.getByRole("button", { name: "Accept proposal" }).click();
+  await page.getByRole("button", { name: "Confirm acceptance" }).click();
   await expect(
-    page.getByText(
-      "The accepted model revision changed after this proposal was authored.",
-    ),
+    page.getByText("Accepted into canonical history.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Review rationale")).toHaveValue(
+    "Inspect the concurrent revision conflict.",
+  );
+  await expect(
+    page
+      .getByText(
+        "The accepted model revision changed after this proposal was authored.",
+      )
+      .first(),
   ).toBeVisible();
   const acceptConflict = page.getByRole("button", { name: "Accept proposal" });
   await expect(acceptConflict).toBeDisabled();
