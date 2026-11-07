@@ -174,7 +174,7 @@ Resolve the release/schema mismatch through a separately reviewed migration step
 before requesting a production preview. No live Google or Neon request was
 performed while implementing this vertical slice.
 
-### 3. Apply boundary (not authorized by this implementation task)
+### 3. Apply boundary (separate owner authorization required)
 
 Application is a separate, explicit operator action. It requires the source and
 target-bound preview hash to be reviewed, and the exact same source pair and target
@@ -201,14 +201,17 @@ npm run db:bootstrap-sheets-minimal -- apply `
   --confirm-minimal-sheets-contract-reviewed
 ```
 
-This document and the current task do not authorize that command. The command
-rechecks the exact target guard and canonical state inside the transaction, refuses
-unrelated non-empty canonical state, and uses the existing append-only bootstrap
-receipt plus legacy import transaction. An exact replay returns `ALREADY_APPLIED`
-only when the stored projection still matches its receipt; otherwise it stops for
+This runbook is procedural, not authorization. The initial minimal import was
+separately authorized and completed as recorded in the
+[canonical production baseline](production-canonical-baseline.md). Any later
+apply requires new, exact-scope owner authorization. The command rechecks the
+target guard and canonical state inside the transaction, refuses unrelated
+non-empty canonical state, and uses the existing append-only bootstrap receipt
+plus legacy import transaction. An exact replay returns `ALREADY_APPLIED` only
+when the stored projection still matches its receipt; otherwise it stops for
 reconciliation. Accepted source changes require a new capture and new preview.
 
-## Verification and present readiness
+## Implementation verification and current production status
 
 The implementation has synthetic service-account/API response fixtures and
 isolated PostgreSQL tests that create a unique temporary schema in the explicit
@@ -217,8 +220,11 @@ source mutation/truncation/errors, exact decimal and missing/zero states, market
 listing reconciliation, a no-write preview, transaction rollback, apply, and
 read-only replay. They do not use production data or call live Google/Neon.
 
-Implementation readiness is not source or production readiness. No live snapshot,
-accepted Market Data schema, source row count, held-listing count, production diff,
-or production apply is claimed by this implementation. The real capture and
-preview must be run and reviewed by the operator. Production apply remains outside
-scope and requires its own explicit authorization.
+The statements above describe implementation-level fixtures, not live source or
+production evidence. The initial minimal import has since been applied once under
+separate owner authorization. Its verified scope, counts, receipt status,
+exclusions, reconciliation and recovery retention are recorded in the
+[canonical production baseline](production-canonical-baseline.md). Do not infer
+that the entire workbook was imported or that a repeat apply is appropriate.
+Future source changes require a new frozen source pair and read-only preview;
+any additional production apply requires separate owner authorization.
