@@ -4128,6 +4128,22 @@ class GoogleSheetsConnectionTestRead(Contract):
     message: str
 
 
+class ModelPublicationValueComparisonRead(Contract):
+    field: Literal["bear_fv", "base_fv", "bull_fv", "weighted_fv"]
+    published_value: ModelNumber
+    native_value: ModelNumber | None
+    difference: FixedDecimal | None
+    matches: bool | None
+
+
+class ModelPublicationParityRead(Contract):
+    contract_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    published_at: datetime
+    parity_status: Literal["MATCH", "MISMATCH", "UNAVAILABLE"]
+    absolute_tolerance: ModelNumber
+    comparisons: list[ModelPublicationValueComparisonRead] = Field(min_length=4, max_length=4)
+
+
 class GoogleSheetsSyncCandidateRead(Contract):
     id: UUID
     status: Literal["PENDING", "READY", "CONFLICT", "INVALID", "NO_CHANGES", "ACCEPTED", "REJECTED"]
@@ -4155,6 +4171,8 @@ class GoogleSheetsSyncCandidateRead(Contract):
     issue: str | None
     preview_status: str | None
     preview_data: dict[str, object] | None
+    preview_fingerprint: str | None = None
+    publication: ModelPublicationParityRead | None = None
     previewed_at: datetime | None
     accepted_revision_id: UUID | None
     reviewer: str | None
@@ -4667,6 +4685,7 @@ class CompanyFinancialStatementsRead(Contract):
 class GoogleSheetsSyncReviewRequest(Contract):
     reviewer: Annotated[str, Field(min_length=1, max_length=160)]
     decision_note: Annotated[str, Field(min_length=1, max_length=4000)] | None = None
+    preview_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = None
 
 
 class GoogleSheetsSyncRejectRequest(Contract):

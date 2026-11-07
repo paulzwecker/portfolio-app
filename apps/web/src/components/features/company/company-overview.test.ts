@@ -16,7 +16,7 @@ const model = (
   }) as ModelOutputCurrentModel;
 
 describe("Company overview model summary", () => {
-  it("prefers a published complete output without recalculating values", () => {
+  it("requires explicit model choice when independent outputs coexist", () => {
     const value = {
       models: [
         model("PUBLISHED", "PARTIAL"),
@@ -25,9 +25,12 @@ describe("Company overview model summary", () => {
       ],
     } as CompanyModelOutputsCurrent;
 
-    expect(selectPrimaryModelOutput(value)?.model_key).toBe(
-      "PUBLISHED-COMPLETE",
-    );
+    expect(selectPrimaryModelOutput(value)).toBeNull();
+    expect(
+      selectPrimaryModelOutput({
+        models: [model("PUBLISHED", "COMPLETE")],
+      } as CompanyModelOutputsCurrent)?.model_key,
+    ).toBe("PUBLISHED-COMPLETE");
   });
 
   it("keeps unavailable and incomplete model states explicit", () => {

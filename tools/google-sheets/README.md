@@ -39,13 +39,18 @@ their separate contract and require explicit review.
    decimal notation and leave them as text; do not add formulas or currency
    conversions. The sheet stores assumptions, not accepted calculations.
 7. Use **Portfolio model → Write edits back to contract JSON**.
-8. To keep the file handoff, copy the updated JSON from `Contract!A1` and preview it
+8. For publication, create `Published Fair Values` with `bear_fv`, `base_fv`,
+   `bull_fv`, `weighted_fv` in A1:D1 and completed source values as exact decimal
+   text in A2:D2. Use model currency per listing share. Native preview compares
+   fair values with `1e-7` tolerance. See the
+   [publication contract](../../docs/model-publications.md).
+9. To keep the file handoff, copy the updated JSON from `Contract!A1` and preview it
    in the matching Company Explorer model. For direct sync, choose **Portfolio
    model → Publish candidate to application inbox** instead. It appends a chunked
    contract record to `Application Model Sync Inbox` without changing older entries.
-9. In `/model-sync`, check for changes, preview the candidate and inspect assumption
-   and recalculated-output differences. A named reviewer must explicitly accept a
-   `READY` candidate; the app never auto-accepts a model change.
+10. In `/model-sync`, check for changes, preview the candidate and inspect assumption
+    and recalculated-output differences. A named reviewer must explicitly accept a
+    `READY` candidate; the app never auto-accepts a model change.
 
 For `1.2.0` and `2.1.0`, first publish the supporting forecast, research revision or
 thesis development through its canonical research contract. Then fill the model

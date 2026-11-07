@@ -122,7 +122,8 @@ application database URL to the agent. Do not automate reviewer actions.
 
 The migration `9f2a6d4c81b7` adds only the proposal inbox table and indexes.
 Local schema integration tests use the repository's isolated
-`TEST_DATABASE_URL` schema fixture. This feature has not been activated on
-Neon, deployed, or authorized for unattended review. Environments whose schema
+`TEST_DATABASE_URL` schema fixture. The production baseline records schema `9f2a6d4c81b7`. Schema availability and
+proposal-role/workflow activation require separate verification. Current activation
+evidence belongs in the roadmap. Unattended review requires its own approved policy. Environments whose schema
 has not applied this migration fail closed through the existing database/API
 readiness behavior.

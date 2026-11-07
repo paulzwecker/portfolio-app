@@ -15303,6 +15303,17 @@
             ],
             "title": "Preview Data"
           },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
+          },
           "preview_status": {
             "anyOf": [
               {
@@ -15330,6 +15341,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/FinancialModelProposalProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelPublicationParityRead"
               },
               {
                 "type": "null"
@@ -15534,6 +15555,18 @@
               }
             ],
             "title": "Decision Note"
+          },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
           },
           "reviewer": {
             "maxLength": 160,
@@ -17844,6 +17877,119 @@
           "forward_fundamental_cagr"
         ],
         "title": "ModelOutputSnapshotRead",
+        "type": "object"
+      },
+      "ModelPublicationParityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "absolute_tolerance": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Absolute Tolerance",
+            "type": "string"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/ModelPublicationValueComparisonRead"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "contract_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Contract Sha256",
+            "type": "string"
+          },
+          "parity_status": {
+            "enum": [
+              "MATCH",
+              "MISMATCH",
+              "UNAVAILABLE"
+            ],
+            "title": "Parity Status",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_sha256",
+          "published_at",
+          "parity_status",
+          "absolute_tolerance",
+          "comparisons"
+        ],
+        "title": "ModelPublicationParityRead",
+        "type": "object"
+      },
+      "ModelPublicationValueComparisonRead": {
+        "additionalProperties": false,
+        "properties": {
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "field": {
+            "enum": [
+              "bear_fv",
+              "base_fv",
+              "bull_fv",
+              "weighted_fv"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "matches": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matches"
+          },
+          "native_value": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Value"
+          },
+          "published_value": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Published Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "published_value",
+          "native_value",
+          "difference",
+          "matches"
+        ],
+        "title": "ModelPublicationValueComparisonRead",
         "type": "object"
       },
       "ModelRevisionProposalDecisionRead": {

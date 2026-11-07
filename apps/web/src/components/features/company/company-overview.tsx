@@ -53,25 +53,19 @@ const scoreDimensions: ScoreDimension[] = [
   "RISK",
 ];
 
-function compactPercent(value: string | null | undefined) {
-  return formatPercent(value ?? null, 2, "No target");
+function compactPercent(
+  value: string | null | undefined,
+  missing = "Unavailable",
+) {
+  return formatPercent(value ?? null, 2, missing);
 }
 
-/** Choose an existing canonical output; never derive or fabricate a valuation in the UI. */
+/** A company summary uses a value only when its model identity is unambiguous. */
 export function selectPrimaryModelOutput(
   value: CompanyModelOutputsCurrent | undefined,
 ) {
   const models = value?.models ?? [];
-  return (
-    models.find(
-      (model) =>
-        model.status === "PUBLISHED" &&
-        model.snapshot.output_quality === "COMPLETE",
-    ) ??
-    models.find((model) => model.status === "PUBLISHED") ??
-    models[0] ??
-    null
-  );
+  return models.length === 1 ? models[0] : null;
 }
 
 function scoreFor(
@@ -224,7 +218,11 @@ export function CompanyOverview({
           <MetricCard
             label={modelReturnLabel(model)}
             value={compactPercent(model?.snapshot.expected_cash_flow_irr)}
-            note={modelReturnNote(model)}
+            note={
+              (models.data?.models.length ?? 0) > 1
+                ? "Select an independent model in Valuation"
+                : modelReturnNote(model)
+            }
             tone={model ? "default" : "warning"}
           />
           <MetricCard
@@ -436,6 +434,11 @@ export function CompanyOverview({
                       "Output is partial; unavailable fields remain explicit.")}
                 </p>
               </>
+            ) : (models.data?.models.length ?? 0) > 1 ? (
+              <EmptyState
+                title="Multiple independent model outputs"
+                description="Select a model in Valuation to inspect its listing, methodology and revision. Company-level synthesis requires a reviewed valuation contract."
+              />
             ) : models.error ? (
               <EmptyState
                 title="Valuation unavailable"
@@ -567,7 +570,7 @@ export function CompanyOverview({
                   />
                   <ModelMetric
                     label="Strategic target"
-                    value={compactPercent(detail.target_weight)}
+                    value={compactPercent(detail.target_weight, "No target")}
                   />
                   <ModelMetric
                     label="Allocation gap"

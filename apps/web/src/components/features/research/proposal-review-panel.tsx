@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusIndicator } from "@/components/app/status-indicator";
 import { SourceReference } from "@/components/app/source-reference";
+import { ModelPublicationReview } from "@/components/features/modeling/model-publication-review";
 import {
   isGoogleSheetsResearchCandidate,
   isGoogleSheetsResearchSyncCheck,
@@ -198,7 +199,10 @@ export function ProposalReviewPanel({
   const [search, setSearch] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [overrides, setOverrides] = useState<Record<string, Proposal>>({});
-  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewMessage, setReviewMessage] = useState<{
+    text: string;
+    complete: boolean;
+  } | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState("");
   const [checkError, setCheckError] = useState("");
@@ -309,7 +313,10 @@ export function ProposalReviewPanel({
 
   function updateProposal(next: Proposal, message: string) {
     setOverrides((current) => ({ ...current, [next.key]: next }));
-    setReviewMessage(message);
+    setReviewMessage({
+      text: message,
+      complete: ["ACCEPTED", "REJECTED"].includes(next.status),
+    });
   }
 
   const selected =
@@ -350,9 +357,14 @@ export function ProposalReviewPanel({
       {reviewMessage && (
         <p
           role="status"
-          className="rounded-md border border-positive/30 bg-positive/5 p-3 text-sm"
+          className={
+            "rounded-md border p-3 text-sm " +
+            (reviewMessage.complete
+              ? "border-positive/30 bg-positive/5"
+              : "border-warning/40 bg-warning/5")
+          }
         >
-          {reviewMessage}
+          {reviewMessage.text}
         </p>
       )}
 
@@ -478,8 +490,14 @@ function ProposalDetail({
   const isStaleRisk =
     proposal.kind === "RISK" && proposal.status === "STALE_BASELINE";
   const hasPreview = proposal.preview !== null;
+  const modelPreviewFingerprint =
+    proposal.kind === "MODEL"
+      ? (proposal.candidate as GoogleSheetsSyncCandidate).preview_fingerprint
+      : null;
   const canAccept =
-    hasPreview && (proposal.status === "READY" || (isStaleRisk && ackStale));
+    hasPreview &&
+    (proposal.kind !== "MODEL" || Boolean(modelPreviewFingerprint)) &&
+    (proposal.status === "READY" || (isStaleRisk && ackStale));
   const canReject = !["ACCEPTED", "REJECTED"].includes(proposal.status);
 
   async function action(actionType: "preview" | "accept" | "reject") {
@@ -495,7 +513,11 @@ function ProposalDetail({
       const body =
         actionType === "accept"
           ? proposal.kind === "MODEL"
-            ? { reviewer: reviewer.trim(), decision_note: note.trim() }
+            ? {
+                reviewer: reviewer.trim(),
+                decision_note: note.trim(),
+                preview_fingerprint: modelPreviewFingerprint,
+              }
             : proposal.kind === "RISK"
               ? {
                   reviewer: reviewer.trim(),
@@ -552,12 +574,16 @@ function ProposalDetail({
         next,
         actionType === "preview"
           ? "Preview refreshed from the existing domain validator."
-          : actionType === "accept"
+          : actionType === "accept" && next.status === "ACCEPTED"
             ? "Accepted into canonical history."
-            : "Rejected with the reviewer decision retained.",
+            : actionType === "reject" && next.status === "REJECTED"
+              ? "Rejected with the reviewer decision retained."
+              : (next.issue ??
+                "Review the updated preview before confirming a decision."),
       );
-      if (actionType !== "preview") setNote("");
+      if (["ACCEPTED", "REJECTED"].includes(next.status)) setNote("");
     } catch (failure) {
+      setConfirm(null);
       setError(
         failure instanceof Error
           ? failure.message
@@ -600,6 +626,12 @@ function ProposalDetail({
         <dl className="grid gap-3 rounded-md border bg-muted/20 p-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
           <Meta label="External revision" value={proposal.externalRevision} />
           <Meta label="Canonical base revision" value={proposal.baseRevision} />
+          {proposal.kind === "MODEL" && (
+            <Meta
+              label="Canonical model"
+              value={(proposal.candidate as GoogleSheetsSyncCandidate).model_id}
+            />
+          )}
           <Meta label="Author" value={proposal.author} />
           <Meta
             label="Observed / authored"
@@ -654,9 +686,14 @@ function ProposalDetail({
           </p>
         )}
         {proposal.kind === "MODEL" && (
-          <ModelEvidence
-            candidate={proposal.candidate as GoogleSheetsSyncCandidate}
-          />
+          <>
+            <ModelPublicationReview
+              candidate={proposal.candidate as GoogleSheetsSyncCandidate}
+            />
+            <ModelEvidence
+              candidate={proposal.candidate as GoogleSheetsSyncCandidate}
+            />
+          </>
         )}
         {proposal.kind === "RISK" && isStaleRisk && (
           <p className="rounded-md border border-warning/40 bg-warning/5 p-3 text-sm">

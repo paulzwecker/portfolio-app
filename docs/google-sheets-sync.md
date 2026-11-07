@@ -45,6 +45,15 @@ and target revision. They are not canonical Risk scores or deterministic exposur
 calculations and cannot modify portfolio or model state. See
 [risk-assessments.md](risk-assessments.md).
 
+## Explicit model publications
+
+New model publications use [FinancialModelPublicationV1](model-publications.md)
+over the existing portable contract. The publish action freezes the contract and
+four source fair values. Preview and acceptance check native parity. Existing
+bare portable contracts remain replayable. The reader validates two bounded row
+reads and source identity. Reused revision IDs and mismatched inbox identities
+remain blocking throughout review.
+
 ## Workbook inbox contract
 
 The workbook adapter in `tools/google-sheets/CanonicalModelContract.gs` adds an
@@ -116,10 +125,13 @@ inbox, research tables and Apps Script workflows are not write targets.
    GOOGLE_SHEETS_SPREADSHEET_ID=the-explicit-spreadsheet-id
    GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE=C:\Users\you\AppData\Local\PortfolioResearch\google-sheets-reader.json
    GOOGLE_SHEETS_SYNC_TAB=Application Model Sync Inbox
-   GOOGLE_SHEETS_POLL_SECONDS=3600
+   GOOGLE_SHEETS_POLL_SECONDS=0
    ```
 
-4. Run `npm run db:migrate`, then `npm run dev`.
+4. Keep recurring operations and cloud ingestion disabled during setup. Verify
+   schema readiness using the [database target](database-write-targets.md) and
+   [migration](deployment-and-migrations.md) runbooks. Migrations require their own
+   reviewed target and authorization. Start the local application with `npm run dev`.
 5. Open `/model-sync`, use **Test workbook connection**, and confirm the configured
    inbox tab exists. The test reports workbook access separately from inbox setup.
 6. Install/update the Apps Script adapter in the workbook and publish one
@@ -158,6 +170,13 @@ uses the existing locked, optimistic-base append operation and stores the source
 workbook URL in revision provenance. Accepted/rejected inbox decisions are final;
 an identical replay does not create another canonical revision. No investment
 assumption change is automatically accepted.
+
+The current reviewer sends the exact `preview_fingerprint` shown by its candidate
+response. Published-model acceptance requires this fingerprint, preventing another
+reviewer tab's refresh from authorizing unseen changes. A changed or blocked
+acceptance result preserves the review note and requires renewed review and
+confirmation. The [publication comparison](model-publications.md) exposes exact
+source/native values and the immutable source identity alongside ordinary diffs.
 
 The backend does not treat Google Sheets values as consensus. Agent-written model
 assumptions remain part of a reviewed model revision, distinct from third-party

@@ -178,6 +178,8 @@ export type GoogleSheetsSyncRun =
   components["schemas"]["GoogleSheetsSyncRunRead"];
 export type GoogleSheetsSyncCandidate =
   components["schemas"]["GoogleSheetsSyncCandidateRead"];
+export type ModelPublicationParity =
+  components["schemas"]["ModelPublicationParityRead"];
 export type FinancialModelEvidenceReference =
   components["schemas"]["FinancialModelEvidenceReference"];
 export type FinancialModelEvidenceRead =
@@ -5301,6 +5303,36 @@ export function isGoogleSheetsSyncRun(
   );
 }
 
+export function isModelPublicationParity(
+  value: unknown,
+): value is ModelPublicationParity {
+  return (
+    isRecord(value) &&
+    string(value.contract_sha256) &&
+    /^[0-9a-f]{64}$/.test(value.contract_sha256) &&
+    timestamp(value.published_at) &&
+    ["MATCH", "MISMATCH", "UNAVAILABLE"].includes(
+      value.parity_status as string,
+    ) &&
+    decimal(value.absolute_tolerance) &&
+    Array.isArray(value.comparisons) &&
+    value.comparisons.length === 4 &&
+    array(
+      value.comparisons,
+      (item) =>
+        isRecord(item) &&
+        ["bear_fv", "base_fv", "bull_fv", "weighted_fv"].includes(
+          item.field as string,
+        ) &&
+        signedDecimal(item.published_value) &&
+        (item.native_value === null || signedDecimal(item.native_value)) &&
+        (item.difference === null || signedDecimal(item.difference)) &&
+        (item.matches === null || typeof item.matches === "boolean"),
+    ) &&
+    new Set(value.comparisons.map((item) => item.field)).size === 4
+  );
+}
+
 export function isGoogleSheetsSyncCandidate(
   value: unknown,
 ): value is GoogleSheetsSyncCandidate {
@@ -5344,6 +5376,13 @@ export function isGoogleSheetsSyncCandidate(
     nullableString(value.issue) &&
     nullableString(value.preview_status) &&
     (value.preview_data === null || isRecord(value.preview_data)) &&
+    (value.preview_fingerprint === undefined ||
+      value.preview_fingerprint === null ||
+      (string(value.preview_fingerprint) &&
+        /^[0-9a-f]{64}$/.test(value.preview_fingerprint))) &&
+    (value.publication === undefined ||
+      value.publication === null ||
+      isModelPublicationParity(value.publication)) &&
     (value.previewed_at === null || timestamp(value.previewed_at)) &&
     timestamp(value.first_observed_at) &&
     timestamp(value.last_observed_at) &&

@@ -6556,11 +6556,14 @@ export interface components {
             preview_data: {
                 [key: string]: unknown;
             } | null;
+            /** Preview Fingerprint */
+            preview_fingerprint?: string | null;
             /** Preview Status */
             preview_status: string | null;
             /** Previewed At */
             previewed_at: string | null;
             proposal?: components["schemas"]["FinancialModelProposalProvenance"] | null;
+            publication?: components["schemas"]["ModelPublicationParityRead"] | null;
             /** Rationale */
             rationale: string | null;
             /** Rejected At */
@@ -6608,6 +6611,8 @@ export interface components {
         GoogleSheetsSyncReviewRequest: {
             /** Decision Note */
             decision_note?: string | null;
+            /** Preview Fingerprint */
+            preview_fingerprint?: string | null;
             /** Reviewer */
             reviewer: string;
         };
@@ -7327,6 +7332,41 @@ export interface components {
             weighted_fv: string | null;
             /** Weighted Upside */
             weighted_upside: string | null;
+        };
+        /** ModelPublicationParityRead */
+        ModelPublicationParityRead: {
+            /** Absolute Tolerance */
+            absolute_tolerance: string;
+            /** Comparisons */
+            comparisons: components["schemas"]["ModelPublicationValueComparisonRead"][];
+            /** Contract Sha256 */
+            contract_sha256: string;
+            /**
+             * Parity Status
+             * @enum {string}
+             */
+            parity_status: "MATCH" | "MISMATCH" | "UNAVAILABLE";
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+        };
+        /** ModelPublicationValueComparisonRead */
+        ModelPublicationValueComparisonRead: {
+            /** Difference */
+            difference: string | null;
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "bear_fv" | "base_fv" | "bull_fv" | "weighted_fv";
+            /** Matches */
+            matches: boolean | null;
+            /** Native Value */
+            native_value: string | null;
+            /** Published Value */
+            published_value: string;
         };
         /** ModelRevisionProposalDecisionRead */
         ModelRevisionProposalDecisionRead: {

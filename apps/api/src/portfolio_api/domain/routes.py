@@ -440,7 +440,13 @@ def post_google_sheets_candidate_preview(
 def post_google_sheets_candidate_accept(
     candidate_id: UUID, value: s.GoogleSheetsSyncReviewRequest, db: Db
 ) -> s.GoogleSheetsSyncCandidateRead:
-    return accept_sync_candidate(db, candidate_id, value.reviewer, value.decision_note)
+    return accept_sync_candidate(
+        db,
+        candidate_id,
+        value.reviewer,
+        value.decision_note,
+        preview_fingerprint=value.preview_fingerprint,
+    )
 
 
 @router.post(

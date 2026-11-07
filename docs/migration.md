@@ -1,5 +1,7 @@
 ﻿# Migration strategy
 
+> Historical evidence for the recorded milestone/date. Current production scope is in [production-canonical-baseline.md](production-canonical-baseline.md), and current execution is in [ROADMAP.md](../ROADMAP.md). Retain the safety and provenance details for the workflows they describe.
+
 ## Current scope
 
 Milestone 0 establishes the application shell, API/database connectivity, environment configuration, schema migration mechanism, contracts, and development checks. Milestone 1A adds identity, explicit lifecycle history, observed holdings/cash, and accepted targets. Milestone 1B adds the four versioned score dimensions and append-only assessments. Milestone 1C adds separate versioned Portfolio, Watchlist, and Research ranking definitions plus immutable runs. All three ranks now calculate their distinct documented rules from canonical point-in-time inputs; cached workbook rank cells remain migration evidence only and are not current calculation inputs.

@@ -1,5 +1,7 @@
 # Cloud-native bootstrap readiness
 
+> Historical evidence for the recorded milestone/date. Current production scope is in [production-canonical-baseline.md](production-canonical-baseline.md), and current execution is in [ROADMAP.md](../ROADMAP.md). Retain the safety and provenance details for the workflows they describe.
+
 ## Decision
 
 The operator has selected a **new canonical cloud baseline built from reproducible

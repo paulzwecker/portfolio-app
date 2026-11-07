@@ -86,6 +86,15 @@ Downstream choices must not silently mutate upstream assumptions. Rankings expre
 
 ## 5. Model architecture
 
+### Model identity and company scope
+
+Each company may own several independent valuation methods. Canonical identity is
+company, exact listing and model type, with a revision pointer/history per model.
+Publication revision labels are resolved within that model. Valuation UI selection
+carries the exact model ID through summary, history and editor. Company synthesis
+and decision-model selection require an explicit versioned economic contract and
+owner approval. See [decision 002](decisions/002-independent-company-models.md).
+
 ### Model protocol
 
 Each supported method has a versioned, discriminated, validated contract with:
@@ -99,6 +108,12 @@ Each supported method has a versioned, discriminated, validated contract with:
 - accepted revision: append-only evidence, actor and review action.
 
 Existing engines include a 10-year UFCF DCF, owner cash flow and residual income paths. Verify actual availability and behavior. A P-GOOGL Google Sheets capture was live-validated and passed 30 projection + 22 output checks, but its probability inputs differ from an older fixture and it remains an **unaccepted proposed source revision**. UFCF enterprise IRR is not shareholder IRR. Method-specific return metrics must not be displayed or ranked as equivalent without an approved bridge.
+
+### Published-model boundary
+
+Google Sheets is the current agent modeling workspace. Agents explicitly publish completed, versioned contracts. The application discovers publications through the existing bounded inbox adapter, validates native calculations and records review candidates before acceptance. Canonical contracts and engines remain independent of Sheets coordinates. A future producer can deliver the same publication as JSON. The publication protocol and implementation boundaries are specified in [model-publications.md](../model-publications.md).
+
+Routine policy-controlled promotion is a future authority transition requiring separate owner approval and activation. Existing reviewed acceptance remains the operational rule.
 
 ### Package boundary and migration strategy
 

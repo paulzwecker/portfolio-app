@@ -1047,11 +1047,13 @@ export function CanonicalDcfExplorer({
   companyId,
   listings,
   embedded = false,
+  focusedModelId,
 }: {
   companyId: string;
   listings: ValuationListing[];
   /** Omit the top-level section chrome when composed by CompanyValuationWorkspace. */
   embedded?: boolean;
+  focusedModelId?: string;
 }) {
   const state = useResearch(
     `companies/${encodeURIComponent(companyId)}/financial-models`,
@@ -1064,7 +1066,9 @@ export function CanonicalDcfExplorer({
   const [inspected, setInspected] = useState<
     Record<string, FinancialModelRevision | undefined>
   >({});
-  const models = state.data ?? [];
+  const models = (state.data ?? []).filter(
+    (model) => !focusedModelId || model.id === focusedModelId,
+  );
 
   const beginCreate = () => {
     setNotice(null);
