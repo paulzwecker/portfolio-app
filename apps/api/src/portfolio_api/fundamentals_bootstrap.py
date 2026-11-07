@@ -821,15 +821,25 @@ def _next_checkpoint(
     candidates = list(
         session.scalars(
             select(FundamentalsBootstrapCheckpoint)
-            .where(
-                FundamentalsBootstrapCheckpoint.run_id == run_id,
-                FundamentalsBootstrapCheckpoint.status.in_(("PENDING", "FAILED")),
-            )
+            .where(FundamentalsBootstrapCheckpoint.run_id == run_id)
             .order_by(FundamentalsBootstrapCheckpoint.sequence_number)
             .with_for_update(skip_locked=True)
         )
     )
-    return next((item for item in candidates if _eligible(item, at)), None)
+    filings_ready = {
+        item.company_id
+        for item in candidates
+        if item.stage == "SOURCE_DOCUMENTS" and item.status in {"COMPLETE", "UNAVAILABLE"}
+    }
+    return next(
+        (
+            item
+            for item in candidates
+            if _eligible(item, at)
+            and (item.stage != "REPORTED_FUNDAMENTALS" or item.company_id in filings_ready)
+        ),
+        None,
+    )
 
 
 def _recover_interrupted_checkpoints(session: Session, run_id: UUID) -> None:

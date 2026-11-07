@@ -5,22 +5,28 @@
 - Branch `codex/portfolio-data-ledger-capabilities`, based on main `395f842`.
 - PR #25 is complete and awaiting owner review. Keep it frozen. Integrate its
   receipt compatibility fix after owner merge; preserve this branch's capability roadmap.
-- Objective: provider-only cloud refresh → durable outcomes → trustworthy portfolio
-  valuation/freshness, reusing existing adapters, jobs and domain calculations.
+- Objective: bounded provider facts → durable provenance/coverage → useful Portfolio
+  and company research, reusing existing adapters, jobs and domain calculations.
 - C2.2 is locally verified through its actual-API browser rehearsal. While its
   integration gate waits for #25, advance the independent scoped SEC foundation.
 
 ## Current SEC increment
 
-`db:bootstrap-fundamentals preview/prepare --portfolio-id` selects the exact
+`6c44a40` adds `db:bootstrap-fundamentals preview/prepare --portfolio-id`, selecting the exact
 portfolio's current complete snapshot and explicit Watchlist. Held issuers are
 prioritized independently of lifecycle, listing duplicates become one issuer,
 and unmapped issuers/companyless ETFs remain explicit. Existing checkpoints,
 guards, SEC importers and source hashes are reused. Resume retains prepared order
-across lifecycle/holdings changes and rejects actual identity drift. Twenty-three
-focused scope/bootstrap cases pass, including exact financial/filing API readback,
-reconciliation and unchanged holdings/targets. Finish cross-portfolio isolation and
-dependent-stage failure checks before finalizing this local BUILD slice.
+across lifecycle/holdings changes and rejects actual identity drift. Second-pass
+outage review found facts could run during its issuer's filing retry cooldown.
+That dependency is now enforced while other eligible issuers can progress.
+Twelve scoped tests and 107 existing bootstrap/source/write-guard regressions pass.
+They cover exact financial/filing API readback, reconciliation, unchanged holdings/
+targets, portfolio isolation, missing CIKs, mapping additions/drift and outage/retry
+recovery. Strict types, lint, formatting, contracts and documentation checks pass.
+The slice is LOCAL_VERIFIED using synthetic data. Real issuer mapping evidence,
+per-company freshness/coverage usability and hosted ingestion remain outstanding.
+Commands are in [the SEC runbook](fundamentals-source-bootstrap.md#choose-the-issuer-scope).
 
 ## Completed build increments
 
@@ -105,8 +111,11 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Finish C3.1 portfolio isolation, missing mappings and filing-stage outage/retry
-   tests. Review operator commands and run focused source/guard regression.
+1. Continue C3.1 with reviewed issuer evidence and per-company coverage/freshness
+   investigation across Financials/Research/Operations. Inspect existing contracts
+   before adding UI or API fields. Current production coverage was not reverified
+   in this local increment. Mapping persistence and provider ingestion require
+   separate production authorization.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review. Then
    enter INTEGRATE for comprehensive local checks and one cohesive C2.2 PR.

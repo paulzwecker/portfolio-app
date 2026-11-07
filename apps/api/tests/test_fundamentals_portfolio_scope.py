@@ -1,7 +1,7 @@
 """Portfolio-prioritized SEC scope through the existing guarded bootstrap."""
 
 from dataclasses import dataclass, replace
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -29,6 +29,7 @@ from portfolio_api.domain.models import (
     FundamentalsBootstrapCheckpoint,
     FundamentalsBootstrapRun,
     Lifecycle,
+    Portfolio,
     ReportedFundamentalObservation,
     Security,
 )
@@ -36,6 +37,7 @@ from portfolio_api.fundamentals_bootstrap import (
     FundamentalsBootstrapError,
     ReviewedCikMapping,
     _load_reviewed_cik_mappings,
+    _next_checkpoint,
     _parser,
     prepare_fundamentals_bootstrap,
     preview_fundamentals_bootstrap,
@@ -72,7 +74,9 @@ def _set_lifecycle(session: Session, company_id: UUID, state: str) -> None:
     )
 
 
-def _source(engine: Engine, *, map_watchlist: bool = False) -> PortfolioScope:
+def _source(
+    engine: Engine, *, map_watchlist: bool = False, map_held: bool = True
+) -> PortfolioScope:
     with Session(engine) as session, session.begin():
         session.add(Company(id=COMPANY_ID, name="Z Held issuer", reporting_currency="USD"))
         session.flush()
@@ -124,6 +128,8 @@ def _source(engine: Engine, *, map_watchlist: bool = False) -> PortfolioScope:
             (unrelated.id, "0000000003", "Unrelated Synthetic Inc."),
             (zero.id, "0000000004", "Zero Synthetic Inc."),
         ):
+            if company_id == COMPANY_ID and not map_held:
+                continue
             record_cik_mapping(
                 session, company_id, cik, name, f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}"
             )
@@ -374,6 +380,9 @@ def test_preparation_rejects_mapping_change_between_inventory_reads(
         )
     with Session(postgres_engine) as session:
         assert session.scalar(select(func.count()).select_from(FundamentalsBootstrapRun)) == 0
+        assert (
+            session.scalar(select(func.count()).select_from(FundamentalsBootstrapCheckpoint)) == 0
+        )
         assert session.scalar(select(func.count()).select_from(ReportedFundamentalObservation)) == 0
 
 
@@ -402,3 +411,134 @@ def test_portfolio_selection_rejects_unknown_portfolio_and_incomplete_latest_sna
             preview_fundamentals_bootstrap(
                 session, target_environment="rehearsal", portfolio_id=source.portfolio_id
             )
+
+
+@pytest.mark.integration
+def test_scoped_selection_does_not_borrow_another_portfolios_newer_snapshot(
+    postgres_engine: Engine,
+) -> None:
+    source = _source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        # Seed schema-level multi-portfolio data for the isolation regression.
+        other = Portfolio(name="Other synthetic portfolio", base_currency="USD")
+        session.add(other)
+        session.flush()
+        services.record_holdings(
+            session,
+            other.id,
+            s.SnapshotCreate(
+                effective_at=RETRIEVED_AT + timedelta(days=2),
+                actor=Actor.IMPORT,
+                reason="Newer other-portfolio snapshot",
+                completeness="COMPLETE",
+                positions=[],
+            ),
+        )
+        preview = preview_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        )
+        assert preview["selection"]["holding_snapshot_id"] == str(source.snapshot_id)
+        assert [item["company_id"] for item in preview["mappings"]] == [str(COMPANY_ID)]
+
+
+@pytest.mark.integration
+def test_missing_held_mappings_remain_blocked_despite_unrelated_reviewed_issuers(
+    postgres_engine: Engine,
+) -> None:
+    source = _source(postgres_engine, map_held=False)
+    before = table_counts(postgres_engine)
+    with Session(postgres_engine) as session:
+        preview = preview_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        )
+        assert preview["status"] == "BLOCKED"
+        assert preview["reason"] == "NO_REVIEWED_SEC_CIK_MAPPINGS"
+        assert preview["mappings"] == []
+        assert preview["active_company_without_reviewed_cik_count"] == 3
+    assert table_counts(postgres_engine) == before
+
+
+@pytest.mark.integration
+def test_newly_reviewed_mapping_cannot_expand_an_existing_run(postgres_engine: Engine) -> None:
+    source = _source(postgres_engine)
+    with Session(postgres_engine) as session:
+        run = prepare_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        )
+        run_id = run.id
+        session.commit()
+    with Session(postgres_engine) as session, session.begin():
+        record_cik_mapping(
+            session,
+            source.unmapped_company_id,
+            "0000000005",
+            "Later reviewed issuer",
+            "https://www.sec.gov/edgar/browse/?CIK=5",
+        )
+    provider = SyntheticSecProvider()
+    result = _execute(postgres_engine, run_id, provider, max_checkpoints=10)
+    assert result["pending_checkpoints"] == 0
+    assert {company_id for _stage, company_id, _known in provider.calls} == {COMPANY_ID}
+    with Session(postgres_engine) as session:
+        next_preview = preview_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        )
+        assert next_preview["mapped_company_count"] == 2
+        assert result["coverage"]["review_flags"]["unmapped_active_company_count"] == 2
+
+
+@pytest.mark.integration
+def test_filing_outage_keeps_fundamentals_waiting_until_bounded_retry_succeeds(
+    postgres_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _source(postgres_engine)
+    clock = datetime.now(UTC)
+    monkeypatch.setattr("portfolio_api.fundamentals_bootstrap._now", lambda: clock)
+    with Session(postgres_engine) as session:
+        run = prepare_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        )
+        run_id = run.id
+        session.commit()
+    provider = SyntheticSecProvider(fail_first_source_request=True)
+    first = _execute(postgres_engine, run_id, provider, max_checkpoints=1)
+    assert first["retryable_checkpoints"] == 1 and len(provider.calls) == 1
+    waiting = _execute(postgres_engine, run_id, provider, max_checkpoints=10)
+    assert waiting["retryable_checkpoints"] == 1 and len(provider.calls) == 1
+    with Session(postgres_engine) as session:
+        assert session.scalar(select(func.count()).select_from(ReportedFundamentalObservation)) == 0
+    clock += timedelta(seconds=6)
+    recovered = _execute(postgres_engine, run_id, provider, max_checkpoints=10)
+    assert recovered["retryable_checkpoints"] == recovered["pending_checkpoints"] == 0
+    assert [stage for stage, _company, _known in provider.calls] == [
+        "SOURCE_DOCUMENTS",
+        "SOURCE_DOCUMENTS",
+        "SOURCE_DOCUMENTS",
+        "REPORTED_FUNDAMENTALS",
+    ]
+    assert len(recovered["checkpoints"][0]["report"]["failure_history"]) == 1
+    with Session(postgres_engine) as session:
+        assert (
+            reconcile_fundamentals_bootstrap(session, run_id)["reconciliation"]["status"]
+            == "MATCHED"
+        )
+
+
+@pytest.mark.integration
+def test_one_issuers_filing_cooldown_keeps_other_issuers_eligible(postgres_engine: Engine) -> None:
+    source = _source(postgres_engine, map_watchlist=True)
+    with Session(postgres_engine) as session:
+        run = prepare_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        )
+        run_id = run.id
+        session.commit()
+    provider = SyntheticSecProvider(fail_first_source_request=True)
+    failed = _execute(postgres_engine, run_id, provider, max_checkpoints=1)
+    assert failed["retryable_checkpoints"] == 1
+    with Session(postgres_engine) as session:
+        next_work = _next_checkpoint(session, run_id, datetime.now(UTC))
+        assert next_work is not None
+        assert next_work.company_id == source.watchlist_company_id
+        assert next_work.stage == "SOURCE_DOCUMENTS"
