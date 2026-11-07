@@ -12,7 +12,7 @@
 | Active milestone        | `M2` — First reviewed company/model lifecycle in cloud                                                                                                               |
 | Next task               | Run the existing read-only P-GOOGL financial-model-package preview against the verified production target using the exact private package run ID and hash.           |
 | Status                  | `M1 PRODUCTION_VERIFIED` for the minimal canonical portfolio baseline; `M2 PARTIAL` with P-GOOGL source revision still owner-gated.                                  |
-| Current branch / commit | codex/m1-production-restoration-closeout at a1b7fb86d0a67a3736edbd8a079cd90651df6fa1, based on origin/main 21e4d969d65af3ad5e0036a4a613c467e2e847a9.                 |
+| Current branch / commit | codex/m1-production-restoration-closeout at 07521d2cc51f25313b745395014a2b6ad67c18bf, based on origin/main 21e4d969d65af3ad5e0036a4a613c467e2e847a9.                 |
 | Last verified tests     | One guarded bootstrap apply succeeded; read-only replay ALREADY_APPLIED reconciled with zero differences. Docs: Prettier, diff, links and repo-policy checks passed. |
 | Latest PR               | [M1 documentation closeout PR #20](https://github.com/paulzwecker/portfolio-app/pull/20) is open for review.                                                         |
 | Primary blocker         | Five source inputs and 26 published outputs differ from the prior P-GOOGL package; the source revision is not accepted.                                              |
