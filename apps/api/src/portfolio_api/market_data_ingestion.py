@@ -56,6 +56,7 @@ from portfolio_api.yahoo_finance import (
     YahooListingMapping,
     load_yahoo_crosswalk,
     yahoo_mapping_for_listing,
+    yahoo_mapping_matches_identity,
 )
 
 CROSSWALK_PATH = REPOSITORY_PATH / "reference" / "market-data" / "providers" / "yahoo-listings.json"
@@ -576,6 +577,13 @@ async def build_provider_import(
         and company_lifecycle[company.id] in {"PORTFOLIO", "WATCHLIST"}
         and (company_ids is None or company.id in company_ids)
     }
+    if listing_keys is not None:
+        scoped_company_ids = {company.id for _, _, company in selected if company is not None}
+        active_companies = {
+            identifier: identity
+            for identifier, identity in active_companies.items()
+            if identifier in scoped_company_ids
+        }
     active_company_ids_with_listing = {
         company.id
         for _, _, company in selected
@@ -599,7 +607,12 @@ async def build_provider_import(
             currency=listing.currency,
             security_type=security.security_type,
         )
-        if mapping is None:
+        if mapping is None or not yahoo_mapping_matches_identity(
+            mapping,
+            listing_id=listing.id,
+            security_id=security.id,
+            company_id=company.id if company else None,
+        ):
             unresolved.append(
                 {
                     "listing_id": str(listing.id),

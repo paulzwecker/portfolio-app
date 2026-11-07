@@ -26,9 +26,10 @@ def _summary(report: dict[str, object]) -> dict[str, object]:
     result: dict[str, object] = {
         "status": status if isinstance(status, str) and status in KNOWN_STATUSES else "FAILED"
     }
-    error_type = report.get("error_type")
-    if isinstance(error_type, str) and error_type.isidentifier() and len(error_type) <= 80:
-        result["error_type"] = error_type
+    for field in ("error_type", "failure_code"):
+        value = report.get(field)
+        if isinstance(value, str) and value.isidentifier() and len(value) <= 80:
+            result[field] = value
     jobs = report.get("jobs")
     if "jobs" in report:
         summaries: list[dict[str, object]] = []
@@ -79,7 +80,11 @@ def main(argv: list[str] | None = None) -> int:
 
     reports: dict[str, object] = {}
     try:
-        reports["market_data"] = run_startup_refresh(settings, allow_local_proxy_bypass=False)
+        reports["market_data"] = run_startup_refresh(
+            settings,
+            allow_local_proxy_bypass=False,
+            cloud_incremental=True,
+        )
     except Exception as error:
         reports["market_data"] = {"status": "FAILED", "error_type": type(error).__name__}
 

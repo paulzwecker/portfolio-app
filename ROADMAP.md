@@ -6,14 +6,14 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                                           |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                                          |
-| Implementation              | PARTIAL / BUILD. Provider-only cycle, explicit cloud scopes and safe failure reporting locally verified. Scope/resource policy and end-to-end valuation readback pending |
-| Next ready substantial task | Continue C2.2 market/FX scope and cold-backfill budget, then synthetic refresh → EUR valuation/Operations readback                                                       |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                                   |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR                      |
+| Field                       | Current value                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
+| Implementation              | PARTIAL / BUILD. Cloud correction scope and bounded history locally verified. End-to-end valuation/Operations proof and activation review pending   |
+| Next ready substantial task | Continue C2.2 actual synthetic importer → EUR valuation/Operations readback, replay and partial/outage handling                                     |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
+| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
 ## How to choose work
 
@@ -116,6 +116,12 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C2.2 bounded-scope increment pins exact listing/FX keys and reviewed crosswalk
+  bytes to the existing scheduled ledger. Cloud corrections cover 90 inclusive
+  calendar dates and at most 30 subjects. Legacy model FX remains on its original
+  path. Eight source/scope/replay checks and 26 adapter regressions pass, with
+  strict types and focused lint. Continue the synthetic end-to-end readback proof.
 
 - C2.2 BUILD increment: provider-only recurring cycles preserve existing locks,
   cadence and durable run records, with queued/unrelated workflows excluded.

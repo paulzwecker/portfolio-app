@@ -22,15 +22,25 @@
   documentation links and whitespace checks.
   Existing detailed outcomes remain in database run ledgers. No UI changed.
 
+## Current build increment
+
+Cloud market correction now pins a repeatable-read canonical scope, exact listing
+keys, required FX and one reviewed crosswalk object/hash. It uses 90 inclusive
+calendar dates and rejects scopes over 30 listing/pair subjects before claims or
+provider access. Existing transport/run retry limits give a conservative upper
+bound of 12 HTTP attempts per subject. Legacy development/model FX behavior is
+retained outside this cloud path. Frozen replay rejects changed mapping bytes or
+replacement filters. Eight scope/replay tests and 26 adapter regressions pass.
+
 ## Next build steps
 
-1. Reconcile market startup scope with the reviewed held-listing/FX plan. Existing
-   startup/scheduled paths add TWD/EUR for legacy model use and can cold-backfill
-   ten years. Inspect `market_data_startup.py` and `external_ingestion._scope_for_domain`.
-   Preserve justified model FX requirements through an explicit reviewed policy. Pin
-   scope, history overlap and per-cycle budgets before production activation.
-2. Prove synthetic refresh → EUR valuation and Operations readback, including
-   restart, partial/outage/retry behavior. Inspect desktop/mobile when UI changes.
+1. Prove synthetic refresh → EUR valuation and Operations/API readback through the
+   actual importer, including replay, source changes, outage/partial results and
+   unchanged holdings/targets. Use `test_cloud_market_refresh.py` and existing
+   synthetic Yahoo fixtures. Inspect desktop/mobile when UI changes.
+2. Finalize any remaining scope/retry/freshness gaps before the milestone's
+   INTEGRATE gate. The 90-date/30-subject policy is a local release proposal,
+   pending explicit review and authorization before production activation.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR
 belong to the completed milestone's INTEGRATE gate. Production backfill/scheduling,

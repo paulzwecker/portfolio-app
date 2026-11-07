@@ -19,9 +19,11 @@ from portfolio_api.domain.models import (
     PriceObservation,
 )
 from portfolio_api.external_data import ExternalDataDomain
-from portfolio_api.external_ingestion import run_scheduled
+from portfolio_api.external_ingestion import MAX_ATTEMPTS, run_scheduled
 from portfolio_api.health import check_readiness
+from portfolio_api.market_data_bootstrap import _load_crosswalk, preview_market_data_bootstrap
 from portfolio_api.market_data_ingestion import (
+    CROSSWALK_PATH,
     DEFAULT_LOOKBACK_DAYS,
     active_market_listings,
     portfolio_fx_requirements,
@@ -30,6 +32,7 @@ from portfolio_api.migrations import expected_heads
 from portfolio_api.networking import bypass_known_local_port_nine_proxy
 from portfolio_api.settings import REPOSITORY_PATH, Settings
 from portfolio_api.yahoo_finance import (
+    DEFAULT_YAHOO_RETRIES,
     FX_SYMBOLS,
     load_yahoo_crosswalk,
     yahoo_mapping_for_listing,
@@ -43,6 +46,80 @@ FRESH_ACTION_DAYS = 7
 DEFAULT_READY_WAIT_SECONDS = 180
 DEFAULT_READY_POLL_SECONDS = 3
 DEFAULT_RETRY_WAIT_SECONDS = 60
+CLOUD_CORRECTION_DAYS = 90
+CLOUD_MAX_SUBJECTS = 30
+
+
+def run_cloud_incremental_refresh(
+    session: Session,
+    settings: Settings,
+    at: datetime,
+) -> dict[str, object]:
+    """Freeze and bound the existing scheduled importer to the reviewed market scope."""
+    if settings.database_target_environment is None:
+        return {"status": "BLOCKED", "failure_code": "EXPLICIT_TARGET_REQUIRED"}
+    if at.tzinfo is None or at.utcoffset() is None:
+        return {"status": "BLOCKED", "failure_code": "TIMEZONE_AWARE_CUTOFF_REQUIRED"}
+    if session.in_transaction():
+        return {"status": "BLOCKED", "failure_code": "CLEAN_REFRESH_TRANSACTION_REQUIRED"}
+    session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+    crosswalk, digest = _load_crosswalk(CROSSWALK_PATH)
+    end = at.astimezone(UTC).date()
+    start = end - timedelta(days=CLOUD_CORRECTION_DAYS - 1)
+    preview = preview_market_data_bootstrap(
+        session,
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        start_date=start,
+        end_date=end,
+        target_environment=settings.database_target_environment,
+    )
+    if preview["status"] != "READY":
+        return {
+            "status": "BLOCKED",
+            "failure_code": "MARKET_SCOPE_REVIEW_REQUIRED",
+            "preview": preview,
+        }
+    listing_rows, _held = active_market_listings(session)
+    listing_keys = {(listing.venue, listing.ticker) for listing, _, _ in listing_rows}
+    if len({(venue.casefold(), ticker.casefold()) for venue, ticker in listing_keys}) != len(
+        listing_rows
+    ):
+        return {"status": "BLOCKED", "failure_code": "AMBIGUOUS_CANONICAL_LISTING_KEYS"}
+    pairs = {tuple(pair.split("/")) for pair in preview["required_fx_pairs"]}
+    subject_count = len(listing_keys) + len(pairs)
+    if subject_count > CLOUD_MAX_SUBJECTS:
+        return {
+            "status": "BLOCKED",
+            "failure_code": "MARKET_SCOPE_BUDGET_EXCEEDED",
+            "subject_count": subject_count,
+            "maximum_subjects": CLOUD_MAX_SUBJECTS,
+        }
+    domains = [ExternalDataDomain.MARKET_DATA] if listing_keys else []
+    if pairs:
+        domains.append(ExternalDataDomain.FX)
+    result = run_scheduled(
+        session,
+        settings,
+        domains=domains,
+        start_date=start,
+        end_date=end,
+        lookback_days=CLOUD_CORRECTION_DAYS,
+        run_date=end,
+        listing_key_filter=listing_keys,
+        fx_pair_filter=pairs,
+        frozen_yahoo_crosswalk=(crosswalk, digest),
+    )
+    return {
+        **result,
+        "scope_version": "cloud-market-correction-v1",
+        "subject_count": subject_count,
+        "maximum_subjects": CLOUD_MAX_SUBJECTS,
+        "correction_days": CLOUD_CORRECTION_DAYS,
+        "provider_http_attempt_upper_bound": subject_count
+        * (DEFAULT_YAHOO_RETRIES + 1)
+        * MAX_ATTEMPTS,
+    }
 
 
 def configure_yahoo_no_proxy(environment: MutableMapping[str, str] | None = None) -> bool:
@@ -184,6 +261,7 @@ def run_startup_refresh(
     ready_wait_seconds: int = DEFAULT_READY_WAIT_SECONDS,
     ready_poll_seconds: int = DEFAULT_READY_POLL_SECONDS,
     allow_local_proxy_bypass: bool = True,
+    cloud_incremental: bool = False,
 ) -> dict[str, object]:
     engine = create_database_engine(
         settings,
@@ -214,6 +292,15 @@ def run_startup_refresh(
             connection.commit()
             try:
                 with Session(bind=connection) as session:
+                    if cloud_incremental:
+                        report = run_cloud_incremental_refresh(session, settings, datetime.now(UTC))
+                        return {
+                            "status": report["status"],
+                            "failure_code": report.get("failure_code"),
+                            "proxy_bypass_applied": bypassed,
+                            "duration_seconds": (datetime.now(UTC) - started).total_seconds(),
+                            "report": report,
+                        }
                     due, reason = market_refresh_due(session, settings, datetime.now(UTC))
                     if not due:
                         return {

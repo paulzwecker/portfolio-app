@@ -16,6 +16,7 @@ import urllib.error
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -66,6 +67,7 @@ from portfolio_api.yahoo_finance import (
     FX_SYMBOLS,
     YAHOO_PROVIDER_ID,
     YahooFinanceProvider,
+    YahooListingCrosswalk,
     load_yahoo_crosswalk,
     yahoo_mapping_for_listing,
 )
@@ -287,6 +289,7 @@ def _scope_for_domain(
     end_date: date,
     lookback_days: int,
     company_ids: set[UUID] | None = None,
+    yahoo_crosswalk: YahooListingCrosswalk | None = None,
 ) -> dict[str, Any]:
     if domain in {
         ExternalDataDomain.FX,
@@ -312,7 +315,7 @@ def _scope_for_domain(
                 }
             if company_ids is None and ("TWD", "EUR") in FX_SYMBOLS:
                 required_fx_pairs.add(("TWD", "EUR"))
-            crosswalk = load_yahoo_crosswalk(CROSSWALK_PATH)
+            crosswalk = yahoo_crosswalk or load_yahoo_crosswalk(CROSSWALK_PATH)
             if base_currency is not None:
                 for listing, security, _company in selected:
                     mapping = yahoo_mapping_for_listing(
@@ -1098,8 +1101,9 @@ def _yahoo_operation(
     listing_keys: set[tuple[str, str]] | None,
     company_ids: set[UUID] | None,
     fx_pairs: set[tuple[str, str]] | None,
+    frozen_crosswalk: YahooListingCrosswalk | None = None,
 ) -> dict[ExternalDataDomain, DomainOutcome]:
-    crosswalk = load_yahoo_crosswalk(crosswalk_path)
+    crosswalk = frozen_crosswalk or load_yahoo_crosswalk(crosswalk_path)
     provider = YahooFinanceProvider(crosswalk)
     report = asyncio.run(
         build_provider_import(
@@ -1157,7 +1161,17 @@ def run_scheduled(
     request_nonce: UUID | None = None,
     run_date: date | None = None,
     yahoo_crosswalk_path: Any = CROSSWALK_PATH,
+    listing_key_filter: set[tuple[str, str]] | None = None,
+    frozen_yahoo_crosswalk: tuple[YahooListingCrosswalk, str] | None = None,
 ) -> dict[str, Any]:
+    if replay_scope is not None and "crosswalk_sha256" in replay_scope:
+        if listing_key_filter is not None or fx_pair_filter is not None:
+            raise ValueError("A frozen replay cannot replace its listing or FX scope")
+        raw_crosswalk = Path(yahoo_crosswalk_path).read_bytes()
+        digest = hashlib.sha256(raw_crosswalk).hexdigest()
+        if digest != replay_scope["crosswalk_sha256"]:
+            raise ValueError("The reviewed crosswalk changed since the frozen ingestion run")
+        frozen_yahoo_crosswalk = (YahooListingCrosswalk.model_validate_json(raw_crosswalk), digest)
     end_date = end_date or datetime.now(UTC).date()
     run_date = run_date or datetime.now(UTC).date()
     selected = _selected_domains(domains)
@@ -1187,10 +1201,17 @@ def run_scheduled(
                 end_date=end_date,
                 lookback_days=lookback_days,
                 company_ids=company_ids,
+                yahoo_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
             )
         )
         if domain == ExternalDataDomain.FX and fx_pair_filter is not None:
             scope["required_fx_pairs"] = [list(pair) for pair in sorted(fx_pair_filter)]
+        if domain in YAHOO_MARKET_DOMAINS and listing_key_filter is not None:
+            scope["listing_keys"] = [
+                {"venue": venue, "ticker": ticker} for venue, ticker in sorted(listing_key_filter)
+            ]
+        if domain in YAHOO_DOMAINS and frozen_yahoo_crosswalk is not None:
+            scope["crosswalk_sha256"] = frozen_yahoo_crosswalk[1]
         claim = _claim_run(
             session,
             PROVIDERS[domain],
@@ -1261,6 +1282,7 @@ def run_scheduled(
                 listing_keys=listing_keys,
                 company_ids=scoped_company_ids,
                 fx_pairs=fx_pairs,
+                frozen_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
             )
 
         _execute_cycle(session, yahoo_claims, yahoo_cycle)

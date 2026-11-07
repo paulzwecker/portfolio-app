@@ -59,7 +59,10 @@ def test_default_cloud_scope_only_refreshes_market_and_preserves_proxy_routing(
         patch("portfolio_api.cloud_cron.run_recurring_cycle") as cycle,
     ):
         assert main([]) == 0
-    assert market.call_args.kwargs == {"allow_local_proxy_bypass": False}
+    assert market.call_args.kwargs == {
+        "allow_local_proxy_bypass": False,
+        "cloud_incremental": True,
+    }
     factory.assert_not_called()
     cycle.assert_not_called()
     output = capsys.readouterr().out

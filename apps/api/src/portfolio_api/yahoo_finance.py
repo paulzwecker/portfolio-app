@@ -41,6 +41,7 @@ from portfolio_api.external_data import (
 YAHOO_PROVIDER_ID = "YAHOO_FINANCE"
 YAHOO_SCHEMA_VERSION = "yahoo-chart-v8"
 YAHOO_CHART_ENDPOINT = "https://query1.finance.yahoo.com/v8/finance/chart"
+DEFAULT_YAHOO_RETRIES = 3
 FX_SYMBOLS: dict[tuple[str, str], str] = {
     ("AUD", "EUR"): "AUDEUR=X",
     ("CAD", "EUR"): "CADEUR=X",
@@ -203,6 +204,22 @@ def yahoo_mapping_for_listing(
     return matches[0] if len(matches) == 1 else None
 
 
+def yahoo_mapping_matches_identity(
+    mapping: YahooListingMapping,
+    *,
+    listing_id: UUID,
+    security_id: UUID,
+    company_id: UUID | None,
+) -> bool:
+    """Validate any explicit canonical IDs, including a standalone security's owner."""
+    return bool(
+        mapping.verification_status == "VERIFIED"
+        and (mapping.canonical_listing_id is None or mapping.canonical_listing_id == listing_id)
+        and (mapping.canonical_security_id is None or mapping.canonical_security_id == security_id)
+        and (mapping.canonical_company_id is None or mapping.canonical_company_id == company_id)
+    )
+
+
 def _default_transport(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "portfolio-app market-data/1.0"})
     with urllib.request.urlopen(request, timeout=25) as response:
@@ -221,7 +238,7 @@ class YahooFinanceProvider:
         *,
         transport: Transport = _default_transport,
         concurrency: int = 5,
-        retries: int = 3,
+        retries: int = DEFAULT_YAHOO_RETRIES,
     ) -> None:
         self._crosswalk = crosswalk
         self._transport = transport
