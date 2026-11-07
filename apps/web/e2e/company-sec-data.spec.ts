@@ -97,22 +97,29 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
     });
     await expect(refresh).toBeVisible();
     await expect(
-      refresh.getByText("No issuer-specific result recorded", { exact: false }),
-    ).toBeVisible();
-    await expect(
       filings.getByText("Latest bootstrap checkpoint", { exact: true }),
     ).toBeVisible();
     if (fixture.scenario === "sec-refresh-outage") {
+      await expect(
+        refresh.getByText("No issuer-specific result recorded", {
+          exact: false,
+        }),
+      ).toBeVisible();
       await expect(refresh.getByText("FAILED", { exact: true })).toBeVisible();
       await expect(
         refresh.getByText(/Last recorded attempt is retryable/),
       ).toBeVisible();
     } else {
-      await expect(
-        refresh.getByText("COMPLETE", { exact: true }),
-      ).toBeVisible();
+      await expect(refresh.getByText("PARTIAL", { exact: true })).toBeVisible();
       expect(data.filings.refresh?.scope_company_count).toBe(2);
-      expect(data.filings.refresh?.source_record_count).toBeNull();
+      expect(data.filings.refresh?.issuer_outcome).toBe("REPORTED");
+      expect(data.filings.refresh?.source_record_count).toBe(2);
+      await expect(
+        refresh.getByText("Source response reported", { exact: false }),
+      ).toBeVisible();
+      await expect(
+        refresh.getByText("Supported filing rows in result", { exact: false }),
+      ).toBeVisible();
     }
     await refresh.scrollIntoViewIfNeeded();
   }

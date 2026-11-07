@@ -12,12 +12,18 @@
 
 ## Current SEC increment
 
-Issuer filing reconciliation is implemented in the existing batch ledger under
+`197254a` adds issuer filing reconciliation to the existing batch ledger under
 `sec-issuer-filings-v1`. It preserves per-issuer response/acceptance/reuse, conflicts
 and quality, with execution-specific history deferrals. Old receipts stay intact.
-The 79-case focused source/coverage/bootstrap regression and strict types/lint pass.
-The current subtask is the real-API desktop/mobile journey. Independent static
-review has no findings.
+The 79-case source/coverage/bootstrap regression and 15 incremental-worker cases
+pass. Six mixed/outage desktop/mobile journeys and repeated screenshots verify
+direct issuer results while another issuer has unsupported filings. Browser writes remain zero
+and protected-state hashes match. Independent static review has no findings.
+Screenshots stay in ignored `.cache/c3.1-issuer-filings`. Eighteen web unit cases,
+strict types, lint, formatting, contracts and documentation checks pass. Both
+fixtures removed only their own schemas on normal shutdown. Local production-write,
+ingestion, recurring/manual/sync/FMP and polling controls are disabled. This slice
+is LOCAL_VERIFIED with synthetic data; hosted provider scope remains unverified.
 
 `4cb4870` adds incremental run/attempt IDs, trigger, frozen scope counts and separate
 batch/issuer results to company coverage. The shared panel/drawer uses that contract
@@ -166,12 +172,13 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C3.1 issuer-level filing reconciliation. The current EDGAR adapter
-   reports aggregate batches; record per-issuer evidence in its existing batch
-   reconciliation so multi-issuer refreshes can expose direct outcomes. Keep legacy
-   unknown results and failed-batch attribution explicit. Preserve frozen scopes,
-   independent lifecycle, source dates and bounded retries. Reviewed real CIK
-   evidence and hosted validation remain outstanding.
+1. Continue C3.1 company-scoped SEC refresh eligibility. `manual_operations`
+   currently requires explicit Portfolio/Watchlist lifecycle even for verified held
+   issuers. Reuse the complete holdings identity scope for SEC-only requests,
+   preserving explicit lifecycle, existing rules for other jobs, cooldowns,
+   authentication and write-target guards. Align company/Operations controls with
+   that backend eligibility. Reviewed real CIK evidence and hosted validation
+   remain outstanding.
    Mapping persistence and provider ingestion require production authorization.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review. Then

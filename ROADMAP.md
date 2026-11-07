@@ -1,6 +1,6 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
@@ -11,7 +11,7 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C3.1 held-issuer SEC slice — BUILD. C2.2 local checkpoint awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                          |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
 | Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending      |
-| Next ready substantial task | C3.1 issuer-level filing reconciliation in existing batch reports. C2.2 INTEGRATE follows #25 owner merge and comprehensive local acceptance        |
+| Next ready substantial task | C3.1 company-scoped SEC refresh for verified held issuers without lifecycle. C2.2 INTEGRATE follows #25 owner merge and comprehensive acceptance    |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -117,14 +117,19 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
-- C3.1 versioned issuer filing receipts now retain response, accepted/reused and
+- C3.1 `197254a` issuer filing receipts retain response, accepted/reused and
   quality counts in the existing immutable batch reconciliation. Exact scope and
   CIK checks protect replay. History deferrals remain per-issuer execution evidence.
-  The 79-case focused source/coverage/bootstrap regression passes, with strict
-  types/lint. Mixed batches preserve a valid issuer's result,
+  The 79-case focused source/coverage/bootstrap regression and 15 incremental-worker
+  cases pass. Mixed batches preserve a valid issuer's result,
   while missing, clean-empty, conflicted and deferred outcomes remain distinct.
   Legacy receipts are preserved. Independent static review has no findings.
-  Real-API desktop/mobile rehearsal is the current BUILD subtask.
+  Six mixed/outage desktop/mobile journeys and repeat inspection verify valid issuer
+  results beside another issuer's gap. Browser writes remain zero and protected
+  state hashes match. Eighteen web tests, types, lint, formatting, contracts and
+  documentation checks pass. Both fixtures removed their own schemas on normal
+  shutdown. Local production-write/ingestion/job/polling flags remain disabled.
+  This is LOCAL_VERIFIED; reviewed real mappings and hosted execution stay gated.
 
 - C3.1 `4cb4870` company coverage includes incremental run/attempt IDs, trigger, frozen
   scope counts and separate batch/issuer outcomes. Attribution uses stored issuer

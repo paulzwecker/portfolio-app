@@ -111,14 +111,19 @@ frozen scope counts beside retained evidence and bootstrap history. The compact
 summary follows the newer bootstrap/refresh activity. Retrieval dates remain
 attached to retained data; execution times describe the operational run.
 
-Issuer outcomes use saved per-company Company Facts evidence. Aggregate filing
-results are attributable only for a sole mapped provider subject. Multi-issuer or
-legacy filing batches without direct issuer results remain explicitly unreported.
+Issuer outcomes use per-company Company Facts evidence and the
+[versioned filing reconciliation](source-documents.md#issuer-reconciliation-contract).
+Legacy aggregate filing results remain attributable only for a sole mapped
+provider subject. Other legacy batches retain their original attribution limits.
+History-file deferrals live in execution results, with strict per-issuer counts
+reconciled to the exact mapped scope and batch total. They preserve immutable raw
+receipt identity and bounded page continuation.
 Batch COMPLETE/PARTIAL never supplies missing issuer evidence. Integrity conflicts
 with zero accepted rows show DATA_CHECK. A clean empty response remains unavailable.
 Last-attempt retryability is separate from execution eligibility and remaining
 budget, which stay in Operations. Older API responses retain an explicit history
-availability message. Recording per-issuer filing reconciliation is the next slice.
+availability message. Company-scoped SEC eligibility for verified holdings without
+an assigned lifecycle is the next slice.
 Synthetic local PostgreSQL tests establish these controls. Reviewed real mappings,
 hosted refresh and production activation still require their separate approvals.
 
