@@ -3613,6 +3613,102 @@ const reportedFundamentalMetrics = [
   "DILUTED_WEIGHTED_AVERAGE_SHARES",
 ] as const;
 
+export type CompanySecCoverage =
+  components["schemas"]["CompanySecCoverageRead"];
+type SecDomainCoverage = CompanySecCoverage["fundamentals"];
+
+function isSecDomainCoverage(value: unknown): value is SecDomainCoverage {
+  if (!isRecord(value)) return false;
+  const bootstrap = value.bootstrap;
+  return (
+    Number.isInteger(value.record_count) &&
+    Number(value.record_count) >= 0 &&
+    Number.isInteger(value.data_check_count) &&
+    Number(value.data_check_count) >= 0 &&
+    Number(value.data_check_count) <= Number(value.record_count) &&
+    (value.latest_period_end === null || dateOnly(value.latest_period_end)) &&
+    (value.latest_filed_at === null || dateOnly(value.latest_filed_at)) &&
+    (value.latest_retrieved_at === null ||
+      timestamp(value.latest_retrieved_at)) &&
+    (value.latest_recorded_at === null ||
+      timestamp(value.latest_recorded_at)) &&
+    (bootstrap === null ||
+      (isRecord(bootstrap) &&
+        uuid(bootstrap.run_id) &&
+        uuid(bootstrap.checkpoint_id) &&
+        [
+          "PENDING",
+          "RUNNING",
+          "COMPLETE",
+          "UNAVAILABLE",
+          "FAILED",
+          "BLOCKED",
+        ].includes(bootstrap.status as string) &&
+        timestamp(bootstrap.prepared_at) &&
+        (bootstrap.started_at === null || timestamp(bootstrap.started_at)) &&
+        (bootstrap.finished_at === null || timestamp(bootstrap.finished_at)) &&
+        nullableString(bootstrap.failure_code) &&
+        typeof bootstrap.retryable === "boolean" &&
+        (bootstrap.next_attempt_at === null ||
+          timestamp(bootstrap.next_attempt_at)) &&
+        Number.isInteger(bootstrap.provider_request_count) &&
+        Number(bootstrap.provider_request_count) >= 0))
+  );
+}
+
+function isSecIdentityLink(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.replace(/\.$/, "");
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      (hostname === "sec.gov" || hostname.endsWith(".sec.gov")) &&
+      (!url.port || url.port === "443")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isCompanySecCoverage(
+  value: unknown,
+): value is CompanySecCoverage {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.metrics_present) ||
+    !Array.isArray(value.metrics_missing)
+  )
+    return false;
+  const metric = (item: unknown) =>
+    typeof item === "string" &&
+    reportedFundamentalMetrics.includes(
+      item as (typeof reportedFundamentalMetrics)[number],
+    );
+  return (
+    uuid(value.company_id) &&
+    string(value.company_name) &&
+    ["MAPPED", "UNMAPPED", "AMBIGUOUS", "INVALID"].includes(
+      value.mapping_status as string,
+    ) &&
+    (value.cik === null ||
+      (typeof value.cik === "string" && /^\d{10}$/.test(value.cik))) &&
+    nullableString(value.provider_company_name) &&
+    (value.identity_evidence_url === null ||
+      isSecIdentityLink(value.identity_evidence_url)) &&
+    isSecDomainCoverage(value.fundamentals) &&
+    isSecDomainCoverage(value.filings) &&
+    array(value.metrics_present, metric) &&
+    array(value.metrics_missing, metric) &&
+    value.metrics_present.length + value.metrics_missing.length ===
+      reportedFundamentalMetrics.length &&
+    new Set([...value.metrics_present, ...value.metrics_missing]).size ===
+      reportedFundamentalMetrics.length
+  );
+}
+
 function isReportedFundamentalObservation(
   v: unknown,
 ): v is ReportedFundamentalObservation {

@@ -108,6 +108,7 @@ def prepare_portfolio_data(
             ),
         )
         identity = {
+            "company_id": str(company.id),
             "portfolio_id": str(portfolio.id),
             "snapshot_id": str(snapshot.id),
             "target_revision_id": str(target.id),

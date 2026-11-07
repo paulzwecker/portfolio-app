@@ -123,6 +123,31 @@ remain untouched. Each scenario needs its own fixture invocation. These checks
 establish local integration using synthetic facts. Hosted provider cycles and
 production activation retain their separate review and authorization gates.
 
+### Company SEC coverage rehearsal
+
+Use the same isolated test database and loopback web/API environment above. Start
+one fixture at a time. The existing bootstrap advisory lock spans test schemas.
+Choose `sec-covered`, `sec-outage` or `sec-unmapped`.
+
+```powershell
+npm run test:e2e:api -- --scenario sec-outage --lifetime-seconds 180
+```
+
+In the second terminal, keep the matching `BROWSER_API_PORT` and `API_BASE_URL`.
+Start the browser check promptly after the API reports readiness.
+
+```powershell
+$env:E2E_SEC_API='1'
+$env:E2E_REAL_API='0'
+node scripts/browser.mjs test company-sec-data.spec.ts --workers=1
+```
+
+This exercises the real scoped SEC importer with synthetic payloads, coverage and
+provenance drawers, historical-cutoff separation, query/tab navigation and focused
+Operations on desktop/mobile. It checks API errors, browser writes and unchanged
+portfolio/table fingerprints. Wait for normal schema cleanup. A timed-out fixture
+requires a fresh invocation before another browser run.
+
 ## Environment variables and database boundaries
 
 Keep secrets in the Codex environment or an ignored `.env`; never commit them.

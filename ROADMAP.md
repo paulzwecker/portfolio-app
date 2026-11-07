@@ -11,7 +11,7 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C3.1 held-issuer SEC slice — BUILD. C2.2 local checkpoint awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                          |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
 | Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 portfolio-scoped SEC bootstrap locally verified. Hosted data/refresh cycles pending     |
-| Next ready substantial task | C3.1 issuer evidence and per-company coverage/freshness. C2.2 INTEGRATE follows #25 owner merge and comprehensive local acceptance                  |
+| Next ready substantial task | C3.1 held-issuer incremental SEC refresh and per-issuer outcomes. C2.2 INTEGRATE follows #25 owner merge and comprehensive local acceptance         |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -117,13 +117,20 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
-- C3.1 current per-company SEC coverage API is LOCAL_VERIFIED with seven isolated
-  cases. It reports retained facts/filings, missing metric types, mapping evidence,
-  economic/filing/retrieval/recording dates and issuer-specific bootstrap state.
-  Failed checkpoints retain prior data. Replay never advances retained retrieval
-  timestamps. Invalid/ambiguous identity links are withheld. The API performs only
-  reads and reuses existing state. Financials/Research/Operations UI wiring is in
-  progress; desktop/mobile visual verification is the next step.
+- C3.1 current per-company SEC coverage is LOCAL_VERIFIED through Financials,
+  Research and focused Operations. Shared drawers expose retained facts/filings,
+  missing metric types, mapping evidence, separate economic/filing/retrieval/record
+  dates and issuer-specific bootstrap state. Failed refreshes retain data and show
+  compact warnings. Historical Financials hides current-only coverage. Fifty-one
+  focused API/fixture/bootstrap checks and 58 web unit/proxy cases pass. Six actual
+  API desktop/mobile journeys plus two refined missing-data reruns preserve state
+  with zero browser writes. Repeat screenshots were inspected. Browser review fixed
+  Company Explorer query/tab synchronization, and two existing composition cases
+  pass with explicit editor closure. Bootstrap fixture starts remain serial under
+  the shared advisory lock; bounded normal cleanup preserves existing test schemas.
+  Source payloads are synthetic. Hosted coverage remains unverified. Next address
+  incremental SEC selection of unclassified held issuers and scheduled/manual
+  issuer diagnostics, preserving lifecycle and existing guards.
 
 - C3.1 adds explicit `db:bootstrap-fundamentals -- preview/prepare --portfolio-id`
   selection using the exact portfolio's current complete snapshot and explicit

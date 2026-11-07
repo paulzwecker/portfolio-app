@@ -41,6 +41,7 @@ import {
   type SourceDocument,
 } from "@/lib/domain-contracts";
 import { dateOnly, dateTime, statusLabel } from "@/lib/display";
+import { CompanySecCoveragePanel } from "./company-sec-coverage";
 
 export type EvidenceCategory =
   "ALL" | "FILINGS" | "RESEARCH" | "RISKS" | "TRIGGERS";
@@ -1677,6 +1678,7 @@ export function CompanyResearchEvidenceWorkspace({
 
   return (
     <div className="space-y-8">
+      <CompanySecCoveragePanel companyId={companyId} />
       <PageSection
         title="Research & evidence"
         description="Prioritized source events, accepted interpretations and review work for this company. Facts, judgments and pending proposals remain separate."

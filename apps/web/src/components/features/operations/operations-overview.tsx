@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ManualRefreshPanel } from "@/components/features/operations/manual-refresh-panel";
 import { MarketRefreshPanel } from "@/components/features/operations/market-refresh-panel";
+import { CompanySecCoveragePanel } from "@/components/features/company/company-sec-coverage";
 import { useResearch } from "@/hooks/use-research";
 import {
   isGoogleSheetsResearchCandidate,
@@ -87,7 +88,7 @@ type IntegrationSummary = {
   candidatesError?: string;
 };
 
-export function OperationsOverview() {
+export function OperationsOverview({ companyId }: { companyId?: string } = {}) {
   const recurring = useResearch(
     "recurring-operations/status",
     isRecurringOperationsStatus,
@@ -155,6 +156,9 @@ export function OperationsOverview() {
     return (
       <div className="space-y-6">
         {header}
+        {companyId && (
+          <CompanySecCoveragePanel companyId={companyId} operations />
+        )}
         <PendingOrError error={recurring.error} retry={retryAll} />
       </div>
     );
@@ -277,6 +281,9 @@ export function OperationsOverview() {
   return (
     <div className="space-y-8">
       {header}
+      {companyId && (
+        <CompanySecCoveragePanel companyId={companyId} operations />
+      )}
 
       <section
         aria-label="Operational summary"

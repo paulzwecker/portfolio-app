@@ -3165,6 +3165,12 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
     await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(
+      page.getByRole("button", { name: /Residual income Not accepted/ }),
+    ).toBeDisabled();
+    await page
+      .getByRole("button", { name: "Close editor", exact: true })
+      .click();
     await page
       .getByRole("button", { name: /Residual income Not accepted/ })
       .click();
@@ -3188,6 +3194,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
     await page.getByRole("button", { name: "Cancel" }).click();
+    await page
+      .getByRole("button", { name: "Close editor", exact: true })
+      .click();
     await page
       .getByRole("button", { name: /Owner cash flow Not accepted/ })
       .click();

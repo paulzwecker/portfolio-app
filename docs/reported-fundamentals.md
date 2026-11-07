@@ -127,6 +127,9 @@ source for audit.
   and record time remain separate. Bootstrap status covers the scoped SEC runner.
   Other refresh histories remain in Operations. Retained metrics include flagged
   history and require the statement resolver for selected values/conflicts.
+  Financials and Research share the coverage panel and source drawer, with direct
+  company-scoped Operations navigation. Current coverage is hidden when Financials
+  selects a historical app-knowledge cutoff. Querying coverage uses read-only GETs.
 - `GET /v1/reported-fundamental-definitions` returns canonical metrics and declares
   free cash flow as derived.
 - `GET /v1/companies/{company_id}/reported-fundamentals` returns coverage, resolved

@@ -12,10 +12,21 @@
 
 ## Current SEC increment
 
-The current per-company `sec-coverage` read API passes seven isolated cases for
-empty/unmapped, imported, failed, replayed and invalid identity evidence. Counts
-and source dates remain distinct from bootstrap attempt state. UI wiring across
-Financials/Research/Operations is in progress, with browser review next.
+`1beddc0` adds the current per-company `sec-coverage` read API. A shared panel and
+source drawer now connect Financials/Research to company-focused Operations.
+Counts and economic/filing/retrieval/recording dates remain distinct from bootstrap
+attempt state. Historical Financials hides current coverage. Failed checkpoints
+retain prior evidence and appear on the compact summary. Invalid identity URLs
+are withheld. This increment passes 51 focused API/fixture/bootstrap tests and
+58 web unit/proxy cases, plus six real-service desktop/mobile journeys and two
+refined missing-data reruns. The existing Company Explorer composition passes
+desktop/mobile after following its explicit Close editor interaction.
+Browser review exposed a URL/tab mismatch. Company navigation now follows Next's
+query state and preserves native History integration. Repeat screenshots were
+visually inspected under `.cache/c3.1-source-coverage`. Fixtures use synthetic SEC
+responses, real importers, PostgreSQL, API and proxy with read-only serving and
+zero browser writes. Start fixtures serially to retain the database-wide bootstrap
+lock. Normal bounded shutdown removes each test-owned schema.
 
 `6c44a40` adds `db:bootstrap-fundamentals preview/prepare --portfolio-id`, selecting the exact
 portfolio's current complete snapshot and explicit Watchlist. Held issuers are
@@ -116,11 +127,13 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C3.1 with reviewed issuer evidence and per-company coverage/freshness
-   investigation across Financials/Research/Operations. Inspect existing contracts
-   before adding UI or API fields. Current production coverage was not reverified
-   in this local increment. Mapping persistence and provider ingestion require
-   separate production authorization.
+1. Continue C3.1 incremental SEC refresh. `external_ingestion.active_company_states`
+   currently selects explicit Portfolio/Watchlist lifecycle only. Reuse the reviewed
+   held-issuer scope for provider-only updates without assigning lifecycle, freeze
+   mappings across retries and retain existing request bounds/receipts. Bootstrap
+   diagnostics are now visible; scheduled/manual per-issuer outcomes need separate
+   coverage. Reviewed real CIK evidence and hosted validation remain outstanding.
+   Mapping persistence and provider ingestion require production authorization.
 2. After owner merge of #25, integrate its receipt adapter and preserve both sets
    of roadmap evidence. Keep the completed PR frozen during owner review. Then
    enter INTEGRATE for comprehensive local checks and one cohesive C2.2 PR.

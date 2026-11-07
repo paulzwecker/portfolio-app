@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 import uvicorn
 from alembic import command
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
+from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine, text
@@ -154,7 +155,17 @@ def fixture_application(
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--scenario", choices=("demo", "unpriced", "fx-outage", "valued"), default="demo"
+        "--scenario",
+        choices=(
+            "demo",
+            "unpriced",
+            "fx-outage",
+            "valued",
+            "sec-covered",
+            "sec-outage",
+            "sec-unmapped",
+        ),
+        default="demo",
     )
     parser.add_argument("--lifetime-seconds", type=int, default=None)
     args = parser.parse_args(argv)
@@ -188,8 +199,15 @@ def main(argv: list[str] | None = None) -> None:
         else:
             with TemporaryDirectory(prefix="portfolio-browser-") as directory:
                 metadata = prepare_portfolio_data(
-                    engine, Path(directory), cast(PortfolioDataState, args.scenario), settings
+                    engine,
+                    Path(directory),
+                    "unpriced"
+                    if args.scenario.startswith("sec-")
+                    else cast(PortfolioDataState, args.scenario),
+                    settings,
                 )
+                if args.scenario.startswith("sec-"):
+                    prepare_sec_data(engine, metadata, args.scenario)
             metadata["schema"] = schema
             reader = fixture_read_engine(url, schema, settings)
         application = fixture_application(reader or engine, settings, metadata)
