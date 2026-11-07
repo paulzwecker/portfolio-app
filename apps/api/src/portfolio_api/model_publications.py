@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -53,26 +53,45 @@ def reconcile_publication(
     """Gate the existing preview and acceptance path on published fair-value parity."""
     result = dict(preview)
     calculated = preview.get("calculated_outputs")
-    if not isinstance(calculated, dict):
-        if preview.get("status") == "READY":
-            result["status"] = "INVALID"
-            result["reason"] = "Native candidate outputs are unavailable for publication parity"
-        return result
-    differences = []
+    comparisons = []
     for field, published in publication.published_fair_values.model_dump().items():
-        native = calculated.get(field)
-        if native is None or abs(Decimal(str(native)) - published) > PARITY_TOLERANCE:
-            differences.append(field)
-    result["publication"] = {
-        "contract_sha256": publication.contract_sha256,
-        "published_at": publication.published_at.isoformat(),
-        "parity_status": "MISMATCH" if differences else "MATCH",
-        "mismatched_fields": differences,
-        "absolute_tolerance": str(PARITY_TOLERANCE),
-    }
-    if differences:
+        native = calculated.get(field) if isinstance(calculated, dict) else None
+        native_value = Decimal(str(native)) if native is not None else None
+        # Each model value supports 38 digits. Retain every signed-delta digit
+        # independently of a caller's ambient Decimal precision.
+        with localcontext() as context:
+            context.prec = 80
+            difference = native_value - published if native_value is not None else None
+        comparisons.append(
+            s.ModelPublicationValueComparisonRead.model_validate(
+                {
+                    "field": field,
+                    "published_value": published,
+                    "native_value": native_value,
+                    "difference": difference,
+                    "matches": abs(difference) <= PARITY_TOLERANCE
+                    if difference is not None
+                    else None,
+                }
+            )
+        )
+    unavailable = any(item.native_value is None for item in comparisons)
+    differences = [item.field for item in comparisons if item.matches is not True]
+    evidence = s.ModelPublicationParityRead(
+        contract_sha256=publication.contract_sha256,
+        published_at=publication.published_at,
+        parity_status="UNAVAILABLE" if unavailable else ("MISMATCH" if differences else "MATCH"),
+        absolute_tolerance=PARITY_TOLERANCE,
+        comparisons=comparisons,
+    )
+    result["publication"] = {**evidence.model_dump(mode="json"), "mismatched_fields": differences}
+    if differences and (not unavailable or preview.get("status") == "READY"):
         result["status"] = "INVALID"
-        result["reason"] = "Published fair values do not reconcile with native calculation"
+        result["reason"] = (
+            "Native candidate outputs are unavailable for publication parity"
+            if unavailable
+            else "Published fair values do not reconcile with native calculation"
+        )
     return result
 
 

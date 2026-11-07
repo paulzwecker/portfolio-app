@@ -32,6 +32,7 @@ from portfolio_api.domain.models import (
     GoogleSheetsSyncCandidate,
     GoogleSheetsSyncRun,
 )
+from portfolio_api.domain.services import DomainError
 from portfolio_api.google_sheets_sync import (
     GoogleSheetsApiReader,
     GoogleSheetsSyncError,
@@ -40,7 +41,7 @@ from portfolio_api.google_sheets_sync import (
     run_sync_check,
 )
 from portfolio_api.main import create_app
-from portfolio_api.model_publications import FinancialModelPublicationV1
+from portfolio_api.model_publications import FinancialModelPublicationV1, reconcile_publication
 from portfolio_api.settings import Settings
 
 
@@ -95,6 +96,69 @@ def test_publication_rejects_drafts_tampering_floats_and_unknown_fields() -> Non
     ):
         with pytest.raises(ValidationError):
             FinancialModelPublicationV1.model_validate({**item, **changes})
+
+
+@pytest.mark.parametrize(
+    ("native", "status", "difference"),
+    [
+        ("0", "MATCH", "0"),
+        ("0.0000001", "MATCH", "0.0000001"),
+        ("0.00000011", "MISMATCH", "0.00000011"),
+        (None, "UNAVAILABLE", None),
+    ],
+)
+def test_publication_review_preserves_exact_values_zero_and_missing(
+    native: str | None,
+    status: str,
+    difference: str | None,
+) -> None:
+    fields = ("bear_fv", "base_fv", "bull_fv", "weighted_fv")
+    item = FinancialModelPublicationV1.model_validate(publication({}, dict.fromkeys(fields, "0")))
+    result = reconcile_publication(
+        item, {"status": "READY", "calculated_outputs": dict.fromkeys(fields, native)}
+    )
+    evidence = result["publication"]
+    assert isinstance(evidence, dict)
+    assert evidence["parity_status"] == status
+    assert evidence["comparisons"] == [
+        {
+            "field": field,
+            "published_value": "0",
+            "native_value": native,
+            "difference": difference,
+            "matches": None if native is None else status == "MATCH",
+        }
+        for field in fields
+    ]
+    assert result["status"] == ("READY" if status == "MATCH" else "INVALID")
+    blocked = reconcile_publication(item, {"status": "CONFLICT", "reason": "Stale base"})
+    assert blocked["status"] == "CONFLICT"
+    blocked_evidence = blocked["publication"]
+    assert isinstance(blocked_evidence, dict)
+    assert blocked_evidence["parity_status"] == "UNAVAILABLE"
+
+
+def test_publication_review_keeps_full_precision_signed_differences() -> None:
+    fields = ("bear_fv", "base_fv", "bull_fv", "weighted_fv")
+    published = "99999999999999999999.123456789012345678"
+    item = FinancialModelPublicationV1.model_validate(
+        publication({}, dict.fromkeys(fields, published))
+    )
+    result = reconcile_publication(
+        item, {"status": "READY", "calculated_outputs": dict.fromkeys(fields, "0")}
+    )
+    evidence = result["publication"]
+    assert isinstance(evidence, dict)
+    assert evidence["comparisons"] == [
+        {
+            "field": field,
+            "published_value": published,
+            "native_value": "0",
+            "difference": "-" + published,
+            "matches": False,
+        }
+        for field in fields
+    ]
 
 
 @pytest.mark.parametrize("change", ["values", "metadata", "outage"])
@@ -216,6 +280,38 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                 parity = preview.preview_data["publication"]
                 assert isinstance(parity, dict)
                 assert parity["parity_status"] == "MATCH"
+                assert preview.publication is not None
+                assert len(preview.publication.comparisons) == 4
+                assert all(value.matches for value in preview.publication.comparisons)
+                assert preview.preview_fingerprint is not None
+                with pytest.raises(DomainError, match="Review the publication preview"):
+                    accept_sync_candidate(db, candidate_id, "synthetic-reviewer")
+                with pytest.raises(DomainError, match="reviewed preview changed"):
+                    accept_sync_candidate(
+                        db, candidate_id, "synthetic-reviewer", preview_fingerprint="0" * 64
+                    )
+                # A refreshed server preview must never authorize another reviewer's older screen.
+                changed = {**preview.preview_data, "review_context": "new synthetic observation"}
+                with patch(
+                    "portfolio_api.google_sheets_sync._preview_contract", return_value=changed
+                ):
+                    refreshed = accept_sync_candidate(
+                        db,
+                        candidate_id,
+                        "synthetic-reviewer",
+                        preview_fingerprint=preview.preview_fingerprint,
+                    )
+                    assert refreshed.status == "READY"
+                    assert refreshed.accepted_revision_id is None
+                    assert refreshed.preview_fingerprint != preview.preview_fingerprint
+                    with pytest.raises(DomainError, match="reviewed preview changed"):
+                        accept_sync_candidate(
+                            db,
+                            candidate_id,
+                            "other-reviewer",
+                            preview_fingerprint=preview.preview_fingerprint,
+                        )
+                preview = preview_sync_candidate(db, candidate_id)
                 assert (
                     db.scalar(
                         select(func.count())
@@ -239,10 +335,25 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                 ]
                 failed = run_sync_check(db, settings, reader(settings, bad_rows))
                 bad_id = failed.new_candidates[0].id
-                assert preview_sync_candidate(db, bad_id).status == "INVALID"
-                assert accept_sync_candidate(db, bad_id, "synthetic-reviewer").status == "INVALID"
+                bad_preview = preview_sync_candidate(db, bad_id)
+                assert bad_preview.status == "INVALID"
+                assert bad_preview.publication is not None
+                assert bad_preview.publication.parity_status == "MISMATCH"
+                assert (
+                    accept_sync_candidate(
+                        db,
+                        bad_id,
+                        "synthetic-reviewer",
+                        preview_fingerprint=bad_preview.preview_fingerprint,
+                    ).status
+                    == "INVALID"
+                )
                 accepted = accept_sync_candidate(
-                    db, candidate_id, "synthetic-reviewer", "Reviewed synthetic fixture"
+                    db,
+                    candidate_id,
+                    "synthetic-reviewer",
+                    "Reviewed synthetic fixture",
+                    preview_fingerprint=preview.preview_fingerprint,
                 )
                 assert accepted.status == "ACCEPTED"
                 assert (
@@ -316,6 +427,18 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                     json.loads(stored.contract_text)["contract_sha256"]
                     == envelope["contract_sha256"]
                 )
+            # The API carries the same reviewed-preview requirement as the domain service.
+            for approval in ({}, {"preview_fingerprint": "0" * 64}):
+                rejected = client.post(
+                    f"/v1/google-sheets-sync/candidates/{bad_id}/accept",
+                    json={"reviewer": "fixture-reviewer", **approval},
+                )
+                assert rejected.status_code == 409
+            candidates = client.get("/v1/google-sheets-sync/candidates").json()
+            persisted = next(item for item in candidates if item["id"] == str(candidate_id))
+            assert persisted["publication"]["parity_status"] == "MATCH"
+            assert persisted["preview_fingerprint"] == preview.preview_fingerprint
+            assert len(persisted["publication"]["comparisons"]) == 4
 
 
 @pytest.mark.parametrize(
@@ -507,7 +630,13 @@ def test_one_company_methods_publish_and_advance_independent_revisions(
         for i, model in enumerate(models):
             with Session(postgres_engine) as db, db.begin():
                 accepted = accept_sync_candidate(
-                    db, candidates[UUID(model["id"])], "fixture-owner", "Review synthetic method"
+                    db,
+                    candidates[UUID(model["id"])],
+                    "fixture-owner",
+                    "Review synthetic method",
+                    preview_fingerprint=preview_sync_candidate(
+                        db, candidates[UUID(model["id"])]
+                    ).preview_fingerprint,
                 )
                 assert accepted.status == "ACCEPTED"
             for j, other in enumerate(models):

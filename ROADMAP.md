@@ -5,14 +5,14 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 
 ## Execution cursor
 
-| Field         | Current value                                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Active work   | MP1 foundation extension on existing PR #23                                                                                    |
-| Branch        | `codex/model-publication-vertical-slice`                                                                                       |
-| Status        | IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED; integration PR awaiting owner review                                                 |
-| Next task     | Review and merge the updated PR #23, then resume MP2 from updated main with a reviewed canonical base and real source template |
-| PR            | [#23](https://github.com/paulzwecker/portfolio-app/pull/23), open and unmerged at inspection                                   |
-| Approval gate | Owner review/merge, followed by separately authorized source installation and production/model operations                      |
+| Field         | Current value                                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| Active work   | MP1 publication-review completion on existing PR #23                                                       |
+| Branch        | `codex/model-publication-vertical-slice`                                                                   |
+| Status        | Foundation LOCAL_VERIFIED; publication review evidence and caller-bound preview safeguards in verification |
+| Next task     | Complete reviewer feedback and desktop/mobile verification, then update PR #23 for owner review            |
+| PR            | [#23](https://github.com/paulzwecker/portfolio-app/pull/23), open and unmerged at inspection               |
+| Approval gate | Owner review/merge, followed by separately authorized source installation and production/model operations  |
 
 ## Baseline and outstanding gates
 
@@ -41,6 +41,8 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | MP1.F3 Exact model selection             | LOCAL_VERIFIED | Summary, history and editor preserve the selected model/listing                                   |
 | MP1.F4 Cross-method proof                | LOCAL_VERIFIED | DCF/owner-cash-flow/residual-income retain independent evidence, revisions and return definitions |
 | MP1.F5 Integration gate                  | LOCAL_VERIFIED | Focused/DB/UI checks, independent review, quality checks and one updated PR                       |
+| MP1.R1 Publication review safeguards     | LOCAL_VERIFIED | Typed source/native values and caller-bound preview hash; stale reviewer tabs remain blocked      |
+| MP1.R2 Reviewer workflow                 | In progress    | Actual acceptance outcome, preserved unresolved rationale, explicit parity and immutable identity |
 
 ## Next milestones
 
@@ -63,12 +65,15 @@ Original task definitions, decisions and evidence remain in the
 
 ## Execution evidence
 
-| Date       | Task                    | Evidence                                                                                                                                                                                                                        | Next action                                       |
-| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| 2026-11-07 | MP1.F1                  | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger                                                                                                              | Check links; complete model-scoped sync           |
-| 2026-11-07 | MP1.F2/F4               | Three methods on one synthetic company publish the same revision label; native parity, independent advancement, model-scoped conflicts and corrected source metadata pass PostgreSQL verification. Three Apps Script tests pass | Complete UI verification and final review         |
-| 2026-11-07 | MP1.F3/F5               | Full check passes (166 web / 659 API unit, two skips); isolated PostgreSQL 139 passed / four skips; focused suite 31; browser six plus two screenshot checks; 133 Markdown files link-clean; independent reviews pass           | Owner review of PR #23, then MP2 from merged main |
-| 2026-11-07 | Remote integration gate | [GitHub Actions](https://github.com/paulzwecker/portfolio-app/actions/runs/42388954068) passed all three jobs on code commit `c770e0f`; Vercel Preview passed                                                                   | Owner review of the current PR head               |
+| Date       | Task                    | Evidence                                                                                                                                                                                                                        | Next action                                          |
+| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 2026-11-07 | MP1.F1                  | Audited 125 Markdown files; preserved safety/provenance, consolidated entrypoints and archived the original ledger                                                                                                              | Check links; complete model-scoped sync              |
+| 2026-11-07 | MP1.F2/F4               | Three methods on one synthetic company publish the same revision label; native parity, independent advancement, model-scoped conflicts and corrected source metadata pass PostgreSQL verification. Three Apps Script tests pass | Complete UI verification and final review            |
+| 2026-11-07 | MP1.F3/F5               | Full check passes (166 web / 659 API unit, two skips); isolated PostgreSQL 139 passed / four skips; focused suite 31; browser six plus two screenshot checks; 133 Markdown files link-clean; independent reviews pass           | Owner review of PR #23, then MP2 from merged main    |
+| 2026-11-07 | Remote integration gate | [GitHub Actions](https://github.com/paulzwecker/portfolio-app/actions/runs/42388954068) passed all three jobs on code commit `c770e0f`; Vercel Preview passed                                                                   | Owner review of the current PR head                  |
+| 2026-11-07 | MP1.R1/R2 inspection    | PR #23 remains open; clean branch/worktree and preserved stash. Independent review found false acceptance feedback and server-only preview approval. Baseline desktop/mobile review tests pass                                  | Verify caller-bound acceptance and reviewer evidence |
+
+| 2026-11-07 | MP1.R1 | Typed parity evidence, 14 unit cases, six isolated PostgreSQL checks plus three API/replay checks, strict backend types and lint pass. Production controls remain disabled | Verify reviewer feedback and desktop/mobile interaction |
 
 ## Upkeep
 

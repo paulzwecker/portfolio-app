@@ -6,12 +6,14 @@ import hashlib
 import json
 import time
 from collections import OrderedDict
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol, cast
 from urllib.parse import quote
 from uuid import UUID
 
+from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -471,6 +473,15 @@ def _candidate_read(
     session: Session, row: GoogleSheetsSyncCandidate
 ) -> s.GoogleSheetsSyncCandidateRead:
     company = session.get(Company, row.company_id) if row.company_id else None
+    publication = None
+    raw_publication = (row.preview_data or {}).get("publication")
+    if isinstance(raw_publication, dict):
+        with suppress(ValidationError):
+            # Older recorded previews lack the detailed comparisons. A refreshed
+            # preview produces the typed evidence without rewriting raw history.
+            publication = s.ModelPublicationParityRead.model_validate(
+                {key: value for key, value in raw_publication.items() if key != "mismatched_fields"}
+            )
     contract_data = row.contract_data or {}
     proposal: s.FinancialModelProposalProvenance | None = None
     raw_proposal = contract_data.get("proposal")
@@ -542,6 +553,8 @@ def _candidate_read(
         issue=row.issue,
         preview_status=row.preview_status,
         preview_data=row.preview_data,
+        preview_fingerprint=row.preview_fingerprint,
+        publication=publication,
         previewed_at=row.previewed_at,
         accepted_revision_id=row.accepted_revision_id,
         reviewer=row.reviewer,
@@ -936,6 +949,8 @@ def accept_sync_candidate(
     candidate_id: UUID,
     reviewer: str,
     decision_note: str | None = None,
+    *,
+    preview_fingerprint: str | None = None,
 ) -> s.GoogleSheetsSyncCandidateRead:
     candidate = session.scalar(
         select(GoogleSheetsSyncCandidate)
@@ -951,6 +966,13 @@ def accept_sync_candidate(
     parsed = _contract_from_candidate(session, candidate)
     if parsed is None or candidate.model_id is None:
         return _candidate_read(session, candidate)
+
+    if parsed.publication is not None and preview_fingerprint is None:
+        raise operations.DomainError("Review the publication preview before accepting", 409)
+    if preview_fingerprint is not None and preview_fingerprint != candidate.preview_fingerprint:
+        raise operations.DomainError(
+            "The reviewed preview changed. Refresh and review it again", 409
+        )
 
     prior_preview_fingerprint = candidate.preview_fingerprint
     fresh_preview = _preview_contract(session, candidate.model_id, parsed)

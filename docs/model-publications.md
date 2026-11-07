@@ -64,6 +64,22 @@ acceptance replay the same frozen contract and recalculate native outputs.
 Published fair-value mismatch blocks readiness and acceptance. Review decisions,
 evidence, concurrency checks and immutable history use existing services.
 
+The candidate API exposes the reviewed preview SHA-256 and typed publication
+evidence containing all four exact published/native fair values, signed differences
+and their tolerance checks. Missing native values retain `UNAVAILABLE`. The
+reviewer panel presents this comparison with model currency, publication time and
+frozen contract identity. Calculation agreement and investment acceptance remain
+separate review decisions.
+
+Acceptance of a publication requires the caller's `preview_fingerprint` to match
+the stored preview, followed by fresh native validation in the transaction. A
+different reviewer refreshing the candidate invalidates an older tab's approval.
+A fresh calculation that differs from the reviewed preview returns the updated
+candidate for another explicit review. The UI preserves the unresolved rationale
+and reports the actual outcome. Previously accepted candidates replay their
+recorded decision. Older bare portable-contract callers may omit the fingerprint
+for compatibility; the current web review always supplies it.
+
 ## Scope and operation
 
 MP1 is an isolated, fixture-verified publication-to-proposal workflow for existing
