@@ -6,14 +6,14 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                         |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                        |
-| Implementation              | PARTIAL / BUILD. Bounded importer → EUR valuation/Operations API readback and same-day recovery locally verified. Durable preflight monitoring pending |
-| Next ready substantial task | C2.2 durable Operations preflight status, followed by local investor-journey review                                                                    |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                 |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR    |
+| Field                       | Current value                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
+| Implementation              | PARTIAL / BUILD. Bounded importer → EUR valuation/Operations API readback, same-day recovery and durable preflight monitoring locally verified      |
+| Next ready substantial task | C2.2 local investor-journey and freshness presentation review, then milestone integration when its local acceptance is met                          |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
+| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
 ## How to choose work
 
@@ -83,7 +83,7 @@ references through the linked ledgers. They do not create a second execution que
 | Slice / status                                                             | Dependencies and meaningful acceptance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | C2.1 Held mapping and recovery preview — VERIFIED on candidate PR #25      | 22/22 held mappings, required FX allowlisted, read-only exact-target preview and current schema/count evidence. Zero provider calls/writes. Merge gate is open; the old recovery branch protects the pre-import state                                                                                                                                                                                                                                                                                                                                     |
-| C2.2 Daily portfolio data — NEXT                                           | C0, reviewed #25 receipt fix, current recovery and approved scope. Bounded backfill → exact-listing prices/dated FX → EUR holdings/cash/weights/gaps → source drill-down. Reconcile all reviewed held instruments and native cash; missing data stays visible. Desktop/mobile readback, two authorized hosted refresh cycles including restart, synthetic outage/rate-limit/partial tests and durable last-success/retry/coverage prove the outcome. Reuse manual jobs and one-cycle runners; provider-only unattended activation needs separate approval |
+| C2.2 Daily portfolio data — PARTIAL / BUILD                                | C0, reviewed #25 receipt fix, current recovery and approved scope. Bounded backfill → exact-listing prices/dated FX → EUR holdings/cash/weights/gaps → source drill-down. Reconcile all reviewed held instruments and native cash; missing data stays visible. Desktop/mobile readback, two authorized hosted refresh cycles including restart, synthetic outage/rate-limit/partial tests and durable last-success/retry/coverage prove the outcome. Reuse manual jobs and one-cycle runners; provider-only unattended activation needs separate approval |
 | C3.1 SEC statements and filings — READY for local mapping/integration work | Verify CIK identity/evidence and supported held/Watchlist issuer scope. Review international gaps. Bounded facts/submissions import must preserve amendments, accessions, units, fiscal periods and source dates, then appear in Financials/Research. Idempotent incremental refresh and per-issuer freshness/coverage need local tests and authorized hosted readback                                                                                                                                                                                    |
 | C3.2 Permitted consensus/international coverage — SOURCE-GATED             | Reviewed provider rights, identities, coverage and retention precede requests. Prove representative annual/quarterly series, currencies, fiscal periods, analyst coverage, revision history and missing-data behavior. Distinguish current snapshots from genuine estimate history and external consensus from agent forecasts                                                                                                                                                                                                                            |
 | C2.3 Ledger foundation and safe cutover — MISSING                          | C0 anchor plus reviewed account/cutover policy. Build a typed opening-balance + manual-activity → exact position/cash projection → reconciliation → reviewed dated cutover workflow. Synthetic buy/sell, deposit/withdrawal and fee cases must match quantities/cash while snapshot/targets remain intact. Production requires schema/ownership/import approval; detailed boundary is in Portfolio architecture                                                                                                                                           |
@@ -117,6 +117,20 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
+- C2.2 preflight diagnostics now persist to existing ingestion run/attempt tables
+  under the guarded market lock. Invalid sources, mappings and budgets reach the
+  Operations API without provider calls or fact/portfolio changes. Unverified
+  targets still reject diagnostic writes. Later valid scope checks record resolution
+  while retaining original failure evidence and actual data freshness. Fixed status
+  selection losing prior success/FX history after many blocked checks. Status follows
+  attempt time when an older run retries. Seven isolated PostgreSQL/API cases pass.
+  Diagnostic records reject provider replay and require
+  a fresh scoped check. Focused worker/importer/guard regression passes 142 cases;
+  strict types, lint, documentation links/tests and whitespace checks pass.
+  Final preflight/importer rerun passes 36 cases after the replay/order corrections.
+  Browser investor-journey review is the next BUILD step.
+  Hosted activation and production data coverage remain unverified and owner-gated.
+
 - C2.2 same-day recovery reuses the frozen run/scope, waits 15 minutes after a
   retryable failure and caps each domain at three persisted attempts. Each cloud
   invocation makes one domain attempt with at most four transport tries per subject.
@@ -125,15 +139,15 @@ policy decision. It has lower priority than useful market, research and decision
   claims. Fixed interruption detection that could rewrite terminal runs after four
   hours; partial success timestamps and append-only attempt numbering are retained.
   Focused recovery/importer regression passes 33 cases, with strict types and lint.
-  Durable preflight diagnostics remain the next BUILD increment.
+  Durable preflight diagnostics are covered in the later increment above.
 
 - C2.2 synthetic end-to-end increment verifies actual normalization/persistence,
   exact EUR valuation and Operations HTTP status, unchanged holdings/cash/targets,
   fresh-connection replay, FX outage and next-UTC-cycle recovery. Frozen source
   hashes persist through fetch and replay. Fixed scope recomputation during reused
   run reporting and retained full-universe coverage diagnostics. The focused
-  84-case importer/runner/adapter regression passes. Same-day recovery and durable
-  preflight blocker visibility remain active BUILD tasks.
+  84-case importer/runner/adapter regression passes. Later BUILD evidence above
+  covers same-day recovery and durable preflight blocker visibility.
 
 - C2.2 bounded-scope increment pins exact listing/FX keys and reviewed crosswalk
   bytes to the existing scheduled ledger. Cloud corrections cover 90 inclusive

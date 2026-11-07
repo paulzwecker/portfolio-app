@@ -598,29 +598,36 @@ def _metric_decimal(value: object) -> Decimal | None:
 def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
     """Expose the latest persisted Yahoo market/FX refresh state."""
 
-    runs = list(
-        session.scalars(
+    latest = {
+        domain: session.scalar(
             select(ExternalIngestionRun)
             .where(
                 ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
-                ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
+                ExternalIngestionRun.domain == domain,
+                ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
             )
-            .order_by(ExternalIngestionRun.created_at.desc())
-            .limit(40)
+            .order_by(
+                func.coalesce(
+                    ExternalIngestionRun.last_attempt_started_at, ExternalIngestionRun.started_at
+                ).desc(),
+                ExternalIngestionRun.created_at.desc(),
+                ExternalIngestionRun.id.desc(),
+            )
+            .limit(1)
         )
-    )
-    latest: dict[str, ExternalIngestionRun] = {}
-    for run in runs:
-        latest.setdefault(run.domain, run)
+        for domain in ("MARKET_DATA", "FX")
+    }
     market_run = latest.get("MARKET_DATA")
     fx_run = latest.get("FX")
     selected = [run for run in (market_run, fx_run) if run is not None]
     last_attempt = max(
         (run.last_attempt_started_at or run.started_at for run in selected), default=None
     )
-    last_success = max(
-        (run.last_successful_at for run in selected if run.last_successful_at is not None),
-        default=None,
+    last_success = session.scalar(
+        select(func.max(ExternalIngestionRun.last_successful_at)).where(
+            ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
+            ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
+        )
     )
     if any(run.status == "RUNNING" for run in selected):
         state = "REFRESHING"

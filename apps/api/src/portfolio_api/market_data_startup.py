@@ -19,9 +19,19 @@ from portfolio_api.domain.models import (
     PriceObservation,
 )
 from portfolio_api.external_data import ExternalDataDomain
-from portfolio_api.external_ingestion import CLOUD_RETRY_COOLDOWN, MAX_ATTEMPTS, run_scheduled
+from portfolio_api.external_ingestion import (
+    CLOUD_RETRY_COOLDOWN,
+    MAX_ATTEMPTS,
+    record_cloud_market_preflight,
+    resolve_cloud_market_preflights,
+    run_scheduled,
+)
 from portfolio_api.health import check_readiness
-from portfolio_api.market_data_bootstrap import _load_crosswalk, preview_market_data_bootstrap
+from portfolio_api.market_data_bootstrap import (
+    MarketDataBootstrapError,
+    _load_crosswalk,
+    preview_market_data_bootstrap,
+)
 from portfolio_api.market_data_ingestion import (
     CROSSWALK_PATH,
     DEFAULT_LOOKBACK_DAYS,
@@ -57,11 +67,23 @@ def run_cloud_incremental_refresh(
 ) -> dict[str, object]:
     """Freeze and bound the existing scheduled importer to the reviewed market scope."""
     if settings.database_target_environment is None:
-        return {"status": "BLOCKED", "failure_code": "EXPLICIT_TARGET_REQUIRED"}
+        return {
+            "status": "BLOCKED",
+            "phase": "PREFLIGHT",
+            "failure_code": "EXPLICIT_TARGET_REQUIRED",
+        }
     if at.tzinfo is None or at.utcoffset() is None:
-        return {"status": "BLOCKED", "failure_code": "TIMEZONE_AWARE_CUTOFF_REQUIRED"}
+        return {
+            "status": "BLOCKED",
+            "phase": "PREFLIGHT",
+            "failure_code": "TIMEZONE_AWARE_CUTOFF_REQUIRED",
+        }
     if session.in_transaction():
-        return {"status": "BLOCKED", "failure_code": "CLEAN_REFRESH_TRANSACTION_REQUIRED"}
+        return {
+            "status": "BLOCKED",
+            "phase": "PREFLIGHT",
+            "failure_code": "CLEAN_REFRESH_TRANSACTION_REQUIRED",
+        }
     session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
     crosswalk, digest = _load_crosswalk(CROSSWALK_PATH)
     end = at.astimezone(UTC).date()
@@ -77,6 +99,7 @@ def run_cloud_incremental_refresh(
     if preview["status"] != "READY":
         return {
             "status": "BLOCKED",
+            "phase": "PREFLIGHT",
             "failure_code": "MARKET_SCOPE_REVIEW_REQUIRED",
             "preview": preview,
         }
@@ -85,12 +108,17 @@ def run_cloud_incremental_refresh(
     if len({(venue.casefold(), ticker.casefold()) for venue, ticker in listing_keys}) != len(
         listing_rows
     ):
-        return {"status": "BLOCKED", "failure_code": "AMBIGUOUS_CANONICAL_LISTING_KEYS"}
+        return {
+            "status": "BLOCKED",
+            "phase": "PREFLIGHT",
+            "failure_code": "AMBIGUOUS_CANONICAL_LISTING_KEYS",
+        }
     pairs = {tuple(pair.split("/")) for pair in preview["required_fx_pairs"]}
     subject_count = len(listing_keys) + len(pairs)
     if subject_count > CLOUD_MAX_SUBJECTS:
         return {
             "status": "BLOCKED",
+            "phase": "PREFLIGHT",
             "failure_code": "MARKET_SCOPE_BUDGET_EXCEEDED",
             "subject_count": subject_count,
             "maximum_subjects": CLOUD_MAX_SUBJECTS,
@@ -113,6 +141,7 @@ def run_cloud_incremental_refresh(
     )
     return {
         **result,
+        "phase": "INGESTION",
         "scope_version": "cloud-market-correction-v1",
         "subject_count": subject_count,
         "maximum_subjects": CLOUD_MAX_SUBJECTS,
@@ -142,8 +171,15 @@ def _latest_run(session: Session, domain: str) -> ExternalIngestionRun | None:
         .where(
             ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
             ExternalIngestionRun.domain == domain,
+            ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
         )
-        .order_by(ExternalIngestionRun.created_at.desc())
+        .order_by(
+            func.coalesce(
+                ExternalIngestionRun.last_attempt_started_at, ExternalIngestionRun.started_at
+            ).desc(),
+            ExternalIngestionRun.created_at.desc(),
+            ExternalIngestionRun.id.desc(),
+        )
         .limit(1)
     )
 
@@ -294,7 +330,21 @@ def run_startup_refresh(
             try:
                 with Session(bind=connection) as session:
                     if cloud_incremental:
-                        report = run_cloud_incremental_refresh(session, settings, datetime.now(UTC))
+                        checked_at = datetime.now(UTC)
+                        try:
+                            report = run_cloud_incremental_refresh(session, settings, checked_at)
+                        except MarketDataBootstrapError:
+                            report = {
+                                "status": "BLOCKED",
+                                "phase": "PREFLIGHT",
+                                "failure_code": "MARKET_SOURCE_INVALID",
+                            }
+                        if report.get("phase") == "PREFLIGHT":
+                            session.rollback()
+                            diagnostic = record_cloud_market_preflight(session, report, checked_at)
+                            report["preflight_run_id"] = diagnostic["run_id"]
+                        elif report.get("phase") == "INGESTION":
+                            resolve_cloud_market_preflights(session, checked_at)
                         return {
                             "status": report["status"],
                             "failure_code": report.get("failure_code"),

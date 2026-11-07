@@ -56,8 +56,19 @@ Cloud execution preserves configured proxy routing. Terminal output contains
 operational statuses and exception classes, with detailed results in existing
 private database ledgers. Partial, blocked, failed and malformed outcomes return a
 nonzero process exit, including failed nested jobs. Overlapping cycles preserve
-the active worker's heartbeat. Preflight monitoring and hosted activation
-remain pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md).
+the active worker's heartbeat.
+
+After schema readiness, cloud scope/source blockers are stored in existing
+`external_ingestion_runs` and append-only attempts under the market lock and
+write-target guard. Operations exposes the failure while retaining the last
+successful data update. A later valid scope records `preflight_resolved_at` on
+those diagnostic reports, leaving their original failures/attempts intact. Resolved
+checks leave the current status selection. Reusing facts never advances data
+freshness. Retry a preflight diagnostic by rerunning the cloud scope check; it
+cannot be replayed as a provider ingestion scope. Status follows the latest attempt,
+including retries of older runs. Database readiness/authorization failures that
+prevent safe diagnostic persistence remain sanitized command failures. Hosted activation and investor
+journey review remain pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md).
 
 ## Jobs and cadence
 

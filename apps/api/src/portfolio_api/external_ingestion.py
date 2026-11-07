@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -1195,6 +1195,58 @@ def _run_result(session: Session, claim: RunClaim) -> dict[str, Any]:
     }
 
 
+def record_cloud_market_preflight(
+    session: Session, report: dict[str, object], checked_at: datetime
+) -> dict[str, Any]:
+    """Persist a blocked scope check in the existing ingestion ledger, without fetching facts."""
+    code = report.get("failure_code")
+    if report.get("phase") != "PREFLIGHT" or not isinstance(code, str):
+        raise ValueError("A preflight diagnostic requires its phase and failure code")
+    claim = _claim_run(
+        session,
+        YAHOO_PROVIDER_ID,
+        ExternalDataDomain.MARKET_DATA,
+        {
+            "scope": "cloud_market_preflight",
+            "checked_at": checked_at.isoformat(),
+            "failure_code": code,
+        },
+        run_date=checked_at.date(),
+    )
+    outcome = DomainOutcome(
+        "BLOCKED",
+        report,
+        code,
+        f"Cloud market preflight blocked ({code}). Inspect the recorded scope diagnostics.",
+    )
+    if claim.created:
+        _execute_cycle(
+            session,
+            [claim],
+            lambda: {ExternalDataDomain.MARKET_DATA: outcome},
+            single_attempt=True,
+        )
+    return _run_result(session, claim)
+
+
+def resolve_cloud_market_preflights(session: Session, checked_at: datetime) -> None:
+    """Retain prior block evidence while recording that a later scope check passed."""
+    blocked = session.scalars(
+        select(ExternalIngestionRun)
+        .where(
+            ExternalIngestionRun.provider_id == YAHOO_PROVIDER_ID,
+            ExternalIngestionRun.request_scope["scope"].as_string() == "cloud_market_preflight",
+            ExternalIngestionRun.status == "BLOCKED",
+            ExternalIngestionRun.created_at <= checked_at,
+            ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
+        )
+        .with_for_update()
+    )
+    for run in blocked:
+        run.report = {**run.report, "preflight_resolved_at": checked_at.isoformat()}
+    session.commit()
+
+
 def run_scheduled(
     session: Session,
     settings: Settings,
@@ -1214,6 +1266,8 @@ def run_scheduled(
     frozen_yahoo_crosswalk: tuple[YahooListingCrosswalk, str] | None = None,
     retry_failed: bool = False,
 ) -> dict[str, Any]:
+    if replay_scope is not None and replay_scope.get("scope") == "cloud_market_preflight":
+        raise ValueError("Cloud preflight diagnostics require a fresh cloud scope check")
     if replay_scope is not None and "crosswalk_sha256" in replay_scope:
         if listing_key_filter is not None or fx_pair_filter is not None:
             raise ValueError("A frozen replay cannot replace its listing or FX scope")
@@ -1466,8 +1520,15 @@ def status_report(session: Session, *, now_at: datetime | None = None) -> dict[s
             .where(
                 ExternalIngestionRun.provider_id == provider,
                 ExternalIngestionRun.domain == domain.value,
+                ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
             )
-            .order_by(ExternalIngestionRun.created_at.desc())
+            .order_by(
+                func.coalesce(
+                    ExternalIngestionRun.last_attempt_started_at, ExternalIngestionRun.started_at
+                ).desc(),
+                ExternalIngestionRun.created_at.desc(),
+                ExternalIngestionRun.id.desc(),
+            )
             .limit(1)
         )
         last_success = session.scalar(

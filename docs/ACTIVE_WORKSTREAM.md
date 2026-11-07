@@ -35,7 +35,7 @@
 - Fixed replay reporting to reuse the captured request scope. Explicit listing
   scope keeps unrelated companies outside its diagnostics while legacy full-universe
   gaps remain visible. Focused regression passed 84 cases, with strict types/lint.
-- Same-day recovery now reclaims only retryable failed/partial domains after a
+- `a4d0ec8` reclaims only retryable failed/partial domains after a
   15-minute cooldown, within the original frozen scope and three-attempt ledger
   budget. One attempt per invocation bounds transport work to four tries per subject.
   Successes stay reused; interrupted claims recover through the existing history.
@@ -43,16 +43,26 @@
   Focused recovery/importer regression passes 33 cases, including five isolated
   recovery scenarios, scope escape and retained-success checks. Strict types and
   lint pass. No production execution occurred.
+- Preflight blockers now persist under the guarded market advisory lock to existing
+  ingestion runs/attempts. Operations keeps previous success and other-domain history,
+  including after more than 40 failures. Corrected scopes resolve active diagnostics
+  without rewriting their original failures or advancing data freshness. Seven isolated
+  PostgreSQL/API cases cover mappings/budgets/source errors, guard rejection and
+  unchanged provider/portfolio facts. No schema or public API contract changed.
+  Diagnostic replay requires a fresh cloud scope check. The focused 142-case
+  worker/importer/guard regression, strict types, lint and documentation checks pass.
+  Second-pass review corrected status ordering to follow an older run's newer
+  attempt. The dedicated case checks both Operations and external-ingestion status.
+  The final 36-case preflight/importer rerun passes after replay/order corrections.
 
 ## Next build steps
 
-1. Make cloud preflight blockers visible durably in Operations. They currently
-   return a safe CLI failure code before ingestion claims, leaving prior run status
-   intact. Reuse existing operational ledgers rather than adding a job framework.
-2. Review the synthetic investor journey and data/freshness presentation, then use
+1. Review the synthetic investor journey and data/freshness presentation, then use
    INTEGRATE once the local milestone is complete. The 90-date/30-subject policy
    requires explicit review before production activation. Actual hosted cycles,
    current-state recovery and provider coverage remain separately gated.
+2. After owner merge of #25, integrate its receipt adapter and preserve both sets
+   of roadmap evidence. Complete local acceptance before the milestone PR gate.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR
 belong to the completed milestone's INTEGRATE gate. Production backfill/scheduling,
