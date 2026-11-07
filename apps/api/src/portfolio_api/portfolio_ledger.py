@@ -182,9 +182,12 @@ def project_ledger(
                 raise services.DomainError(
                     "Trade cash currency must match the exact listing currency", status=422
                 )
-            if item.settlement_date > value.as_of.date():
+            if (
+                item.trade_date > item.settlement_date
+                or item.settlement_date > item.effective_at.date()
+            ):
                 raise services.DomainError(
-                    "Only settled trades within the cutoff are supported", status=422
+                    "Only settled trades within the source booking date are supported", status=422
                 )
 
     ordered_accounts = sorted(value.accounts, key=lambda a: str(a.account_id))
@@ -289,9 +292,10 @@ def project_ledger(
             contract_version=value.contract_version,
             projection_version="settled-booking-v1",
             preview_only=True,
-            status="BLOCKED" if issues else "RECONCILED",
+            status="BLOCKED" if issues else "OPENING_RECONCILED",
             portfolio_id=anchor.portfolio_id,
             anchor_snapshot_id=anchor.snapshot.id,
+            anchor_recorded_at=anchor.snapshot.recorded_at,
             anchor_sha256=anchor.anchor_sha256,
             input_sha256=_digest(payload),
             as_of=value.as_of,

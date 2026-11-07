@@ -76,6 +76,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Forecast accuracy and consensus benchmarking](forecast-accuracy.md)
 - [Canonical investment thesis and evidence](investment-thesis.md)
 - [Portfolio experience](portfolio-dashboard.md)
+- [Candidate portfolio ledger](portfolio-ledger.md)
 - [Canonical Portfolio Rank](portfolio-rank.md)
 - [Research Agent Operations Contract](research-agent-operations.md)
 - [Canonical agent-authored research](research-forecasts.md)

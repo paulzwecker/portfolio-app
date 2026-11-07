@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 ledger foundation � BUILD. Exact settled projection core unit-verified; read-only API integration in progress. [Handoff](docs/ACTIVE_WORKSTREAM.md) |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                          |
-| Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending           |
-| Next ready substantial task | C2.3 verify source-bound ledger API on isolated PostgreSQL, preserving snapshots/targets and read-only transactions. C2.2 integration awaits #25 merge   |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                   |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR      |
+| Field                       | Current value                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.3 hash-bound ledger opening/activity preview LOCAL_VERIFIED (BUILD). [Handoff](docs/ACTIVE_WORKSTREAM.md)                                        |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
+| Implementation              | PARTIAL / BUILD. C2.2/C3.1 synthetic workflows and C2.3 read-only ledger preview locally verified. Hosted data/cutover pending                      |
+| Next ready substantial task | C2.3 ending-statement reconciliation and Portfolio ledger review UI. C2.2 integration follows #25 owner merge                                       |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
+| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
 ## How to choose work
 
@@ -56,7 +56,7 @@ Reverify target, coverage, source rights and controls before activation.
 | Alerts and temporal history          | Implemented in-app attention/trigger/history views                                                                                                             | Real source-backed coverage UNVERIFIED. Notification delivery MISSING and channel/policy undecided. [Contract](docs/attention-center.md)                                                                                                                                                                       |
 | Exposure                             | Company/listing/cash composition and concentration PARTIAL                                                                                                     | Sector/geography/business-model classifications and broader exposure coverage need canonical sources. [Limits](docs/portfolio-dashboard.md)                                                                                                                                                                    |
 | Cloud operations and security        | Durable manual jobs, dependency steps, locks/cooldowns/retries, heartbeat, sync receipts and Operations UI LOCAL_VERIFIED                                      | Recurring/cloud/manual/Sheets controls are disabled in the deployment template; hosted configuration needs reverification. No scheduled worker is configured there. Current-state recovery, bounded provider-only activation and monitoring require operational proof. [Runbook](docs/recurring-operations.md) |
-| Transaction ledger and accounts      | MISSING. Runtime stores observed listing quantities and per-currency snapshot cash                                                                             | Purchases/sales, dividends, taxes/fees, deposits/withdrawals, paired transfers/FX and brokers/accounts need typed accounting and reconciled cutover                                                                                                                                                            |
+| Transaction ledger and accounts      | PARTIAL. Read-only account opening/activity projection LOCAL_VERIFIED against canonical snapshots                                                              | Durable ledger/accounts, ending-statement reconciliation, cutover, remaining event kinds and usable review UI are outstanding                                                                                                                                                                                  |
 | Cost basis and gains                 | MISSING. Optional cost-basis fields in early design are not ORM/API features                                                                                   | Evidenced lots, declared allocation/fee/tax/FX policy and realized/unrealized gains; unknown basis stays unavailable                                                                                                                                                                                           |
 | Broker imports                       | MISSING. Workbook holdings import is implemented for snapshots                                                                                                 | One reviewed broker format first, immutable raw provenance, mapping/deduplication, preview, conflicts, atomic acceptance and statement reconciliation                                                                                                                                                          |
 | Portfolio performance                | MISSING. UI and decision evaluation explicitly report unavailable                                                                                              | TWR/XIRR engines, flow/valuation timing, income/expense treatment, dated FX, coverage and benchmark semantics; model IRRs and price-only charts do not supply these                                                                                                                                            |
@@ -86,7 +86,7 @@ references through the linked ledgers. They do not create a second execution que
 | C2.2 Daily portfolio data — PARTIAL / BUILD                           | C0, reviewed #25 receipt fix, current recovery and approved scope. Bounded backfill → exact-listing prices/dated FX → EUR holdings/cash/weights/gaps → source drill-down. Reconcile all reviewed held instruments and native cash; missing data stays visible. Desktop/mobile readback, two authorized hosted refresh cycles including restart, synthetic outage/rate-limit/partial tests and durable last-success/retry/coverage prove the outcome. Reuse manual jobs and one-cycle runners; provider-only unattended activation needs separate approval |
 | C3.1 SEC statements and filings — PARTIAL / BUILD                     | Portfolio-scoped bootstrap and filing-before-facts recovery LOCAL_VERIFIED with synthetic Financials/filings API readback. Verify real CIK identity/evidence and held/Watchlist scope, review international gaps and prove incremental per-issuer freshness/coverage in the research workflow. Preserve amendments, accessions, units, fiscal periods and source dates. Reviewed mapping writes and hosted ingestion/readback retain separate authorization                                                                                               |
 | C3.2 Permitted consensus/international coverage — SOURCE-GATED        | Reviewed provider rights, identities, coverage and retention precede requests. Prove representative annual/quarterly series, currencies, fiscal periods, analyst coverage, revision history and missing-data behavior. Distinguish current snapshots from genuine estimate history and external consensus from agent forecasts                                                                                                                                                                                                                            |
-| C2.3 Ledger foundation and safe cutover — MISSING                     | C0 anchor plus reviewed account/cutover policy. Build a typed opening-balance + manual-activity → exact position/cash projection → reconciliation → reviewed dated cutover workflow. Synthetic buy/sell, deposit/withdrawal and fee cases must match quantities/cash while snapshot/targets remain intact. Production requires schema/ownership/import approval; detailed boundary is in Portfolio architecture                                                                                                                                           |
+| C2.3 Ledger foundation and safe cutover - PARTIAL / BUILD             | Opening accounts + settled buy/sell, deposit/withdrawal/fee -> exact position/cash projection and opening reconciliation LOCAL_VERIFIED through read-only PostgreSQL/API. Next add ending-statement reconciliation and review UI, then durable revisions/acceptance and dated cutover. Preserve snapshots/targets. Production requires reviewed account/basis/source scope, schema/ownership/import authorization and current recovery                                                                                                                    |
 | C2.4 Broker imports and accounting — MISSING                          | C2.3 and reviewed lot/fee/tax/FX policy. One real broker format first. Preview → map → deduplicate → accept → statement reconciliation, with rollback/replay/conflict tests. Purchases/sales, dividends/withholding, fees/taxes, cash/security transfers and FX need provenance. Cross-account moves carry evidenced basis; unknown basis produces unavailable gains. Re-import must preserve positions and targets                                                                                                                                       |
 | C2.5 Genuine performance — MISSING                                    | C2.3 complete flows plus C2.2 dated valuations/FX and verified action handling. Prove TWR and dated XIRR against independent fixtures, including same-day flows, transfers, retained/withdrawn dividends, fees/taxes, FX, zero opening value, missing valuations and absent/ambiguous IRR roots. Since-cutover coverage may precede full lot history. Hosted return drill-down must reproduce inputs and clearly label coverage, timing and net/gross methodology                                                                                         |
 | C5.1 Provider-only cloud operation — CROSS-CUTTING                    | C2.2/C3 need explicit cadence, source scope, request/storage limits, least privilege, current recovery and separately approved scheduling. Reuse existing durable jobs/locks/backoff and one-cycle entrypoint. Prove sleeping-runtime/restart recovery, overlap prevention, partial failures, data freshness and alerts. Broad worker activation must not silently enable Sheets writes, model/research acceptance, target changes or unrelated decision jobs                                                                                             |
@@ -117,13 +117,19 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
-- C2.3 introduces a versioned opening/settled-activity contract and deterministic
-  exact-decimal projection. Thirty-six synthetic unit cases pass for buy/sell,
-  deposits/withdrawals/fees, explicit charges, account isolation, source deduplication,
-  replay/hash binding, missing/zero and intermediate shorts/overdrafts. Opening
-  mismatches block projection. Strict types and lint pass. Read-only API/database
-  verification is in progress. Persistence, accounting/performance and cutover
-  remain outstanding.
+- C2.3 `43d1ed8` adds the versioned settled-ledger core. The read-only API increment
+  binds current snapshot and listing/source identity hashes, retains anchor recording
+  time and projects exact native balances. Forty unit, nine isolated PostgreSQL/API
+  and 18 existing contract cases pass (67 total). Repeated API replay and all rejected
+  paths preserve snapshot/targets, counts and sequences. Injected DML is rejected by
+  PostgreSQL. Both original writable and read-only pooled settings are retained.
+  Independent review found and resolved backdated settlement and pooled readonly-reset
+  defects. Source-local date/offset, intermediate shorts/overdrafts, zero/missing,
+  stale anchors, companyless ETFs, source duplicates and aggregate limits are covered.
+  Types, lint, formatting and generated contracts pass. Web types and documentation
+  links pass. This is LOCAL_VERIFIED with synthetic data. Durable ledger/cutover,
+  ending-statement reconciliation, review UI, accounting and performance remain open.
+  [Contract and private-file workflow](docs/portfolio-ledger.md).
 
 - C3.1 `1356944` company-scoped SEC admission reuses verified positive holdings from the
   current complete snapshot independently of lifecycle. Only the two SEC jobs gain
@@ -313,7 +319,8 @@ policy decision. It has lower priority than useful market, research and decision
 
 - 2026-11-07 capability audit inspected ORM/API, Portfolio UI, provider adapters,
   manual/recurring/cloud runners, settings, Render template and existing tests.
-  Ledger, accounts, lots, broker imports and TWR/XIRR are absent. Price/FX and SEC
+  At that audit, persisted ledger/accounts, lots, broker imports and TWR/XIRR were
+  absent. Current C2.3 preview evidence is recorded above. Price/FX and SEC
   pipelines are locally tested, with production execution/automation still gated.
   The current holdings confirmation and independent target revision remain intact.
   Planned transition/performance policy is documented in Portfolio architecture,

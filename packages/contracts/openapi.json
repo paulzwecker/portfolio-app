@@ -17175,6 +17175,631 @@
         "title": "InvestmentThesisStreamRead",
         "type": "object"
       },
+      "LedgerAccountProjectionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashRead"
+            },
+            "title": "Cash",
+            "type": "array"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionRead"
+            },
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerAccountProjectionRead",
+        "type": "object"
+      },
+      "LedgerCashActivity": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "DEPOSIT",
+              "WITHDRAWAL",
+              "FEE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "currency",
+          "amount"
+        ],
+        "title": "LedgerCashActivity",
+        "type": "object"
+      },
+      "LedgerCashInput": {
+        "additionalProperties": false,
+        "properties": {
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Balance"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "balance"
+        ],
+        "title": "LedgerCashInput",
+        "type": "object"
+      },
+      "LedgerCashRead": {
+        "additionalProperties": false,
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "balance"
+        ],
+        "title": "LedgerCashRead",
+        "type": "object"
+      },
+      "LedgerEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "source_record_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source Record Id",
+            "type": "string"
+          },
+          "source_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_sha256",
+          "source_record_id"
+        ],
+        "title": "LedgerEvidence",
+        "type": "object"
+      },
+      "LedgerIssueRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "asset_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Key"
+          },
+          "code": {
+            "enum": [
+              "OPENING_MISMATCH",
+              "NEGATIVE_POSITION",
+              "NEGATIVE_CASH",
+              "BALANCE_OUT_OF_RANGE"
+            ],
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "activity_id",
+          "account_id",
+          "asset_key"
+        ],
+        "title": "LedgerIssueRead",
+        "type": "object"
+      },
+      "LedgerListingRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "identity_source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Source Ref"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "security_id": {
+            "format": "uuid",
+            "title": "Security Id",
+            "type": "string"
+          },
+          "security_type": {
+            "title": "Security Type",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "security_id",
+          "company_id",
+          "ticker",
+          "venue",
+          "currency",
+          "security_type",
+          "identity_source_ref"
+        ],
+        "title": "LedgerListingRead",
+        "type": "object"
+      },
+      "LedgerOpeningAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "broker_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broker Name"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashInput"
+            },
+            "maxItems": 100,
+            "title": "Cash",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "kind": {
+            "enum": [
+              "BROKERAGE",
+              "UNALLOCATED_OPENING"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionInput"
+            },
+            "maxItems": 1000,
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "name",
+          "kind",
+          "broker_name",
+          "evidence",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerOpeningAccount",
+        "type": "object"
+      },
+      "LedgerPositionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "listing_id",
+          "quantity"
+        ],
+        "title": "LedgerPositionInput",
+        "type": "object"
+      },
+      "LedgerPositionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "quantity"
+        ],
+        "title": "LedgerPositionRead",
+        "type": "object"
+      },
+      "LedgerReconciliationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "domain": {
+            "enum": [
+              "POSITION",
+              "CASH"
+            ],
+            "title": "Domain",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed"
+          },
+          "opening": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening"
+          },
+          "status": {
+            "enum": [
+              "MATCH",
+              "MISSING_OPENING",
+              "EXTRA_OPENING",
+              "DIFFERENCE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain",
+          "key",
+          "observed",
+          "opening",
+          "difference",
+          "status"
+        ],
+        "title": "LedgerReconciliationRead",
+        "type": "object"
+      },
+      "LedgerTrade": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "fees": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Fees"
+          },
+          "gross_cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Gross Cash"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "settlement_date": {
+            "format": "date",
+            "title": "Settlement Date",
+            "type": "string"
+          },
+          "taxes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Taxes"
+          },
+          "trade_date": {
+            "format": "date",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "quantity",
+          "currency",
+          "gross_cash",
+          "fees",
+          "taxes",
+          "trade_date",
+          "settlement_date"
+        ],
+        "title": "LedgerTrade",
+        "type": "object"
+      },
       "Lifecycle": {
         "enum": [
           "PORTFOLIO",
@@ -20040,6 +20665,225 @@
           "base_currency"
         ],
         "title": "PortfolioCreate",
+        "type": "object"
+      },
+      "PortfolioLedgerAnchorRead": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerListingRead"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "snapshot",
+          "listings",
+          "anchor_sha256"
+        ],
+        "title": "PortfolioLedgerAnchorRead",
+        "type": "object"
+      },
+      "PortfolioLedgerPreviewCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerOpeningAccount"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "activity": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "BUY": "#/components/schemas/LedgerTrade",
+                  "DEPOSIT": "#/components/schemas/LedgerCashActivity",
+                  "FEE": "#/components/schemas/LedgerCashActivity",
+                  "SELL": "#/components/schemas/LedgerTrade",
+                  "WITHDRAWAL": "#/components/schemas/LedgerCashActivity"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/LedgerTrade"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerCashActivity"
+                }
+              ]
+            },
+            "maxItems": 1000,
+            "title": "Activity",
+            "type": "array"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-preview-v1",
+            "title": "Contract Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "anchor_snapshot_id",
+          "anchor_sha256",
+          "as_of",
+          "accounts",
+          "activity"
+        ],
+        "title": "PortfolioLedgerPreviewCreate",
+        "type": "object"
+      },
+      "PortfolioLedgerPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerAccountProjectionRead"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "activity_count": {
+            "title": "Activity Count",
+            "type": "integer"
+          },
+          "anchor_recorded_at": {
+            "format": "date-time",
+            "title": "Anchor Recorded At",
+            "type": "string"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashRead"
+            },
+            "title": "Cash",
+            "type": "array"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-preview-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Sha256",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerIssueRead"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "opening_reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerReconciliationRead"
+            },
+            "title": "Opening Reconciliation",
+            "type": "array"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionRead"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "preview_only": {
+            "const": true,
+            "title": "Preview Only",
+            "type": "boolean"
+          },
+          "projection_version": {
+            "const": "settled-booking-v1",
+            "title": "Projection Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OPENING_RECONCILED",
+              "BLOCKED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "projection_version",
+          "preview_only",
+          "status",
+          "portfolio_id",
+          "anchor_snapshot_id",
+          "anchor_recorded_at",
+          "anchor_sha256",
+          "input_sha256",
+          "as_of",
+          "opening_reconciliation",
+          "accounts",
+          "positions",
+          "cash",
+          "activity_count",
+          "issues"
+        ],
+        "title": "PortfolioLedgerPreviewRead",
         "type": "object"
       },
       "PortfolioOverview": {
@@ -36870,6 +37714,102 @@
           }
         },
         "summary": "Post Snapshot",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/anchor": {
+      "get": {
+        "operationId": "get_ledger_anchor_v1_portfolios__portfolio_id__ledger_anchor_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioLedgerAnchorRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Anchor",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/preview": {
+      "post": {
+        "operationId": "post_ledger_preview_v1_portfolios__portfolio_id__ledger_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioLedgerPreviewCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioLedgerPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ledger Preview",
         "tags": [
           "Portfolio research"
         ]

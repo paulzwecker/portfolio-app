@@ -1742,6 +1742,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/ledger/anchor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ledger Anchor */
+        get: operations["get_ledger_anchor_v1_portfolios__portfolio_id__ledger_anchor_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/ledger/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Ledger Preview */
+        post: operations["post_ledger_preview_v1_portfolios__portfolio_id__ledger_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/overview": {
         parameters: {
             query?: never;
@@ -7151,6 +7185,222 @@ export interface components {
             /** Stream Key */
             stream_key: string;
         };
+        /** LedgerAccountProjectionRead */
+        LedgerAccountProjectionRead: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Cash */
+            cash: components["schemas"]["LedgerCashRead"][];
+            /** Positions */
+            positions: components["schemas"]["LedgerPositionRead"][];
+        };
+        /** LedgerCashActivity */
+        LedgerCashActivity: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: number | string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "DEPOSIT" | "FEE" | "WITHDRAWAL";
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerCashInput */
+        LedgerCashInput: {
+            /** Balance */
+            balance: number | string;
+            /** Currency */
+            currency: string;
+        };
+        /** LedgerCashRead */
+        LedgerCashRead: {
+            /** Balance */
+            balance: string;
+            /** Currency */
+            currency: string;
+        };
+        /** LedgerEvidence */
+        LedgerEvidence: {
+            /** Source Record Id */
+            source_record_id: string;
+            /** Source Sha256 */
+            source_sha256: string;
+        };
+        /** LedgerIssueRead */
+        LedgerIssueRead: {
+            /** Account Id */
+            account_id: string | null;
+            /** Activity Id */
+            activity_id: string | null;
+            /** Asset Key */
+            asset_key: string | null;
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "OPENING_MISMATCH" | "NEGATIVE_POSITION" | "NEGATIVE_CASH" | "BALANCE_OUT_OF_RANGE";
+        };
+        /** LedgerListingRead */
+        LedgerListingRead: {
+            /** Company Id */
+            company_id: string | null;
+            /** Currency */
+            currency: string;
+            /** Identity Source Ref */
+            identity_source_ref: string | null;
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /**
+             * Security Id
+             * Format: uuid
+             */
+            security_id: string;
+            /** Security Type */
+            security_type: string;
+            /** Ticker */
+            ticker: string;
+            /** Venue */
+            venue: string;
+        };
+        /** LedgerOpeningAccount */
+        LedgerOpeningAccount: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Broker Name */
+            broker_name: string | null;
+            /** Cash */
+            cash: components["schemas"]["LedgerCashInput"][];
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "BROKERAGE" | "UNALLOCATED_OPENING";
+            /** Name */
+            name: string;
+            /** Positions */
+            positions: components["schemas"]["LedgerPositionInput"][];
+        };
+        /** LedgerPositionInput */
+        LedgerPositionInput: {
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: number | string;
+        };
+        /** LedgerPositionRead */
+        LedgerPositionRead: {
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: string;
+        };
+        /** LedgerReconciliationRead */
+        LedgerReconciliationRead: {
+            /** Difference */
+            difference: string | null;
+            /**
+             * Domain
+             * @enum {string}
+             */
+            domain: "POSITION" | "CASH";
+            /** Key */
+            key: string;
+            /** Observed */
+            observed: string | null;
+            /** Opening */
+            opening: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MATCH" | "MISSING_OPENING" | "EXTRA_OPENING" | "DIFFERENCE";
+        };
+        /** LedgerTrade */
+        LedgerTrade: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /** Fees */
+            fees: number | string;
+            /** Gross Cash */
+            gross_cash: number | string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "BUY" | "SELL";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Sequence */
+            sequence: number;
+            /**
+             * Settlement Date
+             * Format: date
+             */
+            settlement_date: string;
+            /** Taxes */
+            taxes: number | string;
+            /**
+             * Trade Date
+             * Format: date
+             */
+            trade_date: string;
+        };
         /**
          * Lifecycle
          * @enum {string}
@@ -8008,6 +8258,102 @@ export interface components {
             base_currency: string;
             /** Name */
             name: string;
+        };
+        /** PortfolioLedgerAnchorRead */
+        PortfolioLedgerAnchorRead: {
+            /** Anchor Sha256 */
+            anchor_sha256: string;
+            /** Listings */
+            listings: components["schemas"]["LedgerListingRead"][];
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            snapshot: components["schemas"]["SnapshotRead"];
+        };
+        /** PortfolioLedgerPreviewCreate */
+        PortfolioLedgerPreviewCreate: {
+            /** Accounts */
+            accounts: components["schemas"]["LedgerOpeningAccount"][];
+            /** Activity */
+            activity: (components["schemas"]["LedgerTrade"] | components["schemas"]["LedgerCashActivity"])[];
+            /** Anchor Sha256 */
+            anchor_sha256: string;
+            /**
+             * Anchor Snapshot Id
+             * Format: uuid
+             */
+            anchor_snapshot_id: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "portfolio-ledger-preview-v1";
+        };
+        /** PortfolioLedgerPreviewRead */
+        PortfolioLedgerPreviewRead: {
+            /** Accounts */
+            accounts: components["schemas"]["LedgerAccountProjectionRead"][];
+            /** Activity Count */
+            activity_count: number;
+            /**
+             * Anchor Recorded At
+             * Format: date-time
+             */
+            anchor_recorded_at: string;
+            /** Anchor Sha256 */
+            anchor_sha256: string;
+            /**
+             * Anchor Snapshot Id
+             * Format: uuid
+             */
+            anchor_snapshot_id: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Cash */
+            cash: components["schemas"]["LedgerCashRead"][];
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "portfolio-ledger-preview-v1";
+            /** Input Sha256 */
+            input_sha256: string;
+            /** Issues */
+            issues: components["schemas"]["LedgerIssueRead"][];
+            /** Opening Reconciliation */
+            opening_reconciliation: components["schemas"]["LedgerReconciliationRead"][];
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Positions */
+            positions: components["schemas"]["LedgerPositionRead"][];
+            /**
+             * Preview Only
+             * @constant
+             */
+            preview_only: true;
+            /**
+             * Projection Version
+             * @constant
+             */
+            projection_version: "settled-booking-v1";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "OPENING_RECONCILED" | "BLOCKED";
         };
         /** PortfolioOverview */
         PortfolioOverview: {
@@ -14788,6 +15134,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SnapshotRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ledger_anchor_v1_portfolios__portfolio_id__ledger_anchor_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioLedgerAnchorRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_ledger_preview_v1_portfolios__portfolio_id__ledger_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortfolioLedgerPreviewCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioLedgerPreviewRead"];
                 };
             };
             /** @description Validation Error */

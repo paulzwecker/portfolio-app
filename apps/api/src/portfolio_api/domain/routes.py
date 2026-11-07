@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, Response
 from fastapi.responses import JSONResponse
+from psycopg import Connection as PsycopgConnection
+from psycopg import Error as PsycopgError
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -15,6 +17,8 @@ from sqlalchemy.orm import Session
 from portfolio_api import candidate_pipeline as candidate_research
 from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
+from portfolio_api import portfolio_ledger as ledger
+from portfolio_api import portfolio_ledger_contracts as ledger_contracts
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
 from portfolio_api.company_sec_coverage import company_sec_coverage
@@ -152,6 +156,34 @@ def session_for(request: Request) -> Iterator[Session]:
 
 
 Db = Annotated[Session, Depends(session_for, scope="function")]
+
+
+def ledger_session_for(request: Request) -> Iterator[Session]:
+    engine = cast(Engine | None, request.app.state.database_engine)
+    if engine is None:
+        raise HTTPException(503, "Database is unavailable; configure the local environment")
+    try:
+        with engine.connect().execution_options(isolation_level="REPEATABLE READ") as connection:
+            driver = cast(
+                PsycopgConnection[tuple[object, ...]], connection.connection.driver_connection
+            )
+            previous_read_only = driver.read_only
+            try:
+                # SQLAlchemy's postgresql_readonly reset forces False. Retain the
+                # exact psycopg default (including None) for already read-only pools.
+                driver.read_only = True
+                with connection.begin(), Session(bind=connection, autoflush=False) as session:
+                    yield session
+            finally:
+                if not connection.invalidated:
+                    driver.read_only = previous_read_only
+    except operations.DomainError as error:
+        raise HTTPException(error.status, error.detail) from None
+    except (SQLAlchemyError, PsycopgError):
+        raise HTTPException(503, "Database is unavailable or migrations are required") from None
+
+
+LedgerDb = Annotated[Session, Depends(ledger_session_for, scope="function")]
 
 
 def model_proposal_agent_identity(
@@ -1888,6 +1920,26 @@ def get_snapshots(portfolio_id: UUID, db: Db) -> list[s.SnapshotRead]:
             .order_by(HoldingSnapshot.effective_at.desc())
         )
     ]
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/anchor",
+    response_model=ledger_contracts.PortfolioLedgerAnchorRead,
+)
+def get_ledger_anchor(
+    portfolio_id: UUID, db: LedgerDb
+) -> ledger_contracts.PortfolioLedgerAnchorRead:
+    return ledger.portfolio_ledger_anchor(db, portfolio_id)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/preview",
+    response_model=ledger_contracts.PortfolioLedgerPreviewRead,
+)
+def post_ledger_preview(
+    portfolio_id: UUID, value: ledger_contracts.PortfolioLedgerPreviewCreate, db: LedgerDb
+) -> ledger_contracts.PortfolioLedgerPreviewRead:
+    return ledger.preview_portfolio_ledger(db, portfolio_id, value)
 
 
 @router.post(

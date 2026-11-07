@@ -133,7 +133,7 @@ def test_settled_buy_sell_and_cash_activity_reconcile_exactly() -> None:
         ],
     )
     result = replay(source, value)
-    assert result.status == "RECONCILED" and not result.issues
+    assert result.status == "OPENING_RECONCILED" and not result.issues
     assert result.positions[0].quantity == Decimal("2.5")
     assert {row.currency: row.balance for row in result.cash} == {
         "EUR": Decimal("0"),
@@ -223,7 +223,7 @@ def test_same_timestamp_activity_uses_declared_sequence() -> None:
     )
     value = proposal(source, [withdrawal, cash_activity("DEPOSIT", 1, "1")])
     result = replay(source, value)
-    assert result.status == "RECONCILED"
+    assert result.status == "OPENING_RECONCILED"
     assert next(row.balance for row in result.cash if row.currency == "USD") == 0
 
 
@@ -251,7 +251,7 @@ def test_unallocated_opening_can_reconcile_without_inventing_a_broker_or_trade()
     value.accounts[0].broker_name = None
     assert (
         replay(source, c.PortfolioLedgerPreviewCreate.model_validate(value.model_dump())).status
-        == "RECONCILED"
+        == "OPENING_RECONCILED"
     )
 
 
@@ -265,7 +265,7 @@ def test_new_exact_listing_and_cash_currency_need_no_fx_or_fake_company() -> Non
         proposal(source, [deposit, purchase]),
         {LISTING: source.listings[0], new.listing_id: new},
     )
-    assert result.status == "RECONCILED"
+    assert result.status == "OPENING_RECONCILED"
     assert next(row.balance for row in result.cash if row.currency == "DKK") == Decimal("9.65")
     assert next(
         row.quantity for row in result.positions if row.listing_id == new.listing_id
@@ -292,6 +292,60 @@ def test_unsupported_anchor_and_future_settlement_fail_closed() -> None:
     item.settlement_date = date(2026, 2, 1)
     with pytest.raises(DomainError, match="settled trades"):
         replay(source, value)
+
+
+def test_later_settlement_cannot_be_backdated_before_intervening_activity() -> None:
+    item = trade().model_dump(mode="json")
+    item["settlement_date"] = "2026-01-10"
+    with pytest.raises(ValidationError, match="Settlement cannot follow"):
+        c.LedgerTrade.model_validate(item)
+
+
+def test_source_booking_offset_preserves_local_settlement_date_at_utc_boundary() -> None:
+    source = anchor()
+    item = trade().model_dump(mode="json")
+    item["effective_at"] = "2026-01-02T00:15:00+11:00"
+    captured = c.LedgerTrade.model_validate(item)
+    assert captured.effective_at.utcoffset() == timedelta(hours=11)
+    value = proposal(source, [captured])
+    value.as_of = datetime(2026, 1, 1, 14, tzinfo=UTC)
+    result = replay(source, value)
+    assert result.status == "OPENING_RECONCILED"
+    assert captured.effective_at.date() == date(2026, 1, 2)
+
+
+def test_aggregate_overflow_blocks_even_when_each_account_fits_storage() -> None:
+    source = anchor()
+    value = proposal(source, [cash_activity("DEPOSIT", 1, "500000000000000000")])
+    other = value.accounts[0].model_copy(
+        deep=True,
+        update={
+            "account_id": uuid4(),
+            "evidence": evidence("second-account"),
+            "positions": [],
+            "cash": [c.LedgerCashInput(currency="USD", balance=Decimal("500000000000000000"))],
+        },
+    )
+    value.accounts[0].cash[0].balance = Decimal("1")
+    source.snapshot.cash_positions[0].balance = Decimal("500000000000000001")
+    value.accounts.append(other)
+    result = replay(source, value)
+    assert result.status == "BLOCKED"
+    assert any(
+        row.code == "BALANCE_OUT_OF_RANGE" and row.account_id is None for row in result.issues
+    )
+
+
+def test_additional_listing_identity_drift_changes_proposal_hash() -> None:
+    source = anchor()
+    extra = source.listings[0].model_copy(update={"listing_id": uuid4()})
+    value = proposal(source, [trade().model_copy(update={"listing_id": extra.listing_id})])
+    identities = {LISTING: source.listings[0], extra.listing_id: extra}
+    first = project_ledger(source, value, identities)
+    identities[extra.listing_id] = extra.model_copy(
+        update={"identity_source_ref": "revised-evidence"}
+    )
+    assert project_ledger(source, value, identities).input_sha256 != first.input_sha256
 
 
 @pytest.mark.parametrize(

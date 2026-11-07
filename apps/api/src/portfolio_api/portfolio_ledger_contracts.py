@@ -68,7 +68,9 @@ class LedgerActivity(Contract):
     def aware_time(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("Use a timezone-aware settled booking timestamp")
-        return value.astimezone(UTC)
+        # Retain the source offset for settlement-date validation. Aware datetime
+        # comparisons still order bookings by their absolute instant.
+        return value
 
 
 class LedgerTrade(LedgerActivity):
@@ -86,6 +88,8 @@ class LedgerTrade(LedgerActivity):
     def settled_trade(self) -> Self:
         if self.trade_date > self.settlement_date:
             raise ValueError("A settled trade cannot precede its trade date")
+        if self.settlement_date > self.effective_at.date():
+            raise ValueError("Settlement cannot follow the source-local settled booking date")
         return self
 
 
@@ -188,9 +192,10 @@ class PortfolioLedgerPreviewRead(Contract):
     contract_version: Literal["portfolio-ledger-preview-v1"]
     projection_version: Literal["settled-booking-v1"]
     preview_only: Literal[True]
-    status: Literal["RECONCILED", "BLOCKED"]
+    status: Literal["OPENING_RECONCILED", "BLOCKED"]
     portfolio_id: UUID
     anchor_snapshot_id: UUID
+    anchor_recorded_at: datetime
     anchor_sha256: Digest
     input_sha256: Digest
     as_of: datetime

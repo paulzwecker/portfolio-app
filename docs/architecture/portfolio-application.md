@@ -79,6 +79,11 @@ Downstream choices must not silently mutate upstream assumptions. Rankings expre
 
 ### Transaction-ledger transition (planned)
 
+C2.3 now has a [candidate settled-ledger preview](../portfolio-ledger.md) that
+reconciles explicit opening accounts to the current observed snapshot and projects
+supported activity through a read-only API. Persistence, ending-statement
+reconciliation and the ownership/cutover steps below remain planned.
+
 C2 adds transaction-based accounting to the existing snapshot portfolio. This is
 a planned domain extension, with status and acceptance in `ROADMAP.md`. Reuse
 SQLAlchemy/Alembic, exact decimal types, canonical identity, import previews,

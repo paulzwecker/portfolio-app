@@ -12,14 +12,24 @@
 
 ## Current ledger increment
 
-The versioned settled-booking core passes 36 synthetic unit cases, strict types and
-lint. It requires exact source amounts, immutable source-row references, explicit
-account classification and a hash-bound complete snapshot. Buy/sell cash uses
-observed gross cash plus explicit fees/taxes in listing currency. Intermediate
-negative quantities/cash stay blocking. Reordered replay is deterministic. Opening
-mismatches, duplicate evidence and missing amounts fail closed. The read-only API
-and PostgreSQL verification are in progress. Persistence, cutover, cost lots and
-performance remain outstanding. No production operation occurred.
+`43d1ed8` adds the versioned settled-booking core. The read-only API increment is
+LOCAL_VERIFIED through 40 unit, nine isolated PostgreSQL/API and 18 existing contract
+cases (67 total). GET anchor and POST preview run read-only/repeatable-read and pin
+snapshot content, recording time and canonical listing/source identity. Existing
+writable/read-only pool settings are restored exactly. Injected DML is rejected.
+Input/output replay, snapshots/targets, all table counts and sequences reconcile.
+Reviewer findings corrected source-local settlement timing and pooled readonly
+reset. Follow-up pool checks pass. Types, lint, formatting, generated contracts,
+web types and documentation checks pass.
+
+Opening reconciliation preserves explicit zeros and source/account evidence.
+Trade cash uses observed gross amounts plus explicit fees/taxes, in listing
+currency. Intermediate negative balances remain blocked after later recovery.
+`OPENING_RECONCILED` describes the supported candidate preview. Source authenticity,
+account allocation, settled-balance basis and cutover need operator review.
+Persistence, ending-statement reconciliation, review UI, cost lots and performance
+remain outstanding. Commands and scope are in [the ledger contract](portfolio-ledger.md).
+No production operation occurred. Local activation/write flags remain disabled.
 
 ## Current SEC increment
 
@@ -202,10 +212,10 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Finish C2.3's read-only API/PostgreSQL vertical slice. Verify hash-bound current
-   anchors, exact canonical identities, transaction-level read-only/repeatable-read
-   protection, preserved snapshots/targets and deterministic replay through the API.
-   Then select the next ledger acceptance increment using demonstrated gaps.
+1. Continue C2.3 with ending-statement reconciliation and a Portfolio ledger review
+   UI using the source-bound preview. Make exact account/listing/currency differences
+   and unsupported coverage actionable. Follow with durable candidate/acceptance
+   receipts and a reviewed dated cutover. Retain the current snapshot and targets.
    Production schema/ownership/import changes remain owner-gated. This is the next
    high-value independent capability while #25 review and data activation wait.
    C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;
