@@ -19,7 +19,7 @@ from portfolio_api.domain.models import (
     PriceObservation,
 )
 from portfolio_api.external_data import ExternalDataDomain
-from portfolio_api.external_ingestion import MAX_ATTEMPTS, run_scheduled
+from portfolio_api.external_ingestion import CLOUD_RETRY_COOLDOWN, MAX_ATTEMPTS, run_scheduled
 from portfolio_api.health import check_readiness
 from portfolio_api.market_data_bootstrap import _load_crosswalk, preview_market_data_bootstrap
 from portfolio_api.market_data_ingestion import (
@@ -109,6 +109,7 @@ def run_cloud_incremental_refresh(
         listing_key_filter=listing_keys,
         fx_pair_filter=pairs,
         frozen_yahoo_crosswalk=(crosswalk, digest),
+        retry_failed=True,
     )
     return {
         **result,
@@ -116,9 +117,9 @@ def run_cloud_incremental_refresh(
         "subject_count": subject_count,
         "maximum_subjects": CLOUD_MAX_SUBJECTS,
         "correction_days": CLOUD_CORRECTION_DAYS,
-        "provider_http_attempt_upper_bound": subject_count
-        * (DEFAULT_YAHOO_RETRIES + 1)
-        * MAX_ATTEMPTS,
+        "provider_http_attempt_upper_bound": subject_count * (DEFAULT_YAHOO_RETRIES + 1),
+        "maximum_attempts_per_domain": MAX_ATTEMPTS,
+        "retry_cooldown_seconds": int(CLOUD_RETRY_COOLDOWN.total_seconds()),
     }
 
 

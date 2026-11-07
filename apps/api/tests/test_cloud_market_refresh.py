@@ -84,7 +84,7 @@ def test_cloud_correction_pins_ninety_day_scope_and_required_fx_without_writes(
         result = run_cloud_incremental_refresh(session, settings, datetime.now(UTC))
     assert result["status"] == "COMPLETE"
     assert result["subject_count"] == 2
-    assert result["provider_http_attempt_upper_bound"] == 24
+    assert result["provider_http_attempt_upper_bound"] == 8
     arguments = scheduled.call_args.kwargs
     assert (arguments["end_date"] - arguments["start_date"]).days + 1 == 90
     assert arguments["listing_key_filter"] == {("NASDAQ", "SYNTH")}
@@ -166,6 +166,41 @@ def test_frozen_replay_filters_cannot_be_replaced(replacement: dict[str, Any]) -
             Settings(_env_file=None, database_url=None),
             replay_scope={"crosswalk_sha256": "a" * 64},
             **replacement,
+        )
+    claim.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    [
+        {"domains": [ExternalDataDomain.REPORTED_FUNDAMENTALS]},
+        {"request_nonce": uuid4()},
+        {"replay_of_run_id": uuid4()},
+        {"frozen_yahoo_crosswalk": None},
+        {"listing_key_filter": None},
+        {"fx_pair_filter": None},
+    ],
+)
+def test_cloud_recovery_cannot_escape_its_original_yahoo_scope(
+    replacement: dict[str, Any],
+) -> None:
+    crosswalk = _crosswalk(_mapping(uuid4(), uuid4(), uuid4()))
+    arguments = {
+        "domains": [ExternalDataDomain.MARKET_DATA],
+        "frozen_yahoo_crosswalk": crosswalk,
+        "listing_key_filter": set(),
+        "fx_pair_filter": set(),
+        **replacement,
+    }
+    with (
+        patch("portfolio_api.external_ingestion._claim_run") as claim,
+        pytest.raises(ValueError, match="original frozen Yahoo scope"),
+    ):
+        run_scheduled(
+            cast(Session, None),
+            Settings(_env_file=None, database_url=None),
+            retry_failed=True,
+            **arguments,
         )
     claim.assert_not_called()
 

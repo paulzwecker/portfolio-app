@@ -44,15 +44,19 @@ legacy full cycle and requires its separately reviewed source/write authority.
 
 All scopes retain the cloud/recurring enable flags and production target guards.
 The market/FX portion uses a frozen exact-listing/FX scope and reviewed crosswalk
-hash over 90 inclusive calendar dates, capped at 30 listing/pair subjects. Existing
-transport and run retries bound a subject to at most 12 HTTP attempts per invocation.
+hash over 90 inclusive calendar dates, capped at 30 listing/pair subjects. A cloud
+invocation performs at most one persisted attempt per domain and four transport
+tries per subject. Retryable failed/partial domains become eligible after 15 minutes,
+up to three attempts for the same daily frozen scope. Successful domains and
+nonretryable/exhausted failures are reused. A restart preserves the attempt budget;
+an abandoned running claim is recorded as interrupted before cooldown/recovery.
 Broader historical backfills use their separately reviewed guarded workflow. Other
 providers retain their own reviewed scope and limits.
 Cloud execution preserves configured proxy routing. Terminal output contains
 operational statuses and exception classes, with detailed results in existing
 private database ledgers. Partial, blocked, failed and malformed outcomes return a
 nonzero process exit, including failed nested jobs. Overlapping cycles preserve
-the active worker's heartbeat. Retry/monitoring completion and hosted activation
+the active worker's heartbeat. Preflight monitoring and hosted activation
 remain pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md).
 
 ## Jobs and cadence

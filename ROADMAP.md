@@ -10,8 +10,8 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                         |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                        |
-| Implementation              | PARTIAL / BUILD. Bounded importer → EUR valuation/Operations API readback locally verified. Same-day recovery and durable preflight monitoring pending |
-| Next ready substantial task | C2.2 bounded same-day recovery and durable Operations preflight status, followed by local investor-journey review                                      |
+| Implementation              | PARTIAL / BUILD. Bounded importer → EUR valuation/Operations API readback and same-day recovery locally verified. Durable preflight monitoring pending |
+| Next ready substantial task | C2.2 durable Operations preflight status, followed by local investor-journey review                                                                    |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                 |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR    |
 
@@ -116,6 +116,16 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C2.2 same-day recovery reuses the frozen run/scope, waits 15 minutes after a
+  retryable failure and caps each domain at three persisted attempts. Each cloud
+  invocation makes one domain attempt with at most four transport tries per subject.
+  Successful domains remain reused. Isolated PostgreSQL checks cover outage,
+  cooldown, exhausted budget, nonretryable identity errors, overlap and interrupted
+  claims. Fixed interruption detection that could rewrite terminal runs after four
+  hours; partial success timestamps and append-only attempt numbering are retained.
+  Focused recovery/importer regression passes 33 cases, with strict types and lint.
+  Durable preflight diagnostics remain the next BUILD increment.
 
 - C2.2 synthetic end-to-end increment verifies actual normalization/persistence,
   exact EUR valuation and Operations HTTP status, unchanged holdings/cash/targets,

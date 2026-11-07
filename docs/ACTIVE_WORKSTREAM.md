@@ -26,8 +26,7 @@
 
 - `34b0175` pins a repeatable-read canonical scope, listing keys, required FX and
   reviewed crosswalk object/hash. Cloud corrections use 90 inclusive calendar dates
-  and at most 30 listing/pair subjects. Existing retries imply at most 12 transport
-  attempts per subject in one invocation. Legacy model FX behavior is retained.
+  and at most 30 listing/pair subjects. Legacy model FX behavior is retained.
 - Real synthetic Yahoo payloads now pass through normalization and the existing
   database importer into Portfolio/Operations HTTP readback. Exact EUR totals,
   snapshot/cash/target preservation, fresh-connection replay, FX outage and recovery
@@ -36,16 +35,21 @@
 - Fixed replay reporting to reuse the captured request scope. Explicit listing
   scope keeps unrelated companies outside its diagnostics while legacy full-universe
   gaps remain visible. Focused regression passed 84 cases, with strict types/lint.
+- Same-day recovery now reclaims only retryable failed/partial domains after a
+  15-minute cooldown, within the original frozen scope and three-attempt ledger
+  budget. One attempt per invocation bounds transport work to four tries per subject.
+  Successes stay reused; interrupted claims recover through the existing history.
+  Fixed terminal runs being incorrectly reclassified as interrupted after four hours.
+  Focused recovery/importer regression passes 33 cases, including five isolated
+  recovery scenarios, scope escape and retained-success checks. Strict types and
+  lint pass. No production execution occurred.
 
 ## Next build steps
 
-1. Resolve bounded same-day recovery using the existing run/attempt/replay records.
-   Current same-scope terminal failures are reused until the next UTC cycle or an
-   explicit operator retry. Preserve source hashes, retry caps and provider budgets.
-2. Make cloud preflight blockers visible durably in Operations. They currently
+1. Make cloud preflight blockers visible durably in Operations. They currently
    return a safe CLI failure code before ingestion claims, leaving prior run status
    intact. Reuse existing operational ledgers rather than adding a job framework.
-3. Review the synthetic investor journey and data/freshness presentation, then use
+2. Review the synthetic investor journey and data/freshness presentation, then use
    INTEGRATE once the local milestone is complete. The 90-date/30-subject policy
    requires explicit review before production activation. Actual hosted cycles,
    current-state recovery and provider coverage remain separately gated.

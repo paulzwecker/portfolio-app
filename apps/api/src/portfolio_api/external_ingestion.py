@@ -73,6 +73,7 @@ from portfolio_api.yahoo_finance import (
 )
 
 MAX_ATTEMPTS = 3
+CLOUD_RETRY_COOLDOWN = timedelta(minutes=15)
 MAX_RETRY_DELAY_SECONDS = 30.0
 ABANDONED_RUN_AGE = timedelta(hours=4)
 DAILY_DOMAINS = (
@@ -128,6 +129,7 @@ class RunClaim:
     created: bool
     status: str
     request_scope: dict[str, Any]
+    retrying: bool = False
 
 
 def retry_delay_seconds(attempt_number: int, retry_after_seconds: float | None = None) -> float:
@@ -396,7 +398,7 @@ def parse_fx_pair(value: str) -> tuple[str, str]:
 
 def _mark_interrupted_run(session: Session, run: ExternalIngestionRun, at: datetime) -> None:
     started_at = run.last_attempt_started_at or run.started_at
-    if at - started_at < ABANDONED_RUN_AGE:
+    if run.status != "RUNNING" or at - started_at < ABANDONED_RUN_AGE:
         return
     attempt_number = max(run.attempt_count, 1)
     existing = session.scalar(
@@ -438,6 +440,7 @@ def _claim_run(
     run_date: date,
     replay_nonce: UUID | None = None,
     replay_of_run_id: UUID | None = None,
+    retry_failed: bool = False,
 ) -> RunClaim:
     current = datetime.now(UTC)
     run_id = uuid4()
@@ -469,13 +472,41 @@ def _claim_run(
     session.commit()
     if inserted_id is not None:
         return RunClaim(run_id, provider_id, domain, True, "RUNNING", request_scope)
-    existing = session.scalar(
-        select(ExternalIngestionRun).where(ExternalIngestionRun.idempotency_key == key)
-    )
+    existing_query = select(ExternalIngestionRun).where(ExternalIngestionRun.idempotency_key == key)
+    if retry_failed:
+        existing_query = existing_query.with_for_update()
+    existing = session.scalar(existing_query)
     if existing is None:
         raise RuntimeError("Idempotent ingestion run could not be loaded after insert conflict")
     _mark_interrupted_run(session, existing, current)
-    session.refresh(existing)
+    session.refresh(existing, with_for_update=True if retry_failed else None)
+    if retry_failed:
+        attempt = session.scalar(
+            select(ExternalIngestionAttempt)
+            .where(ExternalIngestionAttempt.run_id == existing.id)
+            .order_by(ExternalIngestionAttempt.attempt_number.desc())
+            .limit(1)
+        )
+        if (
+            existing.status in {"FAILED", "PARTIAL"}
+            and existing.attempt_count < existing.max_attempts
+            and existing.finished_at is not None
+            and current >= existing.finished_at + CLOUD_RETRY_COOLDOWN
+            and attempt is not None
+            and (attempt.retryable or existing.failure_code == "WORKER_INTERRUPTED")
+        ):
+            existing.status = "RUNNING"
+            existing.last_attempt_started_at = current
+            existing.finished_at = None
+            return RunClaim(
+                existing.id,
+                provider_id,
+                domain,
+                False,
+                "RUNNING",
+                existing.request_scope,
+                retrying=True,
+            )
     return RunClaim(
         existing.id,
         provider_id,
@@ -494,20 +525,25 @@ def _execute_cycle(
     session: Session,
     claims: list[RunClaim],
     operation: Callable[[], dict[ExternalDataDomain, DomainOutcome]],
+    *,
+    single_attempt: bool = False,
 ) -> None:
     if not claims:
         return
-    attempt_number = 0
-    while attempt_number < MAX_ATTEMPTS:
-        attempt_number += 1
+    for _ in range(1 if single_attempt else MAX_ATTEMPTS):
+        attempt_numbers: dict[UUID, int] = {}
         started_at = datetime.now(UTC)
         for claim in claims:
             run = session.get(ExternalIngestionRun, claim.run_id)
             if run is None:
                 raise RuntimeError("Claimed ingestion run was removed")
-            run.attempt_count = attempt_number
+            if run.attempt_count >= run.max_attempts:
+                raise RuntimeError("The persisted provider attempt budget is exhausted")
+            run.attempt_count += 1
+            attempt_numbers[claim.run_id] = run.attempt_count
             run.last_attempt_started_at = started_at
             run.status = "RUNNING"
+            run.finished_at = None
         session.commit()
         try:
             outcomes = operation()
@@ -527,13 +563,15 @@ def _execute_cycle(
                 run.failure_message = outcome.failure_message
                 run.report = _json_object(outcome.report)
                 run.last_successful_at = (
-                    finished_at if outcome.status in {"COMPLETE", "PARTIAL"} else None
+                    finished_at
+                    if outcome.status in {"COMPLETE", "PARTIAL"}
+                    else run.last_successful_at
                 )
                 session.add(
                     ExternalIngestionAttempt(
                         id=uuid4(),
                         run_id=claim.run_id,
-                        attempt_number=attempt_number,
+                        attempt_number=attempt_numbers[claim.run_id],
                         status=("SUCCEEDED" if outcome.status == "COMPLETE" else outcome.status),
                         started_at=started_at,
                         finished_at=finished_at,
@@ -549,7 +587,11 @@ def _execute_cycle(
             session.rollback()
             code, message, retryable, retry_after = _failure_outcome(error)
             finished_at = datetime.now(UTC)
-            will_retry = retryable and attempt_number < MAX_ATTEMPTS
+            will_retry = (
+                not single_attempt
+                and retryable
+                and all(number < MAX_ATTEMPTS for number in attempt_numbers.values())
+            )
             for claim in claims:
                 run = session.get(ExternalIngestionRun, claim.run_id)
                 if run is None:
@@ -568,7 +610,7 @@ def _execute_cycle(
                     ExternalIngestionAttempt(
                         id=uuid4(),
                         run_id=claim.run_id,
-                        attempt_number=attempt_number,
+                        attempt_number=attempt_numbers[claim.run_id],
                         status="FAILED",
                         started_at=started_at,
                         finished_at=finished_at,
@@ -580,7 +622,7 @@ def _execute_cycle(
                 )
             session.commit()
             if will_retry:
-                time.sleep(retry_delay_seconds(attempt_number, retry_after))
+                time.sleep(retry_delay_seconds(max(attempt_numbers.values()), retry_after))
 
 
 def _coverage_outcome(
@@ -1147,7 +1189,7 @@ def _run_result(session: Session, claim: RunClaim) -> dict[str, Any]:
         "status": run.status,
         "run_id": str(run.id),
         "attempt_count": run.attempt_count,
-        "idempotent_reuse": not claim.created,
+        "idempotent_reuse": not (claim.created or claim.retrying),
         "failure_code": run.failure_code,
         "report": run.report,
     }
@@ -1170,6 +1212,7 @@ def run_scheduled(
     yahoo_crosswalk_path: Any = CROSSWALK_PATH,
     listing_key_filter: set[tuple[str, str]] | None = None,
     frozen_yahoo_crosswalk: tuple[YahooListingCrosswalk, str] | None = None,
+    retry_failed: bool = False,
 ) -> dict[str, Any]:
     if replay_scope is not None and "crosswalk_sha256" in replay_scope:
         if listing_key_filter is not None or fx_pair_filter is not None:
@@ -1182,6 +1225,16 @@ def run_scheduled(
     end_date = end_date or datetime.now(UTC).date()
     run_date = run_date or datetime.now(UTC).date()
     selected = _selected_domains(domains)
+    if retry_failed and (
+        not selected.issubset(YAHOO_DOMAINS)
+        or frozen_yahoo_crosswalk is None
+        or listing_key_filter is None
+        or fx_pair_filter is None
+        or replay_of_run_id is not None
+        or replay_scope is not None
+        or request_nonce is not None
+    ):
+        raise ValueError("Cloud recovery requires its original frozen Yahoo scope")
     ordered = [domain for domain in DAILY_DOMAINS if domain in selected]
     states: dict[UUID, str] | None = (
         _states_from_scope(replay_scope) if replay_scope is not None else None
@@ -1230,8 +1283,9 @@ def run_scheduled(
             run_date=run_date,
             replay_nonce=request_nonce or replay_of_run_id,
             replay_of_run_id=replay_of_run_id,
+            retry_failed=retry_failed,
         )
-        if claim.created:
+        if claim.created or claim.retrying:
             claims[domain] = claim
 
     # The Yahoo adapter requests price/action and FX facts in one provider cycle,
@@ -1296,7 +1350,7 @@ def run_scheduled(
                 listing_scope=market_scope.get("scope") == "listings",
             )
 
-        _execute_cycle(session, yahoo_claims, yahoo_cycle)
+        _execute_cycle(session, yahoo_claims, yahoo_cycle, single_attempt=retry_failed)
 
     for domain in ordered:
         if domain not in claims or domain in YAHOO_DOMAINS:
@@ -1421,7 +1475,6 @@ def status_report(session: Session, *, now_at: datetime | None = None) -> dict[s
             .where(
                 ExternalIngestionRun.provider_id == provider,
                 ExternalIngestionRun.domain == domain.value,
-                ExternalIngestionRun.status.in_(("COMPLETE", "PARTIAL")),
                 ExternalIngestionRun.last_successful_at.is_not(None),
             )
             .order_by(ExternalIngestionRun.last_successful_at.desc())
