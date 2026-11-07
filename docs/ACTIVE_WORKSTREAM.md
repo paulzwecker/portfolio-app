@@ -1,14 +1,25 @@
 # Active workstream
 
-## C3.1 — Held-issuer SEC slice (BUILD checkpoint complete)
+## C2.3 — Ledger foundation (BUILD)
 
 - Branch `codex/portfolio-data-ledger-capabilities`, based on main `395f842`.
 - PR #25 is complete and awaiting owner review. Keep it frozen. Integrate its
   receipt compatibility fix after owner merge; preserve this branch's capability roadmap.
-- Objective: bounded provider facts → durable provenance/coverage → useful Portfolio
-  and company research, reusing existing adapters, jobs and domain calculations.
-- C2.2 is locally verified through its actual-API browser rehearsal. While its
-  integration gate waits for #25, advance the independent scoped SEC foundation.
+- Objective: evidenced opening balances and settled activity → exact position/cash
+  projection → reconciliation, preserving the canonical snapshot and targets.
+- C2.2 and the C3.1 scoped SEC slice are locally verified. Their hosted scopes and
+  activation retain owner gates. C2.3 can progress independently while #25 waits.
+
+## Current ledger increment
+
+The versioned settled-booking core passes 36 synthetic unit cases, strict types and
+lint. It requires exact source amounts, immutable source-row references, explicit
+account classification and a hash-bound complete snapshot. Buy/sell cash uses
+observed gross cash plus explicit fees/taxes in listing currency. Intermediate
+negative quantities/cash stay blocking. Reordered replay is deterministic. Opening
+mismatches, duplicate evidence and missing amounts fail closed. The read-only API
+and PostgreSQL verification are in progress. Persistence, cutover, cost lots and
+performance remain outstanding. No production operation occurred.
 
 ## Current SEC increment
 
@@ -191,11 +202,10 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Begin C2.3's isolated ledger vertical slice. Reuse canonical listing, portfolio
-   and verified snapshot contracts for typed opening balances plus manual activity,
-   exact position/cash projection and reconciliation. Preserve unknown cost basis,
-   the existing snapshot and independent targets. Prove synthetic buy/sell,
-   deposit/withdrawal and fee cases before proposing a reviewed dated cutover.
+1. Finish C2.3's read-only API/PostgreSQL vertical slice. Verify hash-bound current
+   anchors, exact canonical identities, transaction-level read-only/repeatable-read
+   protection, preserved snapshots/targets and deterministic replay through the API.
+   Then select the next ledger acceptance increment using demonstrated gaps.
    Production schema/ownership/import changes remain owner-gated. This is the next
    high-value independent capability while #25 review and data activation wait.
    C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;

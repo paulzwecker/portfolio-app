@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C3.1 held-issuer scoped refresh LOCAL_VERIFIED — BUILD checkpoint. C2.2 integration awaits #25. [Handoff](docs/ACTIVE_WORKSTREAM.md)                             |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                                  |
-| Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending                   |
-| Next ready substantial task | C2.3 isolated opening-balance/manual-activity → position/cash reconciliation vertical slice. Preserve canonical snapshot/targets. Integrate C2.2 after #25 merge |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                           |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR              |
+| Field                       | Current value                                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.3 ledger foundation � BUILD. Exact settled projection core unit-verified; read-only API integration in progress. [Handoff](docs/ACTIVE_WORKSTREAM.md) |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                          |
+| Implementation              | PARTIAL / BUILD. C2.2 real-service browser journey and C3.1 held-issuer SEC bootstrap/refresh locally verified. Hosted coverage/cycles pending           |
+| Next ready substantial task | C2.3 verify source-bound ledger API on isolated PostgreSQL, preserving snapshots/targets and read-only transactions. C2.2 integration awaits #25 merge   |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                                   |
+| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR      |
 
 ## How to choose work
 
@@ -116,6 +116,14 @@ Automatic promotion (historical MP3) follows proven reviewed history and an expl
 policy decision. It has lower priority than useful market, research and decision coverage.
 
 ## Evidence and upkeep
+
+- C2.3 introduces a versioned opening/settled-activity contract and deterministic
+  exact-decimal projection. Thirty-six synthetic unit cases pass for buy/sell,
+  deposits/withdrawals/fees, explicit charges, account isolation, source deduplication,
+  replay/hash binding, missing/zero and intermediate shorts/overdrafts. Opening
+  mismatches block projection. Strict types and lint pass. Read-only API/database
+  verification is in progress. Persistence, accounting/performance and cutover
+  remain outstanding.
 
 - C3.1 `1356944` company-scoped SEC admission reuses verified positive holdings from the
   current complete snapshot independently of lifecycle. Only the two SEC jobs gain
