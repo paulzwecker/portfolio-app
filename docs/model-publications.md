@@ -128,3 +128,5 @@ worker activation remains operator-controlled.
 Response validation requires the complete requested range while permitting omitted
 trailing empty rows. Both row sets and source identity must match.
 [Google Sheets ValueRange reference](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets.values)
+
+The architectural rationale is recorded in [decision 001](architecture/decisions/001-explicit-model-publications.md).

@@ -10,10 +10,10 @@
 | Field                   | Current value                                                                                                                         |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Active milestone        | `MP1` — Reusable model publication vertical slice                                                                                     |
-| Next task               | Finish MP1 integrated checks and second-pass review, then open one publication vertical-slice PR. M2 acceptance remains owner-gated.  |
-| Status                  | `MP1 IN_PROGRESS`; M1 production baseline verified and M2 source/model acceptance owner-gated.                                        |
+| Next task               | Review and merge the cohesive MP1 publication PR, then begin MP2 from updated main with a reviewed real template and canonical base.  |
+| Status                  | `MP1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED`; real-source rollout and M2 investment acceptance remain owner-gated.                  |
 | Current branch / commit | `codex/model-publication-vertical-slice`, based on merged main `eb14b73`.                                                             |
-| Last verified tests     | Focused two-company publication, native parity, replay, conflict and failure-retention tests pass; integrated checks pending.         |
+| Last verified tests     | npm run check passed; integration 137 passed / 4 skipped; final focused suite 19 passed; desktop/mobile model-review E2E 2 passed.    |
 | Latest PR               | [Investment review PR #22](https://github.com/paulzwecker/portfolio-app/pull/22) merged; publication milestone PR pending.            |
 | Primary blocker         | Investment assumptions, fiscal basis and terminal-value methodology remain unapproved; a private review recommends DEFER.             |
 | Next approval gate      | Owner reviews the exact private P-GOOGL package diff and separately approves any model revision after a read-only production preview. |
@@ -273,3 +273,5 @@ _Add one short row per completed subtask: date | task ID | commit | tests/eviden
 | 2026-11-07 | M2.3 | `codex/m2-native-pgoogl-lifecycle` | Private package replay: 30/30 projection and 22/22 output parity; guarded production read-only preview `READY_FOR_EXPLICIT_ACCEPTANCE` | Five input changes and 26 published output changes remain owner-gated; source effective date and revision ID unavailable | Owner reviews private evidence and separately authorizes any first model acceptance after recovery verification |
 
 | 2026-11-07 | M2.2 review | `codex/m2-pgoogl-investment-review` | Two immutable package replays pass 30/30 and 22/22; native-engine sensitivity and guarded production model-table counts reviewed privately | Investment validity and source period remain unresolved; recommend DEFER | Owner reviews private evidence and decides whether to revise assumptions |
+
+| 2026-11-07 | MP1 integration gate | `e118c31`, `91887e2` | Full check green; PostgreSQL 137 passed / 4 skipped plus final focused 19; browser desktop/mobile 2 passed; independent review passed | Locally verified two-company publication-to-review slice; real source installation and first-model acceptance remain owner-gated | Review MP1 PR, merge manually, resume MP2 from updated main |
