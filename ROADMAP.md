@@ -71,6 +71,8 @@ Original task definitions, decisions and evidence remain in the
 
 | 2026-11-07 | MP1.F3/F5 | Full check passes (166 web / 659 API unit, two skips); isolated PostgreSQL 139 passed / four skips; focused suite 31; browser six plus two screenshot checks; 133 Markdown files link-clean; independent reviews pass | Owner review of PR #23, then MP2 from merged main |
 
+| 2026-11-07 | Remote integration gate | [GitHub Actions](https://github.com/paulzwecker/portfolio-app/actions/runs/42388954068) passed all three jobs on code commit `c770e0f`; Vercel Preview passed | Owner review of the current PR head |
+
 ## Upkeep
 
 Update cursor, status, short evidence and next action after each subtask. Put
