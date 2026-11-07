@@ -1093,6 +1093,42 @@ class CompanyReportedFundamentalsRead(Contract):
     latest_observed_at: datetime | None
 
 
+class SecBootstrapCheckpointRead(Contract):
+    run_id: UUID
+    checkpoint_id: UUID
+    status: Literal["PENDING", "RUNNING", "COMPLETE", "UNAVAILABLE", "FAILED", "BLOCKED"]
+    prepared_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    failure_code: str | None
+    retryable: bool
+    next_attempt_at: datetime | None
+    provider_request_count: Annotated[int, Field(ge=0)]
+
+
+class SecDomainCoverageRead(Contract):
+    record_count: Annotated[int, Field(ge=0)]
+    data_check_count: Annotated[int, Field(ge=0)]
+    latest_period_end: date | None
+    latest_filed_at: date | None
+    latest_retrieved_at: datetime | None
+    latest_recorded_at: datetime | None
+    bootstrap: SecBootstrapCheckpointRead | None
+
+
+class CompanySecCoverageRead(Contract):
+    company_id: UUID
+    company_name: str
+    mapping_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS", "INVALID"]
+    cik: str | None
+    provider_company_name: str | None
+    identity_evidence_url: str | None
+    fundamentals: SecDomainCoverageRead
+    filings: SecDomainCoverageRead
+    metrics_present: list[FundamentalMetric]
+    metrics_missing: list[FundamentalMetric]
+
+
 class ConsensusEstimateObservationRead(Contract):
     id: UUID
     company_id: UUID

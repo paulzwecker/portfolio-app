@@ -117,6 +117,14 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
+- C3.1 current per-company SEC coverage API is LOCAL_VERIFIED with seven isolated
+  cases. It reports retained facts/filings, missing metric types, mapping evidence,
+  economic/filing/retrieval/recording dates and issuer-specific bootstrap state.
+  Failed checkpoints retain prior data. Replay never advances retained retrieval
+  timestamps. Invalid/ambiguous identity links are withheld. The API performs only
+  reads and reuses existing state. Financials/Research/Operations UI wiring is in
+  progress; desktop/mobile visual verification is the next step.
+
 - C3.1 adds explicit `db:bootstrap-fundamentals -- preview/prepare --portfolio-id`
   selection using the exact portfolio's current complete snapshot and explicit
   Watchlist. Held issuers lead, multiple listings deduplicate to one issuer, and

@@ -12,6 +12,11 @@
 
 ## Current SEC increment
 
+The current per-company `sec-coverage` read API passes seven isolated cases for
+empty/unmapped, imported, failed, replayed and invalid identity evidence. Counts
+and source dates remain distinct from bootstrap attempt state. UI wiring across
+Financials/Research/Operations is in progress, with browser review next.
+
 `6c44a40` adds `db:bootstrap-fundamentals preview/prepare --portfolio-id`, selecting the exact
 portfolio's current complete snapshot and explicit Watchlist. Held issuers are
 prioritized independently of lifecycle, listing duplicates become one issuer,

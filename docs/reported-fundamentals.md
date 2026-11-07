@@ -121,6 +121,12 @@ source for audit.
 
 ## API and Company Explorer
 
+- `GET /v1/companies/{company_id}/sec-coverage` reports current retained SEC facts
+  and filing counts, missing metric types, reviewed issuer identity and the latest
+  per-issuer bootstrap checkpoints. Economic period, filing date, retained retrieval
+  and record time remain separate. Bootstrap status covers the scoped SEC runner.
+  Other refresh histories remain in Operations. Retained metrics include flagged
+  history and require the statement resolver for selected values/conflicts.
 - `GET /v1/reported-fundamental-definitions` returns canonical metrics and declares
   free cash flow as derived.
 - `GET /v1/companies/{company_id}/reported-fundamentals` returns coverage, resolved

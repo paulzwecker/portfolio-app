@@ -17,6 +17,7 @@ from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
+from portfolio_api.company_sec_coverage import company_sec_coverage
 from portfolio_api.decision_evaluation import company_decision_evaluation
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
@@ -1211,6 +1212,11 @@ def get_company_reported_fundamentals(
 ) -> s.CompanyReportedFundamentalsRead:
     _validate_market_cutoffs(as_of, known_at)
     return q.company_reported_fundamentals(db, company_id, period_type, as_of, known_at)
+
+
+@router.get("/companies/{company_id}/sec-coverage", response_model=s.CompanySecCoverageRead)
+def get_company_sec_coverage(company_id: UUID, db: Db) -> s.CompanySecCoverageRead:
+    return company_sec_coverage(db, company_id)
 
 
 @router.get(

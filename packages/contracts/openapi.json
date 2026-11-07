@@ -3495,6 +3495,97 @@
         "title": "CompanyRiskAssessmentsRead",
         "type": "object"
       },
+      "CompanySecCoverageRead": {
+        "additionalProperties": false,
+        "properties": {
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cik"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "filings": {
+            "$ref": "#/components/schemas/SecDomainCoverageRead"
+          },
+          "fundamentals": {
+            "$ref": "#/components/schemas/SecDomainCoverageRead"
+          },
+          "identity_evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Evidence Url"
+          },
+          "mapping_status": {
+            "enum": [
+              "MAPPED",
+              "UNMAPPED",
+              "AMBIGUOUS",
+              "INVALID"
+            ],
+            "title": "Mapping Status",
+            "type": "string"
+          },
+          "metrics_missing": {
+            "items": {
+              "$ref": "#/components/schemas/FundamentalMetric"
+            },
+            "title": "Metrics Missing",
+            "type": "array"
+          },
+          "metrics_present": {
+            "items": {
+              "$ref": "#/components/schemas/FundamentalMetric"
+            },
+            "title": "Metrics Present",
+            "type": "array"
+          },
+          "provider_company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Company Name"
+          }
+        },
+        "required": [
+          "company_id",
+          "company_name",
+          "mapping_status",
+          "cik",
+          "provider_company_name",
+          "identity_evidence_url",
+          "fundamentals",
+          "filings",
+          "metrics_present",
+          "metrics_missing"
+        ],
+        "title": "CompanySecCoverageRead",
+        "type": "object"
+      },
       "CompanySourceDocumentsRead": {
         "additionalProperties": false,
         "properties": {
@@ -27811,6 +27902,192 @@
         "title": "ScoreHistoryEntry",
         "type": "object"
       },
+      "SecBootstrapCheckpointRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint_id": {
+            "format": "uuid",
+            "title": "Checkpoint Id",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "prepared_at": {
+            "format": "date-time",
+            "title": "Prepared At",
+            "type": "string"
+          },
+          "provider_request_count": {
+            "minimum": 0.0,
+            "title": "Provider Request Count",
+            "type": "integer"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETE",
+              "UNAVAILABLE",
+              "FAILED",
+              "BLOCKED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "checkpoint_id",
+          "status",
+          "prepared_at",
+          "started_at",
+          "finished_at",
+          "failure_code",
+          "retryable",
+          "next_attempt_at",
+          "provider_request_count"
+        ],
+        "title": "SecBootstrapCheckpointRead",
+        "type": "object"
+      },
+      "SecDomainCoverageRead": {
+        "additionalProperties": false,
+        "properties": {
+          "bootstrap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecBootstrapCheckpointRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_check_count": {
+            "minimum": 0.0,
+            "title": "Data Check Count",
+            "type": "integer"
+          },
+          "latest_filed_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Filed At"
+          },
+          "latest_period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Period End"
+          },
+          "latest_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Recorded At"
+          },
+          "latest_retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Retrieved At"
+          },
+          "record_count": {
+            "minimum": 0.0,
+            "title": "Record Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "record_count",
+          "data_check_count",
+          "latest_period_end",
+          "latest_filed_at",
+          "latest_retrieved_at",
+          "latest_recorded_at",
+          "bootstrap"
+        ],
+        "title": "SecDomainCoverageRead",
+        "type": "object"
+      },
       "SecurityCreate": {
         "additionalProperties": false,
         "properties": {
@@ -33085,6 +33362,49 @@
           }
         },
         "summary": "Get Score History",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/sec-coverage": {
+      "get": {
+        "operationId": "get_company_sec_coverage_v1_companies__company_id__sec_coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanySecCoverageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Sec Coverage",
         "tags": [
           "Portfolio research"
         ]

@@ -748,6 +748,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/sec-coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Sec Coverage */
+        get: operations["get_company_sec_coverage_v1_companies__company_id__sec_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/securities": {
         parameters: {
             query?: never;
@@ -3337,6 +3354,33 @@ export interface components {
             current: components["schemas"]["RiskAssessmentRevisionRead"][];
             /** History */
             history: components["schemas"]["RiskAssessmentRevisionRead"][];
+        };
+        /** CompanySecCoverageRead */
+        CompanySecCoverageRead: {
+            /** Cik */
+            cik: string | null;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Company Name */
+            company_name: string;
+            filings: components["schemas"]["SecDomainCoverageRead"];
+            fundamentals: components["schemas"]["SecDomainCoverageRead"];
+            /** Identity Evidence Url */
+            identity_evidence_url: string | null;
+            /**
+             * Mapping Status
+             * @enum {string}
+             */
+            mapping_status: "MAPPED" | "UNMAPPED" | "AMBIGUOUS" | "INVALID";
+            /** Metrics Missing */
+            metrics_missing: components["schemas"]["FundamentalMetric"][];
+            /** Metrics Present */
+            metrics_present: components["schemas"]["FundamentalMetric"][];
+            /** Provider Company Name */
+            provider_company_name: string | null;
         };
         /** CompanySourceDocumentsRead */
         CompanySourceDocumentsRead: {
@@ -10399,6 +10443,57 @@ export interface components {
             assessment: components["schemas"]["ScoreAssessmentRead"];
             definition: components["schemas"]["ScoreDefinitionRead"];
         };
+        /** SecBootstrapCheckpointRead */
+        SecBootstrapCheckpointRead: {
+            /**
+             * Checkpoint Id
+             * Format: uuid
+             */
+            checkpoint_id: string;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Next Attempt At */
+            next_attempt_at: string | null;
+            /**
+             * Prepared At
+             * Format: date-time
+             */
+            prepared_at: string;
+            /** Provider Request Count */
+            provider_request_count: number;
+            /** Retryable */
+            retryable: boolean;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "RUNNING" | "COMPLETE" | "UNAVAILABLE" | "FAILED" | "BLOCKED";
+        };
+        /** SecDomainCoverageRead */
+        SecDomainCoverageRead: {
+            bootstrap: components["schemas"]["SecBootstrapCheckpointRead"] | null;
+            /** Data Check Count */
+            data_check_count: number;
+            /** Latest Filed At */
+            latest_filed_at: string | null;
+            /** Latest Period End */
+            latest_period_end: string | null;
+            /** Latest Recorded At */
+            latest_recorded_at: string | null;
+            /** Latest Retrieved At */
+            latest_retrieved_at: string | null;
+            /** Record Count */
+            record_count: number;
+        };
         /** SecurityCreate */
         SecurityCreate: {
             /** Name */
@@ -12572,6 +12667,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScoreHistoryEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_sec_coverage_v1_companies__company_id__sec_coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanySecCoverageRead"];
                 };
             };
             /** @description Validation Error */
