@@ -221,12 +221,14 @@ export function CanonicalArchetypeExplorer({
   companyId,
   listings,
   focusedKind,
+  focusedModelId,
   embedded = false,
 }: {
   companyId: string;
   listings: Listing[];
   /** Restrict the editor to the selected method in the Company workspace. */
   focusedKind?: Kind;
+  focusedModelId?: string;
   /** Omit the top-level section heading when composed by another workspace. */
   embedded?: boolean;
 }) {
@@ -236,7 +238,9 @@ export function CanonicalArchetypeExplorer({
       "/canonical-financial-models",
     isExtendedFinancialModels,
   );
-  const models = state.data ?? [];
+  const models = (state.data ?? []).filter(
+    (model) => !focusedModelId || model.id === focusedModelId,
+  );
   const [draft, setDraft] = useState<Draft | null>(null);
   const [contract, setContract] = useState<ContractDraft | null>(null);
   const [contractPreview, setContractPreview] =

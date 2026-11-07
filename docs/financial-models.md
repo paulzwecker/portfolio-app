@@ -47,6 +47,20 @@ revision and advances the current pointer atomically. The database/service layer
 rejects updates or deletes to accepted revisions and their children. Corrections
 are new revisions; previous values remain inspectable.
 
+## Independent models per company
+
+A company can own DCF, owner-cash-flow and residual-income models simultaneously.
+Canonical model identity includes company, exact valuation listing and model type.
+Each model owns its revision ancestry, typed assumptions, source evidence, native
+outputs and return definition. Company Valuation selects the exact model/listing
+for its summary, history and editor. Overview requires an unambiguous output.
+
+Published source revision IDs are scoped to the canonical model. Distinct methods
+can share an agent revision label while changed content within one model conflicts.
+Company-level valuation synthesis or decision-model selection requires an explicit
+versioned economic contract and owner review. Existing ranking and execution
+ambiguity checks remain in force. See [decision 002](architecture/decisions/002-independent-company-models.md).
+
 ## Supported method and workbook reference
 
 The currently implemented archetypes and representative workbook references are:

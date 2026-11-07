@@ -308,6 +308,110 @@ const portableContract = {
   },
 };
 
+test("valuation preserves exact model and listing selection through summary and editor", async ({
+  page,
+}, testInfo) => {
+  const alternate = structuredClone(contractModel);
+  alternate.id = "aaaaaaaa-1111-4111-8111-111111111111";
+  alternate.model_name = "Second listing DCF";
+  alternate.valuation_listing = {
+    ...contractListing,
+    id: "bbbbbbbb-1111-4111-8111-111111111111",
+    ticker: "EXM2",
+    venue: "NYSE",
+  };
+  alternate.current_revision = {
+    ...alternate.current_revision,
+    model_id: alternate.id,
+    rationale: "Independent second-listing model evidence.",
+    outputs: { ...alternate.current_revision.outputs, weighted_fv: "84" },
+  };
+  alternate.history = [alternate.current_revision];
+  let writes = 0;
+  await page.route(/\/api\/research\//, async (route) => {
+    if (route.request().method() !== "GET") writes++;
+    const pathname = new URL(route.request().url()).pathname.replace(
+      "/api/research/",
+      "",
+    );
+    if (pathname === `companies/${id}`)
+      return route.fulfill({
+        json: {
+          company,
+          securities: [],
+          listings: [contractListing, alternate.valuation_listing],
+          lifecycle_history: [],
+          portfolio: null,
+          portfolio_context: null,
+          holding_snapshot: null,
+          positions: [],
+          target_weight: null,
+          target_revision_id: null,
+        },
+      });
+    if (pathname === `companies/${id}/financial-models`)
+      return route.fulfill({ json: [contractModel, alternate] });
+    if (pathname === `companies/${id}/canonical-financial-models`)
+      return route.fulfill({ json: [] });
+    if (pathname === `companies/${id}/model-outputs/current`)
+      return route.fulfill({
+        json: {
+          company_id: id,
+          status: "NO_MODEL",
+          history_count: 0,
+          models: [],
+        },
+      });
+    if (pathname === "model-revision-proposals")
+      return route.fulfill({ json: [] });
+    if (pathname.endsWith("/model-migration-status"))
+      return route.fulfill({ json: emptyModelMigrationStatus(id) });
+    return route.fulfill({
+      status: 404,
+      json: { detail: "Synthetic optional data unavailable" },
+    });
+  });
+  await page.goto(`/company/${id}?view=valuation`);
+  const selector = page.getByRole("combobox", {
+    name: "Accepted model / listing",
+  });
+  await expect(selector).toBeVisible();
+  await selector.selectOption(`native:${alternate.id}`);
+  await expect(
+    page.getByText("Independent second-listing model evidence.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await selector.focus();
+  await expect(selector).toBeFocused();
+  await page.getByRole("button", { name: "Edit accepted assumptions" }).click();
+  await expect(selector).toBeDisabled();
+  const editor = page.locator("#canonical-models");
+  await expect(
+    editor.getByText("Second listing DCF", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    editor.getByText("Example operating DCF", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await selector.selectOption(`native:${contractModel.id}`);
+  await expect(
+    page.getByText("Independent second-listing model evidence.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect(writes).toBe(0);
+  await page.screenshot({
+    path: testInfo.outputPath("model-selection.png"),
+    fullPage: true,
+  });
+});
+
 test("research empty and unavailable states recover", async ({ page }) => {
   let available = false;
   await page.route(/\/api\/research\/universe(?:\/|$)/, (route) =>
@@ -930,7 +1034,10 @@ test("model outputs keep missing values visible across responsive universe and c
   ).toHaveAttribute("aria-selected", "true");
   await overviewTab.click();
   await expect(
-    page.getByText("No target", { exact: true }).first(),
+    page.getByText("No strategic target recorded", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No expected return recorded", { exact: true }),
   ).toBeVisible();
   await page
     .locator("summary")

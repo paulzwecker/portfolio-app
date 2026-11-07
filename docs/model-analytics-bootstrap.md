@@ -80,8 +80,8 @@ read-only previews separately only after their prerequisites are satisfied.
 ## Historical readiness at implementation
 
 The implementation-time private store contained portfolio acquisitions marked
-`ACQUIRED_REVIEW_REQUIRED`; no schema-approved snapshot is available. The current local settings
-also have production writes, recurring operations, Sheets polling, and cloud ingestion disabled.
+`ACQUIRED_REVIEW_REQUIRED`; no schema-approved snapshot was available. The implementation-time local settings
+also had production writes, recurring operations, Sheets polling, and cloud ingestion disabled.
 That record describes the full-workbook model bootstrap. The later minimal
 portfolio restoration is recorded in [the canonical baseline](production-canonical-baseline.md). A target-verified preview
 requires working Neon control-plane access as well as an approved frozen snapshot.

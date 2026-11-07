@@ -57,7 +57,9 @@ Existing sync tables retain raw text, raw hash, semantic fingerprint, source row
 first/last observation, status and run diagnostics. A source-scoped transaction advisory lock covers worker and manual discovery.
 Concurrent scans record `SYNC_IN_PROGRESS` without provider requests. Exact replay
 reuses a candidate.
-Changed content under a reused revision ID produces a conflict. Preview and
+Source revision IDs are scoped to their canonical model. Changed content under a
+reused model revision ID produces a conflict. Independent methods on one company
+can share a producer label. The Sheets adapter tests replay per publish block. Preview and
 acceptance replay the same frozen contract and recalculate native outputs.
 Published fair-value mismatch blocks readiness and acceptance. Review decisions,
 evidence, concurrency checks and immutable history use existing services.
@@ -130,3 +132,8 @@ trailing empty rows. Both row sets and source identity must match.
 [Google Sheets ValueRange reference](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets.values)
 
 The architectural rationale is recorded in [decision 001](architecture/decisions/001-explicit-model-publications.md).
+
+A corrected inbox revision label can recapture the same immutable contract after
+a source metadata error. The original invalid record stays available. Older invalid
+capture keys retain compatibility through a separate verified-source namespace.
+[Independent-model decision](architecture/decisions/002-independent-company-models.md)

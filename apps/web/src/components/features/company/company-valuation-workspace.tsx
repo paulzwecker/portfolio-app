@@ -619,11 +619,15 @@ function ValuationSummary({ descriptor }: { descriptor: ModelDescriptor }) {
 function MethodSelector({
   descriptors,
   selected,
+  selectedModelKey,
   onSelect,
+  disabled = false,
 }: {
   descriptors: ModelDescriptor[];
   selected: ModelMethod | null;
+  selectedModelKey: string;
   onSelect: (method: ModelMethod) => void;
+  disabled?: boolean;
 }) {
   return (
     <Card className="min-w-0 shadow-none">
@@ -636,14 +640,18 @@ function MethodSelector({
       </CardHeader>
       <CardContent className="grid gap-2 md:grid-cols-3">
         {methodOrder.map((method) => {
-          const model = descriptors.find(
+          const available = descriptors.filter(
             (item) => item.method === method && item.native,
           );
+          const model =
+            available.find((item) => item.key === selectedModelKey) ??
+            available[0];
           return (
             <button
               key={method}
               type="button"
               aria-pressed={selected === method}
+              disabled={disabled}
               onClick={() => onSelect(method)}
               className={`rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected === method ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
             >
@@ -659,7 +667,7 @@ function MethodSelector({
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 {model
-                  ? `${model.name} · revision ${model.revisionNumber ?? "—"}`
+                  ? `${available.length} accepted · ${model.name} · revision ${model.revisionNumber ?? "—"}`
                   : "Choose this method to start a supported model."}
               </p>
             </button>
@@ -840,13 +848,8 @@ export function CompanyValuationWorkspace({
     descriptors.find((descriptor) => descriptor.key === resolvedSelectedKey) ??
     null;
   const selectedMethod = selectedDescriptor?.method ?? newMethod;
-  const nativeSelected = selectedMethod
-    ? (descriptors.find(
-        (descriptor) =>
-          descriptor.method === selectedMethod && descriptor.native,
-      ) ?? null)
-    : null;
-  const activeDescriptor = nativeSelected ?? selectedDescriptor;
+  const nativeSelected = selectedDescriptor?.native ? selectedDescriptor : null;
+  const activeDescriptor = selectedDescriptor;
   const loading =
     !dcfState.data &&
     !dcfState.error &&
@@ -864,9 +867,12 @@ export function CompanyValuationWorkspace({
   ].filter(Boolean);
 
   const chooseMethod = (method: ModelMethod) => {
-    const existing = descriptors.find(
-      (descriptor) => descriptor.method === method && descriptor.native,
-    );
+    const existing =
+      selectedDescriptor?.native && selectedDescriptor.method === method
+        ? selectedDescriptor
+        : descriptors.find(
+            (descriptor) => descriptor.method === method && descriptor.native,
+          );
     setSelectedKey(existing?.key ?? `new:${method}`);
     setNewMethod(method);
     setEditorOpen(false);
@@ -888,6 +894,42 @@ export function CompanyValuationWorkspace({
         description="Understand the accepted value range first, then open the applicable assumptions and deterministic preview when you need to underwrite a change."
         id="valuation-workspace-title"
       >
+        {descriptors.length > 1 && (
+          <div className="mb-4 space-y-2">
+            <label htmlFor="valuation-model" className="text-sm font-medium">
+              Accepted model / listing
+            </label>
+            <select
+              id="valuation-model"
+              value={resolvedSelectedKey}
+              disabled={editorOpen}
+              onChange={(event) => {
+                setSelectedKey(event.target.value);
+                setNewMethod(null);
+              }}
+              className="min-h-11 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            >
+              {resolvedSelectedKey.startsWith("new:") && (
+                <option value={resolvedSelectedKey}>New model</option>
+              )}
+              {descriptors.map((model) => (
+                <option key={model.key} value={model.key}>
+                  {model.name} | {methodDisplay(model.method)} |{" "}
+                  {model.venue ?? "Listing unavailable"}:
+                  {model.ticker ?? "Unavailable"} |{" "}
+                  {model.currency ?? "Currency unavailable"}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Each model has its own assumptions, valuation and revision
+              history.
+              {editorOpen
+                ? " Close the editor before switching models."
+                : " Select a model to inspect its exact listing and return basis."}
+            </p>
+          </div>
+        )}
         {loading ? (
           <PendingOrError
             error={undefined}
@@ -1016,7 +1058,9 @@ export function CompanyValuationWorkspace({
           <MethodSelector
             descriptors={descriptors}
             selected={selectedMethod}
+            selectedModelKey={resolvedSelectedKey}
             onSelect={chooseMethod}
+            disabled={editorOpen}
           />
         </PageSection>
       )}
@@ -1059,6 +1103,7 @@ export function CompanyValuationWorkspace({
                 <CanonicalDcfExplorer
                   companyId={companyId}
                   listings={editorListings}
+                  focusedModelId={nativeSelected?.modelId ?? undefined}
                 />
               )}
               {selectedMethod === "OWNER_CASH_FLOW_10Y" && (
@@ -1066,6 +1111,7 @@ export function CompanyValuationWorkspace({
                   companyId={companyId}
                   listings={editorListings}
                   focusedKind="owner-cash-flow"
+                  focusedModelId={nativeSelected?.modelId ?? undefined}
                 />
               )}
               {selectedMethod === "RESIDUAL_INCOME_10Y_FADE" && (
@@ -1073,6 +1119,7 @@ export function CompanyValuationWorkspace({
                   companyId={companyId}
                   listings={editorListings}
                   focusedKind="residual-income"
+                  focusedModelId={nativeSelected?.modelId ?? undefined}
                 />
               )}
             </CardContent>

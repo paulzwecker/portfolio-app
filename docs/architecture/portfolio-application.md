@@ -86,6 +86,15 @@ Downstream choices must not silently mutate upstream assumptions. Rankings expre
 
 ## 5. Model architecture
 
+### Model identity and company scope
+
+Each company may own several independent valuation methods. Canonical identity is
+company, exact listing and model type, with a revision pointer/history per model.
+Publication revision labels are resolved within that model. Valuation UI selection
+carries the exact model ID through summary, history and editor. Company synthesis
+and decision-model selection require an explicit versioned economic contract and
+owner approval. See [decision 002](decisions/002-independent-company-models.md).
+
 ### Model protocol
 
 Each supported method has a versioned, discriminated, validated contract with:

@@ -28,6 +28,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Portfolio architecture](architecture/portfolio-application.md)
 - [Personal Universe architecture](architecture/personal-universe.md)
 - [Explicit publication decision](architecture/decisions/001-explicit-model-publications.md)
+- [Independent-model decision](architecture/decisions/002-independent-company-models.md)
 
 ## Models and publications
 

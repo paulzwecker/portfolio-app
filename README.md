@@ -1,6 +1,6 @@
 # Portfolio Research Platform
 
-A private equity-research and portfolio application built with Next.js, FastAPI
+A private application for public-equity research and portfolio management built with Next.js, FastAPI
 and PostgreSQL. Finance agents maintain models in Google Sheets and explicitly
 publish versioned proposals. The application validates and presents accepted
 models, independent valuation methods, research and portfolio decisions.
