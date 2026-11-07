@@ -67,8 +67,11 @@ checks leave the current status selection. Reusing facts never advances data
 freshness. Retry a preflight diagnostic by rerunning the cloud scope check; it
 cannot be replayed as a provider ingestion scope. Status follows the latest attempt,
 including retries of older runs. Database readiness/authorization failures that
-prevent safe diagnostic persistence remain sanitized command failures. Hosted activation and investor
-journey review remain pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md).
+prevent safe diagnostic persistence remain sanitized command failures. The investor
+journey is locally verified through the real importer, PostgreSQL, API, web proxy
+and desktop/mobile browser with synthetic payloads. Hosted activation remains
+pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md). Reproduce the isolated
+rehearsal with [the development runbook](codex-cloud-development.md#portfolio-data-rehearsal).
 
 ## Jobs and cadence
 

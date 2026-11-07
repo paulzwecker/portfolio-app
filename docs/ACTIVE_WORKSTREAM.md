@@ -72,18 +72,35 @@
   unit checks, strict types, lint and generated contracts pass. Browser requests
   use synthetic fixtures. Hosted data/scheduling are unverified and owner-gated.
 
+## Actual-API rehearsal
+
+`fd4ec9e` adds the bounded test-only API fixture. The actual-API rehearsal is
+LOCAL_VERIFIED. Six unpriced/outage/valued desktop/mobile journeys use the real
+importer, PostgreSQL, API and Next proxy with synthetic provider payloads.
+They preserve exact holdings/cash/targets and protected-state hashes, with
+zero browser writes or API errors. Sixteen fixture safety/integration cases pass.
+Visual review found allocation-gap names squeezed by long decimal displays.
+`443d93a` corrects the layout and retains exact-value titles. Three regression unit
+cases pass, followed by repeat desktop/mobile screenshot inspection. Screenshots
+remain in `.cache/c2.2-real-api`.
+Final focused regression passes five web unit tests and 18 UI/browser cases, with
+strict types, lint, formatting, generated contracts and documentation links current.
+Bounded normal shutdown removes its own schema. Five pre-existing browser schemas
+are preserved. Commands are in the
+[development runbook](codex-cloud-development.md#portfolio-data-rehearsal).
+
 ## Next build steps
 
-1. Finish the actual-API browser rehearsal. The fixture server now supports bounded
-   stock/standalone-ETF/FX ingestion and read-only serving in its verified local test
-   schema. Sixteen safety/integration cases and valued/outage desktop/mobile checks
-   pass. Verify unpriced readback and normal lifetime cleanup, then finalize the
-   bounded release/activation handoff. Preserve pre-existing test schemas.
-2. After owner merge of #25, integrate its receipt adapter and preserve both sets
-   of roadmap evidence. Keep the completed PR frozen during owner review.
-3. The 90-date/30-subject policy, current-state recovery, provider scope and hosted
-   cycles require explicit production review/authorization. Use INTEGRATE for the
-   completed local milestone, distinguishing those remaining operational gates.
+1. After owner merge of #25, integrate its receipt adapter and preserve both sets
+   of roadmap evidence. Keep the completed PR frozen during owner review. Then
+   enter INTEGRATE for comprehensive local checks and one cohesive C2.2 PR.
+2. Review the 90-date/30-subject policy, provider scope, three-attempt/15-minute
+   retry budget and expected holdings/cash reconciliation. Require a verified
+   current-state recovery point and separate production authorization before any
+   backfill or provider cycle. The old recovery point predates accepted holdings.
+3. After explicit authorization, prove two hosted refresh cycles including restart,
+   partial/failure visibility and investor readback. Scheduling/recurring activation
+   remains a separate owner decision. No hosted cycles have run in this increment.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR
 belong to the completed milestone's INTEGRATE gate. Production backfill/scheduling,

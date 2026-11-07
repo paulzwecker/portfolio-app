@@ -10,8 +10,8 @@ Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.2 provider-only cloud refresh — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                                      |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | PARTIAL / BUILD. Importer/API recovery and desktop/mobile diagnostic journey locally verified. Hosted data and refresh cycles pending               |
-| Next ready substantial task | C2.2 real-API browser rehearsal and release/activation handoff. Integrate #25 after owner merge and complete local acceptance                       |
+| Implementation              | PARTIAL / BUILD. Real importer → PostgreSQL → API → web proxy → desktop/mobile locally verified. Hosted data and refresh cycles pending             |
+| Next ready substantial task | C2.2 INTEGRATE gate after owner merge of #25. Integrate receipt adapter, run comprehensive local acceptance and prepare bounded activation review   |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
@@ -117,14 +117,22 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
-- C2.2 isolated browser harness now supports real imported stock/ETF/FX facts and
-  unpriced/outage/valued states. It verifies a loopback `_test` target before schema
-  creation, isolates operator settings, and serves the portfolio fixture through
-  read-only SQL/HTTP. Sixteen focused safety/integration checks pass. Real valued
-  and FX-outage browser cases pass on desktop/mobile. Windows interrupt cleanup
-  proved unreliable, so bounded normal shutdown and cleanup regression checks were
-  added. Existing test schemas are preserved. Complete the remaining unpriced
-  browser pass and final lifecycle verification before updating the release handoff.
+- C2.2 actual-API browser rehearsal is LOCAL_VERIFIED for unpriced, FX-outage and
+  valued states on desktop/mobile. Synthetic stock/standalone-ETF/FX payloads pass
+  through the real importer, PostgreSQL, API and web proxy. Sixteen fixture
+  safety/integration tests pass. The six scenario/device journeys preserve exact
+  holdings/cash/targets, record zero browser writes and retain protected-state hashes.
+  Visual review exposed squeezed company names in allocation gaps. The corrected
+  layout uses compact percentage/percentage-point display with exact input text
+  available, and a second desktop/mobile inspection passes. Three regression unit
+  cases cover precision, zero and missing values. The final focused checks pass
+  five web unit tests, 18 UI/browser regressions, strict types, lint, formatting,
+  generated contracts and documentation links. Windows interrupt cleanup proved
+  unreliable, so bounded normal shutdown is tested and verified. Two interrupted
+  fixtures created during this run were identified and removed from the local test
+  database; five pre-existing schemas remain preserved. Reproduction commands live
+  in the [development runbook](docs/codex-cloud-development.md#portfolio-data-rehearsal).
+  Hosted/provider activation remains unverified and owner-gated.
 
 - C2.2 investor investigation now links Portfolio valuation gaps directly to the
   Operations market panel. Summary/diagnostics precede manual controls. A shared
@@ -135,9 +143,10 @@ policy decision. It has lower priority than useful market, research and decision
   write requests. Eighteen isolated API cases passed initially, followed by a
   14-case status/importer review regression that excludes manual replays from
   automatic eligibility. Nine focused web tests, strict types, lint and contracts
-  pass. Evidence is synthetic/local. Real-API browser and hosted activation remain
-  separate checks. Second visual inspection fixed shared drawer placement and
-  verified actual right-edge bounds. Six focused drawer/design-system reruns pass.
+  pass. Evidence is synthetic/local. The actual-API browser rehearsal is recorded
+  above; hosted activation remains separate. Second visual inspection fixed shared
+  drawer placement and verified actual right-edge bounds. Six focused
+  drawer/design-system reruns pass.
   Screenshots are retained in the ignored local cache.
 
 - C2.2 diagnostics contract adds read-only per-domain scopes, attempt history and

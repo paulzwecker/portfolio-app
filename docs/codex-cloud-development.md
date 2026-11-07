@@ -71,7 +71,7 @@ Browser tests that need seeded API state use the same test database. Start the
 fixture API in one terminal, then run the web suite in another:
 
 ```sh
-TEST_DATABASE_URL='postgresql+psycopg://portfolio_app:<password>@<host>:5432/portfolio_app_test' \
+TEST_DATABASE_URL='postgresql+psycopg://portfolio_app:<password>@127.0.0.1:5432/portfolio_app_test' \
   npm run test:e2e:api
 
 npm run test:e2e
@@ -80,6 +80,48 @@ npm run test:e2e
 Browser tests are intentionally an operator or release check rather than a
 required cloud-initialization step because they need a running API and a
 Playwright browser installation.
+
+### Portfolio data rehearsal
+
+The browser fixture requires a loopback PostgreSQL `_test` database and verifies
+its live identity before creating a random test-owned schema. Portfolio scenarios
+use synthetic provider payloads through the real importer. FastAPI serves those
+records with PostgreSQL read-only transactions, the existing SQL write guard and
+GET/HEAD-only HTTP access. Operator application settings and credentials are isolated.
+
+In a dedicated PowerShell terminal with `TEST_DATABASE_URL` configured securely,
+run the fixture from the repository root. Select `unpriced`, `fx-outage` or `valued`.
+
+```powershell
+$env:BROWSER_API_PORT='8011'
+npm run test:e2e:api -- --scenario valued --lifetime-seconds 120
+```
+
+Run the focused desktop/mobile journey from a second dedicated terminal.
+
+```powershell
+$env:E2E_WEB_PORT='3110'
+$env:BROWSER_API_PORT='8011'
+$env:E2E_REAL_API='1'
+$env:API_BASE_URL='http://127.0.0.1:8011'
+$env:API_ACCESS_TOKEN=''
+$env:APP_ENV='development'
+$env:WEB_ACCESS_USERNAME=''
+$env:WEB_ACCESS_PASSWORD=''
+node scripts/browser.mjs test portfolio-live-data.spec.ts --workers=1
+```
+
+The test checks the fixture identity, exact decimal readback, proxy routing,
+Portfolio → Operations investigation and unchanged holdings/targets/table counts.
+It rejects API errors and browser write requests. Screenshots remain in ignored
+`apps/web/test-results`. This test is skipped without `E2E_REAL_API=1`.
+
+Wait for normal fixture shutdown and `Removed the test-owned browser schema.`
+The lifetime defaults to 120 seconds for portfolio scenarios and is capped at 600.
+Forced termination of the Windows wrapper can interrupt cleanup. Existing schemas
+remain untouched. Each scenario needs its own fixture invocation. These checks
+establish local integration using synthetic facts. Hosted provider cycles and
+production activation retain their separate review and authorization gates.
 
 ## Environment variables and database boundaries
 
