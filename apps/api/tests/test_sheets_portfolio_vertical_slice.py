@@ -6,6 +6,8 @@ import hashlib
 import json
 import re
 from collections.abc import Iterator
+from copy import deepcopy
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
@@ -17,10 +19,11 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from portfolio_api import legacy_import
+from portfolio_api.canonical_import_readiness import canonical_import_readiness
 from portfolio_api.domain.models import (
     CanonicalBootstrapRun,
     CashPosition,
@@ -33,7 +36,10 @@ from portfolio_api.domain.models import (
     TargetAllocation,
     TargetRevision,
 )
+from portfolio_api.fundamentals_bootstrap import preview_fundamentals_bootstrap
 from portfolio_api.main import create_app
+from portfolio_api.market_data_bootstrap import preview_market_data_bootstrap
+from portfolio_api.reported_fundamentals import record_cik_mapping
 from portfolio_api.settings import Settings
 from portfolio_api.sheets_portfolio_vertical_slice import (
     SheetsPortfolioError,
@@ -51,6 +57,7 @@ from portfolio_api.sheets_portfolio_vertical_slice import (
     preview_database,
 )
 from portfolio_api.workbook_sources import SnapshotStore
+from portfolio_api.yahoo_finance import YahooListingCrosswalk, YahooListingMapping
 
 SOURCE_ID = "s" * 30
 
@@ -799,6 +806,7 @@ def test_guarded_minimal_bootstrap_revalidates_and_replays_in_isolated_postgres(
             target_scope=scope,
         )
         assert applied["status"] == "APPLIED"
+
     assert len(prompts) == 2
     with Session(postgres_engine) as session, session.begin():
         replay = _apply_in_transaction(
@@ -930,6 +938,60 @@ def test_minimal_apply_is_atomic_and_receipt_replay_is_read_only(
             target_scope=scope,
         )
         assert applied["status"] == "APPLIED"
+
+    with Session(postgres_engine) as session, session.begin():
+        company = session.scalars(select(Company)).one()
+        listing = session.scalars(select(Listing)).one()
+        mapping = YahooListingMapping(
+            venue=listing.venue,
+            ticker=listing.ticker,
+            currency=listing.currency,
+            security_type="COMMON_STOCK",
+            provider_symbol="SYN",
+            provider_exchange_code="NYQ",
+            provider_exchange_name="NYSE",
+            provider_instrument_type="EQUITY",
+            mapping_basis="SYNTHETIC_TEST_FIXTURE",
+            verification_status="VERIFIED",
+            canonical_company_id=company.id,
+            canonical_security_id=listing.security_id,
+            canonical_listing_id=listing.id,
+        )
+        crosswalk = YahooListingCrosswalk(
+            provider_id="YAHOO_FINANCE",
+            provider_schema_version="yahoo-chart-v8",
+            verified_at=datetime.now(UTC),
+            mappings=(mapping,),
+        )
+        record_cik_mapping(
+            session,
+            company.id,
+            "0000000001",
+            company.name,
+            "https://www.sec.gov/edgar/browse/?CIK=1",
+        )
+
+    with Session(postgres_engine) as session:
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        receipt = session.scalars(select(CanonicalBootstrapRun)).one()
+        original_report = deepcopy(receipt.report)
+        assert canonical_import_readiness(session)["ready"] is True
+        market = preview_market_data_bootstrap(
+            session,
+            crosswalk=crosswalk,
+            crosswalk_sha256=hashlib.sha256(crosswalk.model_dump_json().encode()).hexdigest(),
+            start_date=date(2026, 10, 1),
+            end_date=date(2026, 10, 5),
+            target_environment="production",
+        )
+        assert market["status"] == "READY"
+        assert market["verified_listing_mapping_count"] == 1
+        assert market["database_writes"] == market["provider_requests"] == 0
+        sec = preview_fundamentals_bootstrap(session, target_environment="production")
+        assert sec["status"] == "READY"
+        assert sec["mapped_company_count"] == 1
+        session.refresh(receipt)
+        assert receipt.report == original_report
 
     with (
         patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
