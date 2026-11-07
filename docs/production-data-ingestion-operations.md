@@ -2,28 +2,65 @@
 
 ## Status
 
-**Implementation is ready for review; production is not ready to ingest yet.** The
-market-data and SEC bootstrap commands can now target production through the
-shared database write-target guard. No production provider request or production
-database write was made for this change.
+**Market preview verified on 2026-11-07; production execution remains gated.**
+The market-data and SEC bootstrap commands use the shared database write-target
+guard. The canonical portfolio baseline is applied and reconciled. No production
+provider requests or database writes were made during this readiness assessment.
+Previews used the local candidate checkout against production read-only; hosted
+services were unchanged.
 
 Real ingestion remains blocked until all of the following are true:
 
 1. The canonical portfolio bootstrap has been applied and reconciled with status
    `MATCHED` on the exact production database.
-2. The production schema is at the reviewed Alembic head. In this working tree,
-   the R8 constraint migration follows the pending workbook-sync migration
-   `b16d4f8a2c91`; both must be reviewed and applied in the normal migration
-   procedure before production ingestion.
+2. The production schema is at the reviewed Alembic head. Read-only verification
+   found `9f2a6d4c81b7`, matching the repository head on 2026-11-07. The older R8
+   and workbook-sync migrations are ancestors of this head. Reverify before a run.
 3. The exact target, direct TLS connection, Neon project/primary branch/endpoint,
    database privileges, production-write authorization and interactive target
    confirmation all pass the existing guard.
 4. The required source identity mappings and exact-listing crosswalks are reviewed.
-5. An operator separately approves the bounded production run.
+5. A verified recovery point protects the current accepted portfolio state, with
+   sufficient retention for execution and reconciliation. The original empty
+   pre-import recovery branch does not protect the imported holdings and targets.
+6. An operator separately approves the bounded production run, including its
+   exact target, mappings, date window, request limits and recovery procedure.
 
 This document is an operating procedure, not authorization. Do not enable
 recurring operations, Sheets polling, FMP, decision recomputation, model changes,
 or portfolio changes as part of data ingestion.
+
+## Current coverage and next approval
+
+The read-only production assessment found all 22 held listings matched the
+reviewed Yahoo crosswalk, with no unresolved identity or FX mapping. Required
+pairs are DKK/EUR and USD/EUR. A deliberately bounded example window of
+2025-11-07 through 2026-11-06 produces 24 logical provider scopes (22 listings
+and two FX pairs). This is a planning window, not approved historical coverage
+or proof that a provider has observations for every session. Retries and future
+requests remain subject to the existing per-invocation budgets.
+
+Production contained zero price, FX, corporate-action, reported-fundamental and
+source-document observations at verification. SEC preview is blocked by
+`NO_REVIEWED_SEC_CIK_MAPPINGS`; no company identity is inferred from a ticker.
+There are no explicit Portfolio/Watchlist lifecycle records in this minimal
+baseline. Market selection still includes all held listings. Zero unmapped
+_active_ SEC companies therefore does not establish issuer coverage.
+
+Full target, inventory, recovery metadata and preview reports remain in the
+private `%LOCALAPPDATA%\PortfolioResearch\private-reports\c2-market-readiness`
+directory. Re-run previews before seeking execution approval. The immediate
+operator decisions are a current-state recovery point and a bounded first market
+batch. Reviewed CIK mappings are a separate prerequisite for SEC ingestion.
+
+On this Windows checkout, libpq could not locate a root certificate file. The
+assessment selected the installed trusted `certifi` bundle through
+`PGSSLROOTCERT` in the child process only, retaining `sslmode=verify-full`.
+No `.env` or hosted setting was changed. For the commands below, use an existing
+trusted CA configuration. If it is absent, select and verify the installed CA
+bundle in the operator process, and restore its previous setting afterward.
+Never substitute `require` or disable hostname verification. See the
+[PostgreSQL TLS configuration](https://www.postgresql.org/docs/18/libpq-ssl.html).
 
 ## Guard and run semantics
 
@@ -40,6 +77,15 @@ newest canonical bootstrap receipt is `APPLIED` or `APPLIED_WITH_GAPS`, has a
 persisted `MATCHED` reconciliation, and was recorded no later than the ingestion
 run's preparation time. If the canonical import is applied after a provider run
 was prepared, prepare a new run; do not resume the earlier scope.
+
+The full-workbook receipt records reconciliation at its report root. The minimal
+Sheets v1 receipt records it under `legacy_import`. The shared readiness adapter
+recognizes only the exact minimal versions and verifies source IDs, raw hashes,
+the derived source digest, input digest, matching immutable legacy batch and
+complete zero-difference domain reconciliation. Missing, conflicting or malformed
+evidence remains blocked. It reads the original receipts without rewriting them.
+This validates the historical baseline; it does not freeze later legitimate
+holdings changes or grant production write permission.
 
 Provider checkpoints commit independently under the existing advisory lock.
 Repeated completed runs do not re-fetch data. Retry only failed/retryable

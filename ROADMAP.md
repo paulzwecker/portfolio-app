@@ -9,8 +9,8 @@ The [documentation index](docs/README.md) routes detailed contracts and runbooks
 | ------------- | ---------------------------------------------------------------------------------------------------------- |
 | Active work   | C2.1 held-listing/FX coverage, canonical ingestion compatibility and recovery assessment                   |
 | Branch        | `codex/c2-canonical-ingestion-readiness`, independently based on merged PR #23                             |
-| Status        | PRODUCTION_PREVIEW_VERIFIED for market scope; focused verification and integration review in progress      |
-| Next task     | Finish checks and PR; prepare bounded market execution/recovery plan and reviewed SEC issuer mappings      |
+| Status        | IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED / PRODUCTION_PREVIEW_VERIFIED for the market planning scope       |
+| Next task     | Owner review; current-state recovery and bounded market authorization, plus reviewed SEC issuer mappings   |
 | PR            | New C2 PR pending. Completed [#24](https://github.com/paulzwecker/portfolio-app/pull/24) remains unchanged |
 | Approval gate | Owner merge, current-state recovery and separately authorized ingestion. P-GOOGL acceptance remains DEFER  |
 
@@ -87,8 +87,16 @@ Original task definitions, decisions and evidence remain in the
   pre-import state. A separately authorized current-state recovery point is
   required before future writes. Local TLS required a process-only trusted CA
   selection, preserving `verify-full`; persistent settings were unchanged.
-- Next action: finish focused PostgreSQL/quality checks and independent review,
-  then open the C2 integration PR. Production ingestion remains unauthorized.
+- Verification passed: full `npm run check` (169 web tests, 694 API unit tests,
+  two environment-specific skips, strict types, contracts and production build),
+  154 focused tests including 22 isolated PostgreSQL cases, documentation links
+  and Git whitespace checks. The focused suite passed serially after an earlier
+  parallel run encountered a local PostgreSQL connection timeout. An independent
+  security/correctness review approved the adapter and regression coverage.
+- CLI/backend scope; existing frontend tests/build passed. Provider availability,
+  price quality and refreshed browser valuations await separately authorized real
+  ingestion. Next action: owner review of the C2 PR, then current-state recovery
+  and a bounded execution decision. Production ingestion remains unauthorized.
 
 | Date       | Task                    | Evidence                                                                                                                                                                                                                                                                                                                                                                  | Next action                                             |
 | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |

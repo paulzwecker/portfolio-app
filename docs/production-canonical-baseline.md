@@ -73,6 +73,15 @@ expires, the owner must decide whether to preserve a separately verified
 logical backup or establish another approved recovery point. Do not reset,
 restore, extend, or replace it as part of routine application work.
 
+Read-only reinspection on 2026-11-07 confirmed this branch is ready, with the
+same production parent, parent LSN and schema head. Its canonical tables remain
+empty while production contains the imported baseline above. It preserves the
+historical pre-import recovery state; it is not current-state protection for new
+ingestion or model operations. Establish and verify appropriate current-state
+recovery under separate owner authorization before additional production writes.
+The [ingestion runbook](production-data-ingestion-operations.md) records the
+held-listing/FX assessment and remaining execution gates.
+
 Production write authorization was temporary to the single approved process
 and is false in persistent local configuration. Hosted production-write,
 manual-operation, workbook-sync, provider-ingestion, recurring-operation, and
