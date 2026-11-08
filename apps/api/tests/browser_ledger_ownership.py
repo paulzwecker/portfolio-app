@@ -13,7 +13,9 @@ from portfolio_api import portfolio_ledger_publication as publication
 from portfolio_api import portfolio_ledger_reviews as reviews
 
 
-def prepare_ledger_ownership(engine: Engine, metadata: dict[str, object]) -> None:
+def prepare_ledger_ownership(
+    engine: Engine, metadata: dict[str, object], *, publish: bool = True
+) -> None:
     portfolio_id = UUID(str(metadata["portfolio_id"]))
     account_id = UUID("11111111-1111-4111-8111-111111111111")
     at = datetime.now(UTC)
@@ -102,6 +104,10 @@ def prepare_ledger_ownership(engine: Engine, metadata: dict[str, object]) -> Non
                 acknowledged_removed_activity_ids=[],
             ),
         )
+        metadata["candidate_id"] = str(staged.id)
+        metadata["opening_snapshot_id"] = str(anchor.snapshot.id)
+        if not publish:
+            return
         plan = publication.publication_preview(session, portfolio_id, staged.id)
         receipt = publication.publish(
             session,

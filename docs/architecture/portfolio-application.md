@@ -77,7 +77,7 @@ This is a direction diagram, not a claim that every path is already deployed. Re
 
 Downstream choices must not silently mutate upstream assumptions. Rankings express prioritization, not authorization to buy/sell. Detailed investment and scoring invariants remain in existing domain docs and scoped AGENTS files.
 
-### Transaction-ledger transition (planned)
+### Transaction-ledger transition
 
 C2.3 now has a [candidate settled-ledger preview](../portfolio-ledger.md) that
 reconciles explicit opening accounts to the current observed snapshot and projects
@@ -90,8 +90,10 @@ are locally verified through the API, with canonical Portfolio source/readback.
 A separate hash-bound owner command promotes the accepted candidate to an immutable
 snapshot and lineage receipt. Same-cutoff replacement stays blocked by snapshot
 uniqueness. Full workbook apply becomes an ownership conflict after transfer.
-Publication approval UI and production source ownership remain gated. The steps
-below describe the complete transition; remaining accounting coverage is planned.
+The browser publication review is locally verified with explicit source-bound
+confirmation and read-only recovery of ambiguous responses. Real account/source
+review and production ownership activation remain gated. The steps below describe
+the complete transition; remaining accounting coverage is planned.
 
 C2 adds transaction-based accounting to the existing snapshot portfolio. This is
 a planned domain extension, with status and acceptance in `ROADMAP.md`. Reuse

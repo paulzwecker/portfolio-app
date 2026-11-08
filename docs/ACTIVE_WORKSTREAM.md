@@ -12,6 +12,35 @@
 
 ## Current ledger increment
 
+`a11272a` adds explicit, hash-bound whole-portfolio publication review in the
+saved-candidate workspace. Read-only plan/authority routes and guarded publish
+proxy verify source/candidate/review/portfolio identity, exact decimal text,
+previous publication and snapshot receipt provenance. Rationale, four independent
+owner attestations, the complete typed phrase and a separate confirmation precede
+one submission. Reload is disabled while that submission is pending. Rejected or
+ambiguous outcomes clear approvals and fetch read-only state. A lost response after
+commit recovers its exact receipt; no mutation retry runs automatically.
+
+135 focused web checks, 45 PostgreSQL/API/fixture checks, types, scoped lint/mypy
+and docs/contracts pass. Actual desktop and mobile publication journeys run against
+fictional accepted packets in separate loopback `_test` schemas. Only the exact
+seeded candidate publish route can write compiled inserts to its four snapshot/
+publication tables. Other writes remain denied. Original opening, strategic targets
+and other table counts match before/after. Desktop confirms normally; mobile loses
+the response after a real isolated commit and verifies readback without a retry.
+Screenshots were inspected under ignored test-results and `.cache/c2.3-publication`.
+Review fixed unknown-network messaging and historical before/after labels.
+This is LOCAL_VERIFIED, with milestone-wide integration still pending.
+
+Next use INTEGRATE for the coherent C2.2/C3.1/C2.3 local implementation milestone.
+Recheck #25's owner merge and integrate its receipt fix without losing this roadmap;
+keep that complete PR frozen while it waits. Run comprehensive checks once at this
+gate, review scope and open one cohesive PR. Production account/basis/source review,
+current-state recovery, migration, publication and provider activation retain their
+separate owner gates. C2.4 accounting and C2.5 performance remain future work.
+
+### Earlier ledger BUILD evidence
+
 `71dee7e` implements explicit whole-portfolio holdings publication. The backend
 initially passed 46 focused checks (23 publication, 21 storage and two workbook-lock).
 Follow-up verifies 27 publication/provenance checks and existing API/fixture/import
@@ -38,8 +67,7 @@ random schema. Canonical state hashes match and HTTP mutation remains blocked.
 Fixtures shut down normally and remove only their own schemas. Types, focused
 lint/mypy, contracts and documentation checks pass. This is LOCAL_VERIFIED.
 
-Next finish the publication preview/confirmation UI and assess the C2.3 integration
-gate. Real account/source scope, current-state recovery, production migration,
+The publication UI follow-up is verified above; milestone integration remains next. Real account/source scope, current-state recovery, production migration,
 source-ownership authorization and execution retain owner gates. The current
 recovery branch from M1 predates accepted holdings and cannot protect this transfer.
 

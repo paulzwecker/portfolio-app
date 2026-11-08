@@ -45,6 +45,7 @@ export function PortfolioLedgerPublication({
 }) {
   const [opened, setOpened] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
   const [receipt, setReceipt] = useState<LedgerPublication | null>(null);
   const path = `portfolios/${candidate.portfolio_id}/ledger`;
   const preview = useResearch(
@@ -69,7 +70,18 @@ export function PortfolioLedgerPublication({
       : undefined;
   const recorded = owner?.latest_publication;
   const verifiedReceipt =
-    receipt ?? (recorded?.candidate_id === candidate.id ? recorded : null);
+    receipt ??
+    (recorded &&
+    publicationMatchesCandidate(recorded.plan, candidate) &&
+    plan?.plan_sha256 === recorded.plan.plan_sha256
+      ? recorded
+      : null);
+  const displayNotice =
+    verifiedReceipt &&
+    (notice?.includes("outcome is unknown") ||
+      notice?.includes("could not be verified"))
+      ? "Read-only receipt confirms publication after an uncertain response. No further submission is needed."
+      : notice;
   const reload = () => {
     preview.retry();
     ownership.retry();
@@ -99,6 +111,7 @@ export function PortfolioLedgerPublication({
         <>
           <Button
             variant="outline"
+            disabled={publishing}
             onClick={() => {
               setNotice(null);
               setReceipt(null);
@@ -107,9 +120,9 @@ export function PortfolioLedgerPublication({
           >
             Reload publication state
           </Button>
-          {notice && (
+          {displayNotice && (
             <p role="status" className="break-words text-sm">
-              {notice}
+              {displayNotice}
             </p>
           )}
           {preview.error ||
@@ -145,6 +158,7 @@ export function PortfolioLedgerPublication({
                     plan.previous_publication_id
                 }
                 onResult={result}
+                onPending={setPublishing}
               />
             </>
           )}
@@ -193,10 +207,12 @@ function PublicationPlan({
   candidate,
   enabled,
   onResult,
+  onPending,
 }: {
   plan: LedgerPublicationPlan;
   candidate: LedgerCandidate;
   enabled: boolean;
+  onPending: (pending: boolean) => void;
   onResult: (receipt: LedgerPublication | null, message: string) => void;
 }) {
   const [reason, setReason] = useState("");
@@ -221,6 +237,7 @@ function PublicationPlan({
     const controller = new AbortController();
     active.current = controller;
     setPending(true);
+    onPending(true);
     const command: LedgerPublicationCommand = {
       expected_plan_sha256: plan.plan_sha256,
       expected_previous_publication_id: plan.previous_publication_id,
@@ -231,6 +248,8 @@ function PublicationPlan({
       current_state_recovery_verified: true,
       holdings_confirmation: true,
     };
+    let failureMessage =
+      "Publication outcome is unknown. Read-only state is being reloaded. Check for a receipt before another attempt.";
     try {
       const response = await fetch(
         `/api/research/portfolios/${plan.portfolio_id}/ledger/candidates/${plan.candidate_id}/publish`,
@@ -245,14 +264,15 @@ function PublicationPlan({
           ]),
         },
       );
-      if (!response.ok)
-        throw new Error(
+      if (!response.ok) {
+        failureMessage =
           response.status === 403
             ? "Server-side owner authorization is required. Approval checks have been cleared."
             : response.status === 409
               ? "The plan, source or holdings authority changed. Review a fresh plan before any further action."
-              : "Publication outcome is unknown. Read-only state is being reloaded. Check for a receipt before another attempt.",
-        );
+              : failureMessage;
+        throw new Error("Publication rejected");
+      }
       const value: unknown = await response.json();
       if (
         !isLedgerPublication(value) ||
@@ -262,27 +282,23 @@ function PublicationPlan({
           ([key, expected]) =>
             value.command[key as keyof LedgerPublicationCommand] !== expected,
         )
-      )
-        throw new Error(
-          "The publication response could not be verified. Check read-only state for a receipt before another attempt.",
-        );
+      ) {
+        failureMessage =
+          "The publication response could not be verified. Check read-only state for a receipt before another attempt.";
+        throw new Error("Unverified publication receipt");
+      }
       if (!controller.signal.aborted)
         onResult(
           value,
           "Publication verified. Canonical holdings and immutable ownership receipt were recorded.",
         );
-    } catch (error) {
-      if (!controller.signal.aborted)
-        onResult(
-          null,
-          error instanceof Error
-            ? error.message
-            : "Publication outcome is unknown. Check read-only state before another attempt.",
-        );
+    } catch {
+      if (!controller.signal.aborted) onResult(null, failureMessage);
     } finally {
       if (active.current === controller) {
         active.current = null;
         setPending(false);
+        onPending(false);
       }
     }
   };
@@ -303,12 +319,18 @@ function PublicationPlan({
       <div className="grid gap-3 md:grid-cols-2">
         {[
           {
-            title: "Current canonical holdings",
+            title:
+              plan.status === "ALREADY_PUBLISHED"
+                ? "Canonical holdings before publication"
+                : "Current canonical holdings",
             positions: plan.current_snapshot.positions,
             cash: plan.current_snapshot.cash_positions,
           },
           {
-            title: "Proposed complete replacement",
+            title:
+              plan.status === "ALREADY_PUBLISHED"
+                ? "Published holdings"
+                : "Proposed complete replacement",
             positions: plan.positions,
             cash: plan.cash,
           },

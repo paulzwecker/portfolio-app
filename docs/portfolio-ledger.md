@@ -216,8 +216,11 @@ separate owner authorization precede migration, deployment or publication.
    recovery access/retention. Reading this contract grants no production authority.
 4. After separately scoped approval, an authenticated operator may call
    `POST .../ledger/candidates/{candidate_id}/publish` through the existing API and
-   database-target guard. The browser currently exposes source/history inspection;
-   a publication approval form is pending. Keep production write authorization false
+   database-target guard. In Portfolio ledger history, open the accepted candidate,
+   load its read-only publication plan and review the exact before/after native
+   balances. Enter a rationale and the returned typed phrase, explicitly attest the
+   four ownership/scope/recovery/holdings checks, then review and separately confirm
+   publication. Keep production write authorization false
    during preparation. The server rechecks the plan under shared portfolio/identity
    locks before atomically inserting one snapshot and one immutable receipt.
 5. Read `GET .../ledger/ownership`, Portfolio overview and the returned receipt.
@@ -244,10 +247,26 @@ ledger-owned --lifetime-seconds 180`, `BROWSER_API_PORT=8016`, and matching loop
 verified local test schema before serving; all browser requests then use SQL
 read-only access. Normal shutdown removes that fixture's schema.
 
+For the publication UI rehearsal use `--scenario ledger-publication
+--lifetime-seconds 120`, `BROWSER_API_PORT=8017` and matching loopback
+`API_BASE_URL`. Run `portfolio-ledger-publication.spec.ts` with
+`E2E_LEDGER_PUBLICATION_API=1`, reusing the local web server and selecting one
+Playwright project per fresh fixture. Seeded acceptance is fictional. During
+serving only the exact seeded portfolio/candidate's publish route can write,
+using compiled inserts into snapshot/position/cash/publication tables within the
+verified loopback `_test` schema. Candidate decisions and every unrelated mutation
+remain blocked. The original opening, targets and other table counts are protected.
+Desktop exercises normal confirmation; mobile simulates a response lost after the
+actual isolated commit and verifies the immutable receipt through read-only checks.
+Plan/source conflicts and missing server authorization clear all approval inputs.
+No publication retry runs automatically. Use normal bounded server shutdown so
+only its own schema is removed. Screenshots remain ignored.
+
 ## Remaining acceptance gates
 
-The publication approval UI, real account/source scope review and production
-ownership activation remain outstanding.
+The publication approval UI is LOCAL_VERIFIED with synthetic desktop/mobile
+journeys. Real account/source scope review, milestone integration checks and
+production ownership activation remain outstanding.
 Cost lots, gains, TWR/XIRR, dividends, transfers, executed FX and broker imports
 require their documented contracts and evidence. Opening quantities supply an
 inventory boundary. Historical cost and capital flows require separate source evidence.

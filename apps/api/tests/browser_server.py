@@ -112,25 +112,47 @@ def fixture_read_engine(url: URL, schema: str, settings: Settings) -> Engine:
     return reader
 
 
-def protected_state(engine: Engine, portfolio_id: str, *, ledger_receipts: bool = False) -> str:
+def protected_state(
+    engine: Engine,
+    portfolio_id: str,
+    *,
+    ledger_receipts: bool = False,
+    ledger_publication: bool = False,
+) -> str:
     with Session(engine) as session:
         overview = queries.overview(session, UUID(portfolio_id))
+        snapshot = overview.snapshot
+        if ledger_publication:
+            from portfolio_api.portfolio_ledger import portfolio_ledger_anchor
+
+            snapshot = portfolio_ledger_anchor(session, UUID(portfolio_id)).snapshot
+        mutable_tables = (
+            {"portfolio_ledger_candidates", "portfolio_ledger_reviews"}
+            if ledger_receipts
+            else set()
+        )
+        if ledger_publication:
+            mutable_tables |= {
+                "holding_snapshots",
+                "holding_positions",
+                "holding_cash_positions",
+                "portfolio_ledger_publications",
+            }
         value = {
-            "snapshot": overview.snapshot.model_dump(mode="json") if overview.snapshot else None,
+            "snapshot": snapshot.model_dump(mode="json") if snapshot else None,
             "targets": overview.target_revision.model_dump(mode="json")
             if overview.target_revision
             else None,
             "counts": {
                 key: count
                 for key, count in table_counts(engine).items()
-                if not ledger_receipts
-                or key not in {"portfolio_ledger_candidates", "portfolio_ledger_reviews"}
+                if key not in mutable_tables
             },
         }
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
-def fixture_ledger_writer(url: URL, schema: str) -> Engine:
+def fixture_ledger_writer(url: URL, schema: str, *, publication: bool = False) -> Engine:
     local_test_url(url.render_as_string(hide_password=False))
     if not re.fullmatch(r"test_(?:browser_)?[a-f0-9]{32}", schema):
         raise SystemExit("Ledger browser writes require an isolated test-owned schema")
@@ -145,6 +167,17 @@ def fixture_ledger_writer(url: URL, schema: str) -> Engine:
     with writer.connect() as connection:
         verify_local_identity(connection, url)
 
+    allowed_tables = (
+        {
+            "holding_snapshots",
+            "holding_positions",
+            "holding_cash_positions",
+            "portfolio_ledger_publications",
+        }
+        if publication
+        else {"portfolio_ledger_candidates", "portfolio_ledger_reviews"}
+    )
+
     def restrict(
         _connection: Any, _cursor: Any, statement: str, _parameters: Any, context: Any, _many: bool
     ) -> None:
@@ -155,11 +188,7 @@ def fixture_ledger_writer(url: URL, schema: str) -> Engine:
         if (
             not isinstance(command, Insert)
             or command.table.schema not in {None, schema}
-            or command.table.name
-            not in {
-                "portfolio_ledger_candidates",
-                "portfolio_ledger_reviews",
-            }
+            or command.table.name not in allowed_tables
         ):
             raise DatabaseReadOnlyError(
                 "fixture_ledger_scope", "Fixture writes are restricted to new ledger receipts"
@@ -185,8 +214,11 @@ def fixture_application(
     application = create_app(settings)
     application.router.lifespan_context = lifespan
     if ledger_writer is not None:
-        if metadata is None or metadata.get("ledger_receipts_only") is not True:
-            raise ValueError("Ledger fixture writes require explicit test-only metadata")
+        if metadata is None or (
+            (metadata.get("ledger_receipts_only") is True)
+            == (metadata.get("ledger_publication_only") is True)
+        ):
+            raise ValueError("Ledger fixture writes require one explicit test-only scope")
         writer_app = create_app(settings)
         writer_app.state.database_engine = ledger_writer
 
@@ -206,6 +238,7 @@ def fixture_application(
             )
             ledger_review = (
                 ledger_writer is not None
+                and metadata.get("ledger_receipts_only") is True
                 and request.method == "POST"
                 and re.fullmatch(
                     rf"/v1/portfolios/{metadata['portfolio_id']}/ledger/candidates(?:/[a-f0-9-]{{36}}/review)?",
@@ -213,7 +246,22 @@ def fixture_application(
                 )
                 is not None
             )
-            if request.method not in {"GET", "HEAD"} and not ledger_preview and not ledger_review:
+            ledger_publish = (
+                ledger_writer is not None
+                and metadata.get("ledger_publication_only") is True
+                and request.method == "POST"
+                and request.url.path
+                == (
+                    f"/v1/portfolios/{metadata['portfolio_id']}/ledger/candidates/"
+                    f"{metadata['candidate_id']}/publish"
+                )
+            )
+            if (
+                request.method not in {"GET", "HEAD"}
+                and not ledger_preview
+                and not ledger_review
+                and not ledger_publish
+            ):
                 return JSONResponse(
                     {"detail": "This fixture supports read-only inspection."}, status_code=405
                 )
@@ -225,7 +273,10 @@ def fixture_application(
                 **metadata,
                 "test_only": "portfolio-data-v1",
                 "protected_state_sha256": protected_state(
-                    engine, str(metadata["portfolio_id"]), ledger_receipts=ledger_writer is not None
+                    engine,
+                    str(metadata["portfolio_id"]),
+                    ledger_receipts=metadata.get("ledger_receipts_only") is True,
+                    ledger_publication=metadata.get("ledger_publication_only") is True,
                 ),
             }
 
@@ -243,6 +294,7 @@ def main(argv: list[str] | None = None) -> None:
             "valued",
             "ledger-review",
             "ledger-owned",
+            "ledger-publication",
             "sec-covered",
             "sec-outage",
             "sec-unmapped",
@@ -288,20 +340,24 @@ def main(argv: list[str] | None = None) -> None:
                     Path(directory),
                     "unpriced"
                     if args.scenario.startswith("sec-")
-                    or args.scenario in {"ledger-review", "ledger-owned"}
+                    or args.scenario in {"ledger-review", "ledger-owned", "ledger-publication"}
                     else cast(PortfolioDataState, args.scenario),
                     settings,
                 )
                 if args.scenario.startswith("sec-"):
                     prepare_sec_data(engine, metadata, args.scenario)
-            if args.scenario == "ledger-owned":
-                prepare_ledger_ownership(engine, metadata)
+            if args.scenario in {"ledger-owned", "ledger-publication"}:
+                prepare_ledger_ownership(engine, metadata, publish=args.scenario == "ledger-owned")
             metadata["schema"] = schema
             reader = fixture_read_engine(url, schema, settings)
         if args.scenario == "ledger-review":
             assert metadata is not None
             metadata["ledger_receipts_only"] = True
             ledger_writer = fixture_ledger_writer(url, schema)
+        if args.scenario == "ledger-publication":
+            assert metadata is not None
+            metadata["ledger_publication_only"] = True
+            ledger_writer = fixture_ledger_writer(url, schema, publication=True)
         application = fixture_application(
             reader or engine, settings, metadata, ledger_writer=ledger_writer
         )
