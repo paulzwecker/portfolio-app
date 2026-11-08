@@ -8,6 +8,7 @@ import {
   type OpeningAccountDraft,
 } from "./ledger-opening-draft";
 import { restoreSettledActivityReview } from "./ledger-settled-activity";
+import { ledgerAvailableListings, type LedgerListing } from "./ledger-listings";
 
 export type EndingAccountDraft = {
   accountId: string;
@@ -29,6 +30,7 @@ export type EndingSession = {
 export function restoreEndingReview(
   anchor: PortfolioLedgerAnchor,
   text: string,
+  extraListings: readonly LedgerListing[] = [],
 ): EndingSession {
   const invalid =
     "This review cannot be edited in the ending form. Use the private file workflow for its full contents.";
@@ -99,8 +101,11 @@ export function restoreEndingReview(
       JSON.stringify({ ...packet, ending_statement: null }),
       "review-before-ending.json",
     );
-    const opening = endingOpeningAccounts(anchor, file);
-    if (buildEndingReview(anchor, file, accounts, true).text !== text)
+    const opening = endingOpeningAccounts(anchor, file, extraListings);
+    if (
+      buildEndingReview(anchor, file, accounts, true, extraListings).text !==
+      text
+    )
       throw new Error(invalid);
     return { file, opening, accounts };
   } catch {
@@ -112,6 +117,7 @@ export function restoreEndingReview(
 export function endingOpeningAccounts(
   anchor: PortfolioLedgerAnchor,
   base: LedgerReviewFile,
+  extraListings: readonly LedgerListing[] = [],
 ): OpeningAccountDraft[] {
   let packet: unknown;
   try {
@@ -133,7 +139,7 @@ export function endingOpeningAccounts(
     return restoreOpeningReview(anchor, base.text);
   return restoreOpeningReview(
     anchor,
-    restoreSettledActivityReview(anchor, base.text).base.text,
+    restoreSettledActivityReview(anchor, base.text, extraListings).base.text,
   );
 }
 
@@ -142,8 +148,9 @@ export function buildEndingReview(
   base: LedgerReviewFile,
   accounts: EndingAccountDraft[],
   confirmed: boolean,
+  extraListings: readonly LedgerListing[] = [],
 ): LedgerReviewFile {
-  const opening = endingOpeningAccounts(anchor, base);
+  const opening = endingOpeningAccounts(anchor, base, extraListings);
   if (!confirmed)
     throw new Error(
       "Confirm that every ending observation uses the review cutoff.",
@@ -163,7 +170,11 @@ export function buildEndingReview(
     throw new Error(
       "The ending contract supports 1,000 position rows and 100 cash rows.",
     );
-  const listings = new Set(anchor.listings.map((item) => item.listing_id));
+  const listings = new Set(
+    ledgerAvailableListings(anchor, extraListings).map(
+      (item) => item.listing_id,
+    ),
+  );
   const sources = new Set<string>();
   const endingAccounts = accounts.map((account, index) => {
     const label = `Ending account ${index + 1}`;

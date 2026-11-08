@@ -508,3 +508,53 @@ it("restores ending review while retaining both security transfer legs and unava
       .text,
   ).toBe(packet.text);
 });
+
+it("uses a reviewed non-anchor listing for ending observations without changing the opening anchor", () => {
+  const extra = {
+    ...ledgerAnchor.listings[0],
+    listing_id: "99999999-9999-4999-8999-999999999999",
+    ticker: "OTHER",
+    venue: "NYSE",
+  };
+  const trade: SettledActivityDraft = {
+    ...activity,
+    kind: "BUY",
+    amount: "",
+    listingId: extra.listing_id,
+    quantity: "1",
+    grossCash: "2",
+    fees: "0",
+    taxes: "0",
+    tradeDate: "2026-01-13",
+    settlementDate: "2026-01-15",
+    sourceRecordId: "buy-new",
+  };
+  const source = buildSettledActivityReview(
+    ledgerAnchor,
+    base,
+    "2026-01-31T23:59:59+01:00",
+    [trade],
+    [extra],
+  );
+  const observation = {
+    ...ending(),
+    positions: [
+      ...ending().positions,
+      { id: "extra", listingId: extra.listing_id, quantity: "1" },
+    ],
+  };
+  expect(() =>
+    buildEndingReview(ledgerAnchor, source, [observation], true),
+  ).toThrow();
+  const file = buildEndingReview(ledgerAnchor, source, [observation], true, [
+    extra,
+  ]);
+  const restored = restoreEndingReview(ledgerAnchor, file.text, [extra]);
+  expect(restored.file.text).toBe(source.text);
+  expect(
+    buildEndingReview(ledgerAnchor, restored.file, restored.accounts, true, [
+      extra,
+    ]).text,
+  ).toBe(file.text);
+  expect(ledgerAnchor.listings).toHaveLength(1);
+});

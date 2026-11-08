@@ -531,3 +531,28 @@ it.each([
     ).toThrow();
   },
 );
+
+it("uses a separately verified non-anchor listing without mutating the anchor and restores its exact packet", () => {
+  const extra = {
+    ...ledgerAnchor.listings[0],
+    listing_id: "99999999-9999-4999-8999-999999999999",
+    ticker: "OTHER",
+    venue: "NYSE",
+  };
+  const entry = { ...trade(), listingId: extra.listing_id };
+  expect(() =>
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [entry]),
+  ).toThrow();
+  const file = buildSettledActivityReview(
+    ledgerAnchor,
+    base,
+    cutoff,
+    [entry],
+    [extra],
+  );
+  expect(ledgerAnchor.listings).toHaveLength(1);
+  expect(
+    restoreSettledActivityReview(ledgerAnchor, file.text, [extra]).entries,
+  ).toEqual([entry]);
+  expect(() => restoreSettledActivityReview(ledgerAnchor, file.text)).toThrow();
+});

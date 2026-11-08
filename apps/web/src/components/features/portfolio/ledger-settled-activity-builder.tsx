@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import type { PortfolioLedgerAnchor } from "@/lib/domain-contracts";
 import type { LedgerReviewFile } from "./portfolio-ledger-data";
 import { restoreOpeningReview } from "./ledger-opening-draft";
+import { LedgerListingSearch } from "./ledger-listing-search";
+import { ledgerAvailableListings, type LedgerListing } from "./ledger-listings";
 import {
   buildSettledActivityReview,
   type SettledActivityDraft,
@@ -15,21 +17,28 @@ const field =
 
 export function LedgerSettledActivityBuilder({
   anchor,
+  portfolioId,
   base,
   disabled,
   initialCutoff = "",
   initialEntries = [],
+  initialListings = [],
   onChange,
   onReview,
   onClose,
 }: {
   anchor: PortfolioLedgerAnchor;
+  portfolioId: string;
   base: LedgerReviewFile;
   disabled: boolean;
   initialCutoff?: string;
   initialEntries?: SettledActivityDraft[];
+  initialListings?: readonly LedgerListing[];
   onChange: () => void;
-  onReview: (file: LedgerReviewFile) => Promise<void>;
+  onReview: (
+    file: LedgerReviewFile,
+    listings: readonly LedgerListing[],
+  ) => Promise<void>;
   onClose: () => void;
 }) {
   const [accounts] = useState(() =>
@@ -38,6 +47,10 @@ export function LedgerSettledActivityBuilder({
     ),
   );
   const [cutoff, setCutoff] = useState(initialCutoff);
+  const [extraListings, setExtraListings] =
+    useState<readonly LedgerListing[]>(initialListings);
+  const [demoLabels, setDemoLabels] = useState<Record<string, boolean>>({});
+  const listings = ledgerAvailableListings(anchor, extraListings);
   const [entries, setEntries] =
     useState<SettledActivityDraft[]>(initialEntries);
   const [error, setError] = useState<string | null>(null);
@@ -59,12 +72,12 @@ export function LedgerSettledActivityBuilder({
       <p className="text-sm text-muted-foreground">
         Enter settled purchases, sales, dividends, deposits, withdrawals, fees,
         taxes or internal transfers from your records. Trades, dividends and
-        security transfers require a listing in the verified anchor. Dividend
-        currency is the received cash currency and can differ from the listing
-        currency; no conversion is inferred. Enter timestamps with seconds and a
-        UTC offset, for example 2026-01-15T10:30:00+01:00. The sequence
-        determines ordering when booking times match. The API checks the
-        complete reconstruction.
+        security transfers require an exact listing from the verified anchor or
+        a reviewed search result. Dividend currency is the received cash
+        currency and can differ from the listing currency; no conversion is
+        inferred. Enter timestamps with seconds and a UTC offset, for example
+        2026-01-15T10:30:00+01:00. The sequence determines ordering when booking
+        times match. The API checks the complete reconstruction.
       </p>
       <p className="text-xs text-muted-foreground">
         Discard this activity draft before changing the opening or loading
@@ -82,6 +95,61 @@ export function LedgerSettledActivityBuilder({
           opening review.
         </p>
       )}
+      <LedgerListingSearch
+        portfolioId={portfolioId}
+        disabled={disabled}
+        onSelect={(item) => {
+          try {
+            const next = ledgerAvailableListings(anchor, [
+              ...extraListings,
+              item,
+            ]);
+            changed();
+            setExtraListings(next);
+            setDemoLabels((current) => ({
+              ...current,
+              [item.listing_id]: item.is_demo,
+            }));
+          } catch (failure) {
+            setError(
+              failure instanceof Error
+                ? failure.message
+                : "Listing identity could not be verified.",
+            );
+          }
+        }}
+      />
+      {listings.filter(
+        (item) =>
+          !anchor.listings.some((row) => row.listing_id === item.listing_id),
+      ).length > 0 && (
+        <div
+          className="space-y-1 text-xs text-muted-foreground"
+          aria-label="Additional selected listings"
+        >
+          {listings
+            .filter(
+              (item) =>
+                !anchor.listings.some(
+                  (row) => row.listing_id === item.listing_id,
+                ),
+            )
+            .map((item) => (
+              <p key={item.listing_id} className="break-all">
+                Selected: {item.ticker} · {item.venue} · {item.currency} ·{" "}
+                {item.security_type} · {item.listing_id} ·{" "}
+                {demoLabels[item.listing_id] === undefined
+                  ? "Demo status unavailable in preview; search to recheck"
+                  : demoLabels[item.listing_id]
+                    ? "Demo data at lookup"
+                    : "Not demo at lookup"}
+              </p>
+            ))}
+          <p>
+            Demo status is display-only and is not bound to the review hash.
+          </p>
+        </div>
+      )}
       <form
         className="space-y-4"
         onSubmit={(event) => {
@@ -89,7 +157,14 @@ export function LedgerSettledActivityBuilder({
           setError(null);
           try {
             void onReview(
-              buildSettledActivityReview(anchor, base, cutoff, entries),
+              buildSettledActivityReview(
+                anchor,
+                base,
+                cutoff,
+                entries,
+                extraListings,
+              ),
+              extraListings,
             );
           } catch (failure) {
             setError(
@@ -257,7 +332,7 @@ export function LedgerSettledActivityBuilder({
                         }
                       >
                         <option value="">Choose verified listing</option>
-                        {anchor.listings.map((listing) => (
+                        {listings.map((listing) => (
                           <option
                             key={listing.listing_id}
                             value={listing.listing_id}
@@ -391,7 +466,7 @@ export function LedgerSettledActivityBuilder({
                           }
                         >
                           <option value="">Choose destination listing</option>
-                          {anchor.listings.map((listing) => (
+                          {listings.map((listing) => (
                             <option
                               key={listing.listing_id}
                               value={listing.listing_id}

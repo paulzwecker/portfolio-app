@@ -35,6 +35,10 @@ import {
   type EndingAccountDraft,
 } from "./ledger-ending-draft";
 import type { OpeningAccountDraft } from "./ledger-opening-draft";
+import {
+  selectedListingsMatchPreview,
+  type LedgerListing,
+} from "./ledger-listings";
 
 function matchesReviewSource(
   opening: OpeningAccountDraft[],
@@ -68,13 +72,15 @@ export function PortfolioLedgerWorkspace({
   const verified =
     anchor.data?.portfolio_id === portfolioId ? anchor.data : undefined;
   const [file, setFile] = useState<LedgerReviewFile | null>(null);
-  const [activityBase, setActivityBase] =
-    useState<SettledActivitySession | null>(null);
+  const [activityBase, setActivityBase] = useState<
+    (SettledActivitySession & { listings?: readonly LedgerListing[] }) | null
+  >(null);
   const [endingBase, setEndingBase] = useState<{
     file: LedgerReviewFile;
     opening: OpeningAccountDraft[];
     initialAccounts?: EndingAccountDraft[];
     cancelFile?: LedgerReviewFile;
+    listings?: readonly LedgerListing[];
   } | null>(null);
   const [review, setReview] = useState<{
     report: PortfolioLedgerPreview;
@@ -142,7 +148,10 @@ export function PortfolioLedgerWorkspace({
     }
   };
 
-  const runPreview = async (candidate = file) => {
+  const runPreview = async (
+    candidate = file,
+    expectedListings: readonly LedgerListing[] = [],
+  ) => {
     if (
       !candidate ||
       !verified ||
@@ -197,6 +206,10 @@ export function PortfolioLedgerWorkspace({
       )
         throw new Error(
           "The ledger result could not be verified against this file and portfolio.",
+        );
+      if (!selectedListingsMatchPreview(candidate, expectedListings, data))
+        throw new Error(
+          "A listing identity is missing or changed in the preview. Recheck it against your source.",
         );
       setReview({ report: data, file: candidate });
     } catch (failure) {
@@ -315,9 +328,11 @@ export function PortfolioLedgerWorkspace({
                 <LedgerSettledActivityBuilder
                   key={activityBase.base.text}
                   anchor={verified}
+                  portfolioId={portfolioId}
                   base={activityBase.base}
                   initialCutoff={activityBase.cutoff}
                   initialEntries={activityBase.entries}
+                  initialListings={activityBase.listings}
                   disabled={pending || loadingFile}
                   onChange={() => clear(true)}
                   onReview={runPreview}
@@ -337,9 +352,12 @@ export function PortfolioLedgerWorkspace({
                   base={endingBase.file}
                   opening={endingBase.opening}
                   initialAccounts={endingBase.initialAccounts}
+                  extraListings={endingBase.listings}
                   disabled={pending || loadingFile}
                   onChange={() => clear(false, true)}
-                  onReview={runPreview}
+                  onReview={(candidate) =>
+                    runPreview(candidate, endingBase.listings)
+                  }
                   onClose={() => {
                     const previous = endingBase.cancelFile ?? endingBase.file;
                     clear();
@@ -457,6 +475,7 @@ export function PortfolioLedgerWorkspace({
                     const session = restoreSettledActivityReview(
                       verified,
                       visibleReview.file.text,
+                      visibleReview.report.consumed_listings,
                     );
                     if (
                       session.entries.length !==
@@ -464,7 +483,10 @@ export function PortfolioLedgerWorkspace({
                     )
                       throw new Error("The review activity count changed.");
                     setError(null);
-                    setActivityBase(session);
+                    setActivityBase({
+                      ...session,
+                      listings: visibleReview.report.consumed_listings,
+                    });
                   } catch (failure) {
                     setError(
                       failure instanceof Error
@@ -488,6 +510,7 @@ export function PortfolioLedgerWorkspace({
                     const opening = endingOpeningAccounts(
                       verified,
                       visibleReview.file,
+                      visibleReview.report.consumed_listings,
                     );
                     if (
                       !matchesReviewSource(
@@ -501,7 +524,11 @@ export function PortfolioLedgerWorkspace({
                       );
                     setError(null);
                     setActivityBase(null);
-                    setEndingBase({ file: visibleReview.file, opening });
+                    setEndingBase({
+                      file: visibleReview.file,
+                      opening,
+                      listings: visibleReview.report.consumed_listings,
+                    });
                   } catch (failure) {
                     setError(
                       failure instanceof Error
@@ -532,6 +559,7 @@ export function PortfolioLedgerWorkspace({
                     const restored = restoreEndingReview(
                       verified,
                       visibleReview.file.text,
+                      visibleReview.report.consumed_listings,
                     );
                     if (
                       !matchesReviewSource(
@@ -549,6 +577,7 @@ export function PortfolioLedgerWorkspace({
                       opening: restored.opening,
                       initialAccounts: restored.accounts,
                       cancelFile: visibleReview.file,
+                      listings: visibleReview.report.consumed_listings,
                     });
                   } catch (failure) {
                     setError(

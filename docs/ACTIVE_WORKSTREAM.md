@@ -139,16 +139,31 @@ synthetic desktop and mobile layouts were inspected. No production changes were 
 
 ## Non-anchor listing lookup API
 
-An authenticated read-only exact-ticker lookup returns at most 50 reviewed
+An authenticated read-only exact-ticker lookup returns at most 50 reviewable
 identity candidates, flags truncation, missing/invalid currency and demo records,
 and keeps the snapshot anchor unchanged. Names, share class and demo status are
 lookup context; the existing preview hash binds the core listing identity instead.
-Two focused isolated PostgreSQL/API tests pass, including non-anchor purchase replay
-and 50/51-result boundaries. UI integration remains in progress.
+Three focused isolated PostgreSQL/API tests pass, including non-anchor purchase replay
+and 50/51-result boundaries. The guided activity and ending forms now integrate this lookup.
+
+## Guided non-anchor listing increment
+
+Guided activity can select a canonical non-anchor listing from an exact-ticker
+lookup, keeping lookup results separate from the opening anchor. Preview rejects
+changed or omitted consumed identities, and all consumed identities are visible
+in the evidence drawer, including activity-only listings. Activity and ending
+reviews restore from revalidated preview identities. Display names, share class
+and demo labels are lookup context, not hash-bound facts. Exact-ticker search
+reports unsupported and truncated results; companyless ETFs remain companyless.
+Verification passed 176 focused web tests, three isolated PostgreSQL/API tests,
+48 synthetic desktop/mobile journeys, typecheck, build, focused lint and contract
+checks. Synthetic desktop and mobile layouts were inspected.
+The frontend lookup requires the matching API endpoint; coordinate API availability
+before using it. No schema migration is introduced.
 
 ## Next increment and release boundaries
 
-Finish guided listing selection and verify the complete candidate review journey. Reuse the versioned ledger contract, server calculations,
+Verify the complete guided candidate review journey against the native API. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
 lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.

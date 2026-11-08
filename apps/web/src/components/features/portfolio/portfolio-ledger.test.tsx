@@ -16,7 +16,10 @@ import {
   ledgerFileLimit,
   ledgerSameInstant,
 } from "./portfolio-ledger-data";
-import { PortfolioLedgerResults } from "./portfolio-ledger-results";
+import {
+  LedgerIdentityEvidence,
+  PortfolioLedgerResults,
+} from "./portfolio-ledger-results";
 
 beforeEach(() => {
   vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");
@@ -331,4 +334,28 @@ it("bounds ledger UTF-8 payload bytes while retaining same-origin checks", async
     ).status,
   ).toBe(403);
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it("shows preview identities for activity-only companyless listings even when absent from balances", () => {
+  const report = ledgerReport();
+  const activityOnly = {
+    ...ledgerAnchor.listings[0],
+    listing_id: "99999999-9999-4999-8999-999999999999",
+    ticker: "ACTV",
+    venue: "XETRA",
+    identity_source_ref: "synthetic-evidence",
+  };
+  report.consumed_listings.push(activityOnly);
+  expect(
+    report.positions.some((row) => row.listing_id === activityOnly.listing_id),
+  ).toBe(false);
+  const markup = renderToStaticMarkup(
+    <LedgerIdentityEvidence listings={report.consumed_listings} />,
+  );
+  expect(markup).toContain("ACTV");
+  expect(markup).toContain(activityOnly.listing_id);
+  expect(markup).toContain(activityOnly.security_id);
+  expect(markup).toContain("No company issuer");
+  expect(markup).toContain("synthetic-evidence");
+  expect(markup).toContain("not part of this identity evidence");
 });

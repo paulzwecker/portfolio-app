@@ -23,6 +23,65 @@ type ComparisonRow = {
   status: string;
 };
 
+export function LedgerIdentityEvidence({
+  listings,
+}: {
+  listings: PortfolioLedgerPreview["consumed_listings"];
+}) {
+  const [visible, setVisible] = useState(50);
+  return (
+    <details className="mt-3 rounded-lg border p-3 text-sm">
+      <summary className="cursor-pointer font-medium">
+        Preview listing identities ({listings.length})
+      </summary>
+      <p className="mt-2 text-xs text-muted-foreground">
+        These are the exact identities used in the preview, including listings
+        that do not appear in the projected holdings. Lookup names, share class
+        and demo labels are not part of this identity evidence.
+      </p>
+      {listings.length === 0 ? (
+        <p className="mt-3 text-xs">No listing identities were consumed.</p>
+      ) : (
+        <ol className="mt-3 space-y-4">
+          {listings.slice(0, visible).map((listing) => (
+            <li
+              key={listing.listing_id}
+              className="space-y-1 break-all text-xs"
+            >
+              <p className="font-medium">
+                {listing.ticker} · {listing.venue} · {listing.currency} ·{" "}
+                {listing.security_type}
+              </p>
+              <p>Listing {listing.listing_id}</p>
+              <p>Security {listing.security_id}</p>
+              <p>
+                {listing.company_id
+                  ? `Company ${listing.company_id}`
+                  : "No company issuer"}
+              </p>
+              <p>
+                {listing.identity_source_ref
+                  ? `Identity source ${listing.identity_source_ref}`
+                  : "Identity source unavailable"}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+      {listings.length > visible && (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3"
+          onClick={() => setVisible((count) => count + 50)}
+        >
+          Show next 50 identities
+        </Button>
+      )}
+    </details>
+  );
+}
+
 export function PortfolioLedgerResults({
   report,
   file,
@@ -374,6 +433,7 @@ export function PortfolioLedgerResults({
             ))}
           </ol>
         </details>
+        <LedgerIdentityEvidence listings={report.consumed_listings} />
       </DetailDrawer>
     </div>
   );

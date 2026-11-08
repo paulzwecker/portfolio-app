@@ -4,6 +4,7 @@ import {
   type LedgerReviewFile,
 } from "./portfolio-ledger-data";
 import { restoreOpeningReview } from "./ledger-opening-draft";
+import { ledgerAvailableListings, type LedgerListing } from "./ledger-listings";
 
 export type SettledActivityDraft = {
   id: string;
@@ -58,6 +59,7 @@ export type SettledActivitySession = {
 export function restoreSettledActivityReview(
   anchor: PortfolioLedgerAnchor,
   text: string,
+  extraListings: readonly LedgerListing[] = [],
 ): SettledActivitySession {
   const invalid =
     "This review cannot be edited in the settled activity form. Use the private file workflow for its full contents.";
@@ -212,8 +214,13 @@ export function restoreSettledActivityReview(
       "opening-balances.json",
     );
     if (
-      buildSettledActivityReview(anchor, base, packet.as_of, entries).text !==
-      text
+      buildSettledActivityReview(
+        anchor,
+        base,
+        packet.as_of,
+        entries,
+        extraListings,
+      ).text !== text
     )
       throw new Error(invalid);
     return { base, cutoff: packet.as_of, entries };
@@ -227,8 +234,10 @@ export function buildSettledActivityReview(
   base: LedgerReviewFile,
   cutoff: string,
   entries: SettledActivityDraft[],
+  extraListings: readonly LedgerListing[] = [],
 ): LedgerReviewFile {
   const accounts = restoreOpeningReview(anchor, base.text);
+  const listings = ledgerAvailableListings(anchor, extraListings);
   if (!timestamp.test(cutoff) || !Number.isFinite(Date.parse(cutoff)))
     throw new Error(
       "Enter a cutoff timestamp with seconds and an explicit UTC offset.",
@@ -322,22 +331,22 @@ export function buildSettledActivityReview(
       )
         throw new Error(`${label} contains unsupported cash or trade details.`);
       if (
-        !anchor.listings.some((item) => item.listing_id === entry.listingId) ||
+        !listings.some((item) => item.listing_id === entry.listingId) ||
         !entry.quantity ||
         !amount.test(entry.quantity) ||
         !/[1-9]/.test(entry.quantity) ||
         entry.basisUnavailable !== true
       )
         throw new Error(
-          `${label} needs an anchored listing, positive exact quantity and unavailable-basis acknowledgement.`,
+          `${label} needs a reviewed listing, positive exact quantity and unavailable-basis acknowledgement.`,
         );
     } else if (trade || dividend) {
-      const listing = anchor.listings.find(
+      const listing = listings.find(
         (item) => item.listing_id === entry.listingId,
       );
       if (!listing || (trade && listing.currency !== entry.currency))
         throw new Error(
-          `${label} needs an anchored listing${trade ? " and its exact trading currency" : ""}.`,
+          `${label} needs a reviewed listing${trade ? " and its exact trading currency" : ""}.`,
         );
       if (
         entry.amount ||
@@ -403,7 +412,7 @@ export function buildSettledActivityReview(
         );
       if (
         (securityTransfer
-          ? !anchor.listings.some(
+          ? !listings.some(
               (item) => item.listing_id === entry.destinationListingId,
             ) ||
             !entry.destinationQuantity ||

@@ -191,10 +191,10 @@ statements, changed anchors or other fields use the existing file review workflo
 After a guided opening reconciles, the screen can add evidenced BUY, SELL, DIVIDEND,
 DEPOSIT, WITHDRAWAL, FEE, TAX, CASH_TRANSFER and SECURITY_TRANSFER records for declared brokerage accounts. Each
 record has an explicit type, sequence, settled timestamp with UTC offset, currency,
-document hash and source-record reference. Trades additionally require a verified
-anchor listing in its trading currency, exact quantity and gross settlement cash,
+document hash and source-record reference. Trades additionally require an exact reviewed
+listing in its trading currency, exact quantity and gross settlement cash,
 explicit fees and taxes (including zero), and trade and settlement dates. Dividends
-require an anchor listing, gross cash, explicit fees and withheld taxes; the received
+require an exact reviewed listing, gross cash, explicit fees and withheld taxes; the received
 cash currency can differ from the listing currency. The API rejects charges above
 gross cash. Record withheld tax once, using the same cash currency as the receipt.
 No FX,
@@ -207,8 +207,18 @@ Guided internal cash transfers require two evidenced brokerage accounts and
 independently entered debit and receipt amounts, currencies, booking timestamps
 and source keys. Security transfers likewise require two independent matching
 listing/quantity observations and explicit acknowledgement that acquisition basis
-is unavailable. The API verifies the legs and source holdings. Other activities,
-listings outside the anchor or extra fields use the file workflow.
+is unavailable. The API verifies the legs and source holdings. Other activities or unsupported
+extra fields use the file workflow.
+
+For a listing outside the opening snapshot, search its exact ticker and review
+venue, security, issuer and currency before selection. Search flags demo records,
+unsupported currencies and truncated results. It does not modify the opening
+anchor. The preview compares the selected core identity with the API-consumed
+identity and blocks discrepancies; its evidence drawer lists every consumed
+identity, including activity-only listings. Search names, share class and demo
+status are display context, not bound to the preview hash. Revalidation of a saved
+packet retrieves current consumed identities; lookup-only demo status must be
+rechecked. No company is invented for a companyless ETF.
 
 After a guided opening or supported activity review reconciles, the ending form accepts
 independently entered positions, native cash and source evidence for every account

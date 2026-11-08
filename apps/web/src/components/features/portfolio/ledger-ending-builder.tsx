@@ -6,6 +6,7 @@ import type { PortfolioLedgerAnchor } from "@/lib/domain-contracts";
 import { dateTime } from "@/lib/display";
 import type { LedgerReviewFile } from "./portfolio-ledger-data";
 import { type OpeningAccountDraft } from "./ledger-opening-draft";
+import { ledgerAvailableListings, type LedgerListing } from "./ledger-listings";
 import {
   buildEndingReview,
   type EndingAccountDraft,
@@ -19,6 +20,7 @@ export function LedgerEndingBuilder({
   base,
   opening,
   initialAccounts,
+  extraListings = [],
   disabled,
   onChange,
   onReview,
@@ -28,6 +30,7 @@ export function LedgerEndingBuilder({
   base: LedgerReviewFile;
   opening: OpeningAccountDraft[];
   initialAccounts?: EndingAccountDraft[];
+  extraListings?: readonly LedgerListing[];
   disabled: boolean;
   onChange: () => void;
   onReview: (file: LedgerReviewFile) => Promise<void>;
@@ -76,7 +79,15 @@ export function LedgerEndingBuilder({
           event.preventDefault();
           setError(null);
           try {
-            void onReview(buildEndingReview(anchor, base, accounts, confirmed));
+            void onReview(
+              buildEndingReview(
+                anchor,
+                base,
+                accounts,
+                confirmed,
+                extraListings,
+              ),
+            );
           } catch (failure) {
             setError(
               failure instanceof Error
@@ -152,12 +163,17 @@ export function LedgerEndingBuilder({
                         }
                       >
                         <option value="">Choose exact listing</option>
-                        {anchor.listings.map((item) => (
-                          <option key={item.listing_id} value={item.listing_id}>
-                            {item.venue} · {item.ticker} · {item.currency} ·{" "}
-                            {item.security_type}
-                          </option>
-                        ))}
+                        {ledgerAvailableListings(anchor, extraListings).map(
+                          (item) => (
+                            <option
+                              key={item.listing_id}
+                              value={item.listing_id}
+                            >
+                              {item.venue} · {item.ticker} · {item.currency} ·{" "}
+                              {item.security_type}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </label>
                     <label className="text-sm">

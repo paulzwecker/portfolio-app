@@ -11,9 +11,17 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.3 guided ledger onboarding — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                      |
 | Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; PR #29 merged; no new BUILD PR              |
 | Implementation              | Guided opening, activity and ending reconciliation LOCAL_VERIFIED                                                |
-| Next ready substantial task | Finish guided non-anchor listing selection and full journey verification                                         |
+| Next ready substantial task | Verify complete guided ledger candidate journey with native API and review                                       |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
+
+The current BUILD connects exact non-anchor listing search to activity and ending
+review without changing the opening anchor. It compares selected identities with
+the native preview, rejects missing or changed consumed identities, and displays
+all hash-bound identities including activity-only listings. Lookup names, share
+class and demo status are context rather than hash-bound facts. Verification passed
+176 focused web tests, three isolated PostgreSQL/API tests and 48 synthetic
+desktop/mobile journeys; production integration and release checks remain pending.
 
 The non-anchor listing lookup API supports bounded, exact ticker searches with
 security/company/venue identity, demo and unsupported-currency indicators. The

@@ -932,3 +932,44 @@ def test_listing_search_reports_truncation_at_the_51st_match(postgres_engine: En
             row["listing_id"] for row in first["results"]
         ]
         assert baseline(postgres_engine, portfolio_id) == before_second
+
+
+def test_listing_search_labels_demo_origin_at_every_identity_level(postgres_engine: Engine) -> None:
+    portfolio_id = source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        for level in ("company", "security", "listing"):
+            company = services.create_company(session, s.CompanyCreate(name=f"Synthetic {level}"))
+            company.is_demo = level == "company"
+            security = services.create_security(
+                session,
+                company.id,
+                s.SecurityCreate(name=f"Synthetic {level} shares", security_type="COMMON_STOCK"),
+            )
+            security.is_demo = level == "security"
+            session.add(
+                Listing(
+                    security_id=security.id,
+                    ticker=f"D{level.upper()}",
+                    venue="TEST",
+                    currency="USD",
+                    is_demo=level == "listing",
+                )
+            )
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger/listings"
+        for level in ("company", "security", "listing"):
+            response = client.get(
+                path,
+                params={"ticker": f"D{level.upper()}"},
+                headers={"x-api-access-token": "synthetic-token"},
+            )
+            assert response.status_code == 200
+            assert (
+                len(response.json()["results"]) == 1
+                and response.json()["results"][0]["is_demo"] is True
+            )
+    assert baseline(postgres_engine, portfolio_id) == before

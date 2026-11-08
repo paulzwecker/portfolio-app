@@ -11,8 +11,16 @@ import { isPortfolioLedgerPreview } from "../src/lib/domain-contracts";
 const previewPath = `/api/research/portfolios/${ledgerPortfolioId}/ledger/preview`;
 const acknowledgement =
   "I confirm the entered source balances are as of the observed anchor date.";
+const extraListing = {
+  ...ledgerAnchor.listings[0],
+  listing_id: "99999999-9999-4999-8999-999999999999",
+  ticker: "SYNNEW",
+  venue: "NYSE",
+  currency: "USD",
+  identity_source_ref: "synthetic-new-listing",
+};
 
-async function setup(page: Page, status = 200) {
+async function setup(page: Page, status = 200, drift = false) {
   const calls: { path: string; text: string }[] = [];
   await page.route("**/api/health", (route) =>
     route.fulfill({
@@ -46,6 +54,29 @@ async function setup(page: Page, status = 200) {
       report.projection_version = "settled-booking-v2";
       report.as_of = packet.as_of;
       report.activity_count = packet.activity.length;
+      const hasExtra = packet.activity.some(
+        (row: { listing_id?: string }) =>
+          row.listing_id === extraListing.listing_id,
+      );
+      if (hasExtra) {
+        report.consumed_listings = [
+          ...report.consumed_listings,
+          {
+            ...extraListing,
+            identity_source_ref: drift
+              ? "changed-source"
+              : extraListing.identity_source_ref,
+          },
+        ];
+        report.positions.push({
+          listing_id: extraListing.listing_id,
+          quantity: "0.5000000000",
+        });
+        report.accounts[0].positions.push({
+          listing_id: extraListing.listing_id,
+          quantity: "0.5000000000",
+        });
+      }
       if (packet.accounts.length === 2) {
         report.accounts.push({
           account_id: packet.accounts[1].account_id,
@@ -84,7 +115,7 @@ async function setup(page: Page, status = 200) {
         report.cash.find((row) => row.currency === "USD")!.balance = usd;
         report.accounts[0].cash.find((row) => row.currency === "USD")!.balance =
           usd;
-        if (hasBuy) {
+        if (hasBuy && !hasExtra) {
           report.positions[0].quantity = "3.0000000000";
           report.accounts[0].positions[0].quantity = "3.0000000000";
         }
@@ -115,10 +146,25 @@ async function setup(page: Page, status = 200) {
             ...row,
             account_id: row.account_id ? packet.accounts[0].account_id : null,
             ...(packet.activity.length > 0 && row.key === "USD"
-              ? { projected: "101.2500000000", observed: "101.2500000000" }
+              ? {
+                  projected: hasExtra ? "89.7500000000" : "101.2500000000",
+                  observed: hasExtra ? "89.7500000000" : "101.2500000000",
+                }
               : {}),
           }),
         );
+        if (hasExtra)
+          report.ending_reconciliation.push(
+            ...[null, packet.accounts[0].account_id].map((account_id) => ({
+              account_id,
+              domain: "POSITION" as const,
+              key: extraListing.listing_id,
+              projected: "0.5000000000",
+              observed: "0.5000000000",
+              difference: "0",
+              status: "MATCH" as const,
+            })),
+          );
         if (
           !packet.ending_statement.accounts[0].cash.some(
             (row: { currency: string }) => row.currency === "EUR",
@@ -170,6 +216,22 @@ async function setup(page: Page, status = 200) {
       });
     if (path.endsWith("/ledger/anchor"))
       return route.fulfill({ json: ledgerAnchor });
+    if (path.endsWith("/ledger/listings"))
+      return route.fulfill({
+        json: {
+          results: [
+            {
+              ...extraListing,
+              security_name: "Synthetic fund",
+              company_name: null,
+              share_class: null,
+              is_demo: true,
+            },
+          ],
+          truncated: false,
+          unsupported_results: true,
+        },
+      });
     if (path.endsWith("/ledger/candidates"))
       return route.fulfill({
         json: {
@@ -1904,6 +1966,378 @@ test("guided security transfer preserves independent listing evidence and unavai
   ).toBeVisible();
   expect(calls[3].text).toBe(calls[1].text);
   await page.getByLabel("Destination quantity", { exact: true }).fill("1");
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+});
+
+async function enterSyntheticNonAnchorPurchase(
+  page: Page,
+  calls: { path: string; text: string }[],
+) {
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add settled activity", exact: true })
+    .click();
+  await page.getByLabel("Exact listing ticker", { exact: true }).fill("SYNNEW");
+  await page.getByLabel("Exact listing ticker", { exact: true }).press("Enter");
+  await expect(
+    page.getByText(
+      "Some matching listings lack a supported currency and are unavailable for ledger review.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/SYNNEW · NYSE · USD · ETF · Demo data/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Use this listing", exact: true })
+    .click();
+  await expect(page.getByLabel("Additional selected listings")).toContainText(
+    "Demo data at lookup",
+  );
+  await page
+    .getByLabel("Review cutoff timestamp", { exact: true })
+    .fill("2026-01-31T23:59:59+01:00");
+  await page
+    .getByRole("button", { name: "Add activity record", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption(JSON.parse(calls[0].text).accounts[0].account_id);
+  await page
+    .getByRole("combobox", { name: "Type", exact: true })
+    .selectOption("BUY");
+  await page
+    .getByLabel("Booking timestamp", { exact: true })
+    .fill("2026-01-15T10:30:00+01:00");
+  await page.getByLabel("Sequence", { exact: true }).fill("1");
+  await page.getByLabel("Currency", { exact: true }).fill("USD");
+  await page
+    .getByRole("combobox", { name: "Listing", exact: true })
+    .selectOption(extraListing.listing_id);
+  await page.getByLabel("Quantity", { exact: true }).fill("0.5000000000");
+  await page.getByLabel("Gross settlement cash", { exact: true }).fill("10.00");
+  await page.getByLabel("Fees", { exact: true }).fill("0.20");
+  await page.getByLabel("Taxes", { exact: true }).fill("0.05");
+  await page.getByLabel("Trade date", { exact: true }).fill("2026-01-13");
+  await page.getByLabel("Settlement date", { exact: true }).fill("2026-01-15");
+  await page
+    .getByLabel("Source document SHA-256", { exact: true })
+    .last()
+    .fill("c".repeat(64));
+  await page
+    .getByLabel("Source record reference", { exact: true })
+    .fill("new-purchase");
+}
+
+test("a reviewed non-anchor listing survives activity and ending reconciliation", async ({
+  page,
+}, info) => {
+  const calls = await setup(page);
+  await enterSyntheticNonAnchorPurchase(page, calls);
+  await page
+    .getByRole("heading", { name: "Settled activity", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("non-anchor-listing.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(JSON.parse(calls[1].text).activity[0].listing_id).toBe(
+    extraListing.listing_id,
+  );
+  await page
+    .getByRole("button", { name: "Inspect source evidence", exact: true })
+    .click();
+  const drawer = page.getByRole("dialog");
+  await drawer
+    .getByText("Preview listing identities (2)", { exact: true })
+    .click();
+  await expect(
+    drawer.getByText(`Listing ${extraListing.listing_id}`, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByText(`Identity source ${extraListing.identity_source_ref}`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await drawer
+    .getByRole("button", { name: "Close details", exact: true })
+    .click();
+  const activityDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const activityPath = await (await activityDownload).path();
+  if (!activityPath) throw new Error("Synthetic activity download missing");
+  await page
+    .getByRole("button", { name: "Discard activity", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(activityPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[2].text).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Edit supported activity", exact: true })
+    .click();
+  await expect(page.getByLabel("Additional selected listings")).toContainText(
+    "Demo status unavailable in preview; search to recheck",
+  );
+  await expect(
+    page.getByRole("combobox", { name: "Listing", exact: true }),
+  ).toHaveValue(extraListing.listing_id);
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[3].text).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Add ending statement", exact: true })
+    .click();
+  await page
+    .getByLabel("Statement SHA-256", { exact: true })
+    .fill("d".repeat(64));
+  await page
+    .getByLabel("Statement record reference", { exact: true })
+    .fill("ending");
+  for (const [index, listing, quantity] of [
+    [1, ledgerAnchor.listings[0].listing_id, "2.5000000000"],
+    [2, extraListing.listing_id, "0.5000000000"],
+  ] as const) {
+    await page
+      .getByRole("button", { name: "Add ending position", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", {
+        name: `Ending position ${index} listing`,
+        exact: true,
+      })
+      .selectOption(listing);
+    await page
+      .getByLabel(`Ending position ${index} quantity`, { exact: true })
+      .fill(quantity);
+  }
+  for (const [index, currency, balance] of [
+    [1, "USD", "89.7500000000"],
+    [2, "EUR", "0"],
+  ] as const) {
+    await page
+      .getByRole("button", { name: "Add ending cash", exact: true })
+      .click();
+    await page
+      .getByLabel(`Ending cash ${index} currency`, { exact: true })
+      .fill(currency);
+    await page
+      .getByLabel(`Ending cash ${index} balance`, { exact: true })
+      .fill(balance);
+  }
+  await page
+    .getByLabel(
+      "I confirm these ending observations are effective at the review cutoff.",
+      { exact: true },
+    )
+    .check();
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(
+    JSON.parse(calls[4].text).ending_statement.accounts[0].positions[1]
+      .listing_id,
+  ).toBe(extraListing.listing_id);
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const savedPath = await (await download).path();
+  if (!savedPath) throw new Error("Synthetic ending download missing");
+  await page
+    .getByRole("button", { name: "Discard ending statement", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(savedPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Edit supported ending statement",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("combobox", {
+      name: "Ending position 2 listing",
+      exact: true,
+    }),
+  ).toHaveValue(extraListing.listing_id);
+});
+
+test("a changed listing identity blocks the selected non-anchor review", async ({
+  page,
+}) => {
+  const calls = await setup(page, 200, true);
+  await enterSyntheticNonAnchorPurchase(page, calls);
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "listing identity is missing or changed",
+  );
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Candidate reason", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("a pending listing lookup cannot update a discarded activity editor", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add settled activity", exact: true })
+    .click();
+  let release: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requested = false;
+  await page.route("**/ledger/listings?**", async (route) => {
+    requested = true;
+    await gate;
+    try {
+      await route.fulfill({
+        json: {
+          results: [
+            {
+              ...extraListing,
+              security_name: "Synthetic fund",
+              company_name: null,
+              share_class: null,
+              is_demo: true,
+            },
+          ],
+          truncated: false,
+          unsupported_results: false,
+        },
+      });
+    } catch {
+      /* abandoned request */
+    }
+  });
+  await page.getByLabel("Exact listing ticker", { exact: true }).fill("SYNNEW");
+  await page
+    .getByRole("button", { name: "Search listings", exact: true })
+    .click();
+  await expect.poll(() => requested).toBe(true);
+  await page
+    .getByRole("button", { name: "Discard activity", exact: true })
+    .click();
+  release?.();
+  await expect(page.getByText("Synthetic fund", { exact: true })).toHaveCount(
+    0,
+  );
+  expect(calls).toHaveLength(1);
+});
+
+test("uploaded activity-only listing cannot disappear from preview identity evidence", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  const packet = JSON.parse(calls[0].text);
+  packet.as_of = "2026-01-31T23:59:59+01:00";
+  packet.activity = [
+    {
+      id: "99999999-9999-4999-8999-999999999999",
+      account_id: packet.accounts[0].account_id,
+      kind: "DIVIDEND",
+      sequence: 1,
+      effective_at: "2026-01-15T10:30:00+01:00",
+      evidence: {
+        source_sha256: "c".repeat(64),
+        source_record_id: "activity-only",
+      },
+      listing_id: "88888888-8888-4888-8888-888888888888",
+      currency: "USD",
+      gross_cash: "1",
+      fees: "0",
+      taxes: "0",
+    },
+  ];
+  await page.route(`**${previewPath}`, async (route) => {
+    const report = ledgerReport();
+    report.contract_version = "portfolio-ledger-preview-v2";
+    report.projection_version = "settled-booking-v2";
+    report.status = "OPENING_RECONCILED";
+    report.ending_status = "NOT_PROVIDED";
+    report.ending_statement_at = null;
+    report.ending_reconciliation = [];
+    report.as_of = packet.as_of;
+    report.activity_count = 1;
+    report.accounts[0].account_id = packet.accounts[0].account_id;
+    expect(isPortfolioLedgerPreview(report)).toBe(true);
+    await route.fulfill({ json: report });
+  });
+  await page.getByLabel("Ledger review JSON", { exact: true }).setInputFiles({
+    name: "activity-only.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(packet)),
+  });
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "listing identity is missing or changed",
+  );
   await expect(
     page.getByLabel("Ledger review result", { exact: true }),
   ).toHaveCount(0);
