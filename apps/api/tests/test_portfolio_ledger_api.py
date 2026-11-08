@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_cloud_market_refresh import table_counts
-from test_portfolio_ledger import AT, evidence, proposal, trade
+from test_portfolio_ledger import AT, cash_activity, evidence, proposal, trade
 
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as c
@@ -214,6 +214,36 @@ def test_authenticated_exact_preview_replay_is_sql_read_only_and_preserves_canon
         )
         assert connection.scalar(text("SHOW transaction_read_only")) == "off"
         assert connection.scalar(text("SHOW transaction_isolation")) == "read committed"
+
+
+def test_guided_v2_cash_activity_replays_read_only(postgres_engine: Engine) -> None:
+    portfolio_id = source(postgres_engine)
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger"
+        headers = {"x-api-access-token": "synthetic-token"}
+        anchor = c.PortfolioLedgerAnchorRead.model_validate(
+            client.get(f"{path}/anchor", headers=headers).json()
+        )
+        value = candidate(anchor)
+        value.contract_version = "portfolio-ledger-preview-v2"
+        value.activity = [cash_activity("DEPOSIT", 1, "1.25"), cash_activity("TAX", 2, "0.25")]
+        payload = value.model_dump(mode="json")
+        response = client.post(f"{path}/preview", headers=headers, json=payload)
+        assert response.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(response.json())
+        assert result.status == "OPENING_RECONCILED" and result.activity_count == 2
+        assert next(row.balance for row in result.cash if row.currency == "USD") == Decimal("101")
+        assert next(row.balance for row in result.cash if row.currency == "EUR") == Decimal("0")
+        assert (
+            client.post(f"{path}/preview", headers=headers, json=payload).json() == response.json()
+        )
+        payload["activity"][1]["evidence"] = payload["activity"][0]["evidence"]
+        assert client.post(f"{path}/preview", headers=headers, json=payload).status_code == 422
+    assert baseline(postgres_engine, portfolio_id) == before
 
 
 def test_guided_v2_opening_at_anchor_boundary_preserves_canonical_state(

@@ -44,7 +44,14 @@ async function setup(page: Page, status = 200) {
       const report = ledgerReport();
       report.contract_version = "portfolio-ledger-preview-v2";
       report.projection_version = "settled-booking-v2";
-      report.as_of = ledgerAnchor.snapshot.effective_at;
+      report.as_of = packet.as_of;
+      report.activity_count = packet.activity.length;
+      if (packet.activity.length > 0) {
+        report.cash.find((row) => row.currency === "USD")!.balance =
+          "101.2500000000";
+        report.accounts[0].cash.find((row) => row.currency === "USD")!.balance =
+          "101.2500000000";
+      }
       report.status = "OPENING_RECONCILED";
       report.ending_status = "NOT_PROVIDED";
       report.ending_statement_at = null;
@@ -386,6 +393,125 @@ test("a rejected replacement keeps the draft but clears its previous review", as
     page.getByLabel("Position 1 quantity", { exact: true }),
   ).toHaveValue("2.5000000000");
   expect(calls).toHaveLength(1);
+});
+
+test("guided cash activity reviews exact source evidence against a reconciled opening", async ({
+  page,
+}, info) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add settled cash activity", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Ledger review JSON", { exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Reload observed anchor", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Review cutoff timestamp", { exact: true })
+    .fill("2026-01-31T23:59:59+01:00");
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Add cash record", exact: true })
+    .click();
+  const selected = JSON.parse(calls[0].text).accounts[0].account_id;
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption(selected);
+  await page
+    .getByRole("combobox", { name: "Type", exact: true })
+    .selectOption("DEPOSIT");
+  await page
+    .getByLabel("Booking timestamp", { exact: true })
+    .fill("2026-01-15T10:30:00+01:00");
+  await page.getByLabel("Sequence", { exact: true }).fill("1");
+  await page.getByLabel("Currency", { exact: true }).fill("USD");
+  await page.getByLabel("Amount", { exact: true }).fill("1.2500000000");
+  await page
+    .getByLabel("Source document SHA-256", { exact: true })
+    .last()
+    .fill("c".repeat(64));
+  await page
+    .getByLabel("Source record reference", { exact: true })
+    .fill("synthetic-deposit");
+  await page
+    .getByRole("button", { name: "Review cash activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls).toHaveLength(2);
+  const packet = JSON.parse(calls[1].text);
+  expect(packet.accounts).toEqual(JSON.parse(calls[0].text).accounts);
+  expect(packet.activity).toEqual([
+    {
+      id: expect.any(String),
+      account_id: selected,
+      kind: "DEPOSIT",
+      sequence: 1,
+      effective_at: "2026-01-15T10:30:00+01:00",
+      evidence: {
+        source_sha256: "c".repeat(64),
+        source_record_id: "synthetic-deposit",
+      },
+      currency: "USD",
+      amount: "1.2500000000",
+    },
+  ]);
+  expect(packet.as_of).toBe("2026-01-31T23:59:59+01:00");
+  expect(packet.ending_statement).toBeNull();
+  expect(calls.map((call) => call.path)).toEqual([previewPath, previewPath]);
+  const projection = page.getByRole("region", {
+    name: "Candidate balances at cutoff",
+  });
+  await expect(
+    projection.getByText("101.25", { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
+  await projection
+    .getByRole("combobox", { name: "Projection account" })
+    .selectOption(selected);
+  await expect(
+    projection.getByText("101.25", { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("heading", { name: "Settled cash activity", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("cash-activity.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByLabel("Amount", { exact: true }).fill("2");
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Candidate reason", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Discard cash activity", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Ledger review JSON", { exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByLabel("Position 1 quantity", { exact: true }),
+  ).toHaveValue("2.5000000000");
 });
 
 test("restoring the same account cannot reuse an earlier pending hash", async ({

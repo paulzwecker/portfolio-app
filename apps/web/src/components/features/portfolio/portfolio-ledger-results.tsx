@@ -34,6 +34,8 @@ export function PortfolioLedgerResults({
     report.ending_status === "NOT_PROVIDED" ? "opening" : "ending",
   );
   const [account, setAccount] = useState("portfolio");
+  const [projectionAccount, setProjectionAccount] = useState("portfolio");
+  const [visibleProjection, setVisibleProjection] = useState(50);
   const [onlyDifferences, setOnlyDifferences] = useState(true);
   const [visibleRows, setVisibleRows] = useState(50);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -67,6 +69,24 @@ export function PortfolioLedgerResults({
     </span>
   );
   const statementReady = report.status === "ENDING_RECONCILED";
+  const projection =
+    projectionAccount === "portfolio"
+      ? report
+      : report.accounts.find((item) => item.account_id === projectionAccount);
+  const projectedBalances = projection
+    ? [
+        ...projection.positions.map((row) => ({
+          domain: "POSITION",
+          key: row.listing_id,
+          value: row.quantity,
+        })),
+        ...projection.cash.map((row) => ({
+          domain: "CASH",
+          key: row.currency,
+          value: row.balance,
+        })),
+      ]
+    : [];
 
   return (
     <div className="space-y-6" aria-label="Ledger review result">
@@ -115,6 +135,62 @@ export function PortfolioLedgerResults({
               Showing 50 of {report.issues.length} issues. Download the full
               report for every record.
             </p>
+          )}
+        </PageSection>
+      )}
+
+      {report.activity_count > 0 && (
+        <PageSection
+          title="Candidate balances at cutoff"
+          description="These native quantities and cash balances are supplied by the ledger preview. Ending-statement reconciliation is shown separately."
+        >
+          {report.status === "BLOCKED" ? (
+            <p className="rounded-lg border p-4 text-sm">
+              Resolve the blocking issues before using projected balances.
+            </p>
+          ) : (
+            <>
+              <label className="mb-4 block max-w-sm text-xs font-medium">
+                Projection account
+                <select
+                  className="mt-1 block h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={projectionAccount}
+                  onChange={(event) => {
+                    setProjectionAccount(event.target.value);
+                    setVisibleProjection(50);
+                  }}
+                >
+                  <option value="portfolio">Portfolio total</option>
+                  {report.accounts.map((item) => (
+                    <option key={item.account_id} value={item.account_id}>
+                      {accountLabel(item.account_id)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ResponsiveDataTable
+                caption="Candidate balances"
+                rows={projectedBalances.slice(0, visibleProjection)}
+                getRowKey={(row) => `${row.domain}-${row.key}`}
+                columns={[
+                  { id: "asset", header: "Exact asset", render: assetLabel },
+                  {
+                    id: "amount",
+                    header: "Candidate balance",
+                    render: (row) => exact(row.value),
+                  },
+                ]}
+              />
+              {projectedBalances.length > visibleProjection && (
+                <Button
+                  className="mt-3"
+                  variant="outline"
+                  onClick={() => setVisibleProjection((count) => count + 50)}
+                >
+                  Show next 50 balances
+                </Button>
+              )}
+            </>
           )}
         </PageSection>
       )}

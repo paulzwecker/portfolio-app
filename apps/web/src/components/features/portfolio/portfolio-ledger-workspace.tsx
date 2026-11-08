@@ -22,6 +22,7 @@ import {
 import { PortfolioLedgerCandidates } from "./portfolio-ledger-candidates";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
 import { LedgerOpeningBuilder } from "./ledger-opening-builder";
+import { LedgerCashActivityBuilder } from "./ledger-cash-activity-builder";
 
 export function PortfolioLedgerWorkspace({
   portfolioId,
@@ -37,6 +38,9 @@ export function PortfolioLedgerWorkspace({
   const verified =
     anchor.data?.portfolio_id === portfolioId ? anchor.data : undefined;
   const [file, setFile] = useState<LedgerReviewFile | null>(null);
+  const [activityBase, setActivityBase] = useState<LedgerReviewFile | null>(
+    null,
+  );
   const [review, setReview] = useState<{
     report: PortfolioLedgerPreview;
     file: LedgerReviewFile;
@@ -69,6 +73,7 @@ export function PortfolioLedgerWorkspace({
       : null;
 
   const loadFile = async (selected: File | undefined) => {
+    setActivityBase(null);
     const version = ++fileVersion.current;
     activeRequest.current?.abort();
     activeRequest.current = null;
@@ -171,7 +176,8 @@ export function PortfolioLedgerWorkspace({
     }
   };
 
-  const clear = () => {
+  const clear = (retainActivity = false) => {
+    if (!retainActivity) setActivityBase(null);
     fileVersion.current += 1;
     activeRequest.current?.abort();
     activeRequest.current = null;
@@ -195,11 +201,13 @@ export function PortfolioLedgerWorkspace({
         actions={
           <Button
             variant="outline"
+            disabled={Boolean(activityBase) || pending || loadingFile}
             onClick={() => {
               activeRequest.current?.abort();
               activeRequest.current = null;
               setPending(false);
               setReview(null);
+              setActivityBase(null);
               anchor.retry();
             }}
           >
@@ -248,11 +256,29 @@ export function PortfolioLedgerWorkspace({
             <LedgerOpeningBuilder
               key={verified.anchor_sha256}
               anchor={verified}
-              disabled={pending || loadingFile}
-              onChange={clear}
+              disabled={pending || loadingFile || Boolean(activityBase)}
+              collapsed={Boolean(activityBase)}
+              onChange={() => clear()}
               onReview={runPreview}
             />
           </PageSection>
+          {activityBase &&
+            activityBase.anchorSha256 === verified.anchor_sha256 && (
+              <PageSection
+                title="Settled cash activity"
+                description="Build a candidate from the reconciled opening and your transaction evidence."
+              >
+                <LedgerCashActivityBuilder
+                  key={activityBase.text}
+                  anchor={verified}
+                  base={activityBase}
+                  disabled={pending || loadingFile}
+                  onChange={() => clear(true)}
+                  onReview={runPreview}
+                  onClose={() => clear()}
+                />
+              </PageSection>
+            )}
           <PageSection
             title="3. Validate a private ledger file"
             description="Choose a UTF-8 portfolio-ledger-preview-v1 or v2 JSON file containing evidenced accounts, opening balances, activity and optional ending observations. Use v2 for observed income and paired internal cash or same-listing security transfers. Maximum 1 MB."
@@ -267,6 +293,7 @@ export function PortfolioLedgerWorkspace({
                 ref={input}
                 type="file"
                 accept=".json,application/json"
+                disabled={Boolean(activityBase)}
                 onChange={(event) => void loadFile(event.target.files?.[0])}
                 className="mt-2 block w-full min-w-0 rounded-md border bg-background p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-2 file:text-foreground"
               />
@@ -288,7 +315,13 @@ export function PortfolioLedgerWorkspace({
             )}
             <div className="mt-4 flex flex-wrap gap-2">
               <Button
-                disabled={!file || !matchesAnchor || pending || loadingFile}
+                disabled={
+                  !file ||
+                  !matchesAnchor ||
+                  pending ||
+                  loadingFile ||
+                  Boolean(activityBase)
+                }
                 onClick={() => void runPreview()}
               >
                 {pending
@@ -299,8 +332,11 @@ export function PortfolioLedgerWorkspace({
               </Button>
               <Button
                 variant="ghost"
-                onClick={clear}
-                disabled={!file && !error && !pending && !loadingFile}
+                onClick={() => clear()}
+                disabled={
+                  Boolean(activityBase) ||
+                  (!file && !error && !pending && !loadingFile)
+                }
               >
                 Clear private file
               </Button>
@@ -320,11 +356,24 @@ export function PortfolioLedgerWorkspace({
         Open saved candidates and decisions
       </a>
       {visibleReview && (
-        <PortfolioLedgerResults
-          key={visibleReview.report.input_sha256}
-          report={visibleReview.report}
-          file={visibleReview.file}
-        />
+        <>
+          {visibleReview.report.status === "OPENING_RECONCILED" &&
+            visibleReview.report.activity_count === 0 &&
+            visibleReview.file.name === "opening-balances.json" &&
+            !activityBase && (
+              <Button
+                variant="outline"
+                onClick={() => setActivityBase(visibleReview.file)}
+              >
+                Add settled cash activity
+              </Button>
+            )}
+          <PortfolioLedgerResults
+            key={visibleReview.report.input_sha256}
+            report={visibleReview.report}
+            file={visibleReview.file}
+          />
+        </>
       )}
       <PortfolioLedgerCandidates
         portfolioId={portfolioId}

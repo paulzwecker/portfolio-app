@@ -188,6 +188,17 @@ for the same anchor. Restoration preserves account IDs, exact amounts and eviden
 and requires the source-date confirmation again. Packets with activity, ending
 statements, changed anchors or other fields use the existing file review workflow.
 
+After a guided opening reconciles, the screen can add evidenced DEPOSIT,
+WITHDRAWAL, FEE and TAX records for declared brokerage accounts. Each record has
+an explicit type, unique sequence, settled timestamp with UTC offset, currency,
+exact positive amount, document hash and source-record reference. The user also
+supplies the review cutoff. The API owns ordering, time-boundary, balance and
+duplicate-source validation. Its candidate balances are displayed by account or
+portfolio when replay succeeds. The cash draft must be explicitly discarded before
+the opening or source file is changed. Its downloaded review JSON can be replayed
+through the file workflow. Guided restoration of activity, trades, dividends,
+transfers and ending statements remains future work.
+
 For activity and ending observations, prepare the typed ledger JSON and choose it
 using the file control. Files stay in
 page memory until explicit validation. The browser forwards the original financial

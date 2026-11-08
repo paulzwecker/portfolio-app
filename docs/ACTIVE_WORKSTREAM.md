@@ -36,9 +36,24 @@ Verification passed 98 focused web tests and ten managed desktop/mobile browser
 cases using synthetic data. Typecheck, production build, focused lint and docs
 checks passed. The mobile light-theme layout was visually inspected.
 
+## Current cash activity increment
+
+The guided review now accepts evidenced DEPOSIT, WITHDRAWAL, FEE and TAX records
+after an opening reconciles. Account, type, amount, currency, sequence, timestamp,
+cutoff and source evidence are explicit. Native preview results display account
+and portfolio balances. Editing invalidates the result, and the cash draft must be
+discarded before switching its opening or source file. Full activity packets can
+be downloaded and replayed in the existing file workflow. Guided restoration,
+trade/dividend/transfer entry and ending statements remain outstanding.
+
+Verification passed 112 focused web tests, 14 isolated PostgreSQL/API cases and
+12 managed desktop/mobile browser cases using synthetic data. Typecheck, the
+production build, focused lint and docs checks passed. Mobile and desktop layouts
+were visually reviewed. No production operation was involved.
+
 ## Next increment and release boundaries
 
-Add guided settled-activity and ending-statement entry to complete the existing
+Add guided trade/dividend entry, activity restoration and ending-statement entry to complete the existing
 candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,

@@ -23,11 +23,13 @@ export function LedgerOpeningBuilder({
   disabled,
   onChange,
   onReview,
+  collapsed = false,
 }: {
   anchor: PortfolioLedgerAnchor;
   disabled: boolean;
   onChange: () => void;
   onReview: (file: LedgerReviewFile) => Promise<void>;
+  collapsed?: boolean;
 }) {
   const [accounts, setAccounts] = useState<OpeningAccountDraft[]>([]);
   const [confirmed, setConfirmed] = useState(false);
@@ -104,7 +106,7 @@ export function LedgerOpeningBuilder({
   };
   const busy = accounts.some((account) => account.hashing);
   return (
-    <details className="rounded-lg border bg-card p-4" open>
+    <details className="rounded-lg border bg-card p-4" open={!collapsed}>
       <summary className="cursor-pointer font-medium">
         Build an opening review
       </summary>

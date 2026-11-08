@@ -22,6 +22,33 @@ beforeEach(() => {
   vi.stubEnv("WEB_ACCESS_PASSWORD", "");
 });
 
+it("does not present candidate balances as usable when replay is blocked", () => {
+  const report = ledgerReport();
+  report.activity_count = 1;
+  report.status = "BLOCKED";
+  report.ending_status = "NOT_EVALUATED";
+  report.ending_statement_at = null;
+  report.ending_reconciliation = [];
+  report.issues = [
+    {
+      code: "NEGATIVE_CASH",
+      activity_id: null,
+      account_id: null,
+      asset_key: "USD",
+    },
+  ];
+  const markup = renderToStaticMarkup(
+    <PortfolioLedgerResults
+      report={report}
+      file={inspectLedgerFile(JSON.stringify(ledgerPacket()), "fixture.json")}
+    />,
+  );
+  expect(markup).toContain(
+    "Resolve the blocking issues before using projected balances.",
+  );
+  expect(markup).not.toContain('aria-label="Candidate balances, mobile view"');
+});
+
 it("accepts explicit v2 income packets and their matching projection contract", () => {
   const packet = ledgerPacket();
   packet.contract_version = "portfolio-ledger-preview-v2";
