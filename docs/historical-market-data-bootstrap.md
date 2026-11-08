@@ -61,6 +61,16 @@ empty series has zero dates. Older checkpoint receipts without the new fields re
 usable price history, FX coverage, completeness or freshness. Review expected sessions
 and source conventions separately before interpreting coverage or chart readiness.
 
+Operations also offers an on-demand, read-only schedule review for the latest run.
+It examines at most 30 listing checkpoints ordered by subject key, reporting any
+omitted count and FX checkpoints separately. Only completed checkpoints with matching
+frozen listing identity, batch digest and provider, listing currency and eligible
+same-provider/same-currency stored closes are considered. It compares the first to
+last eligible close in 2026 against a reviewed, time-appropriate NYSE, NASDAQ or
+Xetra schedule. This is not full-window coverage, raw-payload reconciliation, a
+confirmed missing trade, an assessment of FX sessions or a modification of receipts.
+Unavailable schedules, ambiguous identities and incomplete data stay explicit.
+
 The prepared run pins the provider/crosswalk hash, normalizer versions, exact
 listing identities, required currency pairs, target environment, and date window.
 Listings are ordered as held positions first, other Portfolio listings second, and

@@ -16337,6 +16337,153 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HistoricalBootstrapListingReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint_status": {
+            "title": "Checkpoint Status",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "AVAILABLE",
+              "CHECKPOINT_NOT_COMPLETE",
+              "IDENTITY_CHANGED",
+              "LISTING_CURRENCY_UNAVAILABLE",
+              "BATCH_UNVERIFIED",
+              "NO_DAILY_CLOSES",
+              "NO_SCHEDULE",
+              "DATE_LIMIT_EXCEEDED"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "scheduled_session_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledSessionReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_key": {
+            "title": "Subject Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_key",
+          "checkpoint_status",
+          "reason",
+          "scheduled_session_review"
+        ],
+        "title": "HistoricalBootstrapListingReviewRead",
+        "type": "object"
+      },
+      "HistoricalBootstrapReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "fx_checkpoint_count": {
+            "title": "Fx Checkpoint Count",
+            "type": "integer"
+          },
+          "listing_count": {
+            "title": "Listing Count",
+            "type": "integer"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalBootstrapListingReviewRead"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "omitted_listing_count": {
+            "title": "Omitted Listing Count",
+            "type": "integer"
+          },
+          "prepared_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepared At"
+          },
+          "requested_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested End"
+          },
+          "requested_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Start"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Status"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "prepared_at",
+          "requested_start",
+          "requested_end",
+          "checked_at",
+          "listing_count",
+          "fx_checkpoint_count",
+          "omitted_listing_count",
+          "listings"
+        ],
+        "title": "HistoricalBootstrapReviewRead",
+        "type": "object"
+      },
       "HoldingContext": {
         "additionalProperties": false,
         "properties": {
@@ -39773,6 +39920,27 @@
           }
         },
         "summary": "Get Listing Market Data",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/market-data/historical-bootstrap": {
+      "get": {
+        "operationId": "get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalBootstrapReviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Historical Bootstrap Review",
         "tags": [
           "Portfolio research"
         ]

@@ -257,6 +257,73 @@ test("Portfolio data investigation reaches Operations without writes", async ({
   expect(writes).toEqual([]);
 });
 
+test("Historical bootstrap schedule evidence is reviewable without writes", async ({
+  page,
+}) => {
+  const { writes } = await installRoutes(page, operationsFixture());
+  await page.route(
+    "**/api/research/market-data/historical-bootstrap",
+    (route) =>
+      route.fulfill({
+        json: {
+          run_id: "11111111-1111-4111-8111-111111111111",
+          run_status: "COMPLETE",
+          prepared_at: "2026-11-08T20:00:00Z",
+          requested_start: "2025-01-01",
+          requested_end: "2026-12-31",
+          checked_at: "2026-11-09T00:00:00Z",
+          listing_count: 2,
+          fx_checkpoint_count: 1,
+          omitted_listing_count: 1,
+          listings: [
+            {
+              subject_key: "NYSE:SYNTH",
+              checkpoint_status: "COMPLETE",
+              reason: "AVAILABLE",
+              scheduled_session_review: {
+                venue: "NYSE",
+                schedule_id: "synthetic",
+                source_url:
+                  "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+                source_sha256: "a".repeat(64),
+                schedule_fingerprint: "b".repeat(64),
+                source_as_of: null,
+                source_observed_at: "2026-11-08T18:37:45Z",
+                start_date: "2026-07-02",
+                end_date: "2026-07-07",
+                full_selected_span_covered: true,
+                scheduled_count: 3,
+                absent_scheduled_dates: ["2026-07-06"],
+                selected_unscheduled_dates: [],
+              },
+            },
+          ],
+        },
+      }),
+  );
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto("/operations");
+    const panel = page
+      .locator("div")
+      .filter({
+        has: page.getByText("Historical bootstrap review", { exact: true }),
+      })
+      .filter({ hasText: "Latest run:" })
+      .last();
+    await expect(panel).toContainText("FX sessions remain unassessed");
+    await panel.getByText("NYSE:SYNTH", { exact: false }).click();
+    await expect(panel).toContainText("not confirmed missing trades");
+    await expect(panel).toContainText("1 additional listings are not reviewed");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  expect(writes).toEqual([]);
+});
+
 test("Provider quality warnings are reviewable without writes", async ({
   page,
 }) => {

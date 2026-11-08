@@ -854,6 +854,35 @@ class ScheduledSessionReviewRead(Contract):
     selected_unscheduled_dates: list[date]
 
 
+class HistoricalBootstrapListingReviewRead(Contract):
+    subject_key: str
+    checkpoint_status: str
+    reason: Literal[
+        "AVAILABLE",
+        "CHECKPOINT_NOT_COMPLETE",
+        "IDENTITY_CHANGED",
+        "LISTING_CURRENCY_UNAVAILABLE",
+        "BATCH_UNVERIFIED",
+        "NO_DAILY_CLOSES",
+        "NO_SCHEDULE",
+        "DATE_LIMIT_EXCEEDED",
+    ]
+    scheduled_session_review: ScheduledSessionReviewRead | None
+
+
+class HistoricalBootstrapReviewRead(Contract):
+    run_id: UUID | None
+    run_status: str | None
+    prepared_at: datetime | None
+    requested_start: date | None
+    requested_end: date | None
+    checked_at: datetime
+    listing_count: int
+    fx_checkpoint_count: int
+    omitted_listing_count: int
+    listings: list[HistoricalBootstrapListingReviewRead]
+
+
 class PriceHistoryAnalyticsRead(Contract):
     """Price metrics and descriptive coverage over canonical daily observations."""
 

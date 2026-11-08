@@ -1568,6 +1568,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/market-data/historical-bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Historical Bootstrap Review */
+        get: operations["get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/market-data/status": {
         parameters: {
             query?: never;
@@ -7052,6 +7069,45 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "error";
+        };
+        /** HistoricalBootstrapListingReviewRead */
+        HistoricalBootstrapListingReviewRead: {
+            /** Checkpoint Status */
+            checkpoint_status: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "AVAILABLE" | "CHECKPOINT_NOT_COMPLETE" | "IDENTITY_CHANGED" | "LISTING_CURRENCY_UNAVAILABLE" | "BATCH_UNVERIFIED" | "NO_DAILY_CLOSES" | "NO_SCHEDULE" | "DATE_LIMIT_EXCEEDED";
+            scheduled_session_review: components["schemas"]["ScheduledSessionReviewRead"] | null;
+            /** Subject Key */
+            subject_key: string;
+        };
+        /** HistoricalBootstrapReviewRead */
+        HistoricalBootstrapReviewRead: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Fx Checkpoint Count */
+            fx_checkpoint_count: number;
+            /** Listing Count */
+            listing_count: number;
+            /** Listings */
+            listings: components["schemas"]["HistoricalBootstrapListingReviewRead"][];
+            /** Omitted Listing Count */
+            omitted_listing_count: number;
+            /** Prepared At */
+            prepared_at: string | null;
+            /** Requested End */
+            requested_end: string | null;
+            /** Requested Start */
+            requested_start: string | null;
+            /** Run Id */
+            run_id: string | null;
+            /** Run Status */
+            run_status: string | null;
         };
         /** HoldingContext */
         HoldingContext: {
@@ -15916,6 +15972,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoricalBootstrapReviewRead"];
                 };
             };
         };

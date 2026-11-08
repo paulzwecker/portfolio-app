@@ -58,6 +58,7 @@ from portfolio_api.google_sheets_sync import (
     run_sync_check,
     test_google_sheets_connection,
 )
+from portfolio_api.historical_bootstrap_review import latest_historical_bootstrap_review
 from portfolio_api.investment_thesis import (
     company_investment_thesis,
     publish_investment_thesis_revision,
@@ -895,6 +896,11 @@ def get_universe_market_summary(
 @router.get("/market-data/status", response_model=s.MarketRefreshStatusRead)
 def get_market_refresh_status(db: Db) -> s.MarketRefreshStatusRead:
     return q.market_refresh_status(db)
+
+
+@router.get("/market-data/historical-bootstrap", response_model=s.HistoricalBootstrapReviewRead)
+def get_historical_bootstrap_review(db: LedgerDb) -> s.HistoricalBootstrapReviewRead:
+    return latest_historical_bootstrap_review(db)
 
 
 @router.get(

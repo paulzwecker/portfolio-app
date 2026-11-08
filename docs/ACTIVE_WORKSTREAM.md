@@ -302,3 +302,16 @@ run, 58 web checks, type/contract/lint checks and a desktop/mobile browser journ
 passed. No source revision was accepted or production changed. Next: connect bounded
 schedule evidence to the historical bootstrap/Operations workflow without treating
 unassessed venues or unplanned closures as complete coverage.
+
+The latest BUILD connects the latest historical bootstrap to a read-only Operations
+review. At most 30 alphabetically ordered listing checkpoints are reviewed; the
+omitted count and FX checkpoint count are explicit. Completed checkpoints require
+matching frozen/current identity, listing currency, batch digest/provider, and
+eligible price provider/currency before comparing 2026 dates within the first/last
+selected close. Results do not reconcile provider payloads, establish full requested
+window coverage, confirm actual trading or assess FX. Unsupported schedules,
+incomplete checkpoints and excessive dates remain explicit. Ten synthetic isolated
+PostgreSQL cases, 52 web checks and a desktop/mobile browser journey passed; no
+schema, receipt, hosted setting or production data changed. Next extend review to
+the full requested scope and more explicitly reviewed venues while preserving these
+boundaries; live ingestion and deployment remain separately authorized.

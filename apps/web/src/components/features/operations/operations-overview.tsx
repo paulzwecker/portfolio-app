@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ManualRefreshPanel } from "@/components/features/operations/manual-refresh-panel";
 import { MarketRefreshPanel } from "@/components/features/operations/market-refresh-panel";
+import { HistoricalBootstrapPanel } from "@/components/features/operations/historical-bootstrap-panel";
 import { CompanySecCoveragePanel } from "@/components/features/company/company-sec-coverage";
 import { CompanyRefreshAction } from "@/components/features/operations/company-refresh-action";
 import { useResearch } from "@/hooks/use-research";
@@ -395,6 +396,8 @@ export function OperationsOverview({ companyId }: { companyId?: string } = {}) {
           </Card>
         </div>
       </PageSection>
+
+      <HistoricalBootstrapPanel />
 
       <ManualRefreshPanel
         workerEnabled={data.enabled}

@@ -144,6 +144,41 @@ it("validates the market refresh status contract", async () => {
     "/v1/market-data/status",
   );
 });
+it("forwards the historical bootstrap review as a validated read-only endpoint", async () => {
+  const response = {
+    run_id: null,
+    run_status: null,
+    prepared_at: null,
+    requested_start: null,
+    requested_end: null,
+    checked_at: "2026-11-09T00:00:00Z",
+    listing_count: 0,
+    fx_checkpoint_count: 0,
+    omitted_listing_count: 0,
+    listings: [],
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json(response));
+  vi.stubGlobal("fetch", mock);
+  const result = await GET(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap",
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(result.status).toBe(200);
+  expect((mock.mock.calls[0][0] as URL).pathname).toBe(
+    "/v1/market-data/historical-bootstrap",
+  );
+  const mutation = await POST(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap",
+      { method: "POST" },
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(mutation.status).not.toBe(200);
+  expect(mock).toHaveBeenCalledTimes(1);
+});
 it("validates recurring operations status before forwarding it", async () => {
   const response = {
     enabled: true,

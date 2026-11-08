@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Connect schedule evidence to historical bootstrap and Operations; keep activation gated                      |
+| Next ready substantial task | Extend bounded history review to the full requested scope and additional reviewed venues; keep activation gated |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
@@ -33,6 +33,13 @@ captured 2026 calendar; `XFRA` stays separate. Twenty-nine focused backend tests
 Schedule revisions now select only pinned, unambiguous evidence known at the
 requested cutoff; Company Explorer shows the revision and normalized fingerprint.
 Synthetic replay covers a later correction without changing the earlier view.
+The latest BUILD adds a read-only Operations review of up to 30 listing checkpoints
+from the latest historical bootstrap run, with explicit omitted counts and FX
+unassessed. It checks frozen identity, batch, provider and currency before comparing
+eligible 2026 closes with reviewed schedules. This covers only the selected close
+span, does not reconcile payloads or certify trading, and changes no receipts.
+Ten isolated PostgreSQL tests, 52 web tests, and a synthetic desktop/mobile
+browser journey passed. No migration or provider activation was performed.
 
 PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and

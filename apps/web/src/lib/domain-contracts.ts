@@ -320,6 +320,8 @@ export type PriceHistoryAnalytics =
   components["schemas"]["PriceHistoryAnalyticsRead"];
 export type MarketRefreshStatus =
   components["schemas"]["MarketRefreshStatusRead"];
+export type HistoricalBootstrapReview =
+  components["schemas"]["HistoricalBootstrapReviewRead"];
 export type MarketRefreshRun = components["schemas"]["MarketRefreshRunRead"];
 export type RecurringOperationJob =
   components["schemas"]["RecurringOperationJobRead"];
@@ -893,6 +895,101 @@ function isPriceRegime(v: unknown): v is PriceRegime {
     string(v.source_ref)
   );
 }
+function isScheduledSessionReview(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    ["NYSE", "NASDAQ", "XETRA"].includes(v.venue as string) &&
+    string(v.schedule_id) &&
+    string(v.source_sha256) &&
+    /^[a-f0-9]{64}$/.test(v.source_sha256) &&
+    (v.schedule_fingerprint === undefined ||
+      v.schedule_fingerprint === null ||
+      (string(v.schedule_fingerprint) &&
+        /^[a-f0-9]{64}$/.test(v.schedule_fingerprint))) &&
+    ((v.venue === "NYSE" &&
+      v.source_url ===
+        "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf") ||
+      (v.venue === "NASDAQ" &&
+        v.source_url === "https://nasdaqtrader.com/Trader.aspx?id=Calendar") ||
+      (v.venue === "XETRA" &&
+        v.source_url ===
+          "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf")) &&
+    (v.source_as_of === null || dateOnly(v.source_as_of)) &&
+    timestamp(v.source_observed_at) &&
+    dateOnly(v.start_date) &&
+    dateOnly(v.end_date) &&
+    typeof v.full_selected_span_covered === "boolean" &&
+    Number.isInteger(v.scheduled_count) &&
+    (v.scheduled_count as number) >= 0 &&
+    array(v.absent_scheduled_dates, dateOnly) &&
+    array(v.selected_unscheduled_dates, dateOnly)
+  );
+}
+
+export function isHistoricalBootstrapReview(
+  v: unknown,
+): v is HistoricalBootstrapReview {
+  if (
+    !isRecord(v) ||
+    !(v.run_id === null || uuid(v.run_id)) ||
+    !(v.run_status === null || string(v.run_status)) ||
+    !(v.prepared_at === null || timestamp(v.prepared_at)) ||
+    !(v.requested_start === null || dateOnly(v.requested_start)) ||
+    !(v.requested_end === null || dateOnly(v.requested_end)) ||
+    !timestamp(v.checked_at) ||
+    !Number.isInteger(v.listing_count) ||
+    (v.listing_count as number) < 0 ||
+    !Number.isInteger(v.fx_checkpoint_count) ||
+    (v.fx_checkpoint_count as number) < 0 ||
+    !Number.isInteger(v.omitted_listing_count) ||
+    (v.omitted_listing_count as number) < 0 ||
+    !Array.isArray(v.listings) ||
+    !array(
+      v.listings,
+      (row) =>
+        isRecord(row) &&
+        string(row.subject_key) &&
+        string(row.checkpoint_status) &&
+        [
+          "AVAILABLE",
+          "CHECKPOINT_NOT_COMPLETE",
+          "IDENTITY_CHANGED",
+          "LISTING_CURRENCY_UNAVAILABLE",
+          "BATCH_UNVERIFIED",
+          "NO_DAILY_CLOSES",
+          "NO_SCHEDULE",
+          "DATE_LIMIT_EXCEEDED",
+        ].includes(row.reason as string) &&
+        (row.reason === "AVAILABLE"
+          ? isScheduledSessionReview(row.scheduled_session_review)
+          : row.scheduled_session_review === null),
+    )
+  )
+    return false;
+  if (v.run_id === null) {
+    return (
+      v.run_status === null &&
+      v.prepared_at === null &&
+      v.requested_start === null &&
+      v.requested_end === null &&
+      v.listing_count === 0 &&
+      v.fx_checkpoint_count === 0 &&
+      v.omitted_listing_count === 0 &&
+      v.listings.length === 0
+    );
+  }
+  return (
+    v.run_status !== null &&
+    v.prepared_at !== null &&
+    typeof v.requested_start === "string" &&
+    typeof v.requested_end === "string" &&
+    v.requested_start <= v.requested_end &&
+    (v.listing_count as number) ===
+      v.listings.length + (v.omitted_listing_count as number) &&
+    v.listings.length <= 30
+  );
+}
+
 function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
   return (
     isRecord(v) &&
@@ -904,42 +1001,7 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
       v.session_coverage === "NOT_ASSESSED") &&
     (v.scheduled_session_review === undefined ||
       v.scheduled_session_review === null ||
-      (isRecord(v.scheduled_session_review) &&
-        ["NYSE", "NASDAQ", "XETRA"].includes(
-          v.scheduled_session_review.venue as string,
-        ) &&
-        string(v.scheduled_session_review.schedule_id) &&
-        string(v.scheduled_session_review.source_sha256) &&
-        /^[a-f0-9]{64}$/.test(v.scheduled_session_review.source_sha256) &&
-        (v.scheduled_session_review.schedule_fingerprint === undefined ||
-          v.scheduled_session_review.schedule_fingerprint === null ||
-          (string(v.scheduled_session_review.schedule_fingerprint) &&
-            /^[a-f0-9]{64}$/.test(
-              v.scheduled_session_review.schedule_fingerprint,
-            ))) &&
-        ((v.scheduled_session_review.venue === "NYSE" &&
-          v.scheduled_session_review.source_url ===
-            "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf") ||
-          (v.scheduled_session_review.venue === "NASDAQ" &&
-            v.scheduled_session_review.source_url ===
-              "https://nasdaqtrader.com/Trader.aspx?id=Calendar") ||
-          (v.scheduled_session_review.venue === "XETRA" &&
-            v.scheduled_session_review.source_url ===
-              "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf")) &&
-        (v.scheduled_session_review.source_as_of === null ||
-          dateOnly(v.scheduled_session_review.source_as_of)) &&
-        timestamp(v.scheduled_session_review.source_observed_at) &&
-        dateOnly(v.scheduled_session_review.start_date) &&
-        dateOnly(v.scheduled_session_review.end_date) &&
-        typeof v.scheduled_session_review.full_selected_span_covered ===
-          "boolean" &&
-        Number.isInteger(v.scheduled_session_review.scheduled_count) &&
-        (v.scheduled_session_review.scheduled_count as number) >= 0 &&
-        array(v.scheduled_session_review.absent_scheduled_dates, dateOnly) &&
-        array(
-          v.scheduled_session_review.selected_unscheduled_dates,
-          dateOnly,
-        ))) &&
+      isScheduledSessionReview(v.scheduled_session_review)) &&
     (v.distinct_market_dates === undefined ||
       v.distinct_market_dates === null ||
       (Number.isInteger(v.distinct_market_dates) &&
