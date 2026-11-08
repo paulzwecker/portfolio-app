@@ -216,6 +216,38 @@ def test_authenticated_exact_preview_replay_is_sql_read_only_and_preserves_canon
         assert connection.scalar(text("SHOW transaction_isolation")) == "read committed"
 
 
+def test_guided_v2_opening_at_anchor_boundary_preserves_canonical_state(
+    postgres_engine: Engine,
+) -> None:
+    portfolio_id = source(postgres_engine)
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger"
+        headers = {"x-api-access-token": "synthetic-token"}
+        anchor = c.PortfolioLedgerAnchorRead.model_validate(
+            client.get(f"{path}/anchor", headers=headers).json()
+        )
+        value = candidate(anchor)
+        value.contract_version = "portfolio-ledger-preview-v2"
+        value.as_of = anchor.snapshot.effective_at
+        value.activity = []
+        payload = value.model_dump(mode="json")
+        response = client.post(f"{path}/preview", headers=headers, json=payload)
+        assert response.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(response.json())
+        assert result.status == "OPENING_RECONCILED" and not result.issues
+        assert result.as_of == anchor.snapshot.effective_at and result.activity_count == 0
+        assert result.ending_status == "NOT_PROVIDED"
+        assert result.projection_version == "settled-booking-v2"
+        assert (
+            client.post(f"{path}/preview", headers=headers, json=payload).json() == response.json()
+        )
+    assert baseline(postgres_engine, portfolio_id) == before
+
+
 def test_ending_statement_api_replay_and_rejections_preserve_the_read_only_baseline(
     postgres_engine: Engine,
 ) -> None:

@@ -131,8 +131,12 @@ function ledgerFileMetadata(
 }
 
 export function downloadLedgerJson(value: unknown, filename: string) {
+  downloadLedgerText(JSON.stringify(value, null, 2), filename);
+}
+
+export function downloadLedgerText(text: string, filename: string) {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+    new Blob([text], { type: "application/json" }),
   );
   const link = document.createElement("a");
   link.href = url;

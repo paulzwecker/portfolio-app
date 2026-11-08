@@ -21,6 +21,7 @@ import {
 } from "./portfolio-ledger-data";
 import { PortfolioLedgerCandidates } from "./portfolio-ledger-candidates";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
+import { LedgerOpeningBuilder } from "./ledger-opening-builder";
 
 export function PortfolioLedgerWorkspace({
   portfolioId,
@@ -100,12 +101,21 @@ export function PortfolioLedgerWorkspace({
     }
   };
 
-  const runPreview = async () => {
-    if (!file || !verified || !matchesAnchor || pending) return;
+  const runPreview = async (candidate = file) => {
+    if (
+      !candidate ||
+      !verified ||
+      candidate.anchorSnapshotId !== verified.snapshot.id ||
+      candidate.anchorSha256 !== verified.anchor_sha256 ||
+      pending
+    )
+      return;
     const controller = new AbortController();
     activeRequest.current?.abort();
     activeRequest.current = controller;
-    const candidate = file;
+    fileVersion.current += 1;
+    if (input.current) input.current.value = "";
+    setFile(candidate);
     setPending(true);
     setError(null);
     setReview(null);
@@ -232,7 +242,19 @@ export function PortfolioLedgerWorkspace({
             </div>
           </PageSection>
           <PageSection
-            title="2. Validate a private ledger file"
+            title="2. Review opening balances"
+            description="Enter source-evidenced accounts and exact balances. The API checks the combined opening against this observed snapshot."
+          >
+            <LedgerOpeningBuilder
+              key={verified.anchor_sha256}
+              anchor={verified}
+              disabled={pending || loadingFile}
+              onChange={clear}
+              onReview={runPreview}
+            />
+          </PageSection>
+          <PageSection
+            title="3. Validate a private ledger file"
             description="Choose a UTF-8 portfolio-ledger-preview-v1 or v2 JSON file containing evidenced accounts, opening balances, activity and optional ending observations. Use v2 for observed income and paired internal cash or same-listing security transfers. Maximum 1 MB."
           >
             <label

@@ -10,6 +10,7 @@ import type { PortfolioLedgerPreview } from "@/lib/domain-contracts";
 import { dateTime, quantity, statusLabel } from "@/lib/display";
 import {
   downloadLedgerJson,
+  downloadLedgerText,
   type LedgerReviewFile,
 } from "./portfolio-ledger-data";
 
@@ -241,6 +242,12 @@ export function PortfolioLedgerResults({
           onClick={() => downloadLedgerJson(report, "ledger-preview.json")}
         >
           Download private report
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => downloadLedgerText(file.text, "ledger-review.json")}
+        >
+          Download private review JSON
         </Button>
       </div>
       <DetailDrawer
