@@ -12,6 +12,11 @@
 
 ## Current ledger increment
 
+Saved-candidate browser integration is in progress. The typed history/detail
+validators and owner-authenticated stage/review proxy pass 87 focused web checks,
+including raw financial text, source/receipt scope, origin controls and authorization
+errors. Explicit decision controls and isolated browser verification follow.
+
 `a7557b0` durable storage passes 21 isolated PostgreSQL checks. Migration
 `a832e94d6f10` follows `9f2a6d4c81b7` and adds immutable candidate/review tables.
 The stage/detail/list/explicit accept-or-reject API now retains exact packet and

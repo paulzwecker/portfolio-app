@@ -107,3 +107,20 @@ export function downloadLedgerJson(value: unknown, filename: string) {
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** Preserve original financial text when adding submission metadata. */
+export function ledgerStageBody(
+  file: LedgerReviewFile,
+  submissionId: string,
+  base: string | null,
+  inputSha256: string,
+  reason: string,
+) {
+  const header = JSON.stringify({
+    submission_id: submissionId,
+    expected_base_candidate_id: base,
+    expected_input_sha256: inputSha256,
+    reason,
+  });
+  return `${header.slice(0, -1)},"proposal":${file.text}}`;
+}

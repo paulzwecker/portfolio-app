@@ -15,6 +15,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
+C2.3 saved-candidate UI integration is in BUILD. The raw-text stage wrapper,
+owner-authenticated proxy and scoped receipt validation pass 87 focused web checks.
+Explicit decision controls and isolated desktop/mobile rehearsal are in progress.
+
 ### Current BUILD evidence
 
 `a7557b0` C2.3 storage is LOCAL_VERIFIED through 21 isolated PostgreSQL checks.
