@@ -102,6 +102,10 @@ An applied provider request with fetch failures, unresolved listing identities,
 unmapped FX pairs or rejected normalized rows is reported as `PARTIAL` and exits
 with code 2, even when unaffected batches were committed. Review the per-domain
 failure lists and insertion counts before treating the run as complete.
+Price and FX normalization warnings also produce `PARTIAL` provider outcomes and
+are available in the Operations run details. A warning that the provider returned
+a row with an invalid timestamp or no positive close does not establish an expected-session gap; it does
+not replace the missing value with zero or trigger an unattended retry.
 
 Yahoo's raw `close` field is preserved in `provider_close`; for canonical listing
 prices it is a split-adjusted, non-dividend-reinvested series. This adapter does
@@ -155,12 +159,62 @@ and as-of date.
 
 The Company market view computes these measures directly from the latest clean,
 exact-listing canonical daily observations; it does not depend on a legacy
-`PriceRegimeSnapshot`. A 50- or 200-session average and the 20-session volatility
+`PriceRegimeSnapshot`. A 50- or 200-observation average and the 20-return volatility
 are exposed as soon as their individual windows exist. The aggregate analytics
-state is `AVAILABLE` only with 252 eligible sessions, `PARTIAL` for shorter
-non-empty history, and `UNAVAILABLE` without clean history. The 52-week high and
-drawdown remain null until all 252 sessions exist. Price charts use the requested
+state is `AVAILABLE` with at least 252 eligible observations, `PARTIAL` with 2–251,
+and `UNAVAILABLE` with fewer than two. These states describe calculation inputs,
+not verified exchange-session completeness. The 52-week high and drawdown use the
+last 252 observations and remain null until that many observations exist. The API
+reports distinct market dates, earliest date and maximum calendar spacing for the
+calculation inputs; weekends and holidays are included and no missing session count
+is inferred. Older API responses may omit this date-span evidence. Price charts use the requested
 recent observations while analytics retain enough history for the full window.
+Analytics and the connected chart are unavailable when the selected inputs contain
+duplicate market dates, differing provider/symbol/currency streams, a currency that
+conflicts with the listing, an unverified listing currency, or different or empty
+adjustment descriptions. The API reports the specific `input_issues`, affected
+duplicate dates and provider/symbol/currency/adjustment-description stream spans
+from the selected calculation inputs. The Company view exposes these
+in a review disclosure; other provider records may exist. All returned observations
+are searchable independently of the chart range, with exact stored close text and
+source basis. This
+Matching description text alone does not certify consistent corporate-action adjustments or prove
+that all sessions are present. Old API responses without the field remain compatible.
+
+For an exact `NYSE` venue, the history view can compare selected dates within 2026
+with the [published NYSE 2026 schedule](https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf).
+The public source's SHA-256 is `70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f`;
+it says its dates were correct as of December 10, 2025, and was observed here on
+November 8, 2026. Views with an earlier knowledge cutoff do not use this evidence.
+The comparison is limited to the intersection of 2026 and the first-to-last selected
+daily closes. It excludes weekends and published holidays, but includes early-close
+sessions. Absent dates are review candidates, not proof of a missing trade: later
+schedule changes, unplanned closures, suspensions and provider conventions are not
+verified. For an exact `NASDAQ` venue, the same bounded comparison uses Nasdaq's
+[U.S. equity holiday schedule](https://nasdaqtrader.com/Trader.aspx?id=Calendar),
+independently observed November 8, 2026, with SHA-256
+`33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f`. The captured
+Nasdaq source does not state an as-of date; none is inferred. Separate local
+content-addressed source copies are retained outside Git in
+`%LOCALAPPDATA%/PortfolioResearch/reference-calendars`; this local store is not a
+durable backup. Exact `XETRA` or `XETR` listings use Deutsche Börse's independently
+captured [2026 Xetra schedule](https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf)
+(SHA-256 `1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6`;
+observed November 8, 2026; no as-of date stated). Deutsche Börse identifies XETR
+as Xetra's MIC; it is distinct from XFRA. Other venues and years remain unassessed;
+no FX schedule is inferred.
+
+Schedule revisions are retained in the versioned application catalog. For a given
+venue, a read uses the latest uniquely identified revision observed by `known_at`;
+duplicate IDs, equal observation times or a mismatched/unreviewed normalized
+fingerprint make that review unavailable. Each fingerprint binds the venue, schedule
+ID, source URL and SHA-256, source as-of and observation times, year and ordered
+holiday dates. The UI displays the schedule version and both hashes. Before adding a
+correction, preserve earlier catalog entries and pins, retain the captured source
+bytes outside Git, append a new ID/observation time and fingerprint, and review the
+change with point-in-time tests. Catalog and pins are code-reviewed safeguards, not
+an immutable database or proof that a market actually traded. The local source store
+still needs an independently approved durable backup.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because
 the stored dividend facts are not independently verified, so the figures are not

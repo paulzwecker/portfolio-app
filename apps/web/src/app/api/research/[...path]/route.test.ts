@@ -144,6 +144,116 @@ it("validates the market refresh status contract", async () => {
     "/v1/market-data/status",
   );
 });
+it("forwards the historical bootstrap review as a validated read-only endpoint", async () => {
+  const response = {
+    run_id: null,
+    run_status: null,
+    prepared_at: null,
+    requested_start: null,
+    requested_end: null,
+    checked_at: "2026-11-09T00:00:00Z",
+    listing_count: 0,
+    fx_checkpoint_count: 0,
+    offset: 0,
+    omitted_listing_count: 0,
+    listings: [],
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json(response));
+  vi.stubGlobal("fetch", mock);
+  const result = await GET(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap",
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(result.status).toBe(200);
+  expect((mock.mock.calls[0][0] as URL).pathname).toBe(
+    "/v1/market-data/historical-bootstrap",
+  );
+  mock.mockResolvedValueOnce(
+    Response.json({
+      ...response,
+      run_id: "11111111-1111-4111-8111-111111111111",
+      run_status: "COMPLETE",
+      prepared_at: "2026-11-08T20:00:00Z",
+      requested_start: "2026-01-01",
+      requested_end: "2026-12-31",
+      listing_count: 31,
+      offset: 30,
+      listings: [
+        {
+          checkpoint_id: "22222222-2222-4222-8222-222222222222",
+          subject_key: "NYSE:LAST",
+          checkpoint_status: "PENDING",
+          reason: "CHECKPOINT_NOT_COMPLETE",
+          scheduled_session_review: null,
+        },
+      ],
+    }),
+  );
+  const page = await GET(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap?run_id=11111111-1111-4111-8111-111111111111&offset=30",
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(page.status).toBe(200);
+  expect((mock.mock.calls[1][0] as URL).search).toBe(
+    "?run_id=11111111-1111-4111-8111-111111111111&offset=30",
+  );
+  const mismatch = await GET(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap?run_id=11111111-1111-4111-8111-111111111111&offset=30",
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(mismatch.status).toBe(503);
+  const mutation = await POST(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap",
+      { method: "POST" },
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(mutation.status).not.toBe(200);
+  expect(mock).toHaveBeenCalledTimes(3);
+});
+it("binds read-only checkpoint reconciliation to both path identities", async () => {
+  const run = "11111111-1111-4111-8111-111111111111",
+    checkpoint = "22222222-2222-4222-8222-222222222222";
+  const path = [
+    "market-data",
+    "historical-bootstrap",
+    run,
+    "checkpoints",
+    checkpoint,
+    "reconciliation",
+  ];
+  const response = {
+    run_id: run,
+    checkpoint_id: checkpoint,
+    checked_at: "2026-11-09T00:00:00Z",
+    status: "MATCHED",
+    issue_codes: [],
+  };
+  const mock = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(response))
+    .mockResolvedValueOnce(
+      Response.json({
+        ...response,
+        checkpoint_id: "33333333-3333-4333-8333-333333333333",
+      }),
+    );
+  vi.stubGlobal("fetch", mock);
+  const url = `http://localhost/api/research/${path.join("/")}`;
+  expect((await GET(new Request(url), context(path))).status).toBe(200);
+  expect((await GET(new Request(url), context(path))).status).toBe(503);
+  expect(
+    (await POST(new Request(url, { method: "POST" }), context(path))).status,
+  ).not.toBe(200);
+  expect(mock).toHaveBeenCalledTimes(2);
+});
 it("validates recurring operations status before forwarding it", async () => {
   const response = {
     enabled: true,

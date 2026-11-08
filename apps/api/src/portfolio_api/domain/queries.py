@@ -1,6 +1,6 @@
 """Read views combine stored observations; no prices, FX or invented allocation weights."""
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, cast
@@ -78,6 +78,7 @@ from portfolio_api.domain.models import (
 )
 from portfolio_api.estimate_momentum import ConsensusObservationPoint, calculate_estimate_momentum
 from portfolio_api.market_data import calculate_price_history_metrics
+from portfolio_api.market_sessions import scheduled_session_review
 from portfolio_api.model_revision_evidence import (
     resolve_model_evidence_reference,
     stored_evidence_reference,
@@ -805,18 +806,88 @@ def listing_market_data(
     )
     ordered_analytics = list(reversed(analytics_rows))
     closes = [row.split_adjusted_close for row in ordered_analytics]
-    values = calculate_price_history_metrics([value for value in closes if value is not None])
     observation_count = len(closes)
+    market_dates = sorted({row.market_date.astimezone(UTC).date() for row in ordered_analytics})
+    input_issues: list[s.PriceHistoryInputIssue] = []
+    if len(market_dates) != observation_count:
+        input_issues.append("DUPLICATE_MARKET_DATE")
+    if len({(row.provider, row.provider_symbol, row.currency) for row in ordered_analytics}) > 1:
+        input_issues.append("MULTIPLE_SOURCE_STREAMS")
+    if any(
+        not row.adjustment_basis or not row.adjustment_basis.strip() for row in ordered_analytics
+    ):
+        input_issues.append("ADJUSTMENT_BASIS_UNVERIFIED")
+    if (
+        len(
+            {
+                row.adjustment_basis
+                for row in ordered_analytics
+                if row.adjustment_basis and row.adjustment_basis.strip()
+            }
+        )
+        > 1
+    ):
+        input_issues.append("ADJUSTMENT_BASIS_MISMATCH")
+    if ordered_analytics and listing.currency is None:
+        input_issues.append("LISTING_CURRENCY_UNVERIFIED")
+    elif listing.currency is not None and any(
+        row.currency != listing.currency for row in ordered_analytics
+    ):
+        input_issues.append("LISTING_CURRENCY_MISMATCH")
+    source_streams: list[s.PriceHistorySourceStreamRead] = []
+    duplicate_market_dates: list[date] = []
+    if input_issues:
+        dates_by_stream: dict[tuple[str, str, str, str], list[date]] = defaultdict(list)
+        for row in ordered_analytics:
+            basis = (
+                row.adjustment_basis
+                if row.adjustment_basis and row.adjustment_basis.strip()
+                else ""
+            )
+            dates_by_stream[(row.provider, row.provider_symbol, row.currency, basis)].append(
+                row.market_date.astimezone(UTC).date()
+            )
+        source_streams = [
+            s.PriceHistorySourceStreamRead(
+                provider=provider,
+                provider_symbol=symbol,
+                currency=currency,
+                adjustment_basis=basis or None,
+                observation_count=len(dates),
+                first_market_date=min(dates),
+                last_market_date=max(dates),
+            )
+            for (provider, symbol, currency, basis), dates in sorted(dates_by_stream.items())
+        ]
+        date_counts = Counter(row.market_date.astimezone(UTC).date() for row in ordered_analytics)
+        duplicate_market_dates = sorted(day for day, count in date_counts.items() if count > 1)
+    values = calculate_price_history_metrics(
+        [value for value in closes if value is not None] if not input_issues else []
+    )
+    calendar_gaps = [
+        (later - earlier).days
+        for earlier, later in zip(market_dates, market_dates[1:], strict=False)
+    ]
     analytics_status = "UNAVAILABLE"
-    if observation_count >= 252:
+    if not input_issues and observation_count >= 252:
         analytics_status = "AVAILABLE"
-    elif observation_count >= 2:
+    elif not input_issues and observation_count >= 2:
         analytics_status = "PARTIAL"
     analytics = s.PriceHistoryAnalyticsRead(
         status=analytics_status,
         methodology_version="split-adjusted-price-history-v1",
         observation_count=observation_count,
         as_of=ordered_analytics[-1].market_date if ordered_analytics else None,
+        session_coverage="NOT_ASSESSED",
+        scheduled_session_review=scheduled_session_review(
+            listing.venue, market_dates, knowledge_cutoff
+        ),
+        distinct_market_dates=len(market_dates),
+        first_market_date=market_dates[0] if market_dates else None,
+        max_calendar_gap_days=max(calendar_gaps, default=None),
+        input_issues=input_issues,
+        source_streams=source_streams,
+        duplicate_market_dates=duplicate_market_dates,
         daily_return=_metric_decimal(values["daily_return"]),
         dma_20=_metric_decimal(values["dma_20"]),
         dma_50=_metric_decimal(values["dma_50"]),

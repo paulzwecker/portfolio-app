@@ -482,7 +482,7 @@ class YahooFxNormalizer:
         if missing:
             issue = NormalizationIssue(
                 code="FX_ROWS_WITHOUT_CLOSE",
-                message=f"Skipped {missing} Yahoo FX sessions without a positive close.",
+                message=f"Skipped {missing} Yahoo FX rows with an invalid timestamp or close.",
                 severity="WARNING",
             )
             return NormalizationResult(
@@ -561,7 +561,7 @@ def _normalize_listing_chart(
         issues.append(
             NormalizationIssue(
                 code="PRICE_ROWS_WITHOUT_CLOSE",
-                message=f"Skipped {missing} Yahoo sessions without a positive close.",
+                message=f"Skipped {missing} Yahoo price rows with an invalid timestamp or close.",
                 severity="WARNING",
             )
         )

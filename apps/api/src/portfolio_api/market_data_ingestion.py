@@ -310,6 +310,7 @@ def market_provider_batch_plan(
         "accepted_subjects": len(normalized),
         "rejected_subjects": rejected,
         "normalization_warnings": warnings,
+        "normalization_warnings_captured": True,
         "mapped_listings": item_summary,
         "daily_price_rows": sum(len(facts.prices) for _, facts in normalized),
         "current_quote_rows": sum(facts.current_quote is not None for _, facts in normalized),
@@ -382,6 +383,7 @@ def fx_provider_batch_plan(
     fx_rows: list[dict[str, object]] = []
     accepted: list[dict[str, object]] = []
     rejected: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
     current_quote_source_refs: list[str] = []
     for record in records:
         result = normalizer.normalize(record)
@@ -397,6 +399,14 @@ def fx_provider_batch_plan(
         facts = result.observation
         if facts is None:
             raise RuntimeError("Accepted Yahoo FX normalization returned no rate observations")
+        warnings.extend(
+            {
+                "source_record_id": record.source_record_id or "",
+                "code": issue.code,
+                "message": issue.message,
+            }
+            for issue in result.issues
+        )
         current_quote_source_refs.extend(
             item.source_ref for item in facts.observations if item.is_current_quote
         )
@@ -457,6 +467,8 @@ def fx_provider_batch_plan(
         "raw_responses": len(records),
         "accepted_pairs": accepted,
         "rejected_pairs": rejected,
+        "normalization_warnings": warnings,
+        "normalization_warnings_captured": True,
         "fx_observation_rows": len(fx_rows),
         "current_quote_source_refs": current_quote_source_refs,
     }
@@ -949,6 +961,10 @@ def _has_import_gaps(report: dict[str, Any]) -> bool:
         or report.get("selection_issues")
         or any(batch.get("rejected_subjects") for batch in report.get("market_data_batches", []))
         or any(batch.get("rejected_pairs") for batch in report.get("fx_batches", []))
+        or any(
+            batch.get("normalization_warnings") for batch in report.get("market_data_batches", [])
+        )
+        or any(batch.get("normalization_warnings") for batch in report.get("fx_batches", []))
     )
 
 

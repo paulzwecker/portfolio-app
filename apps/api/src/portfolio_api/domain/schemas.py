@@ -818,13 +818,111 @@ class PriceRegimeRead(Contract):
     source_ref: str
 
 
+PriceHistoryInputIssue = Literal[
+    "DUPLICATE_MARKET_DATE",
+    "MULTIPLE_SOURCE_STREAMS",
+    "LISTING_CURRENCY_MISMATCH",
+    "LISTING_CURRENCY_UNVERIFIED",
+    "ADJUSTMENT_BASIS_MISMATCH",
+    "ADJUSTMENT_BASIS_UNVERIFIED",
+]
+
+
+class PriceHistorySourceStreamRead(Contract):
+    provider: str
+    provider_symbol: str
+    currency: str
+    adjustment_basis: str | None = None
+    observation_count: int
+    first_market_date: date
+    last_market_date: date
+
+
+class ScheduledSessionReviewRead(Contract):
+    venue: Literal["NYSE", "NASDAQ", "XETRA"]
+    schedule_id: str
+    source_url: str
+    source_sha256: str
+    schedule_fingerprint: str | None = None
+    source_as_of: date | None
+    source_observed_at: datetime
+    start_date: date
+    end_date: date
+    full_selected_span_covered: bool
+    scheduled_count: int
+    absent_scheduled_dates: list[date]
+    selected_unscheduled_dates: list[date]
+
+
+class HistoricalBootstrapCheckpointDiagnosticsRead(Contract):
+    failure_kind: Literal["NO_PROVIDER_DATA", "OTHER", "NONE"]
+    raw_response_count: int | None
+    normalized_daily_rows: int | None
+    provider_failure_count: int | None
+    normalization_rejection_count: int | None
+    normalization_warning_count: int | None
+    retryable: bool
+
+
+class HistoricalBootstrapListingReviewRead(Contract):
+    checkpoint_id: UUID
+    subject_key: str
+    checkpoint_status: str
+    reason: Literal[
+        "AVAILABLE",
+        "CHECKPOINT_NOT_COMPLETE",
+        "CHECKPOINT_UNAVAILABLE",
+        "CHECKPOINT_FAILED",
+        "CHECKPOINT_BLOCKED",
+        "IDENTITY_CHANGED",
+        "LISTING_CURRENCY_UNAVAILABLE",
+        "BATCH_UNVERIFIED",
+        "NO_DAILY_CLOSES",
+        "NO_SCHEDULE",
+        "DATE_LIMIT_EXCEEDED",
+    ]
+    scheduled_session_review: ScheduledSessionReviewRead | None
+    requested_window_review: ScheduledSessionReviewRead | None = None
+    checkpoint_diagnostics: HistoricalBootstrapCheckpointDiagnosticsRead | None = None
+
+
+class HistoricalBootstrapReconciliationRead(Contract):
+    run_id: UUID
+    checkpoint_id: UUID
+    checked_at: datetime
+    status: Literal["MATCHED", "MISMATCH", "NOT_RECORDED", "INCOMPLETE", "LIMIT_EXCEEDED"]
+    issue_codes: list[str]
+
+
+class HistoricalBootstrapReviewRead(Contract):
+    run_id: UUID | None
+    run_status: str | None
+    prepared_at: datetime | None
+    requested_start: date | None
+    requested_end: date | None
+    checked_at: datetime
+    listing_count: int
+    fx_checkpoint_count: int
+    offset: int
+    omitted_listing_count: int
+    listings: list[HistoricalBootstrapListingReviewRead]
+
+
 class PriceHistoryAnalyticsRead(Contract):
-    """Query-layer analytics over exact canonical daily observations."""
+    """Price metrics and descriptive coverage over canonical daily observations."""
 
     status: Literal["AVAILABLE", "PARTIAL", "UNAVAILABLE"]
     methodology_version: str
     observation_count: int
     as_of: datetime | None
+    session_coverage: Literal["NOT_ASSESSED"] = "NOT_ASSESSED"
+    scheduled_session_review: ScheduledSessionReviewRead | None = None
+    distinct_market_dates: int | None = None
+    first_market_date: date | None = None
+    max_calendar_gap_days: int | None = None
+    input_issues: list[PriceHistoryInputIssue] = Field(default_factory=list)
+    source_streams: list[PriceHistorySourceStreamRead] = Field(default_factory=list)
+    duplicate_market_dates: list[date] = Field(default_factory=list)
     daily_return: FixedDecimal | None
     dma_20: FixedDecimal | None
     dma_50: FixedDecimal | None

@@ -252,9 +252,13 @@ def test_yahoo_normalizer_rejects_currency_or_exchange_identity_drift() -> None:
     assert normalizer.normalize(wrong_exchange).issues[0].code == "LISTING_EXCHANGE_MISMATCH"
 
 
-def test_missing_close_is_skipped_without_a_zero_price() -> None:
+@pytest.mark.parametrize("failure", ["close", "timestamp"])
+def test_missing_close_is_skipped_without_a_zero_price(failure: str) -> None:
     payload = json.loads(chart_payload())
-    payload["chart"]["result"][0]["indicators"]["quote"][0]["close"][1] = None
+    if failure == "close":
+        payload["chart"]["result"][0]["indicators"]["quote"][0]["close"][1] = None
+    else:
+        payload["chart"]["result"][0]["timestamp"][1] = None
     raw = raw_record(
         json.dumps(payload).encode(),
         domain=ExternalDataDomain.MARKET_DATA,
@@ -267,6 +271,7 @@ def test_missing_close_is_skipped_without_a_zero_price() -> None:
     assert result.observation.prices[0].provider_close > 0
     assert result.observation.missing_close_count == 1
     assert result.issues[0].code == "PRICE_ROWS_WITHOUT_CLOSE"
+    assert "invalid timestamp or close" in result.issues[0].message
 
 
 def test_identical_bars_for_the_same_exchange_session_are_collapsed() -> None:

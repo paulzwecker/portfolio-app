@@ -47,6 +47,48 @@ window are rejected. Corporate actions outside the window are rejected as well.
 Yahoo's current quote is not a historical observation for this stage and is not
 inserted.
 
+`AVAILABLE` for a listing or FX pair means that at least one normalized historical
+observation was returned. A `COMPLETE` run means its checkpoints completed; neither
+proves that every expected trading or FX session in the requested window is covered.
+Reports expose `history_window_coverage: NOT_ASSESSED` and per-checkpoint
+`history_window_evidence` with distinct observed dates, their first and last dates,
+and maximum calendar spacing. Spacing is descriptive: weekends, holidays, exchange
+closures and provider conventions are not classified as missing sessions. Dates
+refer to the normalized batch, not all observations already in the database.
+Current quotes are excluded. No response has unknown date evidence; a returned
+empty series has zero dates. Older checkpoint receipts without the new fields remain
+`EVIDENCE_NOT_RECORDED`, not zero or complete. The observation span does not certify
+usable price history, FX coverage, completeness or freshness. Review expected sessions
+and source conventions separately before interpreting coverage or chart readiness.
+
+Operations also offers an on-demand, read-only schedule review for the latest run.
+It examines at most 30 listing checkpoints per page ordered by subject key and ID,
+reporting remaining listings and FX checkpoints separately. Navigation pins the run
+ID, but each page is an independent read, not a transactional snapshot. Offsets
+are capped at 10,000; use a smaller scoped run if that limit is reached. Only completed checkpoints with matching
+frozen listing identity, batch digest and provider, listing currency and eligible
+same-provider/same-currency stored closes are considered. It compares both the
+first-to-last eligible-close span and the requested window intersected with the
+reviewed 2026 NYSE, NASDAQ or Xetra schedule and the knowledge cutoff. The displayed
+window can exclude earlier, later or not-yet-closed dates. At least one eligible close
+is required; an empty batch remains explicitly unassessed. These comparisons are not
+raw-payload reconciliation, proof of actual trading, a
+confirmed missing trade, an assessment of FX sessions or a modification of receipts.
+Unavailable schedules, ambiguous identities and incomplete data stay explicit.
+For unavailable, failed or blocked checkpoints, and completed checkpoints without
+eligible closes, the panel separately shows bounded counts recorded in the receipt:
+provider responses and failures, normalized rows, rejections and warnings. Missing
+or malformed evidence remains “Not recorded”; these counts do not verify raw
+payloads or establish why a listing did not trade. No retry is initiated.
+
+For an individual listing, **Check stored batch** performs a fresh read-only
+reconciliation of recorded counts and fingerprint, retained payload hashes and
+provenance, and frozen subject/window scope. It examines at most 5,000 persisted
+rows and two payloads of at most 4 MiB each, including decompressed bytes; larger
+batches remain `LIMIT_EXCEEDED` and require the operator reconciliation command.
+Missing receipt evidence stays `NOT_RECORDED`. A matched batch is not proof of
+provider accuracy, current listing identity, expected sessions or whole-run coverage.
+
 The prepared run pins the provider/crosswalk hash, normalizer versions, exact
 listing identities, required currency pairs, target environment, and date window.
 Listings are ordered as held positions first, other Portfolio listings second, and
@@ -204,6 +246,13 @@ means the JSON summary reported a `PARTIAL`, `BLOCKED`, or nonmatching state. A
 bounded invocation commonly returns `PARTIAL` while checkpoints remain; inspect
 the summary and continue only when no checkpoint is blocked or terminally failed.
 
+Normalization warnings, including provider rows with an invalid timestamp or without a positive close, are
+retained per listing or FX pair and make the run `PARTIAL`. They identify provider
+response issues, not a count of missing expected sessions. Older receipts may lack
+FX warning evidence; `warning_evidence_unrecorded_checkpoints` distinguishes that
+unknown state from a newly captured empty warning list. Warning-only completed
+checkpoints are not silently retried; review their source evidence and scope.
+
 Remove the non-secret target selector when finished:
 
 ```powershell
@@ -228,6 +277,15 @@ append-only supersession rules. Replaying a completed run performs no provider
 request. Reconciliation hashes the persisted raw receipt metadata and every
 canonical row belonging to each batch, including exact decimal and timestamp
 values. A mismatch is reported explicitly; do not repair it with manual row edits.
+Completed checkpoints must also retain a batch and raw source payload. Reconciliation
+checks listing or FX-pair identity, the frozen date window, historical price kind,
+cross-domain rows and price/FX observation times. Legitimate unavailable checkpoints
+may have no batch. These checks do not establish that every expected trading session
+or FX date is present; that coverage remains unassessed without a reviewed calendar.
+For each retained source payload, reconciliation also verifies provider/domain and
+the SHA-256 of the decoded bytes, including gzip integrity. Verification is bounded
+to 64 MiB per encoded and decoded payload; a larger payload is reported as a
+verification-limit mismatch, not as verified or as proven data corruption.
 
 For a retryable network/HTTP failure, resume after the stored backoff. For
 `NO_PROVIDER_DATA`, keep the `UNAVAILABLE` result and include the gap in the

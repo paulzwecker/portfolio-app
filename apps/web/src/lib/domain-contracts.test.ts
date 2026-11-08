@@ -1627,6 +1627,194 @@ describe("domain display integrity", () => {
       }),
     ).toBe(false);
   });
+  it("accepts additive history evidence but rejects fabricated session coverage", () => {
+    const analytics = {
+      status: "UNAVAILABLE",
+      methodology_version: "split-adjusted-price-history-v1",
+      observation_count: 0,
+      as_of: null,
+      daily_return: null,
+      dma_20: null,
+      dma_50: null,
+      dma_200: null,
+      high_52w: null,
+      drawdown_52w: null,
+      price_return_1m: null,
+      price_return_3m: null,
+      price_return_6m: null,
+      realized_vol_20d: null,
+      trend_state: null,
+      correction_state: null,
+    };
+    const market = {
+      listing: {
+        id,
+        security_id: id,
+        ticker: "EXAMPLE",
+        venue: "NYSE",
+        currency: "USD",
+        is_demo: false,
+      },
+      latest: null,
+      freshness: "NO_DATA",
+      availability: "UNAVAILABLE",
+      age_days: null,
+      price_regime: null,
+      analytics,
+      last_market_update: null,
+      history: [],
+    };
+    expect(isListingMarketData(market)).toBe(true);
+    const withEvidence = {
+      ...market,
+      analytics: {
+        ...analytics,
+        session_coverage: "NOT_ASSESSED",
+        distinct_market_dates: 0,
+        first_market_date: null,
+        max_calendar_gap_days: null,
+        scheduled_session_review: {
+          venue: "NYSE",
+          schedule_id: "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+          source_url:
+            "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+          source_as_of: "2025-12-10",
+          source_observed_at: "2026-11-08T18:37:45.016120Z",
+          source_sha256:
+            "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
+          schedule_fingerprint:
+            "7c7ebf9ac233d1f850adbc70aa3e16245fcf2b38cf34d9922295db9775fe4283",
+          start_date: "2026-07-02",
+          end_date: "2026-07-07",
+          full_selected_span_covered: true,
+          scheduled_count: 3,
+          absent_scheduled_dates: ["2026-07-06"],
+          selected_unscheduled_dates: [],
+        },
+      },
+    };
+    expect(isListingMarketData(withEvidence)).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            source_sha256: "b".repeat(64),
+            schedule_fingerprint: "c".repeat(64),
+          },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            schedule_fingerprint: "not-a-digest",
+          },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            venue: "XETRA",
+            source_url:
+              "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf",
+            source_sha256:
+              "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
+            source_as_of: null,
+            source_observed_at: "2026-11-08T18:42:31.412425Z",
+          },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            venue: "NASDAQ",
+            source_url: "https://nasdaqtrader.com/Trader.aspx?id=Calendar",
+            source_sha256:
+              "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f",
+            source_as_of: null,
+            source_observed_at: "2026-11-08T18:37:45.961889Z",
+          },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            source_url: "javascript:alert(1)",
+          },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          input_issues: ["DUPLICATE_MARKET_DATE", "ADJUSTMENT_BASIS_MISMATCH"],
+          source_streams: [
+            {
+              provider: "FIXTURE",
+              provider_symbol: "EXM",
+              currency: "EUR",
+              adjustment_basis: "split adjusted",
+              observation_count: 2,
+              first_market_date: "2026-01-01",
+              last_market_date: "2026-01-03",
+            },
+          ],
+          duplicate_market_dates: ["2026-01-03"],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          source_streams: [{ provider: "FIXTURE" }],
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: { ...withEvidence.analytics, input_issues: ["INVENTED"] },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: { ...withEvidence.analytics, session_coverage: "COMPLETE" },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: { ...withEvidence.analytics, distinct_market_dates: -1 },
+      }),
+    ).toBe(false);
+  });
   it("preserves separate explicit ranking states without inventing a rank", () => {
     expect(isCompanyRankings(companyRankings)).toBe(true);
     expect(
