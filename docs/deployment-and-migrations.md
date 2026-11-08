@@ -158,8 +158,9 @@ npm run db:production-preflight -- migration-preflight
 
 Both commands are read-only; the current recovery branch fails the existing guard.
 Only a separately authorized migration may run `npm run db:migrate` using the
-temporary authorization/finally block below. Post-check existing rows/content,
-three new empty tables and Alembic head before a separately authorized native
+temporary authorization/finally block below. Post-check existing application
+rows/content, three new empty tables and the expected Alembic version-row update
+before a separately authorized native
 Render deployment of the reviewed commit. The old API can become unready once
 schema advances, so reserve a coordinated operator window. Verify authenticated
 health, Portfolio/Universe and ledger anchor before removing freezes.
@@ -475,7 +476,10 @@ change. They are instructions only; no live setting has been changed here.
 10. **Verify before unfreezing.** Remove temporary write authorization immediately.
     With a read-only URL, run `npm run db:production-preflight -- schema-check` and
     confirm Alembic `b59f16c8a203` plus no metadata drift and unchanged accepted
-    holdings/targets. The older API can report schema outdated until the matching
+    holdings/targets. The one existing `alembic_version` row must change from the
+    reviewed base to the release head. Compare the other 94 pre-existing public
+    tables for exact content preservation and require all three new tables empty.
+    The older API can report schema outdated until the matching
     code is deployed, so plan a coordinated operator window. Database verification
     precedes the native deployments in the next step. If it fails, leave freezes on
     and fix forward under review or follow a separately authorized recovery plan.

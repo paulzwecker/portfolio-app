@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                         |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C5 recovery phase 1 VERIFIED; C2.3 settled-ledger BUILD checkpoint preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                    |
+| Active checkpoint           | C5 read-only migration preflight PASSED; C2.3 settled-ledger BUILD checkpoint preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                         |
 | Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                               |
 | Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated         |
-| Next ready substantial task | Read-only migration preflight using the verified recovery before Nov 8 18:19:38 CET; preserve the independent ledger INTEGRATE checkpoint             |
+| Next ready substantial task | Owner review of exact schema migration and coordinated deployment plan; fresh preflight must remain within Nov 8 18:19:38 CET recovery window         |
 | Parallel owner gate         | Production migration/deployment, any replacement recovery point, provider activation, model acceptance and ledger ownership retain separate approvals |
 | Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream           |
 
@@ -28,10 +28,15 @@ Owner-authorized recovery phase 1 passed on November 8. Render Auto-Deploy Off
 and Blueprint Auto Sync No are verified; Vercel production builds are frozen with
 Preview builds allowed. Exactly one fresh populated-state recovery was created and
 verified against production across all 95 tables, schema and data fingerprints,
-with zero differences. Existing read-only recovery guards pass. The next read-only
-preflight must use the new private recovery credentials in clean pinned main before
-**18:19:38 CET today**. Recovery expires November 15 at 14:18:37 CET. Exact IDs and
-full evidence stay private. Migration, restore and deployment remain unauthorized.
+with zero differences. Phase 2 then passed both existing read-only CLI commands
+from a separate clean main worktree at `deda2ced13df8ef0874df2727cca0d050ab6c164`,
+using the new recovery secret only in process memory. All 95 schema/data fingerprints
+and migration ownership/privileges were reverified; write authorization remains
+disabled. Planned scope adds three tables/two indexes and updates Alembic metadata;
+accepted data stays unchanged. Recovery freshness ends **18:19:38 CET today**, with
+branch expiry November 15 at 14:18:37 CET. Exact evidence stays private. Separate
+owner migration and controlled deployment approvals are next; all freezes remain
+active. The older API may become unready during the coordinated schema/code cutover.
 
 ## Where we are
 

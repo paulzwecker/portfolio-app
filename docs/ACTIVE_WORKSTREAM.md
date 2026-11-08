@@ -8,7 +8,7 @@ for this milestone. Preserve all predecessor branches, stash and private files.
 Income was committed through `0a57454`, cash transfers through `c9f58d7`, and
 security-transfer implementation starts at `35c902e`.
 
-## Current operational priority — recovery phase 1 verified
+## Current operational priority — read-only migration preflight passed
 
 November 8 read-only investigation confirms Render rejected main `deda2ce` and
 continues serving healthy `395f842`; Vercel production already serves `deda2ce`.
@@ -39,12 +39,24 @@ verify-full and credentials are verified, and effective Neon permission is ADMIN
 Full IDs, lineage/LSN, receipts, comparisons and next-preflight manifest stay in the
 private incident store. The root .env recovery URL still identifies the older branch.
 
-Next is read-only migration preflight from clean pinned main with the new recovery
-credentials loaded only into its process. Its four-hour window ends **November 8
-at 18:19:38 CET**; branch expiry is November 15 at 14:18:37 CET. A replacement needs
-new authorization if that window lapses. Restore remains unexercised; project PITR
-history is 24 hours. All production freezes remain set and deployed commits remain
-unchanged. Migration, restoration and deployment require separate approvals.
+Phase 2 passed `db:production-preflight -- readonly` and `-- migration-preflight`
+(exit 0) from a separate clean main worktree at full SHA
+`deda2ced13df8ef0874df2727cca0d050ab6c164`. Pinned code paths and matching locked
+dependencies were verified while reusing the existing runtime without syncing it.
+New recovery secrets lived only in child environments. Independent comparisons
+again match all 95 table counts/content/schema fingerprints against phase 1, and
+the migration guard's full ownership/privilege inventory passes. An auxiliary script
+quoting error was corrected before that comparison executed. Existing accepted
+counts/receipts and target total remain intact. Expected scope is three empty new
+tables, two indexes and the controlled Alembic version-row update to `b59f16c8a203`.
+
+Next is separate owner approval of that exact migration and the subsequent matching
+API deployment. The old API's strict readiness can fail after schema advances, so
+reserve a coordinated window. Recovery freshness ends **November 8 at 18:19:38 CET**;
+expiry is November 15 at 14:18:37 CET. A replacement needs new authorization after
+the freshness window. Restore remains unexercised; project PITR history is 24 hours.
+All freezes and write/background restrictions remain in place. Private phase-2
+reports retain exact identities and comparisons; the root .env remains unchanged.
 The durable schema hook still needs reviewed integration/installation; preserve
 the independent ledger INTEGRATE checkpoint and one cohesive PR.
 
