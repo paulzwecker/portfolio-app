@@ -920,6 +920,8 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
           "MULTIPLE_SOURCE_STREAMS",
           "LISTING_CURRENCY_MISMATCH",
           "LISTING_CURRENCY_UNVERIFIED",
+          "ADJUSTMENT_BASIS_MISMATCH",
+          "ADJUSTMENT_BASIS_UNVERIFIED",
         ].includes(issue as string),
       )) &&
     (v.source_streams === undefined ||
@@ -930,6 +932,9 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
           string(stream.provider) &&
           string(stream.provider_symbol) &&
           string(stream.currency) &&
+          (stream.adjustment_basis === undefined ||
+            stream.adjustment_basis === null ||
+            string(stream.adjustment_basis)) &&
           Number.isInteger(stream.observation_count) &&
           (stream.observation_count as number) > 0 &&
           dateOnly(stream.first_market_date) &&

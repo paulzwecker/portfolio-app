@@ -2799,12 +2799,16 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                 ...market.analytics,
                 status: "UNAVAILABLE",
                 observation_count: conflictHistory.length,
-                input_issues: ["MULTIPLE_SOURCE_STREAMS"],
+                input_issues: [
+                  "MULTIPLE_SOURCE_STREAMS",
+                  "ADJUSTMENT_BASIS_MISMATCH",
+                ],
                 source_streams: [
                   {
                     provider: "Alternate provider",
                     provider_symbol: "EXPL.A",
                     currency: "USD",
+                    adjustment_basis: "Alternate adjustment basis",
                     observation_count: 1,
                     first_market_date: conflictHistory[74].market_date.slice(
                       0,
@@ -2819,6 +2823,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                     provider: "Fixture market source",
                     provider_symbol: "NASDAQ:EXPL",
                     currency: "USD",
+                    adjustment_basis: "Split adjusted",
                     observation_count: 74,
                     first_market_date: conflictHistory[73].market_date.slice(
                       0,
@@ -3485,6 +3490,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       page.getByText(/different provider, symbol or currency/),
     ).toBeVisible();
     await expect(
+      page.getByText(/price adjustment descriptions differ/),
+    ).toBeVisible();
+    await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
     ).toHaveCount(0);
     await page.getByText("Review conflicting history inputs").click();
@@ -3493,6 +3501,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     );
     await expect(page.getByLabel("Price source streams")).toContainText(
       "EXPL.A",
+    );
+    await expect(page.getByLabel("Price source streams")).toContainText(
+      "Alternate adjustment basis",
     );
     await page.getByRole("button", { name: "90 days" }).click();
     await expect(

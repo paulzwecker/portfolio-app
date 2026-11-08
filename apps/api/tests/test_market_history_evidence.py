@@ -127,6 +127,8 @@ def test_listing_coverage_describes_sparse_dates_without_claiming_sessions(
         ("symbol", "MULTIPLE_SOURCE_STREAMS"),
         ("currency", "LISTING_CURRENCY_MISMATCH"),
         ("missing_listing_currency", "LISTING_CURRENCY_UNVERIFIED"),
+        ("adjustment", "ADJUSTMENT_BASIS_MISMATCH"),
+        ("missing_adjustment", "ADJUSTMENT_BASIS_UNVERIFIED"),
     ],
 )
 def test_listing_analytics_reject_incompatible_price_streams(
@@ -148,7 +150,13 @@ def test_listing_analytics_reject_incompatible_price_streams(
                     currency="EUR" if index == 1 and mode == "currency" else "USD",
                     provider="OTHER" if index == 1 and mode == "provider" else "SYNTHETIC",
                     provider_symbol="OTHER" if index == 1 and mode == "symbol" else "SYNTH",
-                    adjustment_basis="Synthetic split-adjusted close",
+                    adjustment_basis=(
+                        "Different adjustment"
+                        if index == 1 and mode == "adjustment"
+                        else "  "
+                        if index == 1 and mode == "missing_adjustment"
+                        else "Synthetic split-adjusted close"
+                    ),
                     data_quality="PASS",
                     source_ref=f"stream-fixture-{index}-{uuid4()}",
                 )
@@ -167,7 +175,17 @@ def test_listing_analytics_reject_incompatible_price_streams(
         assert len(result.history) == 2
         assert sum(stream.observation_count for stream in result.analytics.source_streams) == 2
         assert result.analytics.duplicate_market_dates == []
-        if mode in {"provider", "symbol"}:
+        if mode == "adjustment":
+            assert {stream.adjustment_basis for stream in result.analytics.source_streams} == {
+                "Synthetic split-adjusted close",
+                "Different adjustment",
+            }
+        if mode == "missing_adjustment":
+            assert result.analytics.input_issues == ["ADJUSTMENT_BASIS_UNVERIFIED"]
+            assert any(
+                stream.adjustment_basis is None for stream in result.analytics.source_streams
+            )
+        if mode in {"provider", "symbol", "adjustment"}:
             assert len(result.analytics.source_streams) == 2
             earlier = queries.listing_market_data(
                 session, fetched_listing, known_at=datetime(2026, 10, 4, 12, tzinfo=UTC)

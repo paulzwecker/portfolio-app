@@ -24670,7 +24670,9 @@
                 "DUPLICATE_MARKET_DATE",
                 "MULTIPLE_SOURCE_STREAMS",
                 "LISTING_CURRENCY_MISMATCH",
-                "LISTING_CURRENCY_UNVERIFIED"
+                "LISTING_CURRENCY_UNVERIFIED",
+                "ADJUSTMENT_BASIS_MISMATCH",
+                "ADJUSTMENT_BASIS_UNVERIFIED"
               ],
               "type": "string"
             },
@@ -24798,6 +24800,17 @@
       "PriceHistorySourceStreamRead": {
         "additionalProperties": false,
         "properties": {
+          "adjustment_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment Basis"
+          },
           "currency": {
             "title": "Currency",
             "type": "string"

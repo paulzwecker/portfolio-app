@@ -1681,12 +1681,13 @@ describe("domain display integrity", () => {
         ...withEvidence,
         analytics: {
           ...withEvidence.analytics,
-          input_issues: ["DUPLICATE_MARKET_DATE"],
+          input_issues: ["DUPLICATE_MARKET_DATE", "ADJUSTMENT_BASIS_MISMATCH"],
           source_streams: [
             {
               provider: "FIXTURE",
               provider_symbol: "EXM",
               currency: "EUR",
+              adjustment_basis: "split adjusted",
               observation_count: 2,
               first_market_date: "2026-01-01",
               last_market_date: "2026-01-03",

@@ -108,6 +108,45 @@ describe("historical market coverage notice", () => {
     ).toBe("");
   });
 
+  it("explains differing and unavailable adjustment evidence", () => {
+    const analytics = {
+      input_issues: [
+        "ADJUSTMENT_BASIS_MISMATCH",
+        "ADJUSTMENT_BASIS_UNVERIFIED",
+      ],
+      source_streams: [
+        {
+          provider: "Example",
+          provider_symbol: "EXM",
+          currency: "EUR",
+          adjustment_basis: "Split adjusted",
+          observation_count: 1,
+          first_market_date: "2026-01-01",
+          last_market_date: "2026-01-01",
+        },
+        {
+          provider: "Example",
+          provider_symbol: "EXM",
+          currency: "EUR",
+          adjustment_basis: null,
+          observation_count: 1,
+          first_market_date: "2026-01-02",
+          last_market_date: "2026-01-02",
+        },
+      ],
+    } as PriceHistoryAnalytics;
+    const notice = renderToStaticMarkup(
+      <HistoryCoverageNotice analytics={analytics} />,
+    );
+    const review = renderToStaticMarkup(
+      <HistorySourceReview analytics={analytics} />,
+    );
+    expect(notice).toContain("price adjustment descriptions differ");
+    expect(notice).toContain("price adjustment description is unavailable");
+    expect(review).toContain("Split adjusted");
+    expect(review).toContain("Adjustment: Unavailable");
+  });
+
   it("filters all returned observations and keeps exact close text", () => {
     const observations = Array.from({ length: 75 }, (_, index) => ({
       id: String(index),

@@ -249,3 +249,14 @@ nine web checks, strict types/lint and a read-only synthetic Operations browser
 journey at 390 and 1440 px. Synthetic screenshots were visually reviewed.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.
+
+Current increment: selected daily closes with different or missing adjustment
+descriptions now block price analytics and chart; the source review exposes each
+description. Exact matching does not prove split consistency or session coverage.
+Fourteen focused Python tests passed against disposable PostgreSQL schemas, including
+adjustment drift, unavailable labels and point-in-time selection. Fifty-five web
+contract/component tests, generated-contract verification, strict web and backend
+types, web lint, and a synthetic desktop/mobile browser journey passed. No migration.
+The separately authorized Render release is live on `aef3572`; Vercel reported
+Ready but alias and deployed-check enforcement remain unverified. Render auto-deploy
+and Blueprint sync remain off. This BUILD work performs no production operation.

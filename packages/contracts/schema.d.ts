@@ -9801,7 +9801,7 @@ export interface components {
             /** High 52W */
             high_52w: string | null;
             /** Input Issues */
-            input_issues?: ("DUPLICATE_MARKET_DATE" | "MULTIPLE_SOURCE_STREAMS" | "LISTING_CURRENCY_MISMATCH" | "LISTING_CURRENCY_UNVERIFIED")[];
+            input_issues?: ("DUPLICATE_MARKET_DATE" | "MULTIPLE_SOURCE_STREAMS" | "LISTING_CURRENCY_MISMATCH" | "LISTING_CURRENCY_UNVERIFIED" | "ADJUSTMENT_BASIS_MISMATCH" | "ADJUSTMENT_BASIS_UNVERIFIED")[];
             /** Max Calendar Gap Days */
             max_calendar_gap_days?: number | null;
             /** Methodology Version */
@@ -9834,6 +9834,8 @@ export interface components {
         };
         /** PriceHistorySourceStreamRead */
         PriceHistorySourceStreamRead: {
+            /** Adjustment Basis */
+            adjustment_basis?: string | null;
             /** Currency */
             currency: string;
             /**

@@ -11,11 +11,18 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Establish reviewed session-aware coverage; retain production deployment freezes                              |
+| Next ready substantial task | Establish reviewed session-aware coverage; keep production activation separately authorized                  |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
-PRs #27 and #28 are merged into main; deployment freezes and recovery authorization gates remain in effect.
+The current BUILD increment blocks history analytics for conflicting or unavailable
+price-adjustment descriptions and shows the evidence to investors. Fourteen focused
+PostgreSQL-backed tests, 55 web tests and a synthetic desktop/mobile journey passed.
+Matching descriptions do not verify exchange sessions or corporate-action history.
+
+PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
+Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and
+Blueprint sync remain disabled; retain all separate production activation and recovery gates.
 
 Historical November 8 incident evidence identified a healthy old Render deployment (`395f842`),
 new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail

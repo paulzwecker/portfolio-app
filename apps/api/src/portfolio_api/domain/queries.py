@@ -812,6 +812,21 @@ def listing_market_data(
         input_issues.append("DUPLICATE_MARKET_DATE")
     if len({(row.provider, row.provider_symbol, row.currency) for row in ordered_analytics}) > 1:
         input_issues.append("MULTIPLE_SOURCE_STREAMS")
+    if any(
+        not row.adjustment_basis or not row.adjustment_basis.strip() for row in ordered_analytics
+    ):
+        input_issues.append("ADJUSTMENT_BASIS_UNVERIFIED")
+    if (
+        len(
+            {
+                row.adjustment_basis
+                for row in ordered_analytics
+                if row.adjustment_basis and row.adjustment_basis.strip()
+            }
+        )
+        > 1
+    ):
+        input_issues.append("ADJUSTMENT_BASIS_MISMATCH")
     if ordered_analytics and listing.currency is None:
         input_issues.append("LISTING_CURRENCY_UNVERIFIED")
     elif listing.currency is not None and any(
@@ -821,9 +836,14 @@ def listing_market_data(
     source_streams: list[s.PriceHistorySourceStreamRead] = []
     duplicate_market_dates: list[date] = []
     if input_issues:
-        dates_by_stream: dict[tuple[str, str, str], list[date]] = defaultdict(list)
+        dates_by_stream: dict[tuple[str, str, str, str], list[date]] = defaultdict(list)
         for row in ordered_analytics:
-            dates_by_stream[(row.provider, row.provider_symbol, row.currency)].append(
+            basis = (
+                row.adjustment_basis
+                if row.adjustment_basis and row.adjustment_basis.strip()
+                else ""
+            )
+            dates_by_stream[(row.provider, row.provider_symbol, row.currency, basis)].append(
                 row.market_date.astimezone(UTC).date()
             )
         source_streams = [
@@ -831,11 +851,12 @@ def listing_market_data(
                 provider=provider,
                 provider_symbol=symbol,
                 currency=currency,
+                adjustment_basis=basis or None,
                 observation_count=len(dates),
                 first_market_date=min(dates),
                 last_market_date=max(dates),
             )
-            for (provider, symbol, currency), dates in sorted(dates_by_stream.items())
+            for (provider, symbol, currency, basis), dates in sorted(dates_by_stream.items())
         ]
         date_counts = Counter(row.market_date.astimezone(UTC).date() for row in ordered_analytics)
         duplicate_market_dates = sorted(day for day, count in date_counts.items() if count > 1)

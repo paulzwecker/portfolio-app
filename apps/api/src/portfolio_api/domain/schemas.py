@@ -823,6 +823,8 @@ PriceHistoryInputIssue = Literal[
     "MULTIPLE_SOURCE_STREAMS",
     "LISTING_CURRENCY_MISMATCH",
     "LISTING_CURRENCY_UNVERIFIED",
+    "ADJUSTMENT_BASIS_MISMATCH",
+    "ADJUSTMENT_BASIS_UNVERIFIED",
 ]
 
 
@@ -830,6 +832,7 @@ class PriceHistorySourceStreamRead(Contract):
     provider: str
     provider_symbol: str
     currency: str
+    adjustment_basis: str | None = None
     observation_count: int
     first_market_date: date
     last_market_date: date

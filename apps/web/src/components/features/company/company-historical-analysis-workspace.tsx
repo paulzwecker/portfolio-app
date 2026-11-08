@@ -470,6 +470,8 @@ export function HistoryCoverageNotice({
     MULTIPLE_SOURCE_STREAMS: "different provider, symbol or currency",
     LISTING_CURRENCY_MISMATCH: "price currency differs from listing currency",
     LISTING_CURRENCY_UNVERIFIED: "listing currency is unavailable",
+    ADJUSTMENT_BASIS_MISMATCH: "price adjustment descriptions differ",
+    ADJUSTMENT_BASIS_UNVERIFIED: "price adjustment description is unavailable",
   };
   return (
     <p className="leading-5 text-muted-foreground">
@@ -535,6 +537,7 @@ export function HistorySourceReview({
                   stream.provider,
                   stream.provider_symbol,
                   stream.currency,
+                  stream.adjustment_basis,
                 ])}
                 className="break-words"
               >
@@ -542,6 +545,8 @@ export function HistorySourceReview({
                   {stream.provider} · {stream.provider_symbol} ·{" "}
                   {stream.currency}
                 </span>
+                <br />
+                Adjustment: {stream.adjustment_basis || "Unavailable"}
                 <br />
                 {stream.observation_count} recorded closes ·{" "}
                 {dateOnly(stream.first_market_date)} –{" "}
