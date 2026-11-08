@@ -18,8 +18,13 @@ import { DetailDrawer } from "@/components/app/detail-drawer";
 import { EmptyState, PendingOrError } from "@/components/app/empty-state";
 import { MetricCard } from "@/components/app/metric-card";
 import { PageSection } from "@/components/app/page-section";
+import {
+  ResponsiveDataTable,
+  type ResponsiveColumn,
+} from "@/components/app/responsive-data-table";
 import { SourceReference } from "@/components/app/source-reference";
 import { StatusIndicator } from "@/components/app/status-indicator";
+import { TableSearch } from "@/components/app/table-search";
 import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyEstimateMomentum,
@@ -332,7 +337,7 @@ export function PriceHistoryChart({
     return (
       <EmptyState
         title="Price series needs review"
-        description="The analytics window contains incompatible or ambiguous inputs. Recent observations are listed below; the issue may be outside the displayed range."
+        description="The analytics window contains incompatible or ambiguous inputs. Inspect returned observations below; other source records may exist."
       />
     );
   const values = observations
@@ -474,8 +479,8 @@ export function HistoryCoverageNotice({
           {analytics.input_issues
             ?.map((issue) => issueLabels[issue])
             .join("; ")}
-          . Recent observations are listed below; the issue may be outside the
-          displayed range.{" "}
+          . Inspect returned observations below; other source records may
+          exist.{" "}
         </>
       )}
       Exchange-session coverage has not been assessed; these metrics use
@@ -550,6 +555,110 @@ export function HistorySourceReview({
             Duplicate market dates:{" "}
             {duplicates.map((day) => dateOnly(day)).join(", ")}
           </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
+export function filterPriceObservations(
+  observations: ListingMarketData["history"],
+  search: string,
+): ListingMarketData["history"] {
+  const query = search.trim().toLowerCase();
+  if (!query) return observations;
+  return observations.filter((item) =>
+    [
+      item.market_date.slice(0, 10),
+      item.provider,
+      item.provider_symbol,
+      item.currency,
+      item.data_quality,
+    ].some((value) => value.toLowerCase().includes(query)),
+  );
+}
+
+export function PriceObservationReview({
+  observations,
+}: {
+  observations: ListingMarketData["history"];
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = filterPriceObservations(observations, search);
+  const columns: ResponsiveColumn<ListingMarketData["history"][number]>[] = [
+    {
+      id: "date",
+      header: "Market date",
+      render: (item) => marketDate(item.market_date),
+    },
+    {
+      id: "close",
+      header: "Exact split-adjusted close",
+      className: "tabular-nums",
+      render: (item) =>
+        item.split_adjusted_close === null
+          ? "Unavailable"
+          : `${item.split_adjusted_close} ${item.currency}`,
+    },
+    {
+      id: "observed",
+      header: "Observed",
+      render: (item) => dateTime(item.observed_at),
+    },
+    {
+      id: "recorded",
+      header: "Recorded",
+      render: (item) => dateTime(item.recorded_at),
+    },
+    {
+      id: "source",
+      header: "Source / quality",
+      render: (item) => (
+        <>
+          <SourceReference
+            label={item.provider}
+            reference={item.data_quality}
+            href={item.source_ref.startsWith("http") ? item.source_ref : null}
+          />
+          <p className="text-muted-foreground">{item.provider_symbol}</p>
+        </>
+      ),
+    },
+    {
+      id: "basis",
+      header: "Adjustment basis",
+      render: (item) => item.adjustment_basis,
+    },
+  ];
+  return (
+    <details className="rounded-lg border">
+      <summary className="cursor-pointer px-3 py-2 text-xs font-medium">
+        Inspect price observations ({observations.length})
+      </summary>
+      <div className="space-y-3 border-t p-3">
+        <p className="text-xs text-muted-foreground">
+          All returned observations for this listing, independent of the chart
+          range. This selected history may omit other provider records.
+        </p>
+        <TableSearch
+          label="Find a price observation"
+          placeholder="Date (YYYY-MM-DD), provider, symbol, currency or quality"
+          value={search}
+          onChange={setSearch}
+          resultCount={filtered.length}
+          totalCount={observations.length}
+        />
+        {filtered.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No matching price observations.
+          </p>
+        ) : (
+          <ResponsiveDataTable
+            caption="Price observations"
+            columns={columns}
+            rows={filtered}
+            getRowKey={(item) => item.id}
+          />
         )}
       </div>
     </details>
@@ -714,53 +823,10 @@ function MarketHistory({
         </div>
       )}
       {selected && (
-        <details className="rounded-lg border">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-medium">
-            Inspect price observations ({observations.length})
-          </summary>
-          <div className="overflow-x-auto border-t">
-            <table className="w-full min-w-[640px] text-left text-xs">
-              <thead>
-                <tr className="text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">Market session</th>
-                  <th className="px-3 py-2 font-medium">Close</th>
-                  <th className="px-3 py-2 font-medium">Observed</th>
-                  <th className="px-3 py-2 font-medium">Recorded</th>
-                  <th className="px-3 py-2 font-medium">Source / quality</th>
-                </tr>
-              </thead>
-              <tbody>
-                {observations.slice(0, 60).map((item) => (
-                  <tr key={item.id} className="border-t">
-                    <td className="px-3 py-2">
-                      {marketDate(item.market_date)}
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">
-                      {formatCurrency(item.split_adjusted_close, item.currency)}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {dateTime(item.observed_at)}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {dateTime(item.recorded_at)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <SourceReference
-                        label={item.provider}
-                        reference={item.data_quality}
-                        href={
-                          item.source_ref.startsWith("http")
-                            ? item.source_ref
-                            : null
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
+        <PriceObservationReview
+          key={selected.listing.id}
+          observations={selected.history}
+        />
       )}
     </div>
   );

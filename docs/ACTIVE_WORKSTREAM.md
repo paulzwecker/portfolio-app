@@ -231,5 +231,12 @@ synthetic browser journey validates the disclosure at 390 and 1440 px.
 Synthetic desktop/mobile screenshots were visually reviewed; the chart panel now
 distinguishes market status from quote freshness and labels the independently sourced
 regime date. No private source values or screenshots were committed.
+The next increment removes the former silent 60-row inspection limit: all returned
+observations are searchable by date, provider, symbol, currency or quality, without
+changing the chart range. Exact stored decimal text and adjustment basis are visible
+in the shared responsive table/cards. Fifty-nine focused web checks, strict types,
+lint and the synthetic mobile/desktop browser journey pass; the journey finds an
+older conflict outside the selected 90-day chart range. Screenshots were visually
+reviewed locally. No API contract or migration changed in this increment.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.

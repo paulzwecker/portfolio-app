@@ -7,7 +7,9 @@ import type {
 import {
   HistoryCoverageNotice,
   HistorySourceReview,
+  PriceObservationReview,
   PriceHistoryChart,
+  filterPriceObservations,
 } from "./company-historical-analysis-workspace";
 
 describe("historical market coverage notice", () => {
@@ -104,5 +106,41 @@ describe("historical market coverage notice", () => {
         />,
       ),
     ).toBe("");
+  });
+
+  it("filters all returned observations and keeps exact close text", () => {
+    const observations = Array.from({ length: 75 }, (_, index) => ({
+      id: String(index),
+      market_date: new Date(Date.UTC(2026, 9, 4 - index * 2)).toISOString(),
+      observed_at: null,
+      recorded_at: "2026-10-04T00:00:00Z",
+      split_adjusted_close:
+        index === 74 ? "41.1234567890" : index === 73 ? null : "0.0000000000",
+      provider: index === 74 ? "Alternate" : "Primary",
+      provider_symbol: index === 74 ? "EXPL.A" : "EXPL",
+      currency: "USD",
+      data_quality: "PASS",
+      adjustment_basis: "split adjusted",
+      source_ref: "fixture",
+    })) as ListingMarketData["history"];
+    expect(filterPriceObservations(observations, "  expl.a  ")).toEqual([
+      observations[74],
+    ]);
+    expect(filterPriceObservations(observations, "usd")).toHaveLength(75);
+    expect(
+      filterPriceObservations(
+        observations,
+        observations[74].market_date.slice(0, 10),
+      ),
+    ).toEqual([observations[74]]);
+    expect(filterPriceObservations(observations, "missing")).toEqual([]);
+    const html = renderToStaticMarkup(
+      <PriceObservationReview observations={observations} />,
+    );
+    expect(html).toContain("75 of 75 rows shown");
+    expect(html).toContain("41.1234567890 USD");
+    expect(html).toContain("0.0000000000 USD");
+    expect(html).toContain("Unavailable");
+    expect(html).toContain("split adjusted");
   });
 });

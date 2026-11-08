@@ -170,9 +170,9 @@ duplicate market dates, differing provider/symbol/currency streams, a currency t
 conflicts with the listing, or an unverified listing currency. The API reports the
 specific `input_issues`, affected duplicate dates and provider/symbol/currency
 stream spans from the selected calculation inputs. The Company view exposes these
-in a review disclosure; other provider records may exist. Recent observations
-remain inspectable in the UI, while the
-full calculation window can be requested through the market-data API. This
+in a review disclosure; other provider records may exist. All returned observations
+are searchable independently of the chart range, with exact stored close text and
+source basis. This
 conservative check does not certify consistent corporate-action adjustments or prove
 that all sessions are present. Old API responses without the field remain compatible.
 Quotes and historical closes remain separately identified. Returns are

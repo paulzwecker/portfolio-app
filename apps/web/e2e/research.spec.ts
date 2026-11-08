@@ -1536,6 +1536,19 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       last_market_update: observedAt,
     },
   ];
+  const conflictHistory = Array.from({ length: 75 }, (_, index) => {
+    const earlier = index === 74;
+    return {
+      ...quote,
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      market_date: new Date(Date.UTC(2026, 9, 4 - index * 2)).toISOString(),
+      provider: earlier ? "Alternate provider" : quote.provider,
+      provider_symbol: earlier ? "EXPL.A" : quote.provider_symbol,
+      split_adjusted_close: earlier
+        ? "41.1234567890"
+        : quote.split_adjusted_close,
+    };
+  });
   const revenueObservation = {
     id: "23232323-2323-4323-8323-232323232323",
     company_id: id,
@@ -2781,19 +2794,11 @@ test("Company Explorer composes canonical company context at desktop and mobile 
           ? marketData.map((market) => ({
               ...market,
               availability: "PARTIAL",
-              history: market.history.map((observation, index) =>
-                index === 1
-                  ? {
-                      ...observation,
-                      provider: "Alternate provider",
-                      provider_symbol: "EXPL.A",
-                    }
-                  : observation,
-              ),
+              history: conflictHistory,
               analytics: {
                 ...market.analytics,
                 status: "UNAVAILABLE",
-                observation_count: 2,
+                observation_count: conflictHistory.length,
                 input_issues: ["MULTIPLE_SOURCE_STREAMS"],
                 source_streams: [
                   {
@@ -2801,16 +2806,28 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                     provider_symbol: "EXPL.A",
                     currency: "USD",
                     observation_count: 1,
-                    first_market_date: "2026-10-03",
-                    last_market_date: "2026-10-03",
+                    first_market_date: conflictHistory[74].market_date.slice(
+                      0,
+                      10,
+                    ),
+                    last_market_date: conflictHistory[74].market_date.slice(
+                      0,
+                      10,
+                    ),
                   },
                   {
                     provider: "Fixture market source",
                     provider_symbol: "NASDAQ:EXPL",
                     currency: "USD",
-                    observation_count: 1,
-                    first_market_date: "2026-10-04",
-                    last_market_date: "2026-10-04",
+                    observation_count: 74,
+                    first_market_date: conflictHistory[73].market_date.slice(
+                      0,
+                      10,
+                    ),
+                    last_market_date: conflictHistory[0].market_date.slice(
+                      0,
+                      10,
+                    ),
                   },
                 ],
                 duplicate_market_dates: [],
@@ -3477,10 +3494,26 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(page.getByLabel("Price source streams")).toContainText(
       "EXPL.A",
     );
-    await page.getByText(/Inspect price observations/).click();
+    await page.getByRole("button", { name: "90 days" }).click();
     await expect(
-      page.getByRole("cell", { name: /Fixture market source/ }).first(),
+      page.getByText(/46 observations in the selected range/),
     ).toBeVisible();
+    await page.getByText(/Inspect price observations/).click();
+    await expect(page.getByText("75 of 75 rows shown")).toBeVisible();
+    await page.getByLabel("Find a price observation").fill("EXPL.A");
+    await expect(page.getByText("1 of 75 rows shown")).toBeVisible();
+    const inspection =
+      width === 390
+        ? page.getByLabel("Price observations, mobile view")
+        : page.getByRole("table", { name: "Price observations" });
+    await expect(inspection.getByText("41.1234567890 USD")).toBeVisible();
+    await expect(inspection.getByText("Alternate provider")).toBeVisible();
+    await page.getByLabel("Find a price observation").fill("no-match");
+    await expect(
+      page.getByText("No matching price observations."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(page.getByText("75 of 75 rows shown")).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

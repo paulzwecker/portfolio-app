@@ -199,6 +199,10 @@ source adjustment consistency and live ingestion remain unverified.
 The conflict state now identifies the selected source streams, their date spans and
 duplicate dates, allowing review even when the relevant rows are outside the recent
 observation list. This is local evidence, not a provider reconciliation approval.
+The inspection view now searches all returned observations independently of the
+chart range, displaying exact close text, source symbol and adjustment basis in
+responsive table/cards. It does not assert that the selected history includes every
+provider observation or every market session.
 
 ## Immediate priorities and gates
 
