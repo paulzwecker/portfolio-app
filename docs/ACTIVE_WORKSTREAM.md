@@ -1,11 +1,11 @@
 # Active workstream
 
-## C2.3 guided ledger onboarding — BUILD
+## C2.3 guided ledger onboarding — INTEGRATE / BLOCKED release
 
 Branch `codex/ledger-opening-onboarding` contains implementation `18f1f15` and
 merge `813651e` from updated main `e070406` ([merged PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)).
 The owner edits, predecessor branches/worktrees and private source artifacts remain
-preserved. No new PR has been opened for this BUILD increment.
+preserved. The integration PR is pending.
 
 Completed PRs stay frozen for owner review. Continue independent milestones from
 updated main, or record an explicit stacked branch when a dependency is unmerged.
@@ -192,16 +192,21 @@ release controls remain unverified through available read-only access. The front
 lookup also requires the new API endpoint; release API first, then frontend, under
 separate approval. Do not infer deploy safety from matching schema or green CI.
 
-Complete the milestone integration checks and release review. Reuse the versioned ledger contract, server calculations,
+Complete the release review. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
 lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.
 
 This increment adds no schema or provider configuration. Its milestone remains
-BUILD. Review current hosted release controls at INTEGRATE before classifying
-merge/deployment readiness. Price/FX enrichment, recovery operations, production
+subject to verified provider release controls before merge or deployment. Integration
+checks passed `npm run check` (442 web and 929 API unit tests, 2 skipped), 452
+isolated PostgreSQL integration tests (4 skipped), 48 managed desktop/mobile
+browser tests and two real-API browser journeys. The updated synthetic desktop and
+mobile ending form was visually inspected; independent review found no actionable
+security or financial-integrity issue. No hosted verification is implied.
+Price/FX enrichment, recovery operations, production
 ledger cutover, model acceptance and provider activation require their own scope
-and authorization. No production/provider operation ran in this BUILD.
+and authorization. No production writes or provider configuration changes ran.
 
 [Ledger behavior](portfolio-ledger.md) owns this contract and workflow.
 [The roadmap](../ROADMAP.md) owns priority. The previous market integration and

@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                    |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 guided ledger onboarding — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                      |
-| Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; PR #29 merged; no new BUILD PR              |
+| Active checkpoint           | C2.3 guided ledger onboarding — INTEGRATE; release BLOCKED. [Handoff](docs/ACTIVE_WORKSTREAM.md)                 |
+| Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; integration PR pending                      |
 | Implementation              | Guided opening, activity and ending reconciliation LOCAL_VERIFIED                                                |
-| Next ready substantial task | Review milestone integration, release prerequisites and comprehensive checks                                     |
+| Next ready substantial task | Complete provider-control verification and coordinated release review                                            |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
 
@@ -20,6 +20,9 @@ position. The preview treats an unexplained observation as a blocking mismatch,
 does not infer a trade, and rejects changed lookup identity. Read-only Neon and
 the repository attestation match `b59f16c8a203`; current hosted release controls
 remain unverified. The new API endpoint must precede the frontend at release.
+Integration checks passed `npm run check`, 452 isolated PostgreSQL tests (4 skipped),
+48 managed desktop/mobile tests and two real-API browser journeys. An independent
+review found no authorization or financial-integrity defect in the inspected paths.
 
 The current BUILD fixes the Next.js read-only proxy for exact listing search and
 verifies the guided opening → non-anchor purchase → ending → saved review journey
