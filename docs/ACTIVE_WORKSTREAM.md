@@ -1,15 +1,19 @@
 # Active workstream
 
-## Personal Universe design system — BUILD
+## Personal Universe design system — INTEGRATE
 
 The independent `codex/personal-universe-design-system` worktree starts at current
 main `685fa7a` after merging [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)
 which contains the separate ledger/release work. Owner reference screenshots stay untracked
 in the original workspace. The shared token palette, accessible appearance selector,
-interactive component reference and Portfolio holdings search are under review.
+interactive component reference and Portfolio holdings search are locally verified.
 The design contract is [here](design/design-system-and-frontend-architecture-11b.md).
-Next: complete focused light/dark and mobile verification, independently review,
-then run integration checks and open a single design PR. No production action.
+`npm run check` passed (314 web tests, 899 backend units, two skips). Managed browser
+regression passed 91 tests with 35 explicit fixture/live-only skips. Synthetic
+desktop/mobile screenshots were visually reviewed outside Git; appearance, search,
+drawer keyboard handling and 320 px overflow checks pass. The full production
+release and recovery controls remain separate. Next: open one design PR, require CI
+and owner review, and keep production frozen. No production action.
 
 The following ledger and release notes preserve historical evidence from PR #27.
 

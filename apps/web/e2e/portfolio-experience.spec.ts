@@ -79,6 +79,14 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
 
   await page.getByRole("link", { name: "Holdings", exact: true }).click();
   await expect(page.getByText("22 listing positions")).toBeVisible();
+  if (process.env.DESIGN_REVIEW_SCREENSHOTS) {
+    await page.screenshot({
+      path: path.join(
+        process.env.DESIGN_REVIEW_SCREENSHOTS,
+        `holdings-${testInfo.project.name}.png`,
+      ),
+    });
+  }
   await expect(
     page.getByText("SPYY · XETRA · EUR").filter({ visible: true }).first(),
   ).toBeVisible();

@@ -1,6 +1,8 @@
 # Web Agent Notes
 
 Follow the root `AGENTS.md` and relevant domain documentation.
+For UI work, use the shared tokens and patterns in
+`docs/design/design-system-and-frontend-architecture-11b.md` by default.
 
 This file contains only frontend-specific guidance.
 

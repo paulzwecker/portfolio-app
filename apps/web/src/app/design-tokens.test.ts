@@ -54,17 +54,13 @@ describe("shared palette", () => {
   it("system dark and explicit dark use identical semantic colors", () => {
     const system = block(':root:not([data-theme="light"])');
     const explicit = block(':root[data-theme="dark"]');
-    for (const name of [
-      "background",
-      "foreground",
-      "card",
-      "primary",
-      "info",
-      "ring",
-      "chart-1",
-      "chart-2",
-    ]) {
-      expect(token(system, name)).toBe(token(explicit, name));
-    }
+    const declarations = (source: string) =>
+      Object.fromEntries(
+        [...source.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((match) => [
+          match[1],
+          match[2].trim(),
+        ]),
+      );
+    expect(declarations(system)).toEqual(declarations(explicit));
   });
 });

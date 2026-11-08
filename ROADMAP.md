@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Personal Universe design foundation and Portfolio experience — BUILD. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
-| Branch / PR                 | `codex/personal-universe-design-system`, based on merged main `685fa7a` after [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)        |
-| Implementation              | Shared reference-based tokens, appearance selector, accessible showcase and Portfolio holdings search under local verification                      |
-| Next ready substantial task | Finish desktop/mobile design review and integration checks; prepare one cohesive design PR                                                          |
-| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                        |
-| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                                    |
+| Field                       | Current value                                                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Personal Universe design foundation and Portfolio experience — INTEGRATE. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
+| Branch / PR                 | `codex/personal-universe-design-system`, based on merged main `685fa7a` after [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)            |
+| Implementation              | Reference-based shared tokens, appearance selector, showcase and Portfolio holdings search are LOCAL_VERIFIED                                           |
+| Next ready substantial task | Open one design PR and require CI and owner review; retain production deployment freezes                                                                |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                            |
+| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                                        |
 
 PR #27 is merged into main; deployment freezes and recovery authorization gates remain in effect.
 
@@ -77,8 +77,8 @@ preserves each predecessor's scope and checks. All branches, stash and private
 source artifacts are preserved.
 
 **Release prerequisite.** This code requires additive migrations
-`9f2a6d4c81b7` → `a832e94d6f10` → `b59f16c8a203`. Production was last recorded at
-`9f2a6d4c81b7`; its current state must be reverified. Before releasing schema-dependent
+`9f2a6d4c81b7` → `a832e94d6f10` → `b59f16c8a203`. Production was verified at
+`b59f16c8a203` after the authorized recovery; reverify it before future operations. Before releasing schema-dependent
 code, follow the [native-provider freeze, current-state recovery and guarded migration
 procedure](docs/deployment-and-migrations.md). The historical empty pre-import
 recovery branch does not protect accepted holdings. Schema deployment does not
