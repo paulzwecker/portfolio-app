@@ -260,3 +260,13 @@ types, web lint, and a synthetic desktop/mobile browser journey passed. No migra
 The separately authorized Render release is live on `aef3572`; Vercel reported
 Ready but alias and deployed-check enforcement remain unverified. Render auto-deploy
 and Blueprint sync remain off. This BUILD work performs no production operation.
+
+The next increment adds a bounded 2026 NYSE published-schedule comparison for exact
+`NYSE` venues. It shows absent scheduled closes and selected dates outside the
+schedule, with source hash, as-of date, observation time and partial-window scope.
+Results are review candidates, not proof of missing trades; unplanned closures and
+halts remain unknown. Unknown venues/years and earlier knowledge cutoffs remain
+unassessed. Twenty-one synthetic backend tests including isolated PostgreSQL cases,
+56 web tests and a desktop/mobile browser journey pass. No migration or hosted
+change. Next: review additional venue calendars and durable observation provenance
+before expanding coverage or claiming complete sessions.

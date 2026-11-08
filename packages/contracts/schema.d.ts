@@ -9816,6 +9816,7 @@ export interface components {
             price_return_6m: string | null;
             /** Realized Vol 20D */
             realized_vol_20d: string | null;
+            scheduled_session_review?: components["schemas"]["ScheduledSessionReviewRead"] | null;
             /**
              * Session Coverage
              * @default NOT_ASSESSED
@@ -11886,6 +11887,43 @@ export interface components {
             scenario: string;
             /** Value */
             value: string | null;
+        };
+        /** ScheduledSessionReviewRead */
+        ScheduledSessionReviewRead: {
+            /** Absent Scheduled Dates */
+            absent_scheduled_dates: string[];
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Full Selected Span Covered */
+            full_selected_span_covered: boolean;
+            /** Schedule Id */
+            schedule_id: string;
+            /** Scheduled Count */
+            scheduled_count: number;
+            /** Selected Unscheduled Dates */
+            selected_unscheduled_dates: string[];
+            /**
+             * Source As Of
+             * Format: date
+             */
+            source_as_of: string;
+            /**
+             * Source Observed At
+             * Format: date-time
+             */
+            source_observed_at: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
         };
         /** ScoreAssessmentCreate */
         ScoreAssessmentCreate: {

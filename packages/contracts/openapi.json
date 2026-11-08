@@ -24742,6 +24742,16 @@
             ],
             "title": "Realized Vol 20D"
           },
+          "scheduled_session_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledSessionReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "session_coverage": {
             "const": "NOT_ASSESSED",
             "default": "NOT_ASSESSED",
@@ -31171,6 +31181,82 @@
           "value"
         ],
         "title": "ScenarioForecastPointRead",
+        "type": "object"
+      },
+      "ScheduledSessionReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "absent_scheduled_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Absent Scheduled Dates",
+            "type": "array"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "full_selected_span_covered": {
+            "title": "Full Selected Span Covered",
+            "type": "boolean"
+          },
+          "schedule_id": {
+            "title": "Schedule Id",
+            "type": "string"
+          },
+          "scheduled_count": {
+            "title": "Scheduled Count",
+            "type": "integer"
+          },
+          "selected_unscheduled_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Selected Unscheduled Dates",
+            "type": "array"
+          },
+          "source_as_of": {
+            "format": "date",
+            "title": "Source As Of",
+            "type": "string"
+          },
+          "source_observed_at": {
+            "format": "date-time",
+            "title": "Source Observed At",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schedule_id",
+          "source_url",
+          "source_sha256",
+          "source_as_of",
+          "source_observed_at",
+          "start_date",
+          "end_date",
+          "full_selected_span_covered",
+          "scheduled_count",
+          "absent_scheduled_dates",
+          "selected_unscheduled_dates"
+        ],
+        "title": "ScheduledSessionReviewRead",
         "type": "object"
       },
       "ScoreAssessmentCreate": {

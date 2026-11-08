@@ -180,6 +180,17 @@ are searchable independently of the chart range, with exact stored close text an
 source basis. This
 Matching description text alone does not certify consistent corporate-action adjustments or prove
 that all sessions are present. Old API responses without the field remain compatible.
+
+For an exact `NYSE` venue, the history view can compare selected dates within 2026
+with the [published NYSE 2026 schedule](https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf).
+The public source's SHA-256 is `70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f`;
+it says its dates were correct as of December 10, 2025, and was observed here on
+November 8, 2026. Views with an earlier knowledge cutoff do not use this evidence.
+The comparison is limited to the intersection of 2026 and the first-to-last selected
+daily closes. It excludes weekends and published holidays, but includes early-close
+sessions. Absent dates are review candidates, not proof of a missing trade: later
+schedule changes, unplanned closures, suspensions and provider conventions are not
+verified. Other venues and years remain unassessed; no FX schedule is inferred.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because
 the stored dividend facts are not independently verified, so the figures are not

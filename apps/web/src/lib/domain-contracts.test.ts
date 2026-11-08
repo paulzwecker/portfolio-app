@@ -1673,9 +1673,36 @@ describe("domain display integrity", () => {
         distinct_market_dates: 0,
         first_market_date: null,
         max_calendar_gap_days: null,
+        scheduled_session_review: {
+          schedule_id: "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+          source_url:
+            "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+          source_as_of: "2025-12-10",
+          source_observed_at: "2026-11-08T18:34:00Z",
+          source_sha256:
+            "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
+          start_date: "2026-07-02",
+          end_date: "2026-07-07",
+          full_selected_span_covered: true,
+          scheduled_count: 3,
+          absent_scheduled_dates: ["2026-07-06"],
+          selected_unscheduled_dates: [],
+        },
       },
     };
     expect(isListingMarketData(withEvidence)).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            source_url: "javascript:alert(1)",
+          },
+        },
+      }),
+    ).toBe(false);
     expect(
       isListingMarketData({
         ...withEvidence,

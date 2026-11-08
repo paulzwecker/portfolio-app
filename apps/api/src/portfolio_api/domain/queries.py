@@ -78,6 +78,7 @@ from portfolio_api.domain.models import (
 )
 from portfolio_api.estimate_momentum import ConsensusObservationPoint, calculate_estimate_momentum
 from portfolio_api.market_data import calculate_price_history_metrics
+from portfolio_api.market_sessions import scheduled_session_review
 from portfolio_api.model_revision_evidence import (
     resolve_model_evidence_reference,
     stored_evidence_reference,
@@ -878,6 +879,9 @@ def listing_market_data(
         observation_count=observation_count,
         as_of=ordered_analytics[-1].market_date if ordered_analytics else None,
         session_coverage="NOT_ASSESSED",
+        scheduled_session_review=scheduled_session_review(
+            listing.venue, market_dates, knowledge_cutoff
+        ),
         distinct_market_dates=len(market_dates),
         first_market_date=market_dates[0] if market_dates else None,
         max_calendar_gap_days=max(calendar_gaps, default=None),

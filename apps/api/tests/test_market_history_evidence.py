@@ -194,6 +194,47 @@ def test_listing_analytics_reject_incompatible_price_streams(
             assert earlier.analytics.source_streams == []
 
 
+@pytest.mark.integration
+def test_nyse_schedule_review_uses_only_point_in_time_selected_closes(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        _, _, listing = _seed_canonical_scope(session)
+        listing.venue = "NYSE"
+        listing_id = listing.id
+        for day, recorded in ((2, 3), (7, 8)):
+            session.add(
+                PriceObservation(
+                    listing_id=listing.id,
+                    price_kind="DAILY_CLOSE",
+                    market_date=datetime(2026, 7, day, tzinfo=UTC),
+                    recorded_at=datetime(2026, 7, recorded, tzinfo=UTC),
+                    split_adjusted_close=Decimal("100"),
+                    currency="USD",
+                    provider="SYNTHETIC",
+                    provider_symbol="SYNTH",
+                    adjustment_basis="Synthetic split-adjusted close",
+                    data_quality="PASS",
+                    source_ref=f"scheduled-review-{day}-{uuid4()}",
+                )
+            )
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        listing = session.get(Listing, listing_id)
+        assert listing is not None
+        result = queries.listing_market_data(
+            session, listing, known_at=datetime(2026, 11, 9, tzinfo=UTC)
+        )
+        review = result.analytics.scheduled_session_review
+        assert review is not None
+        assert review.absent_scheduled_dates == [date(2026, 7, 6)]
+        assert result.analytics.session_coverage == "NOT_ASSESSED"
+        earlier = queries.listing_market_data(
+            session, listing, known_at=datetime(2026, 7, 4, tzinfo=UTC)
+        )
+        assert earlier.analytics.scheduled_session_review is None
+
+
 def stamp(day: int) -> datetime:
     return datetime(2026, 10, day, tzinfo=UTC)
 

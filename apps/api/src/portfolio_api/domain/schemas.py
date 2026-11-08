@@ -838,6 +838,20 @@ class PriceHistorySourceStreamRead(Contract):
     last_market_date: date
 
 
+class ScheduledSessionReviewRead(Contract):
+    schedule_id: str
+    source_url: str
+    source_sha256: str
+    source_as_of: date
+    source_observed_at: datetime
+    start_date: date
+    end_date: date
+    full_selected_span_covered: bool
+    scheduled_count: int
+    absent_scheduled_dates: list[date]
+    selected_unscheduled_dates: list[date]
+
+
 class PriceHistoryAnalyticsRead(Contract):
     """Price metrics and descriptive coverage over canonical daily observations."""
 
@@ -846,6 +860,7 @@ class PriceHistoryAnalyticsRead(Contract):
     observation_count: int
     as_of: datetime | None
     session_coverage: Literal["NOT_ASSESSED"] = "NOT_ASSESSED"
+    scheduled_session_review: ScheduledSessionReviewRead | None = None
     distinct_market_dates: int | None = None
     first_market_date: date | None = None
     max_calendar_gap_days: int | None = None

@@ -902,6 +902,27 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
     (v.as_of === null || timestamp(v.as_of)) &&
     (v.session_coverage === undefined ||
       v.session_coverage === "NOT_ASSESSED") &&
+    (v.scheduled_session_review === undefined ||
+      v.scheduled_session_review === null ||
+      (isRecord(v.scheduled_session_review) &&
+        string(v.scheduled_session_review.schedule_id) &&
+        v.scheduled_session_review.source_url ===
+          "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf" &&
+        v.scheduled_session_review.source_sha256 ===
+          "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f" &&
+        dateOnly(v.scheduled_session_review.source_as_of) &&
+        timestamp(v.scheduled_session_review.source_observed_at) &&
+        dateOnly(v.scheduled_session_review.start_date) &&
+        dateOnly(v.scheduled_session_review.end_date) &&
+        typeof v.scheduled_session_review.full_selected_span_covered ===
+          "boolean" &&
+        Number.isInteger(v.scheduled_session_review.scheduled_count) &&
+        (v.scheduled_session_review.scheduled_count as number) >= 0 &&
+        array(v.scheduled_session_review.absent_scheduled_dates, dateOnly) &&
+        array(
+          v.scheduled_session_review.selected_unscheduled_dates,
+          dateOnly,
+        ))) &&
     (v.distinct_market_dates === undefined ||
       v.distinct_market_dates === null ||
       (Number.isInteger(v.distinct_market_dates) &&

@@ -2793,6 +2793,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         json: incompatibleHistory
           ? marketData.map((market) => ({
               ...market,
+              listing: { ...market.listing, venue: "NYSE" },
               availability: "PARTIAL",
               history: conflictHistory,
               analytics: {
@@ -2803,6 +2804,22 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                   "MULTIPLE_SOURCE_STREAMS",
                   "ADJUSTMENT_BASIS_MISMATCH",
                 ],
+                scheduled_session_review: {
+                  schedule_id:
+                    "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+                  source_url:
+                    "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+                  source_as_of: "2025-12-10",
+                  source_observed_at: "2026-11-08T18:34:00Z",
+                  source_sha256:
+                    "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
+                  start_date: "2026-10-01",
+                  end_date: "2026-10-04",
+                  full_selected_span_covered: false,
+                  scheduled_count: 2,
+                  absent_scheduled_dates: ["2026-10-02"],
+                  selected_unscheduled_dates: ["2026-10-04"],
+                },
                 source_streams: [
                   {
                     provider: "Alternate provider",
@@ -3492,6 +3509,8 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByText(/price adjustment descriptions differ/),
     ).toBeVisible();
+    await page.getByText(/Review scheduled NYSE dates/).click();
+    await expect(page.getByText(/not a confirmed missing trade/)).toBeVisible();
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
     ).toHaveCount(0);

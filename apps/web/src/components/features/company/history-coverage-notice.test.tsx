@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { dateOnly } from "@/lib/display";
 import type {
   ListingMarketData,
   PriceHistoryAnalytics,
@@ -145,6 +146,34 @@ describe("historical market coverage notice", () => {
     expect(notice).toContain("price adjustment description is unavailable");
     expect(review).toContain("Split adjusted");
     expect(review).toContain("Adjustment: Unavailable");
+  });
+
+  it("shows the bounded published schedule as review evidence, not confirmed missing trades", () => {
+    const analytics = {
+      scheduled_session_review: {
+        schedule_id: "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+        source_url:
+          "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+        source_as_of: "2025-12-10",
+        source_observed_at: "2026-11-08T18:34:00Z",
+        source_sha256:
+          "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
+        start_date: "2026-07-02",
+        end_date: "2026-07-07",
+        full_selected_span_covered: false,
+        scheduled_count: 3,
+        absent_scheduled_dates: ["2026-07-06"],
+        selected_unscheduled_dates: ["2026-07-03"],
+      },
+    } as PriceHistoryAnalytics;
+    const html = renderToStaticMarkup(
+      <HistoryCoverageNotice analytics={analytics} />,
+    );
+    expect(html).toContain("1 without selected closes");
+    expect(html).toContain("covers only part of the selected date span");
+    expect(html).toContain("not a confirmed missing trade");
+    expect(html).toContain(dateOnly("2026-07-06"));
+    expect(html).toContain(dateOnly("2026-07-03"));
   });
 
   it("filters all returned observations and keeps exact close text", () => {

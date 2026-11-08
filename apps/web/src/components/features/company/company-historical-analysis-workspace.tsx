@@ -473,35 +473,91 @@ export function HistoryCoverageNotice({
     ADJUSTMENT_BASIS_MISMATCH: "price adjustment descriptions differ",
     ADJUSTMENT_BASIS_UNVERIFIED: "price adjustment description is unavailable",
   };
+  const schedule = analytics.scheduled_session_review;
   return (
-    <p className="leading-5 text-muted-foreground">
-      {(analytics.input_issues?.length ?? 0) > 0 && (
-        <>
-          Analytics and chart are unavailable:{" "}
-          {analytics.input_issues
-            ?.map((issue) => issueLabels[issue])
-            .join("; ")}
-          . Inspect returned observations below; other source records may
-          exist.{" "}
-        </>
+    <>
+      <p className="leading-5 text-muted-foreground">
+        {(analytics.input_issues?.length ?? 0) > 0 && (
+          <>
+            Analytics and chart are unavailable:{" "}
+            {analytics.input_issues
+              ?.map((issue) => issueLabels[issue])
+              .join("; ")}
+            . Inspect returned observations below; other source records may
+            exist.{" "}
+          </>
+        )}
+        Exchange-session coverage has not been assessed; these metrics use
+        recorded closes and may span missing sessions. Calendar gaps include
+        weekends and holidays.
+        {analytics.distinct_market_dates != null && (
+          <>
+            {" "}
+            {analytics.distinct_market_dates} distinct market dates
+            {analytics.first_market_date
+              ? ` since ${dateOnly(analytics.first_market_date)}`
+              : ""}
+            {analytics.max_calendar_gap_days != null
+              ? `; largest calendar gap ${analytics.max_calendar_gap_days} days`
+              : ""}
+            .
+          </>
+        )}
+      </p>
+      {schedule && (
+        <details className="mt-2 rounded-md border bg-muted/30 px-3 py-2">
+          <summary className="cursor-pointer font-medium">
+            Review scheduled NYSE dates ·{" "}
+            {schedule.absent_scheduled_dates.length} without selected closes
+          </summary>
+          <div className="mt-2 space-y-2 text-muted-foreground">
+            <p>
+              Published schedule for {dateOnly(schedule.start_date)} –{" "}
+              {dateOnly(schedule.end_date)};
+              {schedule.full_selected_span_covered
+                ? " covers the selected date span."
+                : " covers only part of the selected date span."}{" "}
+              This compares selected calculation inputs, not all source history.{" "}
+              Unscheduled closures, security halts and provider conventions are
+              not verified; an absent close is a review candidate, not a
+              confirmed missing trade.
+            </p>
+            <p>
+              {schedule.scheduled_count} scheduled dates. Calendar as of{" "}
+              {dateOnly(schedule.source_as_of)}, observed{" "}
+              {dateOnly(schedule.source_observed_at)}.{" "}
+              <a
+                className="underline"
+                href={schedule.source_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Published NYSE calendar
+              </a>
+            </p>
+            <p className="break-all">
+              Source SHA-256: {schedule.source_sha256}
+            </p>
+            {schedule.absent_scheduled_dates.length > 0 && (
+              <p className="break-words">
+                Scheduled dates without selected closes:{" "}
+                {schedule.absent_scheduled_dates
+                  .map((day) => dateOnly(day))
+                  .join(", ")}
+              </p>
+            )}
+            {schedule.selected_unscheduled_dates.length > 0 && (
+              <p className="break-words">
+                Selected closes on dates outside this schedule:{" "}
+                {schedule.selected_unscheduled_dates
+                  .map((day) => dateOnly(day))
+                  .join(", ")}
+              </p>
+            )}
+          </div>
+        </details>
       )}
-      Exchange-session coverage has not been assessed; these metrics use
-      recorded closes and may span missing sessions. Calendar gaps include
-      weekends and holidays.
-      {analytics.distinct_market_dates != null && (
-        <>
-          {" "}
-          {analytics.distinct_market_dates} distinct market dates
-          {analytics.first_market_date
-            ? ` since ${dateOnly(analytics.first_market_date)}`
-            : ""}
-          {analytics.max_calendar_gap_days != null
-            ? `; largest calendar gap ${analytics.max_calendar_gap_days} days`
-            : ""}
-          .
-        </>
-      )}
-    </p>
+    </>
   );
 }
 
