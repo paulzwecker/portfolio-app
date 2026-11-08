@@ -10,10 +10,17 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.3 guided ledger onboarding — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                      |
 | Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; PR #29 merged; no new BUILD PR              |
-| Implementation              | Guided opening, resumable cash and resumable ending reconciliation LOCAL_VERIFIED                                |
-| Next ready substantial task | Guided trade and dividend entry with exact source evidence                                                       |
+| Implementation              | Guided opening, resumable cash/trades and ending reconciliation LOCAL_VERIFIED                                   |
+| Next ready substantial task | Guided dividend entry with exact source evidence and ending reconciliation                                       |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
+
+The current BUILD adds source-evidenced purchases and sales for verified anchor
+listings to the existing read-only ledger review. It retains exact text and evidence
+through download and restoration, with explicit dates, fees and taxes; native API
+replay remains authoritative. Listing expansion, dividends and transfers remain.
+Focused verification passed 136 web tests, 16 isolated PostgreSQL/API tests and
+34 synthetic desktop/mobile journeys. No schema or production changes were made.
 
 The latest BUILD restores a revalidated guided ending packet for editing, including
 ending-only mismatches. It preserves the original source on discard, retains exact

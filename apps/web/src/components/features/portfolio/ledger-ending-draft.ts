@@ -7,7 +7,7 @@ import {
   restoreOpeningReview,
   type OpeningAccountDraft,
 } from "./ledger-opening-draft";
-import { restoreCashActivityReview } from "./ledger-cash-activity";
+import { restoreSettledActivityReview } from "./ledger-settled-activity";
 
 export type EndingAccountDraft = {
   accountId: string;
@@ -133,7 +133,7 @@ export function endingOpeningAccounts(
     return restoreOpeningReview(anchor, base.text);
   return restoreOpeningReview(
     anchor,
-    restoreCashActivityReview(anchor, base.text).base.text,
+    restoreSettledActivityReview(anchor, base.text).base.text,
   );
 }
 

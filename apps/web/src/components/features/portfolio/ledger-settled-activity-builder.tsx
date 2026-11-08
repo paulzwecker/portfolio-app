@@ -6,14 +6,14 @@ import type { PortfolioLedgerAnchor } from "@/lib/domain-contracts";
 import type { LedgerReviewFile } from "./portfolio-ledger-data";
 import { restoreOpeningReview } from "./ledger-opening-draft";
 import {
-  buildCashActivityReview,
-  type CashActivityDraft,
-} from "./ledger-cash-activity";
+  buildSettledActivityReview,
+  type SettledActivityDraft,
+} from "./ledger-settled-activity";
 
 const field =
   "mt-1 block w-full min-w-0 rounded-md border bg-background px-3 py-2 text-sm";
 
-export function LedgerCashActivityBuilder({
+export function LedgerSettledActivityBuilder({
   anchor,
   base,
   disabled,
@@ -27,7 +27,7 @@ export function LedgerCashActivityBuilder({
   base: LedgerReviewFile;
   disabled: boolean;
   initialCutoff?: string;
-  initialEntries?: CashActivityDraft[];
+  initialEntries?: SettledActivityDraft[];
   onChange: () => void;
   onReview: (file: LedgerReviewFile) => Promise<void>;
   onClose: () => void;
@@ -38,13 +38,14 @@ export function LedgerCashActivityBuilder({
     ),
   );
   const [cutoff, setCutoff] = useState(initialCutoff);
-  const [entries, setEntries] = useState<CashActivityDraft[]>(initialEntries);
+  const [entries, setEntries] =
+    useState<SettledActivityDraft[]>(initialEntries);
   const [error, setError] = useState<string | null>(null);
   const changed = () => {
     onChange();
     setError(null);
   };
-  const update = (id: string, patch: Partial<CashActivityDraft>) => {
+  const update = (id: string, patch: Partial<SettledActivityDraft>) => {
     changed();
     setEntries((current) =>
       current.map((entry) =>
@@ -56,18 +57,19 @@ export function LedgerCashActivityBuilder({
   return (
     <div className="space-y-4 rounded-lg border bg-card p-4">
       <p className="text-sm text-muted-foreground">
-        Enter settled deposits, withdrawals, fees or taxes from your records.
-        Enter timestamps with seconds and a UTC offset, for example
+        Enter settled purchases, sales, deposits, withdrawals, fees or taxes
+        from your records. Trades currently require a listing in the verified
+        anchor. Enter timestamps with seconds and a UTC offset, for example
         2026-01-15T10:30:00+01:00. The sequence determines ordering when booking
         times match. The API checks the complete reconstruction.
       </p>
       <p className="text-xs text-muted-foreground">
-        Discard this cash draft before changing the opening or loading another
-        file.
+        Discard this activity draft before changing the opening or loading
+        another file.
       </p>
       {accounts.length === 0 && (
         <p className="text-sm text-warning">
-          Cash activity requires an evidenced brokerage account in the opening
+          Activity requires an evidenced brokerage account in the opening
           review.
         </p>
       )}
@@ -78,19 +80,19 @@ export function LedgerCashActivityBuilder({
           setError(null);
           try {
             void onReview(
-              buildCashActivityReview(anchor, base, cutoff, entries),
+              buildSettledActivityReview(anchor, base, cutoff, entries),
             );
           } catch (failure) {
             setError(
               failure instanceof Error
                 ? failure.message
-                : "Check the cash records.",
+                : "Check the activity records.",
             );
           }
         }}
       >
         <fieldset disabled={disabled} className="min-w-0 space-y-4">
-          <legend className="sr-only">Settled cash activity</legend>
+          <legend className="sr-only">Settled activity</legend>
           <label className="block text-sm">
             Review cutoff timestamp
             <input
@@ -109,7 +111,7 @@ export function LedgerCashActivityBuilder({
               className="min-w-0 space-y-4 rounded-lg border p-4"
             >
               <legend className="px-1 text-sm font-semibold">
-                Cash record {index + 1}
+                Activity record {index + 1}
               </legend>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm">
@@ -138,14 +140,18 @@ export function LedgerCashActivityBuilder({
                   Type
                   <select
                     className={field}
+                    disabled={entry.kind !== ""}
                     value={entry.kind}
                     onChange={(event) =>
                       update(entry.id, {
-                        kind: event.target.value as CashActivityDraft["kind"],
+                        kind: event.target
+                          .value as SettledActivityDraft["kind"],
                       })
                     }
                   >
                     <option value="">Choose type</option>
+                    <option value="BUY">Purchase</option>
+                    <option value="SELL">Sale</option>
                     <option value="DEPOSIT">Deposit</option>
                     <option value="WITHDRAWAL">Withdrawal</option>
                     <option value="FEE">Fee</option>
@@ -185,17 +191,70 @@ export function LedgerCashActivityBuilder({
                     }
                   />
                 </label>
-                <label className="text-sm">
-                  Amount
-                  <input
-                    className={field}
-                    inputMode="decimal"
-                    value={entry.amount}
-                    onChange={(event) =>
-                      update(entry.id, { amount: event.target.value })
-                    }
-                  />
-                </label>
+                {entry.kind === "BUY" || entry.kind === "SELL" ? (
+                  <>
+                    <label className="text-sm">
+                      Listing
+                      <select
+                        className={field}
+                        value={entry.listingId ?? ""}
+                        onChange={(event) =>
+                          update(entry.id, { listingId: event.target.value })
+                        }
+                      >
+                        <option value="">Choose verified listing</option>
+                        {anchor.listings.map((listing) => (
+                          <option
+                            key={listing.listing_id}
+                            value={listing.listing_id}
+                          >
+                            {listing.ticker} · {listing.venue} ·{" "}
+                            {listing.currency} · {listing.listing_id}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {(
+                      [
+                        ["Quantity", "quantity"],
+                        ["Gross settlement cash", "grossCash"],
+                        ["Fees", "fees"],
+                        ["Taxes", "taxes"],
+                        ["Trade date", "tradeDate"],
+                        ["Settlement date", "settlementDate"],
+                      ] as const
+                    ).map(([label, key]) => (
+                      <label className="text-sm" key={key}>
+                        {label}
+                        <input
+                          className={field}
+                          inputMode={
+                            key.endsWith("Date") ? undefined : "decimal"
+                          }
+                          placeholder={
+                            key.endsWith("Date") ? "YYYY-MM-DD" : undefined
+                          }
+                          value={entry[key] ?? ""}
+                          onChange={(event) =>
+                            update(entry.id, { [key]: event.target.value })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </>
+                ) : entry.kind ? (
+                  <label className="text-sm">
+                    Amount
+                    <input
+                      className={field}
+                      inputMode="decimal"
+                      value={entry.amount}
+                      onChange={(event) =>
+                        update(entry.id, { amount: event.target.value })
+                      }
+                    />
+                  </label>
+                ) : null}
                 <label className="text-sm">
                   Source document SHA-256
                   <input
@@ -229,7 +288,7 @@ export function LedgerCashActivityBuilder({
                   );
                 }}
               >
-                Remove cash record {index + 1}
+                Remove activity record {index + 1}
               </Button>
             </fieldset>
           ))}
@@ -255,11 +314,12 @@ export function LedgerCashActivityBuilder({
               ]);
             }}
           >
-            Add cash record
+            Add activity record
           </Button>
           <p className="text-xs text-muted-foreground">
-            Amounts are positive exact decimals in the recorded currency. Keep
-            each source record distinct.
+            Use exact decimals in the recorded currency. Enter zero explicitly
+            for no fees or taxes. Keep each source record distinct. To change a
+            selected type, remove the record and add it again.
           </p>
           {error && (
             <p role="alert" className="text-sm text-warning">
@@ -268,10 +328,10 @@ export function LedgerCashActivityBuilder({
           )}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={entries.length === 0}>
-              Review cash activity
+              Review activity
             </Button>
             <Button type="button" variant="ghost" onClick={onClose}>
-              Discard cash activity
+              Discard activity
             </Button>
           </div>
         </fieldset>

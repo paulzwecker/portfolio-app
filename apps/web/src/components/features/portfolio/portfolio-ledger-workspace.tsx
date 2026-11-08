@@ -23,11 +23,11 @@ import {
 import { PortfolioLedgerCandidates } from "./portfolio-ledger-candidates";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
 import { LedgerOpeningBuilder } from "./ledger-opening-builder";
-import { LedgerCashActivityBuilder } from "./ledger-cash-activity-builder";
+import { LedgerSettledActivityBuilder } from "./ledger-settled-activity-builder";
 import {
-  restoreCashActivityReview,
-  type CashActivitySession,
-} from "./ledger-cash-activity";
+  restoreSettledActivityReview,
+  type SettledActivitySession,
+} from "./ledger-settled-activity";
 import { LedgerEndingBuilder } from "./ledger-ending-builder";
 import {
   endingOpeningAccounts,
@@ -68,9 +68,8 @@ export function PortfolioLedgerWorkspace({
   const verified =
     anchor.data?.portfolio_id === portfolioId ? anchor.data : undefined;
   const [file, setFile] = useState<LedgerReviewFile | null>(null);
-  const [activityBase, setActivityBase] = useState<CashActivitySession | null>(
-    null,
-  );
+  const [activityBase, setActivityBase] =
+    useState<SettledActivitySession | null>(null);
   const [endingBase, setEndingBase] = useState<{
     file: LedgerReviewFile;
     opening: OpeningAccountDraft[];
@@ -310,10 +309,10 @@ export function PortfolioLedgerWorkspace({
           {activityBase &&
             activityBase.base.anchorSha256 === verified.anchor_sha256 && (
               <PageSection
-                title="Settled cash activity"
+                title="Settled activity"
                 description="Build a candidate from the reconciled opening and your transaction evidence."
               >
-                <LedgerCashActivityBuilder
+                <LedgerSettledActivityBuilder
                   key={activityBase.base.text}
                   anchor={verified}
                   base={activityBase.base}
@@ -442,7 +441,7 @@ export function PortfolioLedgerWorkspace({
                   })
                 }
               >
-                Add settled cash activity
+                Add settled activity
               </Button>
             )}
           {verified &&
@@ -455,7 +454,7 @@ export function PortfolioLedgerWorkspace({
                 variant="outline"
                 onClick={() => {
                   try {
-                    const session = restoreCashActivityReview(
+                    const session = restoreSettledActivityReview(
                       verified,
                       visibleReview.file.text,
                     );
@@ -470,12 +469,12 @@ export function PortfolioLedgerWorkspace({
                     setError(
                       failure instanceof Error
                         ? failure.message
-                        : "This review cannot be edited in the cash form.",
+                        : "This review cannot be edited in the settled activity form.",
                     );
                   }
                 }}
               >
-                Edit supported cash activity
+                Edit supported activity
               </Button>
             )}
           {verified &&

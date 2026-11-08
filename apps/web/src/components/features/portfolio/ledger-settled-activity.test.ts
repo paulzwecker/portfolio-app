@@ -5,10 +5,10 @@ import {
   type OpeningAccountDraft,
 } from "./ledger-opening-draft";
 import {
-  buildCashActivityReview,
-  restoreCashActivityReview,
-  type CashActivityDraft,
-} from "./ledger-cash-activity";
+  buildSettledActivityReview,
+  restoreSettledActivityReview,
+  type SettledActivityDraft,
+} from "./ledger-settled-activity";
 
 const opening: OpeningAccountDraft = {
   id: ledgerAccountId,
@@ -32,7 +32,7 @@ const opening: OpeningAccountDraft = {
 };
 const base = buildOpeningReview(ledgerAnchor, [opening], true);
 const cutoff = "2026-01-31T23:59:59+01:00";
-function record(): CashActivityDraft {
+function record(): SettledActivityDraft {
   return {
     id: "66666666-6666-4666-8666-666666666666",
     accountId: ledgerAccountId,
@@ -56,16 +56,16 @@ it("restores exact cash packets with their original identities, evidence and pre
     amount: "0.0000000001",
     sourceRecordId: "fee-1",
   };
-  const original = buildCashActivityReview(ledgerAnchor, base, cutoff, [
+  const original = buildSettledActivityReview(ledgerAnchor, base, cutoff, [
     first,
     second,
   ]);
-  const restored = restoreCashActivityReview(ledgerAnchor, original.text);
+  const restored = restoreSettledActivityReview(ledgerAnchor, original.text);
   expect(restored.entries).toEqual([first, second]);
   expect(restored.cutoff).toBe(cutoff);
   expect(restored.base.text).toBe(base.text);
   expect(
-    buildCashActivityReview(
+    buildSettledActivityReview(
       ledgerAnchor,
       restored.base,
       restored.cutoff,
@@ -75,7 +75,7 @@ it("restores exact cash packets with their original identities, evidence and pre
 });
 
 it("rejects stale, lossy, unsupported or extended packets without discarding data", () => {
-  const text = buildCashActivityReview(ledgerAnchor, base, cutoff, [
+  const text = buildSettledActivityReview(ledgerAnchor, base, cutoff, [
     record(),
   ]).text;
   type FixturePacket = {
@@ -110,11 +110,11 @@ it("rejects stale, lossy, unsupported or extended packets without discarding dat
       packet.accounts[0].cash[0].balance = 0;
     }),
   ])
-    expect(() => restoreCashActivityReview(ledgerAnchor, candidate)).toThrow(
+    expect(() => restoreSettledActivityReview(ledgerAnchor, candidate)).toThrow(
       /cannot be edited/,
     );
   expect(() =>
-    restoreCashActivityReview(
+    restoreSettledActivityReview(
       { ...ledgerAnchor, anchor_sha256: "f".repeat(64) },
       text,
     ),
@@ -131,7 +131,7 @@ it("builds deterministic cash records preserving the exact opening and decimal t
     amount: "0.0000000001",
     sourceRecordId: "tax-1",
   };
-  const result = buildCashActivityReview(ledgerAnchor, base, cutoff, [
+  const result = buildSettledActivityReview(ledgerAnchor, base, cutoff, [
     first,
     second,
   ]);
@@ -155,7 +155,8 @@ it("builds deterministic cash records preserving the exact opening and decimal t
   expect(packet.activity[1].amount).toBe("0.0000000001");
   expect(result.evidence).toHaveLength(3);
   expect(
-    buildCashActivityReview(ledgerAnchor, base, cutoff, [first, second]).text,
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [first, second])
+      .text,
   ).toBe(result.text);
 });
 
@@ -173,7 +174,7 @@ it.each([
   { sourceRecordId: " " },
 ])("rejects incomplete or ambiguous cash evidence %j", (change) => {
   expect(() =>
-    buildCashActivityReview(ledgerAnchor, base, cutoff, [
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [
       { ...record(), ...change },
     ]),
   ).toThrow();
@@ -181,13 +182,13 @@ it.each([
 
 it("rejects reused source keys and sequences, stale anchors and unallocated accounts", () => {
   expect(() =>
-    buildCashActivityReview(ledgerAnchor, base, "2026-01-31", [record()]),
+    buildSettledActivityReview(ledgerAnchor, base, "2026-01-31", [record()]),
   ).toThrow(/offset/);
-  expect(() => buildCashActivityReview(ledgerAnchor, base, cutoff, [])).toThrow(
-    /one and/,
-  );
   expect(() =>
-    buildCashActivityReview(ledgerAnchor, base, cutoff, [
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, []),
+  ).toThrow(/one and/);
+  expect(() =>
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [
       {
         ...record(),
         sourceSha256: opening.sourceSha256,
@@ -201,10 +202,10 @@ it("rejects reused source keys and sequences, stale anchors and unallocated acco
     sourceRecordId: "other",
   };
   expect(() =>
-    buildCashActivityReview(ledgerAnchor, base, cutoff, [record(), other]),
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [record(), other]),
   ).toThrow(/sequence/);
   expect(() =>
-    buildCashActivityReview(
+    buildSettledActivityReview(
       { ...ledgerAnchor, anchor_sha256: "f".repeat(64) },
       base,
       cutoff,
@@ -217,6 +218,77 @@ it("rejects reused source keys and sequences, stale anchors and unallocated acco
     true,
   );
   expect(() =>
-    buildCashActivityReview(ledgerAnchor, unallocated, cutoff, [record()]),
+    buildSettledActivityReview(ledgerAnchor, unallocated, cutoff, [record()]),
   ).toThrow(/brokerage/);
+});
+
+function trade(kind: "BUY" | "SELL" = "BUY"): SettledActivityDraft {
+  return {
+    ...record(),
+    id: "77777777-7777-4777-8777-777777777777",
+    kind,
+    sequence: "2",
+    amount: "",
+    listingId: ledgerAnchor.listings[0].listing_id,
+    quantity: "0.1234567890",
+    grossCash: "123.4500000000",
+    fees: "0",
+    taxes: "0.0000000001",
+    tradeDate: "2026-01-13",
+    settlementDate: "2026-01-15",
+    sourceRecordId: "trade-1",
+  };
+}
+
+it.each(["BUY", "SELL"] as const)(
+  "round-trips %s and cash with exact decimal and evidence text",
+  (kind) => {
+    const input = buildSettledActivityReview(ledgerAnchor, base, cutoff, [
+      record(),
+      trade(kind),
+    ]);
+    const packet = JSON.parse(input.text);
+    expect(packet.activity[1]).toMatchObject({
+      kind,
+      quantity: "0.1234567890",
+      gross_cash: "123.4500000000",
+      fees: "0",
+      taxes: "0.0000000001",
+      listing_id: ledgerAnchor.listings[0].listing_id,
+    });
+    expect(packet.activity[1]).not.toHaveProperty("amount");
+    const restored = restoreSettledActivityReview(ledgerAnchor, input.text);
+    expect(restored.entries).toEqual([record(), trade(kind)]);
+    expect(
+      buildSettledActivityReview(
+        ledgerAnchor,
+        restored.base,
+        restored.cutoff,
+        restored.entries,
+      ).text,
+    ).toBe(input.text);
+    packet.activity[1].fees = 0;
+    expect(() =>
+      restoreSettledActivityReview(ledgerAnchor, JSON.stringify(packet)),
+    ).toThrow(/cannot be edited/);
+  },
+);
+
+it.each([
+  { listingId: "unrelated" },
+  { currency: "EUR" },
+  { quantity: "0" },
+  { quantity: "1e3" },
+  { grossCash: "" },
+  { fees: "" },
+  { taxes: undefined },
+  { tradeDate: "" },
+  { settlementDate: "" },
+  { amount: "1" },
+])("rejects ambiguous trade details %j", (change) => {
+  expect(() =>
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [
+      { ...trade(), ...change },
+    ]),
+  ).toThrow();
 });

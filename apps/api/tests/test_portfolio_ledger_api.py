@@ -660,3 +660,71 @@ def test_future_snapshot_cannot_replace_observed_anchor(
         assert response.json()["anchor_sha256"] == original.anchor_sha256
         assert response.json()["snapshot"]["id"] == str(original.snapshot.id)
     assert baseline(postgres_engine, portfolio_id) == before
+
+
+def test_guided_mixed_trade_payload_replays_and_rejects_invalid_dates_read_only(
+    postgres_engine: Engine,
+) -> None:
+    portfolio_id = source(postgres_engine)
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger"
+        headers = {"x-api-access-token": "synthetic-token"}
+        anchor = c.PortfolioLedgerAnchorRead.model_validate(
+            client.get(f"{path}/anchor", headers=headers).json()
+        )
+        common = next(item for item in anchor.listings if item.security_type == "COMMON_STOCK")
+        value = candidate(anchor)
+        value.contract_version = "portfolio-ledger-preview-v2"
+        payload = value.model_dump(mode="json")
+        account_id = str(value.accounts[0].account_id)
+
+        def entry(
+            kind: str, sequence: int, quantity: str, gross: str, fees: str, taxes: str
+        ) -> dict[str, object]:
+            return {
+                "id": str(UUID(int=100 + sequence)),
+                "account_id": account_id,
+                "kind": kind,
+                "sequence": sequence,
+                "effective_at": f"2026-01-0{sequence + 1}T00:00:00Z",
+                "evidence": {"source_sha256": "c" * 64, "source_record_id": str(sequence)},
+                "currency": "USD",
+                "listing_id": str(common.listing_id),
+                "quantity": quantity,
+                "gross_cash": gross,
+                "fees": fees,
+                "taxes": taxes,
+                "trade_date": "2026-01-01",
+                "settlement_date": "2026-01-02",
+            }
+
+        payload["activity"] = [
+            entry("BUY", 1, "0.5000000000", "10.00", "0.20", "0.05"),
+            entry("SELL", 2, "0.2500000000", "6.00", "0.10", "0.02"),
+            {
+                "id": str(UUID(int=103)),
+                "account_id": account_id,
+                "kind": "DEPOSIT",
+                "sequence": 3,
+                "effective_at": "2026-01-04T00:00:00Z",
+                "evidence": {"source_sha256": "c" * 64, "source_record_id": "3"},
+                "currency": "USD",
+                "amount": "1.00",
+            },
+        ]
+        first = client.post(f"{path}/preview", headers=headers, json=payload)
+        assert first.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(first.json())
+        assert result.status == "OPENING_RECONCILED" and not result.issues
+        assert next(
+            row.quantity for row in result.positions if row.listing_id == common.listing_id
+        ) == Decimal("2.75")
+        assert next(row.balance for row in result.cash if row.currency == "USD") == Decimal("96.63")
+        assert client.post(f"{path}/preview", headers=headers, json=payload).json() == first.json()
+        payload["activity"][1]["settlement_date"] = "2025-12-31"
+        assert client.post(f"{path}/preview", headers=headers, json=payload).status_code == 422
+    assert baseline(postgres_engine, portfolio_id) == before

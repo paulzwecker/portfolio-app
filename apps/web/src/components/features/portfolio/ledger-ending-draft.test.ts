@@ -7,9 +7,9 @@ import {
   type OpeningAccountDraft,
 } from "./ledger-opening-draft";
 import {
-  buildCashActivityReview,
-  type CashActivityDraft,
-} from "./ledger-cash-activity";
+  buildSettledActivityReview,
+  type SettledActivityDraft,
+} from "./ledger-settled-activity";
 import {
   buildEndingReview,
   endingOpeningAccounts,
@@ -39,7 +39,7 @@ const opening: OpeningAccountDraft = {
   ],
 };
 const base = buildOpeningReview(ledgerAnchor, [opening], true);
-const activity: CashActivityDraft = {
+const activity: SettledActivityDraft = {
   id: "66666666-6666-4666-8666-666666666666",
   accountId: ledgerAccountId,
   kind: "DEPOSIT",
@@ -50,7 +50,7 @@ const activity: CashActivityDraft = {
   sourceSha256: "c".repeat(64),
   sourceRecordId: "deposit",
 };
-const cashBase = buildCashActivityReview(
+const cashBase = buildSettledActivityReview(
   ledgerAnchor,
   base,
   "2026-01-31T23:59:59+01:00",
@@ -328,4 +328,35 @@ it("rejects stale or unsupported source packets without silently discarding thei
   expect(() =>
     buildEndingReview(ledgerAnchor, completed, [ending()], true),
   ).toThrow(/without an ending/);
+});
+
+it("retains mixed trade and cash evidence when independently recorded ending observations are restored", () => {
+  const trade: SettledActivityDraft = {
+    ...activity,
+    id: "77777777-7777-4777-8777-777777777777",
+    kind: "BUY",
+    sequence: "2",
+    amount: "",
+    listingId: ledgerAnchor.listings[0].listing_id,
+    quantity: "0.5000000000",
+    grossCash: "10.00",
+    fees: "0",
+    taxes: "0.05",
+    tradeDate: "2026-01-13",
+    settlementDate: "2026-01-15",
+    sourceRecordId: "buy",
+  };
+  const mixed = buildSettledActivityReview(
+    ledgerAnchor,
+    base,
+    "2026-01-31T23:59:59+01:00",
+    [activity, trade],
+  );
+  const original = buildEndingReview(ledgerAnchor, mixed, [ending()], true);
+  const restored = restoreEndingReview(ledgerAnchor, original.text);
+  expect(restored.file.text).toBe(mixed.text);
+  expect(
+    buildEndingReview(ledgerAnchor, restored.file, restored.accounts, true)
+      .text,
+  ).toBe(original.text);
 });

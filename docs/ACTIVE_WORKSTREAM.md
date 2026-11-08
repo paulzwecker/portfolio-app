@@ -88,9 +88,21 @@ cases, including matched and blocked statement reload, correction, discard and
 revalidation. Typecheck, build, focused lint and documentation checks passed.
 The resumed desktop and mobile layouts were visually inspected.
 
+## Current trade activity increment
+
+The guided activity form supports evidenced BUY and SELL records for listings in
+the verified anchor, alongside existing cash records. Listing and trading currency,
+exact quantity, gross settlement cash, explicit fees/taxes and both dates come from
+the source; replay and date/balance checks remain in the API. Mixed packets retain
+identity, precision and evidence on restoration. Other listings and activity types
+remain in the existing file workflow; no cost basis or FX is inferred.
+Focused checks passed 136 web tests, 16 isolated PostgreSQL/API cases and 34 synthetic
+desktop/mobile journeys, including trade download and restoration. Typecheck,
+production build and focused lint passed; the synthetic desktop and mobile forms were inspected.
+
 ## Next increment and release boundaries
 
-Add guided trade/dividend entry to complete the existing
+Add guided dividend entry and expand reviewed listing selection to complete the existing
 candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,

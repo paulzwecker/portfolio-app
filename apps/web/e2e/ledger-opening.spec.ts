@@ -47,10 +47,17 @@ async function setup(page: Page, status = 200) {
       report.as_of = packet.as_of;
       report.activity_count = packet.activity.length;
       if (packet.activity.length > 0) {
-        report.cash.find((row) => row.currency === "USD")!.balance =
-          "101.2500000000";
+        const hasBuy = packet.activity.some(
+          (row: { kind: string }) => row.kind === "BUY",
+        );
+        const usd = hasBuy ? "89.7500000000" : "101.2500000000";
+        report.cash.find((row) => row.currency === "USD")!.balance = usd;
         report.accounts[0].cash.find((row) => row.currency === "USD")!.balance =
-          "101.2500000000";
+          usd;
+        if (hasBuy) {
+          report.positions[0].quantity = "3.0000000000";
+          report.accounts[0].positions[0].quantity = "3.0000000000";
+        }
       }
       if (packet.ending_statement) {
         report.status = "ENDING_RECONCILED";
@@ -449,7 +456,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     page.getByText("Opening balances reconciled", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Add settled cash activity", exact: true })
+    .getByRole("button", { name: "Add settled activity", exact: true })
     .click();
   await expect(
     page.getByLabel("Ledger review JSON", { exact: true }),
@@ -464,7 +471,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     page.getByLabel("Ledger review result", { exact: true }),
   ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Add cash record", exact: true })
+    .getByRole("button", { name: "Add activity record", exact: true })
     .click();
   const selected = JSON.parse(calls[0].text).accounts[0].account_id;
   await page
@@ -487,7 +494,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     .getByLabel("Source record reference", { exact: true })
     .fill("synthetic-deposit");
   await page
-    .getByRole("button", { name: "Review cash activity", exact: true })
+    .getByRole("button", { name: "Review activity", exact: true })
     .click();
   await expect(
     page.getByText("Opening balances reconciled", { exact: true }),
@@ -526,7 +533,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     projection.getByText("101.25", { exact: true }).filter({ visible: true }),
   ).toBeVisible();
   await page
-    .getByRole("heading", { name: "Settled cash activity", exact: true })
+    .getByRole("heading", { name: "Settled activity", exact: true })
     .scrollIntoViewIfNeeded();
   await page.screenshot({
     path: info.outputPath("cash-activity.png"),
@@ -547,7 +554,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
   if (!savedPath) throw new Error("Synthetic cash review download missing");
   expect(await readFile(savedPath, "utf8")).toBe(calls[1].text);
   await page
-    .getByRole("button", { name: "Discard cash activity", exact: true })
+    .getByRole("button", { name: "Discard activity", exact: true })
     .click();
   await page.reload();
   await page
@@ -561,7 +568,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
   ).toBeVisible();
   expect(calls[2].text).toBe(calls[1].text);
   await page
-    .getByRole("button", { name: "Edit supported cash activity", exact: true })
+    .getByRole("button", { name: "Edit supported activity", exact: true })
     .click();
   await expect(
     page.getByLabel("Review cutoff timestamp", { exact: true }),
@@ -573,7 +580,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     page.getByLabel("Source record reference", { exact: true }),
   ).toHaveValue("synthetic-deposit");
   await page
-    .getByRole("heading", { name: "Settled cash activity", exact: true })
+    .getByRole("heading", { name: "Settled activity", exact: true })
     .scrollIntoViewIfNeeded();
   await page.screenshot({
     path: info.outputPath("cash-resumed.png"),
@@ -586,7 +593,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     ),
   ).toBe(true);
   await page
-    .getByRole("button", { name: "Review cash activity", exact: true })
+    .getByRole("button", { name: "Review activity", exact: true })
     .click();
   await expect(
     page.getByText("Opening balances reconciled", { exact: true }),
@@ -600,7 +607,7 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     page.getByRole("textbox", { name: "Candidate reason", exact: true }),
   ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Discard cash activity", exact: true })
+    .getByRole("button", { name: "Discard activity", exact: true })
     .click();
   await expect(
     page.getByLabel("Ledger review JSON", { exact: true }),
@@ -902,13 +909,13 @@ test("a reviewed cash draft can transition to ending observations without losing
     page.getByText("Opening balances reconciled", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Add settled cash activity", exact: true })
+    .getByRole("button", { name: "Add settled activity", exact: true })
     .click();
   await page
     .getByLabel("Review cutoff timestamp", { exact: true })
     .fill("2026-01-31T23:59:59+01:00");
   await page
-    .getByRole("button", { name: "Add cash record", exact: true })
+    .getByRole("button", { name: "Add activity record", exact: true })
     .click();
   await page
     .getByRole("combobox", { name: "Account", exact: true })
@@ -930,7 +937,7 @@ test("a reviewed cash draft can transition to ending observations without losing
     .getByLabel("Source record reference", { exact: true })
     .fill("deposit");
   await page
-    .getByRole("button", { name: "Review cash activity", exact: true })
+    .getByRole("button", { name: "Review activity", exact: true })
     .click();
   await expect(
     page.getByText("Opening balances reconciled", { exact: true }),
@@ -993,7 +1000,7 @@ test("a reviewed cash draft can transition to ending observations without losing
   ).toBeVisible();
   expect(calls[3].text).toBe(calls[1].text);
   await page
-    .getByRole("button", { name: "Edit supported cash activity", exact: true })
+    .getByRole("button", { name: "Edit supported activity", exact: true })
     .click();
   await expect(page.getByLabel("Amount", { exact: true })).toHaveValue(
     "1.2500000000",
@@ -1179,13 +1186,13 @@ test("unsupported reviewed activity stays available in its original file", async
     page.getByText("Opening balances reconciled", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Edit supported cash activity", exact: true })
+    .getByRole("button", { name: "Edit supported activity", exact: true })
     .click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "cannot be edited in the cash form",
+    "cannot be edited in the settled activity form",
   );
   await expect(
-    page.getByRole("heading", { name: "Settled cash activity", exact: true }),
+    page.getByRole("heading", { name: "Settled activity", exact: true }),
   ).toHaveCount(0);
   const downloadEvent = page.waitForEvent("download");
   await page
@@ -1290,4 +1297,124 @@ test("restoring the same account cannot reuse an earlier pending hash", async ({
   await expect(
     page.getByLabel("Source document SHA-256", { exact: true }),
   ).toHaveValue(createHash("sha256").update(newBytes).digest("hex"));
+});
+
+test("a guided purchase keeps source evidence and exact amounts through download and restoration", async ({
+  page,
+}, info) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add settled activity", exact: true })
+    .click();
+  await page
+    .getByLabel("Review cutoff timestamp", { exact: true })
+    .fill("2026-01-31T23:59:59+01:00");
+  await page
+    .getByRole("button", { name: "Add activity record", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption(JSON.parse(calls[0].text).accounts[0].account_id);
+  await page
+    .getByRole("combobox", { name: "Type", exact: true })
+    .selectOption("BUY");
+  await expect(
+    page.getByRole("combobox", { name: "Type", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Booking timestamp", { exact: true })
+    .fill("2026-01-15T10:30:00+01:00");
+  await page.getByLabel("Sequence", { exact: true }).fill("1");
+  await page.getByLabel("Currency", { exact: true }).fill("USD");
+  await page
+    .getByRole("combobox", { name: "Listing", exact: true })
+    .selectOption(ledgerAnchor.listings[0].listing_id);
+  await page.getByLabel("Quantity", { exact: true }).fill("0.5000000000");
+  await page
+    .getByLabel("Gross settlement cash", { exact: true })
+    .fill("10.0000000000");
+  await page.getByLabel("Fees", { exact: true }).fill("0.20");
+  await page.getByLabel("Taxes", { exact: true }).fill("0.05");
+  await page.getByLabel("Trade date", { exact: true }).fill("2026-01-13");
+  await page.getByLabel("Settlement date", { exact: true }).fill("2026-01-15");
+  await page
+    .getByLabel("Source document SHA-256", { exact: true })
+    .last()
+    .fill("c".repeat(64));
+  await page
+    .getByLabel("Source record reference", { exact: true })
+    .fill("synthetic-purchase");
+  await page
+    .getByRole("heading", { name: "Settled activity", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("trade-entry.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(JSON.parse(calls[1].text).activity[0]).toMatchObject({
+    kind: "BUY",
+    quantity: "0.5000000000",
+    gross_cash: "10.0000000000",
+    fees: "0.20",
+    taxes: "0.05",
+    trade_date: "2026-01-13",
+    settlement_date: "2026-01-15",
+  });
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const savedPath = await (await downloadEvent).path();
+  if (!savedPath) throw new Error("Synthetic trade review download missing");
+  expect(await readFile(savedPath, "utf8")).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Discard activity", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(savedPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Edit supported activity", exact: true })
+    .click();
+  await expect(page.getByLabel("Quantity", { exact: true })).toHaveValue(
+    "0.5000000000",
+  );
+  await expect(page.getByLabel("Fees", { exact: true })).toHaveValue("0.20");
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[3].text).toBe(calls[1].text);
+  await page.getByLabel("Fees", { exact: true }).fill("0");
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
 });

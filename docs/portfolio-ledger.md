@@ -188,20 +188,21 @@ for the same anchor. Restoration preserves account IDs, exact amounts and eviden
 and requires the source-date confirmation again. Packets with activity, ending
 statements, changed anchors or other fields use the existing file review workflow.
 
-After a guided opening reconciles, the screen can add evidenced DEPOSIT,
-WITHDRAWAL, FEE and TAX records for declared brokerage accounts. Each record has
-an explicit type, unique sequence, settled timestamp with UTC offset, currency,
-exact positive amount, document hash and source-record reference. The user also
-supplies the review cutoff. The API owns ordering, time-boundary, balance and
-duplicate-source validation. Its candidate balances are displayed by account or
-portfolio when replay succeeds. The cash draft must be explicitly discarded before
-the opening or source file is changed. To resume it, load the unchanged downloaded
-review JSON, validate it against the current anchor and select the cash editor.
-Restoration preserves account and record IDs, source evidence and exact amounts.
-Packets with other activities or extra fields remain available through the file
-workflow. Guided trades, dividends and transfers remain future work.
+After a guided opening reconciles, the screen can add evidenced BUY, SELL,
+DEPOSIT, WITHDRAWAL, FEE and TAX records for declared brokerage accounts. Each
+record has an explicit type, sequence, settled timestamp with UTC offset, currency,
+document hash and source-record reference. Trades additionally require a verified
+anchor listing in its trading currency, exact quantity and gross settlement cash,
+explicit fees and taxes (including zero), and trade and settlement dates. No FX,
+acquisition basis or historical transactions are inferred. The user supplies the
+review cutoff. The API owns ordering, dates, balance and source validation and
+calculates candidate balances. The activity draft must be discarded before its
+opening or source file is changed. Revalidate an unchanged downloaded review JSON
+to resume; account and record IDs, evidence and exact amounts remain intact.
+Other activities, listings outside the current anchor, or extra fields use the file
+workflow; guided dividends and transfers remain future work.
 
-After a guided opening or supported cash review reconciles, the ending form accepts
+After a guided opening or supported activity review reconciles, the ending form accepts
 independently entered positions, native cash and source evidence for every account
 at the existing review cutoff. Fields start empty. The user confirms the observation
 time, and the API distinguishes missing rows, explicit zeros and differences.
