@@ -5,6 +5,7 @@ import Link from "next/link";
 import "./globals.css";
 import { ContextHeader } from "@/components/app/context-header";
 import { Navigation } from "@/components/app/navigation";
+import { ThemeSelector } from "@/components/app/theme-selector";
 
 export const metadata: Metadata = {
   title: "Portfolio Research · Portfolio",
@@ -58,12 +59,9 @@ export default function RootLayout({
             </div>
           </aside>
           <div className="min-w-0">
-            <header className="flex min-h-16 items-center gap-4 border-b px-4 py-3 sm:px-6 md:px-10">
+            <header className="flex min-h-16 items-center gap-4 border-b bg-card px-4 py-3 sm:px-6 md:px-10">
               <ContextHeader />
-              <span className="hidden shrink-0 items-center gap-2 text-xs text-muted-foreground lg:flex">
-                <span className="size-1.5 rounded-full bg-muted-foreground/50" />
-                Local development
-              </span>
+              <ThemeSelector />
             </header>
             <main
               id="main-content"

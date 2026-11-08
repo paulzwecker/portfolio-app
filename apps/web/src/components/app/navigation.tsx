@@ -83,7 +83,13 @@ function NavigationLink({
           : "text-sidebar-foreground hover:bg-sidebar-accent/70",
       )}
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0 text-primary" />
+      <Icon
+        aria-hidden="true"
+        className={cn(
+          "size-4 shrink-0",
+          active ? "text-primary" : "text-muted-foreground",
+        )}
+      />
       <span>{label}</span>
     </Link>
   );
