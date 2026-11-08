@@ -22,3 +22,5 @@
 - [ ] I reviewed required CI and any Vercel Preview evidence.
 - [ ] I checked migration compatibility, target guards and recovery implications.
 - [ ] Any production migration/deployment step remains separately authorized.
+- [ ] At this integration boundary I ran `node scripts/deployment/schema-gate.mjs review` and reviewed its pending range.
+- [ ] For a schema-dependent release, provider freezes, fresh populated-state recovery and the guarded migration have explicit operator gates. The production schema attestation advances only after live read-only verification and owner review.

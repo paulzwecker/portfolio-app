@@ -21,6 +21,22 @@ beforeEach(() => {
   vi.stubEnv("WEB_ACCESS_USERNAME", "");
   vi.stubEnv("WEB_ACCESS_PASSWORD", "");
 });
+
+it("accepts explicit v2 income packets and their matching projection contract", () => {
+  const packet = ledgerPacket();
+  packet.contract_version = "portfolio-ledger-preview-v2";
+  const text = JSON.stringify(packet);
+  expect(inspectLedgerFile(text, "income.json").text).toBe(text);
+  const report = ledgerReport();
+  report.contract_version = "portfolio-ledger-preview-v2";
+  report.projection_version = "settled-booking-v2";
+  expect(isPortfolioLedgerPreview(report)).toBe(true);
+  report.projection_version = "settled-booking-v1";
+  expect(isPortfolioLedgerPreview(report)).toBe(false);
+  report.contract_version = "portfolio-ledger-preview-v1";
+  report.projection_version = "settled-booking-v2";
+  expect(isPortfolioLedgerPreview(report)).toBe(false);
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();

@@ -58,6 +58,14 @@ jobs:
       - name: Verify CI checkout excludes portfolio source data
         run: node scripts/tests/ci-source-data-policy.mjs
 
+      - name: Review schema compatibility for pull requests
+        if: github.event_name == 'pull_request'
+        run: node scripts/deployment/schema-gate.mjs review
+
+      - name: Gate main deployment on owner-verified production schema
+        if: github.event_name == 'push'
+        run: node scripts/deployment/schema-gate.mjs deploy
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

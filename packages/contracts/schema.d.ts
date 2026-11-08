@@ -7617,7 +7617,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "DEPOSIT" | "FEE" | "WITHDRAWAL";
+            kind: "DEPOSIT" | "FEE" | "TAX" | "WITHDRAWAL";
             /** Sequence */
             sequence: number;
         };
@@ -7647,7 +7647,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "DEPOSIT" | "FEE" | "WITHDRAWAL";
+            kind: "DEPOSIT" | "FEE" | "TAX" | "WITHDRAWAL";
             /** Sequence */
             sequence: number;
         };
@@ -7671,6 +7671,152 @@ export interface components {
             balance: string;
             /** Currency */
             currency: string;
+        };
+        /** LedgerCashTransfer */
+        "LedgerCashTransfer-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: number | string;
+            /** Currency */
+            currency: string;
+            destination: components["schemas"]["LedgerTransferReceipt-Input"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "CASH_TRANSFER";
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerCashTransfer */
+        "LedgerCashTransfer-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            destination: components["schemas"]["LedgerTransferReceipt-Output"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "CASH_TRANSFER";
+            /** Sequence */
+            sequence: number;
+        };
+        /**
+         * LedgerDividend
+         * @description Observed account cash in one settlement currency, independently of quote currency.
+         */
+        "LedgerDividend-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /** Fees */
+            fees: number | string;
+            /** Gross Cash */
+            gross_cash: number | string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "DIVIDEND";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Sequence */
+            sequence: number;
+            /** Taxes */
+            taxes: number | string;
+        };
+        /**
+         * LedgerDividend
+         * @description Observed account cash in one settlement currency, independently of quote currency.
+         */
+        "LedgerDividend-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /** Fees */
+            fees: string;
+            /** Gross Cash */
+            gross_cash: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "DIVIDEND";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Sequence */
+            sequence: number;
+            /** Taxes */
+            taxes: string;
         };
         /** LedgerEndingAccount */
         "LedgerEndingAccount-Input": {
@@ -8090,6 +8236,126 @@ export interface components {
             /** Revision Number */
             revision_number: number | null;
         };
+        /** LedgerSecurityTransfer */
+        "LedgerSecurityTransfer-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Basis Status
+             * @constant
+             */
+            basis_status: "UNAVAILABLE";
+            destination: components["schemas"]["LedgerSecurityTransferReceipt-Input"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SECURITY_TRANSFER";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerSecurityTransfer */
+        "LedgerSecurityTransfer-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Basis Status
+             * @constant
+             */
+            basis_status: "UNAVAILABLE";
+            destination: components["schemas"]["LedgerSecurityTransferReceipt-Output"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SECURITY_TRANSFER";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerSecurityTransferReceipt */
+        "LedgerSecurityTransferReceipt-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: number | string;
+        };
+        /** LedgerSecurityTransferReceipt */
+        "LedgerSecurityTransferReceipt-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: string;
+        };
         /** LedgerTrade */
         "LedgerTrade-Input": {
             /**
@@ -8191,6 +8457,42 @@ export interface components {
              * Format: date
              */
             trade_date: string;
+        };
+        /** LedgerTransferReceipt */
+        "LedgerTransferReceipt-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: number | string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+        };
+        /** LedgerTransferReceipt */
+        "LedgerTransferReceipt-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
         };
         /**
          * Lifecycle
@@ -9068,7 +9370,7 @@ export interface components {
             /** Accounts */
             accounts: components["schemas"]["LedgerOpeningAccount-Input"][];
             /** Activity */
-            activity: (components["schemas"]["LedgerTrade-Input"] | components["schemas"]["LedgerCashActivity-Input"])[];
+            activity: (components["schemas"]["LedgerTrade-Input"] | components["schemas"]["LedgerCashActivity-Input"] | components["schemas"]["LedgerDividend-Input"] | components["schemas"]["LedgerCashTransfer-Input"] | components["schemas"]["LedgerSecurityTransfer-Input"])[];
             /** Anchor Sha256 */
             anchor_sha256: string;
             /**
@@ -9083,9 +9385,9 @@ export interface components {
             as_of: string;
             /**
              * Contract Version
-             * @constant
+             * @enum {string}
              */
-            contract_version: "portfolio-ledger-preview-v1";
+            contract_version: "portfolio-ledger-preview-v1" | "portfolio-ledger-preview-v2";
             ending_statement?: components["schemas"]["LedgerEndingStatement-Input"] | null;
         };
         /** PortfolioLedgerPreviewCreate */
@@ -9093,7 +9395,7 @@ export interface components {
             /** Accounts */
             accounts: components["schemas"]["LedgerOpeningAccount-Output"][];
             /** Activity */
-            activity: (components["schemas"]["LedgerTrade-Output"] | components["schemas"]["LedgerCashActivity-Output"])[];
+            activity: (components["schemas"]["LedgerTrade-Output"] | components["schemas"]["LedgerCashActivity-Output"] | components["schemas"]["LedgerDividend-Output"] | components["schemas"]["LedgerCashTransfer-Output"] | components["schemas"]["LedgerSecurityTransfer-Output"])[];
             /** Anchor Sha256 */
             anchor_sha256: string;
             /**
@@ -9108,9 +9410,9 @@ export interface components {
             as_of: string;
             /**
              * Contract Version
-             * @constant
+             * @enum {string}
              */
-            contract_version: "portfolio-ledger-preview-v1";
+            contract_version: "portfolio-ledger-preview-v1" | "portfolio-ledger-preview-v2";
             ending_statement?: components["schemas"]["LedgerEndingStatement-Output"] | null;
         };
         /** PortfolioLedgerPreviewRead */
@@ -9142,9 +9444,9 @@ export interface components {
             consumed_listings?: components["schemas"]["LedgerListingRead"][];
             /**
              * Contract Version
-             * @constant
+             * @enum {string}
              */
-            contract_version: "portfolio-ledger-preview-v1";
+            contract_version: "portfolio-ledger-preview-v1" | "portfolio-ledger-preview-v2";
             /** Ending Reconciliation */
             ending_reconciliation?: components["schemas"]["LedgerEndingReconciliationRead"][];
             /** Ending Statement At */
@@ -9175,9 +9477,9 @@ export interface components {
             preview_only: true;
             /**
              * Projection Version
-             * @constant
+             * @enum {string}
              */
-            projection_version: "settled-booking-v1";
+            projection_version: "settled-booking-v1" | "settled-booking-v2";
             /**
              * Status
              * @enum {string}

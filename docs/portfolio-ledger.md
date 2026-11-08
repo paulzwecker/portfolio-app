@@ -14,6 +14,84 @@ opening accounts/balances and up to 1,000 activity records. It permits 20 accoun
 1,000 opening position rows and 100 opening cash rows across those accounts.
 `settled-booking-v1` supports BUY, SELL, DEPOSIT, WITHDRAWAL and FEE.
 
+`portfolio-ledger-preview-v2` explicitly opts into `settled-booking-v2`, adding
+DIVIDEND, TAX and paired CASH_TRANSFER / SECURITY_TRANSFER records. Existing v1/v2 packets, projections and receipt hashes retain
+their original meaning. A v1 packet cannot contain these new kinds. Both versions
+use the same review/publication workflow and existing migrated receipt tables.
+
+### Paired internal cash transfers
+
+A v2 CASH_TRANSFER is one ordered activity containing a source debit and a
+required `destination` receipt. Both legs explicitly declare account, currency,
+positive amount, timezone-aware settled booking instant and source document/record
+evidence. The legs must have equal amounts/currency and the same absolute booking
+instant, with distinct source keys. Both accounts must be declared evidenced
+brokerage accounts inside the same portfolio, and they must differ.
+
+Replay debits the source and credits the recipient at that single sequence,
+preserving consolidated native-currency cash and all security quantities. Source
+overdrafts block the packet, even when later activity repairs the closing balance.
+Account-level ending observations must reconcile independently of portfolio totals.
+The receipt evidence participates in duplicate-source checks, immutable input
+hashes, saved records and correction acknowledgements. A reviewed correction
+replaces the complete paired activity under its existing activity ID.
+
+This scope requires two matched, already-settled observations. Different booking
+instants require an explicit future in-transit accounting contract. Cross-currency
+movement and outside-portfolio accounts remain unsupported.
+Fees/taxes require separate evidenced rows. Do not also enter the matched legs as
+external DEPOSIT/WITHDRAWAL rows; exact source-key reuse is rejected, and original
+statement review must catch differently keyed duplicates. Internal movement grants
+no income, external capital-flow, performance or ownership inference.
+
+### Paired internal security transfers
+
+A v2 SECURITY_TRANSFER declares the source account, exact `listing_id`, positive
+`quantity`, settled instant and source record. Its required `destination` declares
+the receiving account, the same listing/quantity/instant and independent receipt
+evidence. Both accounts must be declared evidenced brokerages inside the portfolio.
+The two source keys join duplicate checks, hashes and correction acknowledgements.
+
+Replay moves only quantity between accounts, preserving consolidated holdings and
+all currency cash. A short source position blocks review even if a later return
+repairs the closing position. Both account statements must reconcile, including
+explicit zero source positions after a whole-position transfer. Exact listing
+identity is verified, locked and hash-bound, including companyless ETFs. Different
+listings of the same security, ADR conversions and share-class exchanges require
+separate reviewed contracts.
+
+`basis_status` must explicitly be `UNAVAILABLE`. Acquisition dates/costs and gains
+remain unavailable in this quantity-only ledger contract. Retain original lot/cost
+evidence privately for later reviewed lot accounting. Known basis claims and extra
+cost fields are rejected. Separate evidenced cash rows cover any fees/taxes.
+Both legs require the same absolute settled instant; in-transit and external
+transfers remain outside this contract. Transfer records grant no sale, income,
+performance or investment-acceptance inference.
+
+### Observed income and taxes
+
+A DIVIDEND record declares an exact `listing_id`, settlement `currency`, positive
+`gross_cash`, nonnegative `fees` and nonnegative `taxes` (withholding), including
+explicit zero charges. It retains the common account, settled booking timestamp,
+sequence and source document/record evidence. Net cash is gross less fees and
+withholding; charges exceeding gross are rejected. Full withholding preserves an
+explicit zero receipt. A separate TAX record debits its positive `amount` in the
+stated currency. Do not record the same withholding both inside a dividend and as
+a separate TAX row. Duplicate source keys remain blocked; source review must also
+identify differently keyed duplicates from overlapping statements.
+
+All dividend amounts use one observed account-settlement currency, which can
+differ from the listing quote currency. The broker evidence must supply every
+amount in that currency. The application performs no implicit conversion or
+reconstruction of an original announced payout/rate. Unconverted multi-currency
+legs require a future explicit FX contract. Dividends do not alter quantities or
+require a current position, since an evidenced payment can arrive after a sale.
+Their listing identity is still verified, locked and hash-bound, including a
+companyless ETF or a security absent from current holdings. Provider action data
+alone cannot create an account dividend. Automatic reinvestment requires a
+separate evidenced purchase. Income, external funding and strategic targets keep
+their distinct meanings. No yield, cost basis or performance is inferred.
+
 An optional `ending_statement` contains an `effective_at` equal to `as_of` and
 per-account observations with account ID, evidence, positions and cash. Its scope
 uses the declared opening accounts. Every account, including empty accounts,
