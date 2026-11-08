@@ -22,6 +22,14 @@ history and ambiguous-commit readback are covered. [Handoff](docs/ACTIVE_WORKSTR
 records the guarded fixture and canonical-state evidence. Dated cutover and
 production activation retain their owner gates.
 
+The explicit whole-portfolio publication backend is LOCAL_VERIFIED through 46
+focused checks. It pins accepted review, source/current snapshot, plan hash and
+human confirmation, writes an immutable lineage receipt plus a new dated snapshot,
+and blocks observed/manual/workbook replacement after cutover. Additive migration
+`b59f16c8a203` follows `a832e94d6f10`; populated ownership prevents downgrade.
+Same-cutoff publication stays blocked by existing snapshot semantics. Portfolio
+source presentation and additional compatibility checks are the next increment.
+
 ### Current BUILD evidence
 
 `a7557b0` C2.3 storage is LOCAL_VERIFIED through 21 isolated PostgreSQL checks.

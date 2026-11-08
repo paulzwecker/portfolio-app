@@ -12,6 +12,22 @@
 
 ## Current ledger increment
 
+The new publication backend passes 46 focused checks (23 publication, 21 receipt
+storage and two workbook-lock cases). `portfolio-ledger-publication-v1` previews
+whole-portfolio effects read-only and requires an exact plan/previous publication,
+typed confirmation and explicit ownership/scope/recovery/holdings acknowledgements.
+Atomic publication appends a canonical snapshot and immutable lineage receipt.
+The original opening remains pinned for later candidate reconstruction. Normal
+snapshot writes are blocked after ownership transfer; workbook previews report
+`HOLDINGS_OWNERSHIP_TRANSFERRED`. Same-date corrections require later source evidence
+before publication, preserving the existing unique snapshot cutoff.
+Migration `b59f16c8a203` follows `a832e94d6f10`, retaining existing data. Downgrade
+fails closed once publications exist. Tests cover native quantities/currency cash,
+current/historical API readback, replay/concurrency, rollback, stale source/base,
+confirmation rejection, append-only lineage and ownership writer rejection.
+Review normalized publication receipt times to UTC for timezone-independent hashes.
+Source presentation/compatibility verification follows. Production remains gated.
+
 `cbefcae` adds scoped history/detail/stage/review proxy contracts. The complete
 saved-candidate UI is LOCAL_VERIFIED through 90 focused web checks, 43 API/fixture
 checks (including the 26 receipt/review regressions) and four real-API desktop/mobile

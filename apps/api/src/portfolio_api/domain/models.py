@@ -643,6 +643,69 @@ class PortfolioLedgerReview(Base):
     review_data: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
+class PortfolioLedgerPublication(Base):
+    """Immutable whole-portfolio ownership/publication lineage into holdings snapshots."""
+
+    __tablename__ = "portfolio_ledger_publications"
+    __table_args__ = (
+        UniqueConstraint("portfolio_id", "id"),
+        UniqueConstraint(
+            "portfolio_id", "sequence", name="uq_portfolio_ledger_publications_sequence"
+        ),
+        UniqueConstraint("candidate_id"),
+        UniqueConstraint("review_id"),
+        UniqueConstraint("holding_snapshot_id"),
+        ForeignKeyConstraint(
+            ["portfolio_id", "candidate_id"],
+            ["portfolio_ledger_candidates.portfolio_id", "portfolio_ledger_candidates.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["portfolio_id", "previous_publication_id"],
+            ["portfolio_ledger_publications.portfolio_id", "portfolio_ledger_publications.id"],
+            ondelete="RESTRICT",
+            name="fk_ledger_publication_previous",
+        ),
+        CheckConstraint("sequence >= 1", name="sequence"),
+        CheckConstraint("cutover_at <= effective_at", name="cutover_at"),
+        CheckConstraint(
+            "previous_publication_id IS NULL OR previous_publication_id <> id", name="previous"
+        ),
+        CheckConstraint(
+            "(sequence = 1 AND previous_publication_id IS NULL) OR "
+            "(sequence > 1 AND previous_publication_id IS NOT NULL)",
+            name="lineage",
+        ),
+        CheckConstraint("published_by = 'LOCAL_USER'", name="published_by"),
+        CheckConstraint("length(plan_sha256) = 64", name="plan_sha256"),
+        CheckConstraint("length(request_sha256) = 64", name="request_sha256"),
+        CheckConstraint("length(snapshot_sha256) = 64", name="snapshot_sha256"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    portfolio_id: Mapped[UUID] = mapped_column(ForeignKey("portfolios.id", ondelete="RESTRICT"))
+    candidate_id: Mapped[UUID] = mapped_column()
+    review_id: Mapped[UUID] = mapped_column(
+        ForeignKey("portfolio_ledger_reviews.id", ondelete="RESTRICT")
+    )
+    previous_publication_id: Mapped[UUID | None] = mapped_column()
+    holding_snapshot_id: Mapped[UUID] = mapped_column(
+        ForeignKey("holding_snapshots.id", ondelete="RESTRICT")
+    )
+    anchor_snapshot_id: Mapped[UUID] = mapped_column(
+        ForeignKey("holding_snapshots.id", ondelete="RESTRICT")
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    cutover_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    published_by: Mapped[str] = mapped_column(String(24), default="LOCAL_USER")
+    plan_sha256: Mapped[str] = mapped_column(String(64))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    snapshot_sha256: Mapped[str] = mapped_column(String(64))
+    plan_data: Mapped[dict[str, object]] = mapped_column(JSON)
+    command_data: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
 class TargetRevision(Audit, Base):
     __tablename__ = "target_allocation_revisions"
     __table_args__ = (
@@ -4107,6 +4170,7 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         CashPosition,
         PortfolioLedgerCandidate,
         PortfolioLedgerReview,
+        PortfolioLedgerPublication,
         ScoreAssessment,
         LegacyImportBatch,
         WorkbookSyncArtifact,

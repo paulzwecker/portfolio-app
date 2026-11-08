@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 
 from portfolio_api import portfolio_ledger_contracts as c
 from portfolio_api.domain import queries, services
-from portfolio_api.domain.models import HoldingSnapshot, Listing, Security
+from portfolio_api.domain.models import (
+    HoldingSnapshot,
+    Listing,
+    PortfolioLedgerPublication,
+    Security,
+)
 
 
 def _digest(value: object) -> str:
@@ -70,6 +75,20 @@ def portfolio_ledger_anchor(session: Session, portfolio_id: UUID) -> c.Portfolio
         .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
         .limit(1)
     )
+    ownership = session.scalar(
+        select(PortfolioLedgerPublication)
+        .where(PortfolioLedgerPublication.portfolio_id == portfolio_id)
+        .order_by(PortfolioLedgerPublication.sequence)
+        .limit(1)
+    )
+    if ownership is not None:
+        snapshot = session.get(HoldingSnapshot, ownership.anchor_snapshot_id)
+        if snapshot is not None and (
+            snapshot.portfolio_id != portfolio_id
+            or snapshot.effective_at > known_at
+            or snapshot.recorded_at > known_at
+        ):
+            raise services.DomainError("Ledger opening anchor is unavailable", status=409)
     if snapshot is None or snapshot.completeness != "COMPLETE":
         raise services.DomainError(
             "Ledger preview requires the current complete observed snapshot", status=409

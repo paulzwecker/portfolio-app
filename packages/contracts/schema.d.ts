@@ -1794,6 +1794,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publication-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ledger Publication Preview */
+        get: operations["get_ledger_publication_preview_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publication_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Ledger Publication */
+        post: operations["post_ledger_publication_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/review": {
         parameters: {
             query?: never;
@@ -1805,6 +1839,23 @@ export interface paths {
         put?: never;
         /** Post Ledger Review */
         post: operations["post_ledger_review_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/ledger/ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ledger Ownership */
+        get: operations["get_ledger_ownership_v1_portfolios__portfolio_id__ledger_ownership_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7685,6 +7736,25 @@ export interface components {
             /** Positions */
             positions: components["schemas"]["LedgerPositionInput-Output"][];
         };
+        /** LedgerOwnershipRead */
+        LedgerOwnershipRead: {
+            latest_publication: components["schemas"]["LedgerPublicationRead"] | null;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /**
+             * Scope
+             * @constant
+             */
+            scope: "WHOLE_PORTFOLIO";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "OBSERVED_SNAPSHOT" | "ACCEPTED_LEDGER";
+        };
         /** LedgerPositionInput */
         "LedgerPositionInput-Input": {
             /**
@@ -7714,6 +7784,152 @@ export interface components {
             listing_id: string;
             /** Quantity */
             quantity: string;
+        };
+        /** LedgerPublicationCreate */
+        LedgerPublicationCreate: {
+            /** Confirmation */
+            confirmation: string;
+            /**
+             * Current State Recovery Verified
+             * @constant
+             */
+            current_state_recovery_verified: true;
+            /** Expected Plan Sha256 */
+            expected_plan_sha256: string;
+            /** Expected Previous Publication Id */
+            expected_previous_publication_id: string | null;
+            /**
+             * Holdings Confirmation
+             * @constant
+             */
+            holdings_confirmation: true;
+            /**
+             * Ownership Transfer Reviewed
+             * @constant
+             */
+            ownership_transfer_reviewed: true;
+            /** Reason */
+            reason: string;
+            /**
+             * Whole Portfolio Scope Reviewed
+             * @constant
+             */
+            whole_portfolio_scope_reviewed: true;
+        };
+        /** LedgerPublicationPreviewRead */
+        LedgerPublicationPreviewRead: {
+            /** Account Ids */
+            account_ids: string[];
+            /** Anchor Sha256 */
+            anchor_sha256: string;
+            /**
+             * Anchor Snapshot Id
+             * Format: uuid
+             */
+            anchor_snapshot_id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Candidate Input Sha256 */
+            candidate_input_sha256: string;
+            /** Candidate Preview Sha256 */
+            candidate_preview_sha256: string;
+            /** Cash */
+            cash: components["schemas"]["LedgerCashRead"][];
+            /** Confirmation Phrase */
+            confirmation_phrase: string;
+            /**
+             * Contract Version
+             * @constant
+             */
+            contract_version: "portfolio-ledger-publication-v1";
+            current_snapshot: components["schemas"]["SnapshotRead"];
+            /** Current Snapshot Sha256 */
+            current_snapshot_sha256: string;
+            /**
+             * Cutover At
+             * Format: date-time
+             */
+            cutover_at: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /**
+             * Ownership Scope
+             * @constant
+             */
+            ownership_scope: "WHOLE_PORTFOLIO";
+            /** Plan Sha256 */
+            plan_sha256: string;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Positions */
+            positions: components["schemas"]["LedgerPositionRead"][];
+            /** Previous Publication Id */
+            previous_publication_id: string | null;
+            /** Publication Id */
+            publication_id: string | null;
+            /**
+             * Review Id
+             * Format: uuid
+             */
+            review_id: string;
+            /** Review Revision Number */
+            review_revision_number: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "READY" | "ALREADY_PUBLISHED";
+        };
+        /** LedgerPublicationRead */
+        LedgerPublicationRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            command: components["schemas"]["LedgerPublicationCreate"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            plan: components["schemas"]["LedgerPublicationPreviewRead"];
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Previous Publication Id */
+            previous_publication_id: string | null;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /**
+             * Published By
+             * @constant
+             */
+            published_by: "LOCAL_USER";
+            /**
+             * Replayed
+             * @default false
+             */
+            replayed: boolean;
+            /** Sequence */
+            sequence: number;
+            snapshot: components["schemas"]["SnapshotRead"];
+            /** Snapshot Sha256 */
+            snapshot_sha256: string;
         };
         /** LedgerReconciliationRead */
         LedgerReconciliationRead: {
@@ -15796,6 +16012,74 @@ export interface operations {
             };
         };
     };
+    get_ledger_publication_preview_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publication_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerPublicationPreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_ledger_publication_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LedgerPublicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerPublicationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_ledger_review_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__review_post: {
         parameters: {
             query?: never;
@@ -15819,6 +16103,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ledger_ownership_v1_portfolios__portfolio_id__ledger_ownership_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerOwnershipRead"];
                 };
             };
             /** @description Validation Error */

@@ -98,20 +98,21 @@ def review(value: PortfolioLedgerCandidate, revision: int | None = 1) -> Portfol
 
 
 def test_additive_migration_upgrade_replay_and_downgrade(storage_engine: Engine) -> None:
-    assert expected_heads() == {REVISION}
+    assert len(expected_heads()) == 1
     with Session(storage_engine) as session, session.begin():
         portfolio_id, _ = anchor(session)
     with storage_engine.begin() as connection:
         schema = connection.scalar(text("SELECT current_schema()"))
         assert isinstance(schema, str) and schema.startswith("test_")
-        before = set(inspect(connection).get_table_names(schema=schema))
         config = alembic_config()
         config.attributes["connection"] = connection
+        command.downgrade(config, REVISION)
+        before = set(inspect(connection).get_table_names(schema=schema))
         command.downgrade(config, "9f2a6d4c81b7")
         assert set(inspect(connection).get_table_names(schema=schema)) == before - TABLES
         assert connection.scalar(select(Portfolio.id).where(Portfolio.id == portfolio_id))
-        command.upgrade(config, "head")
-        command.upgrade(config, "head")
+        command.upgrade(config, REVISION)
+        command.upgrade(config, REVISION)
         assert MigrationContext.configure(connection).get_current_heads() == (REVISION,)
         assert set(inspect(connection).get_table_names(schema=schema)) == before
         for name in TABLES:

@@ -366,3 +366,61 @@ class LedgerCandidatesRead(Contract):
     current_accepted_candidate_id: UUID | None
     current_revision_number: int
     candidates: list[LedgerCandidateSummaryRead]
+
+
+class LedgerPublicationPreviewRead(Contract):
+    contract_version: Literal["portfolio-ledger-publication-v1"]
+    status: Literal["READY", "ALREADY_PUBLISHED"]
+    portfolio_id: UUID
+    candidate_id: UUID
+    review_id: UUID
+    review_revision_number: int
+    anchor_snapshot_id: UUID
+    anchor_sha256: Digest
+    candidate_input_sha256: Digest
+    candidate_preview_sha256: Digest
+    previous_publication_id: UUID | None
+    publication_id: UUID | None
+    ownership_scope: Literal["WHOLE_PORTFOLIO"]
+    cutover_at: datetime
+    effective_at: datetime
+    current_snapshot: SnapshotRead
+    current_snapshot_sha256: Digest
+    account_ids: list[UUID]
+    positions: list[LedgerPositionRead]
+    cash: list[LedgerCashRead]
+    plan_sha256: Digest
+    confirmation_phrase: str
+
+
+class LedgerPublicationCreate(Contract):
+    expected_plan_sha256: Digest
+    expected_previous_publication_id: UUID | None
+    confirmation: Annotated[str, Field(min_length=1, max_length=200)]
+    reason: Annotated[str, Field(min_length=1, max_length=1000)]
+    ownership_transfer_reviewed: Literal[True]
+    whole_portfolio_scope_reviewed: Literal[True]
+    current_state_recovery_verified: Literal[True]
+    holdings_confirmation: Literal[True]
+
+
+class LedgerPublicationRead(Contract):
+    id: UUID
+    portfolio_id: UUID
+    candidate_id: UUID
+    sequence: int
+    previous_publication_id: UUID | None
+    published_at: datetime
+    published_by: Literal["LOCAL_USER"]
+    plan: LedgerPublicationPreviewRead
+    command: LedgerPublicationCreate
+    snapshot: SnapshotRead
+    snapshot_sha256: Digest
+    replayed: bool = False
+
+
+class LedgerOwnershipRead(Contract):
+    portfolio_id: UUID
+    source: Literal["OBSERVED_SNAPSHOT", "ACCEPTED_LEDGER"]
+    scope: Literal["WHOLE_PORTFOLIO"]
+    latest_publication: LedgerPublicationRead | None

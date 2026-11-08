@@ -2070,11 +2070,14 @@ def _import_holdings(
     ids: dict[str, UUID],
     portfolio: Portfolio,
 ) -> tuple[int, int]:
+    from portfolio_api.domain.services import require_observed_holdings_authority
+
     # Keep standalone/internal calls serialized with an in-flight source-bound
     # ledger review, including the current-snapshot read and no-change path.
     session.execute(
         select(Portfolio.id).where(Portfolio.id == portfolio.id).with_for_update()
     ).scalar_one()
+    require_observed_holdings_authority(session, portfolio.id)
     desired_positions = {
         ids[f"listing:{item.listing_key}"]: item.quantity for item in plan.positions
     }

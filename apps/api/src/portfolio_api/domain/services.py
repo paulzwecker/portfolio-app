@@ -35,6 +35,7 @@ from portfolio_api.domain.models import (
     OwnerCashFlowScenarioAssumptions,
     OwnerCashFlowYearAssumption,
     Portfolio,
+    PortfolioLedgerPublication,
     PriceObservation,
     RankingDefinition,
     RankingDefinitionStatus,
@@ -2016,6 +2017,27 @@ def record_holdings(
     session: Session, portfolio_id: UUID, value: s.SnapshotCreate
 ) -> HoldingSnapshot:
     portfolio(session, portfolio_id, lock=True)
+    require_observed_holdings_authority(session, portfolio_id)
+    return _record_holdings(session, portfolio_id, value)
+
+
+def require_observed_holdings_authority(session: Session, portfolio_id: UUID) -> None:
+    if session.scalar(
+        select(PortfolioLedgerPublication.id)
+        .where(PortfolioLedgerPublication.portfolio_id == portfolio_id)
+        .limit(1)
+    ):
+        raise DomainError(
+            "Ledger-owned holdings require explicit ledger publication. "
+            "Observed snapshot writes are blocked",
+            status=409,
+        )
+
+
+def _record_holdings(
+    session: Session, portfolio_id: UUID, value: s.SnapshotCreate
+) -> HoldingSnapshot:
+    """Insert only after the caller has locked and verified its source authority."""
     for position in value.positions:
         if session.get(Listing, position.listing_id) is None:
             raise DomainError("A held listing was not found", 404)

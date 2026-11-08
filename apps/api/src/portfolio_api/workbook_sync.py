@@ -40,6 +40,7 @@ from portfolio_api.domain.models import (
     LifecycleEvent,
     Listing,
     ModelOutputSnapshot,
+    PortfolioLedgerPublication,
     ResearchPriorityInput,
     ScoreAssessment,
     ScoreDefinition,
@@ -426,6 +427,18 @@ def _current_state_sha256(session: Session, plan: legacy_import.ImportPlan) -> s
 def _source_change_guard(session: Session, plan: legacy_import.ImportPlan) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
     portfolio_id = legacy_import._stable_id("portfolio", "legacy-default")
+    if session.scalar(
+        select(PortfolioLedgerPublication.id)
+        .where(PortfolioLedgerPublication.portfolio_id == portfolio_id)
+        .limit(1)
+    ):
+        issues.append(
+            {
+                "code": "HOLDINGS_OWNERSHIP_TRANSFERRED",
+                "message": "Whole-portfolio holdings/cash are ledger-owned. Full workbook apply "
+                "requires a reviewed field-scoped reconciliation workflow.",
+            }
+        )
     latest = session.scalar(
         select(HoldingSnapshot)
         .where(HoldingSnapshot.portfolio_id == portfolio_id)

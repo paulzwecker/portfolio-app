@@ -18361,6 +18361,47 @@
         "title": "LedgerOpeningAccount",
         "type": "object"
       },
+      "LedgerOwnershipRead": {
+        "additionalProperties": false,
+        "properties": {
+          "latest_publication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerPublicationRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "scope": {
+            "const": "WHOLE_PORTFOLIO",
+            "title": "Scope",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "OBSERVED_SNAPSHOT",
+              "ACCEPTED_LEDGER"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "source",
+          "scope",
+          "latest_publication"
+        ],
+        "title": "LedgerOwnershipRead",
+        "type": "object"
+      },
       "LedgerPositionInput-Input": {
         "additionalProperties": false,
         "properties": {
@@ -18433,6 +18474,313 @@
           "quantity"
         ],
         "title": "LedgerPositionRead",
+        "type": "object"
+      },
+      "LedgerPublicationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "current_state_recovery_verified": {
+            "const": true,
+            "title": "Current State Recovery Verified",
+            "type": "boolean"
+          },
+          "expected_plan_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Plan Sha256",
+            "type": "string"
+          },
+          "expected_previous_publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Previous Publication Id"
+          },
+          "holdings_confirmation": {
+            "const": true,
+            "title": "Holdings Confirmation",
+            "type": "boolean"
+          },
+          "ownership_transfer_reviewed": {
+            "const": true,
+            "title": "Ownership Transfer Reviewed",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "whole_portfolio_scope_reviewed": {
+            "const": true,
+            "title": "Whole Portfolio Scope Reviewed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expected_plan_sha256",
+          "expected_previous_publication_id",
+          "confirmation",
+          "reason",
+          "ownership_transfer_reviewed",
+          "whole_portfolio_scope_reviewed",
+          "current_state_recovery_verified",
+          "holdings_confirmation"
+        ],
+        "title": "LedgerPublicationCreate",
+        "type": "object"
+      },
+      "LedgerPublicationPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Account Ids",
+            "type": "array"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Candidate Input Sha256",
+            "type": "string"
+          },
+          "candidate_preview_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Candidate Preview Sha256",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashRead"
+            },
+            "title": "Cash",
+            "type": "array"
+          },
+          "confirmation_phrase": {
+            "title": "Confirmation Phrase",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-publication-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "current_snapshot": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          },
+          "current_snapshot_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Current Snapshot Sha256",
+            "type": "string"
+          },
+          "cutover_at": {
+            "format": "date-time",
+            "title": "Cutover At",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "ownership_scope": {
+            "const": "WHOLE_PORTFOLIO",
+            "title": "Ownership Scope",
+            "type": "string"
+          },
+          "plan_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionRead"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "previous_publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Publication Id"
+          },
+          "publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Id"
+          },
+          "review_id": {
+            "format": "uuid",
+            "title": "Review Id",
+            "type": "string"
+          },
+          "review_revision_number": {
+            "title": "Review Revision Number",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "READY",
+              "ALREADY_PUBLISHED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "status",
+          "portfolio_id",
+          "candidate_id",
+          "review_id",
+          "review_revision_number",
+          "anchor_snapshot_id",
+          "anchor_sha256",
+          "candidate_input_sha256",
+          "candidate_preview_sha256",
+          "previous_publication_id",
+          "publication_id",
+          "ownership_scope",
+          "cutover_at",
+          "effective_at",
+          "current_snapshot",
+          "current_snapshot_sha256",
+          "account_ids",
+          "positions",
+          "cash",
+          "plan_sha256",
+          "confirmation_phrase"
+        ],
+        "title": "LedgerPublicationPreviewRead",
+        "type": "object"
+      },
+      "LedgerPublicationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "command": {
+            "$ref": "#/components/schemas/LedgerPublicationCreate"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/LedgerPublicationPreviewRead"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "previous_publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Publication Id"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "published_by": {
+            "const": "LOCAL_USER",
+            "title": "Published By",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          },
+          "snapshot_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Snapshot Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "portfolio_id",
+          "candidate_id",
+          "sequence",
+          "previous_publication_id",
+          "published_at",
+          "published_by",
+          "plan",
+          "command",
+          "snapshot",
+          "snapshot_sha256"
+        ],
+        "title": "LedgerPublicationRead",
         "type": "object"
       },
       "LedgerReconciliationRead": {
@@ -39109,6 +39457,122 @@
         ]
       }
     },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publication-preview": {
+      "get": {
+        "operationId": "get_ledger_publication_preview_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publication_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerPublicationPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Publication Preview",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publish": {
+      "post": {
+        "operationId": "post_ledger_publication_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerPublicationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerPublicationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ledger Publication",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/review": {
       "post": {
         "operationId": "post_ledger_review_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__review_post",
@@ -39182,6 +39646,49 @@
           }
         },
         "summary": "Post Ledger Review",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/ownership": {
+      "get": {
+        "operationId": "get_ledger_ownership_v1_portfolios__portfolio_id__ledger_ownership_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerOwnershipRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Ownership",
         "tags": [
           "Portfolio research"
         ]

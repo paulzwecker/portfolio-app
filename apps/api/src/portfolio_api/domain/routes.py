@@ -19,6 +19,7 @@ from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as ledger_contracts
+from portfolio_api import portfolio_ledger_publication as ledger_publication
 from portfolio_api import portfolio_ledger_reviews as ledger_reviews
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
@@ -2003,6 +2004,37 @@ def post_ledger_review(
     db: LedgerWriteDb,
 ) -> ledger_contracts.LedgerCandidateRead:
     return ledger_reviews.review_candidate(db, portfolio_id, candidate_id, value)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/ownership",
+    response_model=ledger_contracts.LedgerOwnershipRead,
+)
+def get_ledger_ownership(portfolio_id: UUID, db: LedgerDb) -> ledger_contracts.LedgerOwnershipRead:
+    return ledger_publication.ownership(db, portfolio_id)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publication-preview",
+    response_model=ledger_contracts.LedgerPublicationPreviewRead,
+)
+def get_ledger_publication_preview(
+    portfolio_id: UUID, candidate_id: UUID, db: LedgerDb
+) -> ledger_contracts.LedgerPublicationPreviewRead:
+    return ledger_publication.publication_preview(db, portfolio_id, candidate_id)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publish",
+    response_model=ledger_contracts.LedgerPublicationRead,
+)
+def post_ledger_publication(
+    portfolio_id: UUID,
+    candidate_id: UUID,
+    value: ledger_contracts.LedgerPublicationCreate,
+    db: LedgerWriteDb,
+) -> ledger_contracts.LedgerPublicationRead:
+    return ledger_publication.publish(db, portfolio_id, candidate_id, value)
 
 
 @router.post(
