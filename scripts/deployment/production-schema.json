@@ -1,0 +1,13 @@
+{
+  "contract": "production-schema-attestation-v1",
+  "revision": "b59f16c8a203",
+  "migration_history_sha256": "de9fb593f76ec72261ef40bb3d88a12751b0e114c81fc48f08f96dee48be73f2",
+  "verified_at": "2026-11-08T14:11:16.721911Z",
+  "target": {
+    "project": "blue-pond-96398788",
+    "branch": "br-square-butterfly-bacw0rn5",
+    "endpoint": "ep-floral-cake-bae16liy",
+    "database": "neondb",
+    "schema": "public"
+  }
+}

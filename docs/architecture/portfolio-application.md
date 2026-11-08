@@ -92,8 +92,17 @@ snapshot and lineage receipt. Same-cutoff replacement stays blocked by snapshot
 uniqueness. Full workbook apply becomes an ownership conflict after transfer.
 The browser publication review is locally verified with explicit source-bound
 confirmation and read-only recovery of ambiguous responses. Real account/source
-review and production ownership activation remain gated. The steps below describe
-the complete transition; remaining accounting coverage is planned.
+review and production ownership activation remain gated. V2 packets additionally
+support evidenced dividend receipts, explicit withholding/fees and standalone tax
+debits, plus matched same-currency cash and same-listing security transfers with
+two account source records, through the same reviewed lifecycle, locally verified
+in isolated schemas
+and responsive browser tests. Quote currency and observed settlement currency stay
+independent. Security-transfer acquisition basis and gains remain explicitly
+unavailable pending reviewed lot accounting. No dividend entitlement, conversion
+or reinvestment is inferred.
+The steps below describe the complete transition; remaining accounting coverage
+is planned.
 
 C2 adds transaction-based accounting to the existing snapshot portfolio. This is
 a planned domain extension, with status and acceptance in `ROADMAP.md`. Reuse

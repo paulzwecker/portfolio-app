@@ -1,6 +1,7 @@
 """Versioned, exact inputs for a candidate settled-activity ledger."""
 
 from datetime import UTC, date, datetime
+from decimal import localcontext
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
@@ -94,9 +95,96 @@ class LedgerTrade(LedgerActivity):
 
 
 class LedgerCashActivity(LedgerActivity):
-    kind: Literal["DEPOSIT", "WITHDRAWAL", "FEE"]
+    kind: Literal["DEPOSIT", "WITHDRAWAL", "FEE", "TAX"]
     currency: Currency
     amount: PositiveQuantity
+
+
+class LedgerDividend(LedgerActivity):
+    """Observed account cash in one settlement currency, independently of quote currency."""
+
+    kind: Literal["DIVIDEND"]
+    listing_id: UUID
+    currency: Currency
+    gross_cash: PositiveQuantity
+    fees: Quantity
+    taxes: Quantity
+
+    @model_validator(mode="after")
+    def nonnegative_net_cash(self) -> Self:
+        with localcontext() as context:
+            context.prec = 80
+            if self.fees + self.taxes > self.gross_cash:
+                raise ValueError("Dividend charges cannot exceed the evidenced gross receipt")
+        return self
+
+
+class LedgerTransferReceipt(Contract):
+    account_id: UUID
+    currency: Currency
+    amount: PositiveQuantity
+    effective_at: datetime
+    evidence: LedgerEvidence
+
+    @field_validator("effective_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        return LedgerActivity.aware_time(value)
+
+
+class LedgerCashTransfer(LedgerActivity):
+    kind: Literal["CASH_TRANSFER"]
+    currency: Currency
+    amount: PositiveQuantity
+    destination: LedgerTransferReceipt
+
+    @model_validator(mode="after")
+    def matching_internal_legs(self) -> Self:
+        if self.account_id == self.destination.account_id:
+            raise ValueError("An internal cash transfer requires two different accounts")
+        if self.currency != self.destination.currency or self.amount != self.destination.amount:
+            raise ValueError("Internal cash transfer legs require equal amounts in one currency")
+        if self.effective_at != self.destination.effective_at:
+            raise ValueError("Internal cash transfer legs require the same settled booking instant")
+        return self
+
+
+class LedgerSecurityTransferReceipt(Contract):
+    account_id: UUID
+    listing_id: UUID
+    quantity: PositiveQuantity
+    effective_at: datetime
+    evidence: LedgerEvidence
+
+    @field_validator("effective_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        return LedgerActivity.aware_time(value)
+
+
+class LedgerSecurityTransfer(LedgerActivity):
+    kind: Literal["SECURITY_TRANSFER"]
+    listing_id: UUID
+    quantity: PositiveQuantity
+    basis_status: Literal["UNAVAILABLE"]
+    destination: LedgerSecurityTransferReceipt
+
+    @model_validator(mode="after")
+    def matching_internal_legs(self) -> Self:
+        if self.account_id == self.destination.account_id:
+            raise ValueError("An internal security transfer requires two different accounts")
+        if (
+            self.listing_id != self.destination.listing_id
+            or self.quantity != self.destination.quantity
+        ):
+            raise ValueError(
+                "Internal security transfer legs require equal quantities of one listing"
+            )
+        if self.effective_at != self.destination.effective_at:
+            raise ValueError(
+                "Internal security transfer legs require the same settled booking instant"
+            )
+        return self
 
 
 class LedgerEndingAccount(Contract):
@@ -141,14 +229,21 @@ class LedgerEndingStatement(Contract):
 
 
 class PortfolioLedgerPreviewCreate(Contract):
-    contract_version: Literal["portfolio-ledger-preview-v1"]
+    contract_version: Literal["portfolio-ledger-preview-v1", "portfolio-ledger-preview-v2"]
     anchor_snapshot_id: UUID
     anchor_sha256: Digest
     as_of: datetime
     accounts: list[LedgerOpeningAccount] = Field(min_length=1, max_length=20)
-    activity: list[Annotated[LedgerTrade | LedgerCashActivity, Field(discriminator="kind")]] = (
-        Field(max_length=1000)
-    )
+    activity: list[
+        Annotated[
+            LedgerTrade
+            | LedgerCashActivity
+            | LedgerDividend
+            | LedgerCashTransfer
+            | LedgerSecurityTransfer,
+            Field(discriminator="kind"),
+        ]
+    ] = Field(max_length=1000)
     ending_statement: LedgerEndingStatement | None = None
 
     @field_validator("as_of")
@@ -163,6 +258,11 @@ class PortfolioLedgerPreviewCreate(Contract):
 
     @model_validator(mode="after")
     def bounded_unique_records(self) -> Self:
+        if self.contract_version == "portfolio-ledger-preview-v1" and any(
+            item.kind in {"DIVIDEND", "TAX", "CASH_TRANSFER", "SECURITY_TRANSFER"}
+            for item in self.activity
+        ):
+            raise ValueError("Income and internal transfers require portfolio-ledger-preview-v2")
         if len({a.account_id for a in self.accounts}) != len(self.accounts):
             raise ValueError("An account may have only one opening boundary")
         if (
@@ -175,6 +275,11 @@ class PortfolioLedgerPreviewCreate(Contract):
         ) != len(self.activity):
             raise ValueError("Activity IDs and sequence numbers must be unique")
         evidence = [a.evidence for a in self.accounts] + [a.evidence for a in self.activity]
+        evidence.extend(
+            item.destination.evidence
+            for item in self.activity
+            if isinstance(item, (LedgerCashTransfer, LedgerSecurityTransfer))
+        )
         if len({(e.source_sha256, e.source_record_id) for e in evidence}) != len(evidence):
             raise ValueError("A source record may contribute only once to this ledger scope")
         if self.ending_statement is not None:
@@ -255,8 +360,8 @@ class LedgerEndingReconciliationRead(Contract):
 
 
 class PortfolioLedgerPreviewRead(Contract):
-    contract_version: Literal["portfolio-ledger-preview-v1"]
-    projection_version: Literal["settled-booking-v1"]
+    contract_version: Literal["portfolio-ledger-preview-v1", "portfolio-ledger-preview-v2"]
+    projection_version: Literal["settled-booking-v1", "settled-booking-v2"]
     preview_only: Literal[True]
     status: Literal["OPENING_RECONCILED", "ENDING_RECONCILED", "BLOCKED"]
     portfolio_id: UUID
@@ -275,6 +380,17 @@ class PortfolioLedgerPreviewRead(Contract):
     ending_statement_at: datetime | None = None
     ending_reconciliation: list[LedgerEndingReconciliationRead] = Field(default_factory=list)
     consumed_listings: list[LedgerListingRead] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def matching_projection_contract(self) -> Self:
+        expected = (
+            "settled-booking-v2"
+            if self.contract_version == "portfolio-ledger-preview-v2"
+            else "settled-booking-v1"
+        )
+        if self.projection_version != expected:
+            raise ValueError("Ledger input and projection versions must match")
+        return self
 
 
 class LedgerCandidateCreate(Contract):
