@@ -19,9 +19,11 @@ from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as ledger_contracts
+from portfolio_api import portfolio_ledger_reviews as ledger_reviews
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
 from portfolio_api.company_sec_coverage import company_sec_coverage
+from portfolio_api.database_write_target import DatabaseWriteTargetError
 from portfolio_api.decision_evaluation import company_decision_evaluation
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
@@ -184,6 +186,24 @@ def ledger_session_for(request: Request) -> Iterator[Session]:
 
 
 LedgerDb = Annotated[Session, Depends(ledger_session_for, scope="function")]
+
+
+def ledger_write_session_for(request: Request) -> Iterator[Session]:
+    settings = cast(Settings, request.app.state.settings)
+    production = (
+        settings.app_env == "production" or settings.database_target_environment == "production"
+    )
+    if production and not settings.database_production_writes_authorized:
+        raise HTTPException(403, "Production ledger writes require separate owner authorization")
+    try:
+        yield from session_for(request)
+    except DatabaseWriteTargetError:
+        raise HTTPException(
+            403, "Ledger writes are blocked by database target safeguards"
+        ) from None
+
+
+LedgerWriteDb = Annotated[Session, Depends(ledger_write_session_for, scope="function")]
 
 
 def model_proposal_agent_identity(
@@ -1940,6 +1960,49 @@ def post_ledger_preview(
     portfolio_id: UUID, value: ledger_contracts.PortfolioLedgerPreviewCreate, db: LedgerDb
 ) -> ledger_contracts.PortfolioLedgerPreviewRead:
     return ledger.preview_portfolio_ledger(db, portfolio_id, value)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/candidates",
+    response_model=ledger_contracts.LedgerCandidatesRead,
+)
+def get_ledger_candidates(
+    portfolio_id: UUID, db: LedgerDb, limit: int = Query(default=30, ge=1, le=100)
+) -> ledger_contracts.LedgerCandidatesRead:
+    return ledger_reviews.list_candidates(db, portfolio_id, limit)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}",
+    response_model=ledger_contracts.LedgerCandidateRead,
+)
+def get_ledger_candidate(
+    portfolio_id: UUID, candidate_id: UUID, db: LedgerDb
+) -> ledger_contracts.LedgerCandidateRead:
+    return ledger_reviews.candidate_read(db, portfolio_id, candidate_id)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/candidates",
+    response_model=ledger_contracts.LedgerCandidateRead,
+)
+def post_ledger_candidate(
+    portfolio_id: UUID, value: ledger_contracts.LedgerCandidateCreate, db: LedgerWriteDb
+) -> ledger_contracts.LedgerCandidateRead:
+    return ledger_reviews.stage_candidate(db, portfolio_id, value)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/review",
+    response_model=ledger_contracts.LedgerCandidateRead,
+)
+def post_ledger_review(
+    portfolio_id: UUID,
+    candidate_id: UUID,
+    value: ledger_contracts.LedgerReviewCreate,
+    db: LedgerWriteDb,
+) -> ledger_contracts.LedgerCandidateRead:
+    return ledger_reviews.review_candidate(db, portfolio_id, candidate_id, value)
 
 
 @router.post(

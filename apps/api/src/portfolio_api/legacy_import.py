@@ -1829,6 +1829,13 @@ def _latest_lifecycle(session: Session, company_id: UUID) -> LifecycleEvent | No
 def _import_identity(
     session: Session, plan: ImportPlan, *, incremental_sync: bool = False
 ) -> dict[str, UUID]:
+    # Existing portfolio refreshes take the same lock as canonical snapshot and
+    # ledger-review writers before acquiring any security/listing locks.
+    session.execute(
+        select(Portfolio.id)
+        .where(Portfolio.id == _stable_id("portfolio", "legacy-default"))
+        .with_for_update()
+    ).all()
     company_ids: dict[str, UUID] = {}
     for company_row in plan.companies:
         identifier = _stable_id("company", company_row.ticker)
@@ -2063,6 +2070,11 @@ def _import_holdings(
     ids: dict[str, UUID],
     portfolio: Portfolio,
 ) -> tuple[int, int]:
+    # Keep standalone/internal calls serialized with an in-flight source-bound
+    # ledger review, including the current-snapshot read and no-change path.
+    session.execute(
+        select(Portfolio.id).where(Portfolio.id == portfolio.id).with_for_update()
+    ).scalar_one()
     desired_positions = {
         ids[f"listing:{item.listing_key}"]: item.quantity for item in plan.positions
     }

@@ -5,7 +5,7 @@ import json
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, localcontext
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import select
@@ -163,6 +163,43 @@ def _ending_reconciliation[Key: (UUID, str)](
     ]
 
 
+def canonical_ledger_packet(value: c.PortfolioLedgerPreviewCreate) -> dict[str, Any]:
+    """Stable typed packet ordering shared by projection, durable storage and replay."""
+    payload = value.model_dump(mode="json")
+    ending = value.ending_statement
+    if ending is None:
+        # Additive ending support retains historical opening-only input hashes.
+        payload.pop("ending_statement")
+    else:
+        payload["ending_statement"] = ending.model_copy(
+            update={
+                "accounts": [
+                    a.model_copy(
+                        update={
+                            "positions": sorted(a.positions, key=lambda p: str(p.listing_id)),
+                            "cash": sorted(a.cash, key=lambda p: p.currency),
+                        }
+                    )
+                    for a in sorted(ending.accounts, key=lambda a: str(a.account_id))
+                ]
+            }
+        ).model_dump(mode="json")
+    payload["accounts"] = [
+        a.model_copy(
+            update={
+                "positions": sorted(a.positions, key=lambda p: str(p.listing_id)),
+                "cash": sorted(a.cash, key=lambda p: p.currency),
+            }
+        ).model_dump(mode="json")
+        for a in sorted(value.accounts, key=lambda a: str(a.account_id))
+    ]
+    payload["activity"] = [
+        a.model_dump(mode="json")
+        for a in sorted(value.activity, key=lambda a: (a.effective_at, a.sequence))
+    ]
+    return payload
+
+
 def project_ledger(
     anchor: c.PortfolioLedgerAnchorRead,
     value: c.PortfolioLedgerPreviewCreate,
@@ -232,34 +269,7 @@ def project_ledger(
 
     ordered_accounts = sorted(value.accounts, key=lambda a: str(a.account_id))
     activity = sorted(value.activity, key=lambda a: (a.effective_at, a.sequence))
-    payload = value.model_dump(mode="json")
-    if ending is None:
-        # Additive ending support retains historical opening-only input hashes.
-        payload.pop("ending_statement")
-    else:
-        payload["ending_statement"] = ending.model_copy(
-            update={
-                "accounts": [
-                    a.model_copy(
-                        update={
-                            "positions": sorted(a.positions, key=lambda p: str(p.listing_id)),
-                            "cash": sorted(a.cash, key=lambda p: p.currency),
-                        }
-                    )
-                    for a in sorted(ending.accounts, key=lambda a: str(a.account_id))
-                ]
-            }
-        ).model_dump(mode="json")
-    payload["accounts"] = [
-        a.model_copy(
-            update={
-                "positions": sorted(a.positions, key=lambda p: str(p.listing_id)),
-                "cash": sorted(a.cash, key=lambda p: p.currency),
-            }
-        ).model_dump(mode="json")
-        for a in ordered_accounts
-    ]
-    payload["activity"] = [a.model_dump(mode="json") for a in activity]
+    payload = canonical_ledger_packet(value)
     payload["listing_identities"] = [
         listings[key].model_dump(mode="json") for key in sorted(listing_ids, key=str)
     ]

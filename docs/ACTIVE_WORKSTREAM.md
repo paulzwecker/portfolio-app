@@ -12,11 +12,26 @@
 
 ## Current ledger increment
 
-Durable storage now passes 21 isolated PostgreSQL checks. Migration `a832e94d6f10`
-follows `9f2a6d4c81b7` and adds candidate/review tables, hash/request uniqueness,
-portfolio-scoped ancestry and immutable terminal reviews. Upgrade/replay, constraints,
-rollback and append-only enforcement pass. Review API/corrections are being integrated.
-Production migration and activation remain owner-gated.
+`a7557b0` durable storage passes 21 isolated PostgreSQL checks. Migration
+`a832e94d6f10` follows `9f2a6d4c81b7` and adds immutable candidate/review tables.
+The stage/detail/list/explicit accept-or-reject API now retains exact packet and
+preview hashes, account/source evidence and per-portfolio accepted revision history.
+Full replacement corrections require exact changed/removed activity acknowledgements,
+a current base and fresh matching opening/ending evidence. Replay creates no extra
+receipts. Canonical snapshot/targets remain the application's reading authority.
+Independent review corrected workbook refresh lock ordering and retained-ORM identity
+freshness. Focused verification passes 164 distinct checks: 67 ledger unit,
+12 existing PostgreSQL/API, 26 new review/API, 21 storage/migration, two lock
+contention, two existing workbook/bootstrap integration, 18 domain contracts and
+16 read-only browser-fixture safety checks.
+Ruff/format, strict mypy, generated contracts, web types and documentation links pass.
+SQL test targets were independently verified read-only as loopback `_test` before
+using random, disposable schemas. Exact decimal/zero/ETF identity, source/base/hash
+changes, concurrent replay, rejection, explicit corrections, stored-data integrity,
+production guard rejection and post-flush rollback are covered. New API behavior
+is LOCAL_VERIFIED with synthetic data. Browser decision controls remain pending.
+Production migration, activation and cutover remain owner-gated. This increment
+changes API/contracts, with no new browser decision controls.
 
 `bf9f184` ending-statement reconciliation passes 79 focused checks (67 unit and 12 isolated
 PostgreSQL/API cases). Account and total comparisons preserve missing/zero, exact
@@ -49,8 +64,8 @@ Trade cash uses observed gross amounts plus explicit fees/taxes, in listing
 currency. Intermediate negative balances remain blocked after later recovery.
 `OPENING_RECONCILED` describes the supported candidate preview. Source authenticity,
 account allocation, settled-balance basis and cutover need operator review.
-Persistence, acceptance/cutover, cost lots and performance
-remain outstanding. Commands and scope are in [the ledger contract](portfolio-ledger.md).
+Durable review receipts are locally verified above. Decision UI, ownership
+cutover, cost lots and performance remain outstanding. Commands and scope are in [the ledger contract](portfolio-ledger.md).
 No production operation occurred. Local activation/write flags remain disabled.
 
 ## Current SEC increment
@@ -234,10 +249,11 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C2.3 with durable candidate/review receipts and an explicit, idempotent
-   acceptance/correction workflow in isolated tests. Reuse source-bound previews,
-   account/period reconciliation and existing guards. Preserve canonical snapshots
-   and independent targets while cutover remains a separately reviewed decision.
+1. Continue C2.3 with explicit candidate decision/history UI, authenticated proxy
+   integration and synthetic desktop/mobile review. Reuse the durable API and
+   private-file workflow, show full-replacement changes and require explicit
+   source/account/basis acknowledgements. Then design/test dated ownership cutover
+   with preserved canonical snapshot and independent targets.
    Production schema/ownership/import changes remain owner-gated. This is the next
    high-value independent capability while #25 review and data activation wait.
    C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;

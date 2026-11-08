@@ -1,7 +1,7 @@
 # Candidate portfolio ledger
 
-C2.3's first slice implements a read-only, source-bound opening reconciliation and
-settled-activity projection. [The roadmap](../ROADMAP.md) owns delivery status and
+C2.3 implements source-bound opening/ending reconciliation, settled-activity
+projection and durable candidate/review receipts. [The roadmap](../ROADMAP.md) owns delivery status and
 [Portfolio architecture](architecture/portfolio-application.md#transaction-ledger-transition-planned)
 owns cutover/ownership boundaries. Canonical observed snapshots and independent
 strategic targets retain authority.
@@ -113,14 +113,64 @@ Invoke-WebRequest "$ledgerApi/preview" -Method Post -ContentType 'application/js
   -OutFile (Join-Path $reviewDirectory 'preview.json')
 ```
 
+## Durable candidate and review API
+
+This locally verified API increment requires additive migration `a832e94d6f10`
+after `9f2a6d4c81b7`. Its two tables retain immutable typed packets, saved previews,
+source/input/packet/preview hashes and append-only terminal reviews. Production
+migration requires a separately reviewed current-state recovery and owner authorization.
+Readiness checks retain exact schema-head enforcement.
+
+1. Obtain/review the read-only preview above. Submit `POST /v1/portfolios/{id}/ledger/candidates`
+   with `submission_id`, required nullable `expected_base_candidate_id`,
+   `expected_input_sha256`, a reason and the complete typed `proposal` packet.
+   The first base is null. The server locks the portfolio and consumed identities,
+   recalculates the packet and checks the exact source/input hash before storing it.
+2. Inspect `GET .../ledger/candidates` and `GET .../ledger/candidates/{candidate_id}`.
+   The bounded list exposes current accepted candidate/revision and summary metadata.
+   Detail replays hash-verified saved input/output and reports added, changed and
+   removed activity IDs plus opening-account changes relative to the explicit base.
+   These reads use the existing read-only, repeatable-read dependency.
+3. Submit `POST .../ledger/candidates/{candidate_id}/review` with `decision`,
+   `expected_base_candidate_id`, `expected_input_sha256`, `expected_preview_sha256`
+   and a reason. `REJECT` records a terminal rejection, including superseded candidates.
+   `ACCEPT` additionally requires true `source_evidence_reviewed`,
+   `account_allocation_reviewed`, `settled_balance_basis_reviewed` and
+   `full_replacement_reviewed`, plus the exact `acknowledged_changed_activity_ids`
+   and `acknowledged_removed_activity_ids` sets. Empty sets must be explicit.
+4. Acceptance requires a fresh `ENDING_RECONCILED` result identical to the saved
+   input and preview hashes and the still-current accepted base. Source/identity,
+   calculation, anchor or base changes require a newly reviewed candidate.
+   Blocked/opening-only candidates can be retained and rejected.
+5. Corrections are complete replacement packets on the accepted base, retaining
+   the opening anchor/hash, account ID set and a nondecreasing cutoff. Removed
+   activity is excluded only from that new packet's projection after explicit
+   acknowledgement. Original packets/reviews remain available. Canonical source
+   snapshots and strategic targets retain their independent authority.
+
+Every mutation is one atomic transaction. Shared portfolio/source locks serialize
+review, canonical snapshot writers and workbook refreshes. Fresh locked identity
+reads refresh retained ORM objects. Duplicate submissions are bound to canonical
+packet content, portfolio, input hash, base and reason, independently of collection
+order or caller submission ID. Exact replay returns the original receipt without
+new records. Reusing an ID for different content, conflicting terminal decisions
+or stale bases returns 409. A replay of historical receipt data grants no new approval.
+The ORM protects both receipt tables from updates/deletes, following existing history
+conventions. Database administrators remain outside this application authority boundary.
+
+Remote requests use existing private-owner API authentication and database target
+guards. Model proposal credentials grant no remote ledger access. Local development
+retains the existing trusted-local authentication policy. The production write flag must be
+separately authorized in the approved operator scope; it defaults to false.
+The current browser/proxy review screen exposes preview only. Durable mutation
+and decision-history UI remain the next BUILD increment.
+
 ## Remaining acceptance gates
 
-This slice has no ledger persistence, acceptance, cutover or current-holdings switch.
-It provides candidate balances, opening/ending comparisons and a private-file review UI.
-Durable revisions/receipts and transaction correction
-semantics remain follow-up work. Cost lots, gains, TWR/XIRR, dividends, transfers,
-executed FX and broker imports require their documented contracts and evidence.
-Opening quantities never establish historical cost or capital flows.
+Dated ownership cutover and current-holdings integration remain outstanding.
+Cost lots, gains, TWR/XIRR, dividends, transfers, executed FX and broker imports
+require their documented contracts and evidence. Opening quantities supply an
+inventory boundary. Historical cost and capital flows require separate source evidence.
 
 Production cutover requires separately reviewed account/basis/source scope, zero
 unexplained reconciliation differences, ownership policy, schema/write authorization

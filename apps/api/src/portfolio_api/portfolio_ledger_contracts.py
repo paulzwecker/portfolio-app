@@ -275,3 +275,94 @@ class PortfolioLedgerPreviewRead(Contract):
     ending_statement_at: datetime | None = None
     ending_reconciliation: list[LedgerEndingReconciliationRead] = Field(default_factory=list)
     consumed_listings: list[LedgerListingRead] = Field(default_factory=list)
+
+
+class LedgerCandidateCreate(Contract):
+    submission_id: UUID
+    expected_base_candidate_id: UUID | None
+    expected_input_sha256: Digest
+    reason: Annotated[str, Field(min_length=1, max_length=1000)]
+    proposal: PortfolioLedgerPreviewCreate
+
+
+class LedgerReviewCommand(Contract):
+    expected_base_candidate_id: UUID | None
+    expected_input_sha256: Digest
+    expected_preview_sha256: Digest
+    reason: Annotated[str, Field(min_length=1, max_length=1000)]
+
+
+class LedgerAcceptCreate(LedgerReviewCommand):
+    decision: Literal["ACCEPT"]
+    source_evidence_reviewed: Literal[True]
+    account_allocation_reviewed: Literal[True]
+    settled_balance_basis_reviewed: Literal[True]
+    full_replacement_reviewed: Literal[True]
+    acknowledged_removed_activity_ids: list[UUID] = Field(max_length=1000)
+    acknowledged_changed_activity_ids: list[UUID] = Field(max_length=1000)
+
+    @model_validator(mode="after")
+    def unique_acknowledgements(self) -> Self:
+        if len(set(self.acknowledged_removed_activity_ids)) != len(
+            self.acknowledged_removed_activity_ids
+        ) or len(set(self.acknowledged_changed_activity_ids)) != len(
+            self.acknowledged_changed_activity_ids
+        ):
+            raise ValueError("Correction acknowledgements must contain unique activity IDs")
+        return self
+
+
+class LedgerRejectCreate(LedgerReviewCommand):
+    decision: Literal["REJECT"]
+
+
+LedgerReviewCreate = Annotated[
+    LedgerAcceptCreate | LedgerRejectCreate, Field(discriminator="decision")
+]
+
+
+class LedgerReviewRead(Contract):
+    id: UUID
+    decision: Literal["ACCEPT", "REJECT"]
+    revision_number: int | None
+    reviewed_by: Literal["LOCAL_USER"]
+    reviewed_at: datetime
+    command: LedgerReviewCreate
+
+
+class LedgerActivityChangesRead(Contract):
+    added_activity_ids: list[UUID]
+    changed_activity_ids: list[UUID]
+    removed_activity_ids: list[UUID]
+    opening_changed: bool
+
+
+class LedgerCandidateSummaryRead(Contract):
+    id: UUID
+    portfolio_id: UUID
+    base_candidate_id: UUID | None
+    anchor_snapshot_id: UUID
+    input_sha256: Digest
+    packet_sha256: Digest
+    preview_sha256: Digest
+    status: Literal["PENDING", "ACCEPTED", "REJECTED"]
+    preview_status: Literal["BLOCKED", "OPENING_RECONCILED", "ENDING_RECONCILED"]
+    as_of: datetime
+    reason: str
+    submitted_by: Literal["LOCAL_USER"]
+    submitted_at: datetime
+    review: LedgerReviewRead | None
+
+
+class LedgerCandidateRead(LedgerCandidateSummaryRead):
+    packet: PortfolioLedgerPreviewCreate
+    preview: PortfolioLedgerPreviewRead
+    changes: LedgerActivityChangesRead
+    replayed: bool = False
+
+
+class LedgerCandidatesRead(Contract):
+    portfolio_id: UUID
+    current_accepted_candidate_id: UUID | None
+    current_revision_number: int
+    candidates: list[LedgerCandidateSummaryRead]

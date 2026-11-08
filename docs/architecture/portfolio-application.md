@@ -82,8 +82,10 @@ Downstream choices must not silently mutate upstream assumptions. Rankings expre
 C2.3 now has a [candidate settled-ledger preview](../portfolio-ledger.md) that
 reconciles explicit opening accounts to the current observed snapshot and projects
 supported activity through a read-only API. Ending-statement/account comparisons
-and the Portfolio private-file review UI are locally verified. Durable revisions,
-acceptance and the ownership/cutover steps below remain planned.
+and the Portfolio private-file review UI are locally verified. Immutable candidate
+packets and explicit accept/reject/correction receipts are locally verified through
+the private API. Browser decision controls and the ownership/cutover steps below
+remain planned. Existing snapshots/targets retain authority during candidate review.
 
 C2 adds transaction-based accounting to the existing snapshot portfolio. This is
 a planned domain extension, with status and acceptance in `ROADMAP.md`. Reuse
