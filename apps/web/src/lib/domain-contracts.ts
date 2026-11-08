@@ -956,6 +956,9 @@ export function isHistoricalBootstrapReview(
         [
           "AVAILABLE",
           "CHECKPOINT_NOT_COMPLETE",
+          "CHECKPOINT_UNAVAILABLE",
+          "CHECKPOINT_FAILED",
+          "CHECKPOINT_BLOCKED",
           "IDENTITY_CHANGED",
           "LISTING_CURRENCY_UNAVAILABLE",
           "BATCH_UNVERIFIED",
@@ -979,7 +982,27 @@ export function isHistoricalBootstrapReview(
             row.requested_window_review.schedule_id ===
               row.scheduled_session_review.schedule_id &&
             row.requested_window_review.schedule_fingerprint ===
-              row.scheduled_session_review.schedule_fingerprint)),
+              row.scheduled_session_review.schedule_fingerprint)) &&
+        (row.checkpoint_diagnostics === undefined ||
+          row.checkpoint_diagnostics === null ||
+          (isRecord(row.checkpoint_diagnostics) &&
+            ["NO_PROVIDER_DATA", "OTHER", "NONE"].includes(
+              row.checkpoint_diagnostics.failure_kind as string,
+            ) &&
+            typeof row.checkpoint_diagnostics.retryable === "boolean" &&
+            [
+              row.checkpoint_diagnostics.raw_response_count,
+              row.checkpoint_diagnostics.normalized_daily_rows,
+              row.checkpoint_diagnostics.provider_failure_count,
+              row.checkpoint_diagnostics.normalization_rejection_count,
+              row.checkpoint_diagnostics.normalization_warning_count,
+            ].every(
+              (count) =>
+                count === null ||
+                (Number.isInteger(count) &&
+                  (count as number) >= 0 &&
+                  (count as number) <= 1000000),
+            ))),
     )
   )
     return false;

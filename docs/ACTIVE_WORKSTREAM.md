@@ -333,3 +333,13 @@ provider or production state changes. Next improve empty-batch investigation and
 add venues only with reviewed source evidence. Verification: 18 schedule tests, 10
 isolated PostgreSQL cases, 53 focused web tests, generated contracts, strict types,
 and a synthetic desktop/mobile Operations journey; no full-suite run in BUILD.
+
+The current increment distinguishes unavailable, failed and blocked checkpoints
+from pending work and displays sanitized, nullable receipt counts for response,
+normalization and provider failures. Missing or malformed evidence stays unrecorded;
+payload reconciliation, schedule coverage and retry execution are not implied.
+Next connect existing read-only source reconciliation evidence to the Operations
+investigation and extend venue schedules only with reviewed provenance. Seventeen
+isolated PostgreSQL cases include the synthetic importer no-data and transport-failure
+paths; 54 web tests, strict types, contract checks and a desktop/mobile browser
+journey passed. No production or provider request was made.

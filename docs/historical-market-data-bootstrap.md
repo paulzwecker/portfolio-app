@@ -75,6 +75,11 @@ is required; an empty batch remains explicitly unassessed. These comparisons are
 raw-payload reconciliation, proof of actual trading, a
 confirmed missing trade, an assessment of FX sessions or a modification of receipts.
 Unavailable schedules, ambiguous identities and incomplete data stay explicit.
+For unavailable, failed or blocked checkpoints, and completed checkpoints without
+eligible closes, the panel separately shows bounded counts recorded in the receipt:
+provider responses and failures, normalized rows, rejections and warnings. Missing
+or malformed evidence remains “Not recorded”; these counts do not verify raw
+payloads or establish why a listing did not trade. No retry is initiated.
 
 The prepared run pins the provider/crosswalk hash, normalizer versions, exact
 listing identities, required currency pairs, target environment, and date window.

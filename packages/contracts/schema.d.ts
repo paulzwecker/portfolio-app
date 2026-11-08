@@ -7070,15 +7070,36 @@ export interface components {
              */
             status: "ok" | "error";
         };
+        /** HistoricalBootstrapCheckpointDiagnosticsRead */
+        HistoricalBootstrapCheckpointDiagnosticsRead: {
+            /**
+             * Failure Kind
+             * @enum {string}
+             */
+            failure_kind: "NO_PROVIDER_DATA" | "OTHER" | "NONE";
+            /** Normalization Rejection Count */
+            normalization_rejection_count: number | null;
+            /** Normalization Warning Count */
+            normalization_warning_count: number | null;
+            /** Normalized Daily Rows */
+            normalized_daily_rows: number | null;
+            /** Provider Failure Count */
+            provider_failure_count: number | null;
+            /** Raw Response Count */
+            raw_response_count: number | null;
+            /** Retryable */
+            retryable: boolean;
+        };
         /** HistoricalBootstrapListingReviewRead */
         HistoricalBootstrapListingReviewRead: {
+            checkpoint_diagnostics?: components["schemas"]["HistoricalBootstrapCheckpointDiagnosticsRead"] | null;
             /** Checkpoint Status */
             checkpoint_status: string;
             /**
              * Reason
              * @enum {string}
              */
-            reason: "AVAILABLE" | "CHECKPOINT_NOT_COMPLETE" | "IDENTITY_CHANGED" | "LISTING_CURRENCY_UNAVAILABLE" | "BATCH_UNVERIFIED" | "NO_DAILY_CLOSES" | "NO_SCHEDULE" | "DATE_LIMIT_EXCEEDED";
+            reason: "AVAILABLE" | "CHECKPOINT_NOT_COMPLETE" | "CHECKPOINT_UNAVAILABLE" | "CHECKPOINT_FAILED" | "CHECKPOINT_BLOCKED" | "IDENTITY_CHANGED" | "LISTING_CURRENCY_UNAVAILABLE" | "BATCH_UNVERIFIED" | "NO_DAILY_CLOSES" | "NO_SCHEDULE" | "DATE_LIMIT_EXCEEDED";
             requested_window_review?: components["schemas"]["ScheduledSessionReviewRead"] | null;
             scheduled_session_review: components["schemas"]["ScheduledSessionReviewRead"] | null;
             /** Subject Key */

@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Extend reviewed schedules and improve explicit empty-batch investigation; keep activation gated |
+| Next ready substantial task | Extend reviewed venue schedules and connect source reconciliation evidence to the Operations investigation; keep activation gated |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
@@ -49,6 +49,11 @@ date candidates within the known 2026 schedule, retaining the existing selected-
 review. Outside dates, empty series, unscheduled closures and FX stay unassessed.
 Eighteen schedule tests, ten isolated PostgreSQL cases, 53 focused web tests and
 a synthetic desktop/mobile Operations journey passed; no production activation.
+The following BUILD distinguishes recorded no-data responses, failed and blocked
+checkpoints from pending work in Operations. Receipt counts preserve missing evidence
+and do not imply payload reconciliation or trigger retries.
+Seventeen isolated PostgreSQL cases, 54 web tests and a synthetic desktop/mobile
+journey passed, including actual synthetic importer no-data and failure paths.
 
 PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and

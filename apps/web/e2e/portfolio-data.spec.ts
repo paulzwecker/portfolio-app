@@ -287,9 +287,18 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
               ? [
                   {
                     subject_key: "NYSE:LAST",
-                    checkpoint_status: "PENDING",
-                    reason: "CHECKPOINT_NOT_COMPLETE",
+                    checkpoint_status: "UNAVAILABLE",
+                    reason: "CHECKPOINT_UNAVAILABLE",
                     scheduled_session_review: null,
+                    checkpoint_diagnostics: {
+                      failure_kind: "NO_PROVIDER_DATA",
+                      raw_response_count: 1,
+                      normalized_daily_rows: 0,
+                      provider_failure_count: 0,
+                      normalization_rejection_count: 1,
+                      normalization_warning_count: null,
+                      retryable: false,
+                    },
                   },
                 ]
               : [
@@ -372,6 +381,13 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
     await panel.getByRole("button", { name: "Next listings" }).click();
     await expect(panel).toContainText("NYSE:LAST");
     await expect(panel).toContainText("Showing 31–31 of 31");
+    await panel.getByText("NYSE:LAST", { exact: false }).click();
+    await expect(
+      panel.getByText("Provider reported no observations."),
+    ).toBeVisible();
+    await expect(
+      panel.getByText("Normalization warnings: Not recorded", { exact: false }),
+    ).toBeVisible();
     await panel.getByRole("button", { name: "Previous listings" }).click();
     await expect(panel).toContainText("NYSE:SYNTH");
     expect(

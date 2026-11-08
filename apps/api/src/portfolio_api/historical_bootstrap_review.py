@@ -97,10 +97,45 @@ def _listing_review(
     checkpoint: MarketDataBootstrapCheckpoint,
     at: datetime,
 ) -> s.HistoricalBootstrapListingReviewRead:
+    def recorded_diagnostics() -> s.HistoricalBootstrapCheckpointDiagnosticsRead:
+        report = checkpoint.report if isinstance(checkpoint.report, dict) else {}
+        coverage = report.get("coverage")
+        coverage = coverage if isinstance(coverage, dict) else {}
+
+        def count(value: object) -> int | None:
+            return value if type(value) is int and 0 <= value <= 1000000 else None
+
+        raw_count = count(coverage.get("raw_response_count"))
+        warnings = coverage.get("normalization_warnings")
+        rejections = report.get("normalization_rejections")
+        return s.HistoricalBootstrapCheckpointDiagnosticsRead(
+            failure_kind=(
+                "NO_PROVIDER_DATA"
+                if checkpoint.failure_code == "NO_PROVIDER_DATA"
+                else "OTHER"
+                if checkpoint.failure_code
+                else "NONE"
+            ),
+            raw_response_count=raw_count,
+            normalized_daily_rows=count(coverage.get("daily_price_rows"))
+            if raw_count is not None
+            else None,
+            provider_failure_count=count(report.get("provider_failure_count")),
+            normalization_rejection_count=count(len(rejections))
+            if isinstance(rejections, list)
+            else None,
+            normalization_warning_count=count(len(warnings))
+            if coverage.get("normalization_warnings_captured") is True
+            and isinstance(warnings, list)
+            else None,
+            retryable=checkpoint.retryable,
+        )
+
     def result(
         reason: str,
         review: s.ScheduledSessionReviewRead | None = None,
         window_review: s.ScheduledSessionReviewRead | None = None,
+        diagnostics: s.HistoricalBootstrapCheckpointDiagnosticsRead | None = None,
     ) -> s.HistoricalBootstrapListingReviewRead:
         return s.HistoricalBootstrapListingReviewRead.model_validate(
             {
@@ -109,14 +144,15 @@ def _listing_review(
                 "reason": reason,
                 "scheduled_session_review": review,
                 "requested_window_review": window_review,
+                "checkpoint_diagnostics": diagnostics,
             }
         )
 
-    if (
-        checkpoint.status != "COMPLETE"
-        or checkpoint.finished_at is None
-        or checkpoint.finished_at > at
-    ):
+    if checkpoint.finished_at is None or checkpoint.finished_at > at:
+        return result("CHECKPOINT_NOT_COMPLETE")
+    if checkpoint.status in {"UNAVAILABLE", "FAILED", "BLOCKED"}:
+        return result(f"CHECKPOINT_{checkpoint.status}", diagnostics=recorded_diagnostics())
+    if checkpoint.status != "COMPLETE":
         return result("CHECKPOINT_NOT_COMPLETE")
     identity = checkpoint.report.get("identity") if isinstance(checkpoint.report, dict) else None
     listing = session.get(Listing, checkpoint.listing_id) if checkpoint.listing_id else None
@@ -178,7 +214,7 @@ def _listing_review(
     if len(timestamps) > MAX_DAILY_TIMESTAMPS:
         return result("DATE_LIMIT_EXCEEDED")
     if not timestamps:
-        return result("NO_DAILY_CLOSES")
+        return result("NO_DAILY_CLOSES", diagnostics=recorded_diagnostics())
     dates = [value.astimezone(UTC).date() for value in timestamps]
     review = scheduled_session_review(listing.venue, dates, at)
     window = scheduled_session_review(

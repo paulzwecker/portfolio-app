@@ -16337,9 +16337,103 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HistoricalBootstrapCheckpointDiagnosticsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "failure_kind": {
+            "enum": [
+              "NO_PROVIDER_DATA",
+              "OTHER",
+              "NONE"
+            ],
+            "title": "Failure Kind",
+            "type": "string"
+          },
+          "normalization_rejection_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalization Rejection Count"
+          },
+          "normalization_warning_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalization Warning Count"
+          },
+          "normalized_daily_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Daily Rows"
+          },
+          "provider_failure_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Failure Count"
+          },
+          "raw_response_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Response Count"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "failure_kind",
+          "raw_response_count",
+          "normalized_daily_rows",
+          "provider_failure_count",
+          "normalization_rejection_count",
+          "normalization_warning_count",
+          "retryable"
+        ],
+        "title": "HistoricalBootstrapCheckpointDiagnosticsRead",
+        "type": "object"
+      },
       "HistoricalBootstrapListingReviewRead": {
         "additionalProperties": false,
         "properties": {
+          "checkpoint_diagnostics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoricalBootstrapCheckpointDiagnosticsRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "checkpoint_status": {
             "title": "Checkpoint Status",
             "type": "string"
@@ -16348,6 +16442,9 @@
             "enum": [
               "AVAILABLE",
               "CHECKPOINT_NOT_COMPLETE",
+              "CHECKPOINT_UNAVAILABLE",
+              "CHECKPOINT_FAILED",
+              "CHECKPOINT_BLOCKED",
               "IDENTITY_CHANGED",
               "LISTING_CURRENCY_UNAVAILABLE",
               "BATCH_UNVERIFIED",

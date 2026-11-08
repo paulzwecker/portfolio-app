@@ -854,12 +854,25 @@ class ScheduledSessionReviewRead(Contract):
     selected_unscheduled_dates: list[date]
 
 
+class HistoricalBootstrapCheckpointDiagnosticsRead(Contract):
+    failure_kind: Literal["NO_PROVIDER_DATA", "OTHER", "NONE"]
+    raw_response_count: int | None
+    normalized_daily_rows: int | None
+    provider_failure_count: int | None
+    normalization_rejection_count: int | None
+    normalization_warning_count: int | None
+    retryable: bool
+
+
 class HistoricalBootstrapListingReviewRead(Contract):
     subject_key: str
     checkpoint_status: str
     reason: Literal[
         "AVAILABLE",
         "CHECKPOINT_NOT_COMPLETE",
+        "CHECKPOINT_UNAVAILABLE",
+        "CHECKPOINT_FAILED",
+        "CHECKPOINT_BLOCKED",
         "IDENTITY_CHANGED",
         "LISTING_CURRENCY_UNAVAILABLE",
         "BATCH_UNVERIFIED",
@@ -869,6 +882,7 @@ class HistoricalBootstrapListingReviewRead(Contract):
     ]
     scheduled_session_review: ScheduledSessionReviewRead | None
     requested_window_review: ScheduledSessionReviewRead | None = None
+    checkpoint_diagnostics: HistoricalBootstrapCheckpointDiagnosticsRead | None = None
 
 
 class HistoricalBootstrapReviewRead(Contract):

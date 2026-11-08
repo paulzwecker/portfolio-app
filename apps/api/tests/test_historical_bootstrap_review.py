@@ -131,6 +131,11 @@ def test_large_scope_is_bounded_and_reports_omitted_listings(postgres_engine: En
         "currency_missing",
         "wrong_currency",
         "wrong_provider",
+        "no_prices",
+        "malformed_receipt",
+        "unavailable",
+        "failed",
+        "blocked",
     ],
 )
 def test_review_uses_only_verified_listing_and_batch_dates(
@@ -176,10 +181,20 @@ def test_review_uses_only_verified_listing_and_batch_dates(
             listing_id=listing.id,
             start_date=run.start_date,
             end_date=run.end_date,
-            status="PENDING" if mode == "pending" else "COMPLETE",
+            status={
+                "pending": "PENDING",
+                "unavailable": "UNAVAILABLE",
+                "failed": "FAILED",
+                "blocked": "BLOCKED",
+            }.get(mode, "COMPLETE"),
             attempt_count=1,
             batch_id=batch.id,
             source_digest="d" * 64 if mode == "wrong_batch" else digest,
+            failure_code={
+                "unavailable": "NO_PROVIDER_DATA",
+                "failed": "PRIVATE_ERROR_MESSAGE",
+                "blocked": "CANONICAL_IDENTITY_CHANGED",
+            }.get(mode),
             finished_at=datetime(2026, 11, 8, 21, tzinfo=UTC),
             report={
                 "identity": {
@@ -188,11 +203,19 @@ def test_review_uses_only_verified_listing_and_batch_dates(
                     "venue": "OLD" if mode == "changed_identity" else listing.venue,
                     "ticker": listing.ticker,
                     "currency": listing.currency,
-                }
+                },
+                "coverage": {
+                    "raw_response_count": True if mode == "malformed_receipt" else 1,
+                    "daily_price_rows": -1 if mode == "malformed_receipt" else 0,
+                    "normalization_warnings_captured": False,
+                    "normalization_warnings": [],
+                },
+                "provider_failure_count": False if mode == "malformed_receipt" else 0,
+                "normalization_rejections": [],
             },
         )
         session.add(checkpoint)
-        for day in (2, 7):
+        for day in () if mode in {"no_prices", "malformed_receipt"} else (2, 7):
             session.add(
                 PriceObservation(
                     listing_id=listing.id,
@@ -223,6 +246,11 @@ def test_review_uses_only_verified_listing_and_batch_dates(
             "currency_missing": "LISTING_CURRENCY_UNAVAILABLE",
             "wrong_currency": "NO_DAILY_CLOSES",
             "wrong_provider": "NO_DAILY_CLOSES",
+            "no_prices": "NO_DAILY_CLOSES",
+            "malformed_receipt": "NO_DAILY_CLOSES",
+            "unavailable": "CHECKPOINT_UNAVAILABLE",
+            "failed": "CHECKPOINT_FAILED",
+            "blocked": "CHECKPOINT_BLOCKED",
         }[mode]
         assert row.reason == expected
         if mode == "valid":
@@ -236,6 +264,26 @@ def test_review_uses_only_verified_listing_and_batch_dates(
         else:
             assert row.scheduled_session_review is None
             assert row.requested_window_review is None
-        assert session.scalar(select(MarketDataBootstrapCheckpoint.status)) == (
-            "PENDING" if mode == "pending" else "COMPLETE"
-        )
+        if mode in {"no_prices", "unavailable", "failed", "blocked"}:
+            assert row.checkpoint_diagnostics is not None
+            assert row.checkpoint_diagnostics.raw_response_count == 1
+            assert row.checkpoint_diagnostics.normalization_warning_count is None
+            assert row.checkpoint_diagnostics.failure_kind == (
+                "NO_PROVIDER_DATA"
+                if mode == "unavailable"
+                else "OTHER"
+                if mode in {"failed", "blocked"}
+                else "NONE"
+            )
+            assert "PRIVATE_ERROR_MESSAGE" not in row.model_dump_json()
+        if mode == "malformed_receipt":
+            assert row.checkpoint_diagnostics is not None
+            assert row.checkpoint_diagnostics.raw_response_count is None
+            assert row.checkpoint_diagnostics.normalized_daily_rows is None
+            assert row.checkpoint_diagnostics.provider_failure_count is None
+        assert session.scalar(select(MarketDataBootstrapCheckpoint.status)) == {
+            "pending": "PENDING",
+            "unavailable": "UNAVAILABLE",
+            "failed": "FAILED",
+            "blocked": "BLOCKED",
+        }.get(mode, "COMPLETE")

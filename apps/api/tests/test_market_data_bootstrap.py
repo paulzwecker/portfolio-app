@@ -794,6 +794,8 @@ def test_provider_gaps_are_distinguished_from_ingestion_failures(
     mode: str,
     expected_status: str,
 ) -> None:
+    from portfolio_api.historical_bootstrap_review import latest_historical_bootstrap_review
+
     with Session(postgres_engine) as session, session.begin():
         company, security, listing = _seed_canonical_scope(session)
         crosswalk, digest = _crosswalk(_mapping(company.id, security.id, listing.id))
@@ -826,6 +828,19 @@ def test_provider_gaps_are_distinguished_from_ingestion_failures(
             assert not checkpoint.retryable
             assert checkpoint.failure_code == "NO_PROVIDER_DATA"
         assert result["failed_checkpoints"] == (1 if expected_status == "FAILED" else 0)
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        review = latest_historical_bootstrap_review(session, run_id=run_id)
+        row = review.listings[0]
+        assert row.reason == (
+            "CHECKPOINT_FAILED" if mode == "transport_failure" else "CHECKPOINT_UNAVAILABLE"
+        )
+        assert row.checkpoint_diagnostics is not None
+        assert row.checkpoint_diagnostics.failure_kind == (
+            "OTHER" if mode == "transport_failure" else "NO_PROVIDER_DATA"
+        )
+        assert row.checkpoint_diagnostics.retryable == (mode == "transport_failure")
+        assert row.scheduled_session_review is None and row.requested_window_review is None
 
 
 @pytest.mark.integration

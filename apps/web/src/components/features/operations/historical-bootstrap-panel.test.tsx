@@ -132,4 +132,47 @@ describe("historical bootstrap review", () => {
       renderToStaticMarkup(<HistoricalBootstrapPanelContent data={empty} />),
     ).toContain("No historical bootstrap run");
   });
+
+  it("shows recorded empty response evidence without inventing warning counts", () => {
+    const diagnostics = {
+      failure_kind: "NO_PROVIDER_DATA",
+      raw_response_count: 1,
+      normalized_daily_rows: 0,
+      provider_failure_count: 0,
+      normalization_rejection_count: 1,
+      normalization_warning_count: null,
+      retryable: false,
+    };
+    const data = {
+      ...payload,
+      listings: [
+        {
+          subject_key: "NYSE:SYNTH",
+          checkpoint_status: "UNAVAILABLE",
+          reason: "CHECKPOINT_UNAVAILABLE",
+          scheduled_session_review: null,
+          checkpoint_diagnostics: diagnostics,
+        },
+      ],
+    };
+    expect(isHistoricalBootstrapReview(data)).toBe(true);
+    if (!isHistoricalBootstrapReview(data)) throw new Error("fixture invalid");
+    const html = renderToStaticMarkup(
+      <HistoricalBootstrapPanelContent data={data} />,
+    );
+    expect(html).toContain("Provider reported no observations");
+    expect(html).toContain("Normalization warnings: Not recorded");
+    expect(html).toContain("raw responses have not been reconciled");
+    expect(
+      isHistoricalBootstrapReview({
+        ...data,
+        listings: [
+          {
+            ...data.listings[0],
+            checkpoint_diagnostics: { ...diagnostics, raw_response_count: -1 },
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
 });

@@ -13,6 +13,9 @@ import { dateOnly, dateTime } from "@/lib/display";
 const reasonLabels = {
   AVAILABLE: "Schedule review available",
   CHECKPOINT_NOT_COMPLETE: "Checkpoint is not complete",
+  CHECKPOINT_UNAVAILABLE: "Provider data unavailable",
+  CHECKPOINT_FAILED: "Provider processing failed",
+  CHECKPOINT_BLOCKED: "Checkpoint blocked",
   IDENTITY_CHANGED: "Listing identity needs review",
   LISTING_CURRENCY_UNAVAILABLE: "Listing currency is unavailable",
   BATCH_UNVERIFIED: "Batch identity is unavailable or inconsistent",
@@ -125,6 +128,43 @@ export function HistoricalBootstrapPanelContent({
                   <p className="mt-2 text-muted-foreground">
                     Checkpoint: {row.checkpoint_status}
                   </p>
+                  {row.checkpoint_diagnostics && (
+                    <div className="mt-2 space-y-1 text-muted-foreground">
+                      <p>
+                        Recorded receipt evidence; raw responses have not been
+                        reconciled here.
+                      </p>
+                      <p>
+                        {row.checkpoint_diagnostics.failure_kind ===
+                        "NO_PROVIDER_DATA"
+                          ? "Provider reported no observations."
+                          : row.checkpoint_diagnostics.failure_kind === "OTHER"
+                            ? "Another failure was recorded; review the operator report."
+                            : "No failure code recorded."}
+                      </p>
+                      <p>
+                        Raw responses:{" "}
+                        {row.checkpoint_diagnostics.raw_response_count ??
+                          "Not recorded"}{" "}
+                        · Normalized daily rows:{" "}
+                        {row.checkpoint_diagnostics.normalized_daily_rows ??
+                          "Not recorded"}{" "}
+                        · Provider failures:{" "}
+                        {row.checkpoint_diagnostics.provider_failure_count ??
+                          "Not recorded"}
+                      </p>
+                      <p>
+                        Normalization rejections:{" "}
+                        {row.checkpoint_diagnostics
+                          .normalization_rejection_count ?? "Not recorded"}{" "}
+                        · Normalization warnings:{" "}
+                        {row.checkpoint_diagnostics
+                          .normalization_warning_count ?? "Not recorded"}{" "}
+                        · Retryable when recorded:{" "}
+                        {row.checkpoint_diagnostics.retryable ? "Yes" : "No"}
+                      </p>
+                    </div>
+                  )}
                   {row.scheduled_session_review && (
                     <div className="mt-2 space-y-1 text-muted-foreground">
                       <p>
