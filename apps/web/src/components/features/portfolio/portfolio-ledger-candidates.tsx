@@ -20,6 +20,7 @@ import {
   ledgerStageBody,
   type LedgerReviewFile,
 } from "./portfolio-ledger-data";
+import { PortfolioLedgerPublication } from "./portfolio-ledger-publication";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
 
 async function writeCandidate(
@@ -527,6 +528,12 @@ function LedgerCandidateDetail({
         </ul>
       </details>
       <PortfolioLedgerResults report={row.preview} file={file} />
+      {row.status === "ACCEPTED" && (
+        <PortfolioLedgerPublication
+          candidate={row}
+          currentCandidateId={history?.current_accepted_candidate_id}
+        />
+      )}
       {row.review ? (
         <div
           className="rounded-lg border p-4 text-sm"

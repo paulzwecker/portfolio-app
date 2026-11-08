@@ -15,6 +15,12 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
+Publication UI BUILD now adds scoped plan/ownership/publish proxy routes and strict
+response binding. The new and existing candidate/proxy tests pass 102 checks.
+Exact decimals, source/candidate/review identity, typed confirmation and receipt
+provenance are checked without floating-point conversion. Browser approval and
+isolated publication-fixture verification remain in progress.
+
 C2.3 saved-candidate decisions/history are LOCAL_VERIFIED. Ninety focused web,
 43 API/fixture checks and four repeated real-API desktop/mobile journeys pass.
 Source/receipt scope, explicit confirmations, corrections, rejection, immutable
