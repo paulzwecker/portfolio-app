@@ -17328,6 +17328,150 @@
         "title": "LedgerCashRead",
         "type": "object"
       },
+      "LedgerEndingAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashInput"
+            },
+            "maxItems": 100,
+            "title": "Cash",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionInput"
+            },
+            "maxItems": 1000,
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "evidence",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerEndingAccount",
+        "type": "object"
+      },
+      "LedgerEndingReconciliationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "domain": {
+            "enum": [
+              "POSITION",
+              "CASH"
+            ],
+            "title": "Domain",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected"
+          },
+          "status": {
+            "enum": [
+              "MATCH",
+              "MISSING_OBSERVATION",
+              "EXTRA_OBSERVATION",
+              "DIFFERENCE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "domain",
+          "key",
+          "projected",
+          "observed",
+          "difference",
+          "status"
+        ],
+        "title": "LedgerEndingReconciliationRead",
+        "type": "object"
+      },
+      "LedgerEndingStatement": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEndingAccount"
+            },
+            "maxItems": 20,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "effective_at",
+          "accounts"
+        ],
+        "title": "LedgerEndingStatement",
+        "type": "object"
+      },
       "LedgerEvidence": {
         "additionalProperties": false,
         "properties": {
@@ -17393,7 +17537,9 @@
               "OPENING_MISMATCH",
               "NEGATIVE_POSITION",
               "NEGATIVE_CASH",
-              "BALANCE_OUT_OF_RANGE"
+              "BALANCE_OUT_OF_RANGE",
+              "ENDING_MISMATCH",
+              "ENDING_ACCOUNT_MISSING"
             ],
             "title": "Code",
             "type": "string"
@@ -20756,6 +20902,16 @@
             "const": "portfolio-ledger-preview-v1",
             "title": "Contract Version",
             "type": "string"
+          },
+          "ending_statement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerEndingStatement"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -20810,9 +20966,46 @@
             "title": "Cash",
             "type": "array"
           },
+          "consumed_listings": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerListingRead"
+            },
+            "title": "Consumed Listings",
+            "type": "array"
+          },
           "contract_version": {
             "const": "portfolio-ledger-preview-v1",
             "title": "Contract Version",
+            "type": "string"
+          },
+          "ending_reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEndingReconciliationRead"
+            },
+            "title": "Ending Reconciliation",
+            "type": "array"
+          },
+          "ending_statement_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ending Statement At"
+          },
+          "ending_status": {
+            "default": "NOT_PROVIDED",
+            "enum": [
+              "NOT_PROVIDED",
+              "MATCH",
+              "MISMATCH",
+              "NOT_EVALUATED"
+            ],
+            "title": "Ending Status",
             "type": "string"
           },
           "input_sha256": {
@@ -20859,6 +21052,7 @@
           "status": {
             "enum": [
               "OPENING_RECONCILED",
+              "ENDING_RECONCILED",
               "BLOCKED"
             ],
             "title": "Status",

@@ -99,6 +99,47 @@ class LedgerCashActivity(LedgerActivity):
     amount: PositiveQuantity
 
 
+class LedgerEndingAccount(Contract):
+    account_id: UUID
+    evidence: LedgerEvidence
+    positions: list[LedgerPositionInput] = Field(max_length=1000)
+    cash: list[LedgerCashInput] = Field(max_length=100)
+
+    @model_validator(mode="after")
+    def unique_balances(self) -> Self:
+        if len({p.listing_id for p in self.positions}) != len(self.positions):
+            raise ValueError("An ending account may contain a listing only once")
+        if len({c.currency for c in self.cash}) != len(self.cash):
+            raise ValueError("An ending account may contain a cash currency only once")
+        return self
+
+
+class LedgerEndingStatement(Contract):
+    effective_at: datetime
+    accounts: list[LedgerEndingAccount] = Field(max_length=20)
+
+    @field_validator("effective_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Use a timezone-aware ending statement timestamp")
+        return value.astimezone(UTC)
+
+    @model_validator(mode="after")
+    def bounded_unique_accounts(self) -> Self:
+        if len({a.account_id for a in self.accounts}) != len(self.accounts):
+            raise ValueError("An account may have only one ending observation")
+        if (
+            sum(len(a.positions) for a in self.accounts) > 1000
+            or sum(len(a.cash) for a in self.accounts) > 100
+        ):
+            raise ValueError("Ending scope exceeds 1000 position or 100 cash rows")
+        evidence = [a.evidence for a in self.accounts]
+        if len({(e.source_sha256, e.source_record_id) for e in evidence}) != len(evidence):
+            raise ValueError("An ending source record may describe only one account")
+        return self
+
+
 class PortfolioLedgerPreviewCreate(Contract):
     contract_version: Literal["portfolio-ledger-preview-v1"]
     anchor_snapshot_id: UUID
@@ -108,6 +149,7 @@ class PortfolioLedgerPreviewCreate(Contract):
     activity: list[Annotated[LedgerTrade | LedgerCashActivity, Field(discriminator="kind")]] = (
         Field(max_length=1000)
     )
+    ending_statement: LedgerEndingStatement | None = None
 
     @field_validator("as_of")
     @classmethod
@@ -135,6 +177,13 @@ class PortfolioLedgerPreviewCreate(Contract):
         evidence = [a.evidence for a in self.accounts] + [a.evidence for a in self.activity]
         if len({(e.source_sha256, e.source_record_id) for e in evidence}) != len(evidence):
             raise ValueError("A source record may contribute only once to this ledger scope")
+        if self.ending_statement is not None:
+            if self.ending_statement.effective_at != self.as_of:
+                raise ValueError("The ending statement timestamp must equal the projection cutoff")
+            if not {a.account_id for a in self.ending_statement.accounts} <= {
+                a.account_id for a in self.accounts
+            }:
+                raise ValueError("Ending observations must use declared opening accounts")
         return self
 
 
@@ -182,17 +231,34 @@ class LedgerReconciliationRead(Contract):
 
 
 class LedgerIssueRead(Contract):
-    code: Literal["OPENING_MISMATCH", "NEGATIVE_POSITION", "NEGATIVE_CASH", "BALANCE_OUT_OF_RANGE"]
+    code: Literal[
+        "OPENING_MISMATCH",
+        "NEGATIVE_POSITION",
+        "NEGATIVE_CASH",
+        "BALANCE_OUT_OF_RANGE",
+        "ENDING_MISMATCH",
+        "ENDING_ACCOUNT_MISSING",
+    ]
     activity_id: UUID | None
     account_id: UUID | None
     asset_key: str | None
+
+
+class LedgerEndingReconciliationRead(Contract):
+    account_id: UUID | None
+    domain: Literal["POSITION", "CASH"]
+    key: str
+    projected: FixedDecimal | None
+    observed: FixedDecimal | None
+    difference: FixedDecimal | None
+    status: Literal["MATCH", "MISSING_OBSERVATION", "EXTRA_OBSERVATION", "DIFFERENCE"]
 
 
 class PortfolioLedgerPreviewRead(Contract):
     contract_version: Literal["portfolio-ledger-preview-v1"]
     projection_version: Literal["settled-booking-v1"]
     preview_only: Literal[True]
-    status: Literal["OPENING_RECONCILED", "BLOCKED"]
+    status: Literal["OPENING_RECONCILED", "ENDING_RECONCILED", "BLOCKED"]
     portfolio_id: UUID
     anchor_snapshot_id: UUID
     anchor_recorded_at: datetime
@@ -205,3 +271,7 @@ class PortfolioLedgerPreviewRead(Contract):
     cash: list[LedgerCashRead]
     activity_count: int
     issues: list[LedgerIssueRead]
+    ending_status: Literal["NOT_PROVIDED", "MATCH", "MISMATCH", "NOT_EVALUATED"] = "NOT_PROVIDED"
+    ending_statement_at: datetime | None = None
+    ending_reconciliation: list[LedgerEndingReconciliationRead] = Field(default_factory=list)
+    consumed_listings: list[LedgerListingRead] = Field(default_factory=list)

@@ -13,6 +13,15 @@ opening accounts/balances and up to 1,000 activity records. It permits 20 accoun
 1,000 opening position rows and 100 opening cash rows across those accounts.
 `settled-booking-v1` supports BUY, SELL, DEPOSIT, WITHDRAWAL and FEE.
 
+An optional `ending_statement` contains an `effective_at` equal to `as_of` and
+per-account observations with account ID, evidence, positions and cash. Its scope
+uses the declared opening accounts. Every account, including empty accounts,
+requires an ending observation. Unknown accounts/listings, duplicate rows/evidence,
+invalid times and missing amounts fail closed. Per-account and consolidated
+comparisons preserve missing/extra rows and explicit zeroes. Differences use
+candidate minus observed. Portfolio totals cannot cancel account-level blockers.
+Source document authenticity/completeness remains an operator review requirement.
+
 - Opening accounts declare a broker or `UNALLOCATED_OPENING`. Source evidence
   must support the allocation. An unallocated opening can reconcile quantities
   and cash; subsequent activity requires an evidenced brokerage account.
@@ -64,9 +73,14 @@ broker allocation and settled-balance basis remain evidence/review requirements.
    `BLOCKED` identifies opening differences, negative balances or storage overflow.
    Opening mismatches suppress projected balances. Intermediate failures remain
    blocking even if final balances recover.
+   `ENDING_RECONCILED` additionally requires exact ending-account and total matches.
+   `ending_status` distinguishes absent, matching, mismatched and unevaluated
+   statements. A matching ending cannot clear an earlier booking failure.
 5. Retain input and report privately. `input_sha256` binds version, anchor, accounts,
    evidence, ordered activity and all consumed listing identities. Reordering input
    collections preserves replay; changed financial values or provenance change the hash.
+   Ending observations and their consumed listing identities join this binding.
+   Opening-only packets retain their existing v1 input hashes.
 
 Both endpoints run inside a PostgreSQL read-only, repeatable-read transaction.
 The psycopg read-only setting is restored to its exact prior value when returning
@@ -87,8 +101,8 @@ Invoke-WebRequest "$ledgerApi/preview" -Method Post -ContentType 'application/js
 ## Remaining acceptance gates
 
 This slice has no ledger persistence, acceptance, cutover or current-holdings switch.
-It provides candidate balances and opening comparisons. Ending broker-statement
-reconciliation, a review UI, durable revisions/receipts and transaction correction
+It provides candidate balances and opening/ending comparisons. A review UI,
+durable revisions/receipts and transaction correction
 semantics remain follow-up work. Cost lots, gains, TWR/XIRR, dividends, transfers,
 executed FX and broker imports require their documented contracts and evidence.
 Opening quantities never establish historical cost or capital flows.

@@ -12,6 +12,14 @@
 
 ## Current ledger increment
 
+Ending-statement reconciliation passes 79 focused checks (67 unit and 12 isolated
+PostgreSQL/API cases). Account and total comparisons preserve missing/zero, exact
+decimals, evidence and ordering. Missing empty accounts block; matching portfolio
+totals cannot conceal account differences. Golden opening-only v1 hashes retain
+compatibility. Existing canonical state and read-only pool protection are verified.
+Types, lint and generated contracts pass. The private-file Portfolio review UI and
+actual-API desktop/mobile verification are in progress.
+
 `43d1ed8` adds the versioned settled-booking core. The read-only API increment is
 LOCAL_VERIFIED through 40 unit, nine isolated PostgreSQL/API and 18 existing contract
 cases (67 total). GET anchor and POST preview run read-only/repeatable-read and pin

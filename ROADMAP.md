@@ -117,6 +117,12 @@ policy decision. It has lower priority than useful market, research and decision
 
 ## Evidence and upkeep
 
+- C2.3 ending-statement reconciliation passes 79 focused checks (67 unit and
+  12 isolated PostgreSQL/API). Account/portfolio comparisons bind ending evidence,
+  time and exact listing identities, retaining missing/zero and legacy v1 hashes.
+  Missing empty accounts and equal-total/wrong-account cases remain blocked.
+  Types, lint and generated contracts pass. UI/browser verification is in progress.
+
 - C2.3 `43d1ed8` adds the versioned settled-ledger core. The read-only API increment
   binds current snapshot and listing/source identity hashes, retains anchor recording
   time and projects exact native balances. Forty unit, nine isolated PostgreSQL/API

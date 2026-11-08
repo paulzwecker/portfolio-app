@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_cloud_market_refresh import table_counts
-from test_portfolio_ledger import AT, proposal, trade
+from test_portfolio_ledger import AT, evidence, proposal, trade
 
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as c
@@ -101,6 +101,35 @@ def candidate(anchor: c.PortfolioLedgerAnchorRead) -> c.PortfolioLedgerPreviewCr
     return value
 
 
+def ending_candidate(
+    anchor: c.PortfolioLedgerAnchorRead,
+    value: c.PortfolioLedgerPreviewCreate,
+) -> c.LedgerEndingStatement:
+    common = next(item for item in anchor.listings if item.security_type == "COMMON_STOCK")
+    return c.LedgerEndingStatement(
+        effective_at=value.as_of,
+        accounts=[
+            c.LedgerEndingAccount(
+                account_id=value.accounts[0].account_id,
+                evidence=evidence("api-ending"),
+                positions=[
+                    c.LedgerPositionInput(
+                        listing_id=row.listing_id,
+                        quantity=Decimal("3.75")
+                        if row.listing_id == common.listing_id
+                        else row.quantity,
+                    )
+                    for row in value.accounts[0].positions
+                ],
+                cash=[
+                    c.LedgerCashInput(currency="USD", balance=Decimal("89.65")),
+                    c.LedgerCashInput(currency="EUR", balance=Decimal("0")),
+                ],
+            )
+        ],
+    )
+
+
 def baseline(engine: Engine, portfolio_id: UUID) -> dict[str, object]:
     with Session(engine) as session:
         overview = queries.overview(session, portfolio_id)
@@ -185,6 +214,173 @@ def test_authenticated_exact_preview_replay_is_sql_read_only_and_preserves_canon
         )
         assert connection.scalar(text("SHOW transaction_read_only")) == "off"
         assert connection.scalar(text("SHOW transaction_isolation")) == "read committed"
+
+
+def test_ending_statement_api_replay_and_rejections_preserve_the_read_only_baseline(
+    postgres_engine: Engine,
+) -> None:
+    portfolio_id = source(postgres_engine)
+    with Session(postgres_engine) as session:
+        anchor = ledger.portfolio_ledger_anchor(session, portfolio_id)
+        schema = str(session.scalar(text("SELECT current_schema()")))
+    value = candidate(anchor)
+    value.ending_statement = ending_candidate(anchor, value)
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings()
+    reader = fixture_read_engine(postgres_engine.url, schema, settings)
+    try:
+        with TestClient(fixture_application(reader, settings)) as client:
+            path = f"/v1/portfolios/{portfolio_id}/ledger/preview"
+            payload = value.model_dump(mode="json")
+            response = client.post(path, json=payload)
+            assert response.status_code == 200
+            result = c.PortfolioLedgerPreviewRead.model_validate(response.json())
+            assert result.status == "ENDING_RECONCILED" and result.ending_status == "MATCH"
+            assert (
+                result.ending_statement_at == value.as_of and len(result.ending_reconciliation) == 8
+            )
+            assert all(row.difference == 0 for row in result.ending_reconciliation)
+            assert client.post(path, json=payload).json() == response.json()
+
+            missing_zero = value.model_dump(mode="json")
+            missing_zero["ending_statement"]["accounts"][0]["cash"].pop()
+            missing = client.post(path, json=missing_zero)
+            assert missing.status_code == 200 and missing.json()["status"] == "BLOCKED"
+            rows = missing.json()["ending_reconciliation"]
+            euro = next(
+                row for row in rows if row["account_id"] is not None and row["key"] == "EUR"
+            )
+            assert euro["status"] == "MISSING_OBSERVATION" and euro["observed"] is None
+            assert euro["projected"] == "0.0000000000"
+
+            changed_value = value.model_dump(mode="json")
+            changed_value["ending_statement"]["accounts"][0]["cash"][0]["balance"] = "89.64"
+            changed = client.post(path, json=changed_value)
+            assert changed.status_code == 200 and changed.json()["status"] == "BLOCKED"
+            assert changed.json()["input_sha256"] != result.input_sha256
+            unknown_listing = value.model_dump(mode="json")
+            unknown_listing["ending_statement"]["accounts"][0]["positions"][0]["listing_id"] = str(
+                uuid4()
+            )
+            assert client.post(path, json=unknown_listing).status_code == 422
+            unknown_account = value.model_dump(mode="json")
+            unknown_account["ending_statement"]["accounts"][0]["account_id"] = str(uuid4())
+            assert client.post(path, json=unknown_account).status_code == 422
+            wrong_time = value.model_dump(mode="json")
+            wrong_time["ending_statement"]["effective_at"] = (
+                value.as_of - timedelta(seconds=1)
+            ).isoformat()
+            assert client.post(path, json=wrong_time).status_code == 422
+        with reader.connect() as connection:
+            assert connection.scalar(text("SHOW transaction_read_only")) == "on"
+    finally:
+        reader.dispose()
+    assert baseline(postgres_engine, portfolio_id) == before
+
+
+def test_ending_only_listing_metadata_is_verified_and_returned_without_writes(
+    postgres_engine: Engine,
+) -> None:
+    portfolio_id = source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        anchor = ledger.portfolio_ledger_anchor(session, portfolio_id)
+        fund = next(item for item in anchor.listings if item.security_type == "ETF")
+        additional = Listing(
+            security_id=fund.security_id,
+            ticker="SYNF-ALT",
+            venue="ALT",
+            currency="EUR",
+            identity_source_ref="synthetic-ending-only",
+        )
+        session.add(additional)
+        session.flush()
+        additional_id = additional.id
+    value = candidate(anchor)
+    value.ending_statement = ending_candidate(anchor, value)
+    value.ending_statement.accounts[0].positions.append(
+        c.LedgerPositionInput(listing_id=additional_id, quantity=Decimal("0"))
+    )
+    before = baseline(postgres_engine, portfolio_id)
+    with TestClient(fixture_application(postgres_engine, fixture_settings())) as client:
+        response = client.post(
+            f"/v1/portfolios/{portfolio_id}/ledger/preview", json=value.model_dump(mode="json")
+        )
+        assert response.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(response.json())
+        assert result.status == "BLOCKED" and result.ending_status == "MISMATCH"
+        identity = next(row for row in result.consumed_listings if row.listing_id == additional_id)
+        assert (
+            identity.identity_source_ref == "synthetic-ending-only" and identity.company_id is None
+        )
+        assert identity.security_type == "ETF" and identity.currency == "EUR"
+        extra = next(
+            row
+            for row in result.ending_reconciliation
+            if row.account_id is not None and row.key == str(additional_id)
+        )
+        assert (
+            extra.status == "EXTRA_OBSERVATION" and extra.projected is None and extra.observed == 0
+        )
+    assert baseline(postgres_engine, portfolio_id) == before
+
+
+def test_same_total_wrong_account_is_blocked_through_the_real_api(postgres_engine: Engine) -> None:
+    portfolio_id = source(postgres_engine)
+    with Session(postgres_engine) as session:
+        anchor = ledger.portfolio_ledger_anchor(session, portfolio_id)
+    value = candidate(anchor)
+    value.activity = []
+    first = value.accounts[0]
+    common = next(row for row in anchor.listings if row.security_type == "COMMON_STOCK")
+    second = first.model_copy(
+        deep=True,
+        update={
+            "account_id": uuid4(),
+            "evidence": evidence("second-api-opening"),
+            "positions": [
+                c.LedgerPositionInput(listing_id=common.listing_id, quantity=Decimal("1.5"))
+            ],
+            "cash": [c.LedgerCashInput(currency="USD", balance=Decimal("50"))],
+        },
+    )
+    next(row for row in first.positions if row.listing_id == common.listing_id).quantity = Decimal(
+        "1"
+    )
+    next(row for row in first.cash if row.currency == "USD").balance = Decimal("50")
+    value.accounts.append(second)
+    first_observed = c.LedgerEndingAccount(
+        account_id=first.account_id,
+        evidence=evidence("first-api-ending"),
+        positions=[
+            row.model_copy(update={"quantity": Decimal("1.5")})
+            if row.listing_id == common.listing_id
+            else row.model_copy()
+            for row in first.positions
+        ],
+        cash=first.cash,
+    )
+    second_observed = c.LedgerEndingAccount(
+        account_id=second.account_id,
+        evidence=evidence("second-api-ending"),
+        positions=[c.LedgerPositionInput(listing_id=common.listing_id, quantity=Decimal("1"))],
+        cash=second.cash,
+    )
+    value.ending_statement = c.LedgerEndingStatement(
+        effective_at=value.as_of, accounts=[first_observed, second_observed]
+    )
+    before = baseline(postgres_engine, portfolio_id)
+    with TestClient(fixture_application(postgres_engine, fixture_settings())) as client:
+        response = client.post(
+            f"/v1/portfolios/{portfolio_id}/ledger/preview", json=value.model_dump(mode="json")
+        )
+        assert response.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(response.json())
+        assert result.status == "BLOCKED" and result.ending_status == "MISMATCH"
+        assert all(
+            row.status == "MATCH" for row in result.ending_reconciliation if row.account_id is None
+        )
+        assert len([row for row in result.ending_reconciliation if row.status == "DIFFERENCE"]) == 2
+    assert baseline(postgres_engine, portfolio_id) == before
 
 
 def test_ledger_route_rejects_accidental_dml_even_on_a_writable_engine(

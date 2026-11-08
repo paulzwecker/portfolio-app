@@ -135,6 +135,34 @@ def _reconciliation[Key: (UUID, str)](
     return result
 
 
+def _ending_reconciliation[Key: (UUID, str)](
+    account_id: UUID | None,
+    domain: Literal["POSITION", "CASH"],
+    projected: Mapping[Key, Decimal],
+    observed: Mapping[Key, Decimal],
+) -> list[c.LedgerEndingReconciliationRead]:
+    statuses: dict[
+        str, Literal["MATCH", "MISSING_OBSERVATION", "EXTRA_OBSERVATION", "DIFFERENCE"]
+    ] = {
+        "MATCH": "MATCH",
+        "MISSING_OPENING": "MISSING_OBSERVATION",
+        "EXTRA_OPENING": "EXTRA_OBSERVATION",
+        "DIFFERENCE": "DIFFERENCE",
+    }
+    return [
+        c.LedgerEndingReconciliationRead(
+            account_id=account_id,
+            domain=row.domain,
+            key=row.key,
+            projected=row.observed,
+            observed=row.opening,
+            difference=-row.difference if row.difference is not None else None,
+            status=statuses[row.status],
+        )
+        for row in _reconciliation(domain, projected, observed)
+    ]
+
+
 def project_ledger(
     anchor: c.PortfolioLedgerAnchorRead,
     value: c.PortfolioLedgerPreviewCreate,
@@ -161,9 +189,21 @@ def project_ledger(
             "The projection cutoff precedes the opening snapshot", status=422
         )
     accounts = {a.account_id: a for a in value.accounts}
+    ending = value.ending_statement
+    if ending is not None:
+        if ending.effective_at != value.as_of:
+            raise services.DomainError(
+                "The ending statement timestamp must equal the cutoff", status=422
+            )
+        if not {a.account_id for a in ending.accounts} <= accounts.keys():
+            raise services.DomainError(
+                "Ending observations must use declared opening accounts", status=422
+            )
     listing_ids = {p.listing_id for a in value.accounts for p in a.positions} | {
         a.listing_id for a in value.activity if isinstance(a, c.LedgerTrade)
     }
+    if ending is not None:
+        listing_ids.update(p.listing_id for a in ending.accounts for p in a.positions)
     if not listing_ids <= listings.keys():
         raise services.DomainError(
             "Every ledger position needs an existing exact listing", status=422
@@ -193,6 +233,23 @@ def project_ledger(
     ordered_accounts = sorted(value.accounts, key=lambda a: str(a.account_id))
     activity = sorted(value.activity, key=lambda a: (a.effective_at, a.sequence))
     payload = value.model_dump(mode="json")
+    if ending is None:
+        # Additive ending support retains historical opening-only input hashes.
+        payload.pop("ending_statement")
+    else:
+        payload["ending_statement"] = ending.model_copy(
+            update={
+                "accounts": [
+                    a.model_copy(
+                        update={
+                            "positions": sorted(a.positions, key=lambda p: str(p.listing_id)),
+                            "cash": sorted(a.cash, key=lambda p: p.currency),
+                        }
+                    )
+                    for a in sorted(ending.accounts, key=lambda a: str(a.account_id))
+                ]
+            }
+        ).model_dump(mode="json")
     payload["accounts"] = [
         a.model_copy(
             update={
@@ -210,6 +267,8 @@ def project_ledger(
         a.account_id: {p.listing_id: p.quantity for p in a.positions} for a in value.accounts
     }
     cash = {a.account_id: {p.currency: p.balance for p in a.cash} for a in value.accounts}
+    consumed_listings = {item.listing_id: item for item in anchor.listings}
+    consumed_listings.update({key: listings[key] for key in listing_ids})
     with localcontext() as context:
         context.prec = 80
         reconciliation = _reconciliation(
@@ -288,11 +347,78 @@ def project_ledger(
                         asset_key=str(key),
                     )
                 )
+        ending_status: Literal["NOT_PROVIDED", "MATCH", "MISMATCH", "NOT_EVALUATED"] = (
+            "NOT_PROVIDED"
+        )
+        ending_reconciliation: list[c.LedgerEndingReconciliationRead] = []
+        if ending is not None:
+            ending_status = "NOT_EVALUATED"
+            if opening_matches:
+                ending_accounts = {a.account_id: a for a in ending.accounts}
+                ending_positions = {
+                    a.account_id: {p.listing_id: p.quantity for p in a.positions}
+                    for a in ending.accounts
+                }
+                ending_cash = {
+                    a.account_id: {p.currency: p.balance for p in a.cash} for a in ending.accounts
+                }
+                for account in ordered_accounts:
+                    account_id = account.account_id
+                    if account_id not in ending_accounts:
+                        issues.append(
+                            c.LedgerIssueRead(
+                                code="ENDING_ACCOUNT_MISSING",
+                                activity_id=None,
+                                account_id=account_id,
+                                asset_key=None,
+                            )
+                        )
+                    ending_reconciliation.extend(
+                        _ending_reconciliation(
+                            account_id,
+                            "POSITION",
+                            positions[account_id],
+                            ending_positions.get(account_id, {}),
+                        )
+                    )
+                    ending_reconciliation.extend(
+                        _ending_reconciliation(
+                            account_id, "CASH", cash[account_id], ending_cash.get(account_id, {})
+                        )
+                    )
+                ending_reconciliation.extend(
+                    _ending_reconciliation(
+                        None, "POSITION", projected_positions, _totals(ending_positions)
+                    )
+                )
+                ending_reconciliation.extend(
+                    _ending_reconciliation(None, "CASH", projected_cash, _totals(ending_cash))
+                )
+                for row in ending_reconciliation:
+                    if row.status != "MATCH":
+                        issues.append(
+                            c.LedgerIssueRead(
+                                code="ENDING_MISMATCH",
+                                activity_id=None,
+                                account_id=row.account_id,
+                                asset_key=row.key,
+                            )
+                        )
+                ending_status = (
+                    "MATCH"
+                    if all(row.status == "MATCH" for row in ending_reconciliation)
+                    and len(ending_accounts) == len(accounts)
+                    else "MISMATCH"
+                )
         return c.PortfolioLedgerPreviewRead(
             contract_version=value.contract_version,
             projection_version="settled-booking-v1",
             preview_only=True,
-            status="BLOCKED" if issues else "OPENING_RECONCILED",
+            status="BLOCKED"
+            if issues
+            else "ENDING_RECONCILED"
+            if ending is not None
+            else "OPENING_RECONCILED",
             portfolio_id=anchor.portfolio_id,
             anchor_snapshot_id=anchor.snapshot.id,
             anchor_recorded_at=anchor.snapshot.recorded_at,
@@ -302,6 +428,12 @@ def project_ledger(
             opening_reconciliation=reconciliation,
             activity_count=len(activity),
             issues=issues,
+            ending_status=ending_status,
+            ending_statement_at=ending.effective_at if ending is not None else None,
+            ending_reconciliation=ending_reconciliation,
+            consumed_listings=[
+                consumed_listings[key] for key in sorted(consumed_listings, key=str)
+            ],
             accounts=[
                 c.LedgerAccountProjectionRead(
                     account_id=a.account_id,
@@ -335,4 +467,6 @@ def preview_portfolio_ledger(
     ids = {p.listing_id for a in value.accounts for p in a.positions} | {
         a.listing_id for a in value.activity if isinstance(a, c.LedgerTrade)
     }
+    if value.ending_statement is not None:
+        ids.update(p.listing_id for a in value.ending_statement.accounts for p in a.positions)
     return project_ledger(anchor, value, _listing_identities(session, ids))

@@ -120,6 +120,340 @@ def replay(
     return project_ledger(source, value, {item.listing_id: item for item in source.listings})
 
 
+def ending_statement(
+    value: c.PortfolioLedgerPreviewCreate, quantity: str = "3.75", usd: str = "89.65"
+) -> c.LedgerEndingStatement:
+    return c.LedgerEndingStatement(
+        effective_at=value.as_of,
+        accounts=[
+            c.LedgerEndingAccount(
+                account_id=ACCOUNT,
+                evidence=evidence("ending"),
+                positions=[c.LedgerPositionInput(listing_id=LISTING, quantity=Decimal(quantity))],
+                cash=[
+                    c.LedgerCashInput(currency="USD", balance=Decimal(usd)),
+                    c.LedgerCashInput(currency="EUR", balance=Decimal("0")),
+                ],
+            )
+        ],
+    )
+
+
+def test_legacy_opening_only_input_hash_and_replay_remain_compatible() -> None:
+    source = anchor()
+    source.listings[0].security_id = UUID("77777777-7777-4777-8777-777777777777")
+    value = proposal(source, [trade()])
+    result = replay(source, value)
+    assert result.input_sha256 == "eba696dd14efaa5eb43ddd36da8620371cb0d49d55c0f1a61c24abdf1d4cd09f"
+    assert result.status == "OPENING_RECONCILED" and result.ending_status == "NOT_PROVIDED"
+    assert result.ending_statement_at is None and not result.ending_reconciliation
+    assert (
+        replay(source, c.PortfolioLedgerPreviewCreate.model_validate_json(value.model_dump_json()))
+        == result
+    )
+
+
+def test_ending_statement_reconciles_exact_account_and_portfolio_balances() -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    value.ending_statement = ending_statement(value)
+    result = replay(source, value)
+    assert result.status == "ENDING_RECONCILED" and result.ending_status == "MATCH"
+    assert result.ending_statement_at == value.as_of and not result.issues
+    assert len(result.ending_reconciliation) == 6
+    assert {row.account_id for row in result.ending_reconciliation} == {None, ACCOUNT}
+    assert all(
+        row.status == "MATCH" and row.difference == 0 for row in result.ending_reconciliation
+    )
+    assert result.consumed_listings == source.listings
+    assert result.consumed_listings[0].company_id is None
+    assert c.PortfolioLedgerPreviewRead.model_validate_json(result.model_dump_json()) == result
+
+
+def test_ending_differences_preserve_candidate_minus_observed_sign() -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    value.ending_statement = ending_statement(value, quantity="4", usd="80")
+    result = replay(source, value)
+    assert result.status == "BLOCKED" and result.ending_status == "MISMATCH"
+    position = next(
+        row
+        for row in result.ending_reconciliation
+        if row.account_id == ACCOUNT and row.domain == "POSITION"
+    )
+    cash = next(
+        row
+        for row in result.ending_reconciliation
+        if row.account_id == ACCOUNT and row.key == "USD"
+    )
+    assert position.projected == Decimal("3.75") and position.observed == Decimal("4")
+    assert position.difference == Decimal("-0.25") and cash.difference == Decimal("9.65")
+    assert len([issue for issue in result.issues if issue.code == "ENDING_MISMATCH"]) == 4
+
+
+@pytest.mark.parametrize("change", ["missing_zero", "extra_zero", "missing_position"])
+def test_ending_missing_and_explicit_zero_never_coalesce(change: str) -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    value.ending_statement = ending_statement(value)
+    observed = value.ending_statement.accounts[0]
+    if change == "missing_zero":
+        observed.cash.pop()
+    elif change == "extra_zero":
+        observed.cash.append(c.LedgerCashInput(currency="DKK", balance=Decimal("0")))
+    else:
+        observed.positions.clear()
+    result = replay(source, value)
+    assert result.status == "BLOCKED" and result.ending_status == "MISMATCH"
+    difference = next(
+        row
+        for row in result.ending_reconciliation
+        if row.account_id == ACCOUNT and row.status != "MATCH"
+    )
+    assert difference.difference is None
+    if change == "extra_zero":
+        assert (
+            difference.status == "EXTRA_OBSERVATION"
+            and difference.projected is None
+            and difference.observed == 0
+        )
+    else:
+        assert difference.status == "MISSING_OBSERVATION" and difference.observed is None
+
+
+def test_ending_same_total_wrong_account_stays_blocking() -> None:
+    source = anchor()
+    value = proposal(source)
+    second = value.accounts[0].model_copy(
+        deep=True, update={"account_id": uuid4(), "evidence": evidence("opening-2")}
+    )
+    value.accounts[0].positions[0].quantity = Decimal("1")
+    value.accounts[0].cash[0].balance = Decimal("50")
+    second.positions[0].quantity = Decimal("1.5")
+    second.cash = [c.LedgerCashInput(currency="USD", balance=Decimal("50"))]
+    value.accounts.append(second)
+    first_observed = ending_statement(value, quantity="1.5", usd="50").accounts[0]
+    second_observed = c.LedgerEndingAccount(
+        account_id=second.account_id,
+        evidence=evidence("ending-2"),
+        positions=[c.LedgerPositionInput(listing_id=LISTING, quantity=Decimal("1"))],
+        cash=[c.LedgerCashInput(currency="USD", balance=Decimal("50"))],
+    )
+    value.ending_statement = c.LedgerEndingStatement(
+        effective_at=value.as_of, accounts=[first_observed, second_observed]
+    )
+    result = replay(source, value)
+    assert result.status == "BLOCKED" and result.ending_status == "MISMATCH"
+    assert all(
+        row.status == "MATCH" for row in result.ending_reconciliation if row.account_id is None
+    )
+    assert len([row for row in result.ending_reconciliation if row.status == "DIFFERENCE"]) == 2
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_missing_ending_account_is_blocking_even_when_its_balances_are_empty(empty: bool) -> None:
+    source = anchor()
+    value = proposal(source)
+    if empty:
+        value.accounts.append(
+            c.LedgerOpeningAccount(
+                account_id=uuid4(),
+                name="Synthetic empty account",
+                kind="BROKERAGE",
+                broker_name="Synthetic broker",
+                evidence=evidence("empty-opening"),
+                positions=[],
+                cash=[],
+            )
+        )
+        value.ending_statement = ending_statement(value, quantity="2.5", usd="100")
+    else:
+        value.ending_statement = c.LedgerEndingStatement(effective_at=value.as_of, accounts=[])
+    result = replay(source, value)
+    assert result.status == "BLOCKED" and result.ending_status == "MISMATCH"
+    assert any(issue.code == "ENDING_ACCOUNT_MISSING" for issue in result.issues)
+
+
+def test_ending_hash_and_replay_bind_observations_and_provenance() -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    before = replay(source, value).input_sha256
+    value.ending_statement = ending_statement(value)
+    first = replay(source, value)
+    assert first.input_sha256 != before
+    recovered = c.PortfolioLedgerPreviewCreate.model_validate_json(value.model_dump_json())
+    assert recovered.ending_statement is not None
+    recovered.ending_statement.accounts[0].cash.reverse()
+    assert replay(source, recovered) == first
+    recovered.ending_statement.accounts[0].evidence = evidence("new-ending-source")
+    assert replay(source, recovered).input_sha256 != first.input_sha256
+    recovered.ending_statement.accounts[0].cash[0].balance = Decimal("1")
+    assert replay(source, recovered).input_sha256 != first.input_sha256
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "time",
+        "naive",
+        "unknown_account",
+        "duplicate_account",
+        "duplicate_position",
+        "duplicate_cash",
+        "duplicate_evidence",
+        "missing_amount",
+        "float",
+        "negative",
+    ],
+)
+def test_ending_contract_rejects_ambiguous_or_invalid_observations(change: str) -> None:
+    value = proposal(anchor(), [trade()])
+    value.ending_statement = ending_statement(value)
+    data = value.model_dump(mode="json")
+    ending = data["ending_statement"]
+    account = ending["accounts"][0]
+    if change == "time":
+        ending["effective_at"] = (value.as_of - timedelta(seconds=1)).isoformat()
+    if change == "naive":
+        ending["effective_at"] = "2026-01-11T00:00:00"
+    if change == "unknown_account":
+        account["account_id"] = str(uuid4())
+    if change == "duplicate_account":
+        ending["accounts"].append(dict(account))
+    if change == "duplicate_position":
+        account["positions"].append(dict(account["positions"][0]))
+    if change == "duplicate_cash":
+        account["cash"].append(dict(account["cash"][0]))
+    if change == "duplicate_evidence":
+        second_id = str(uuid4())
+        opening = dict(
+            data["accounts"][0],
+            account_id=second_id,
+            evidence=evidence("second").model_dump(mode="json"),
+            positions=[],
+            cash=[],
+        )
+        data["accounts"].append(opening)
+        ending["accounts"].append(dict(account, account_id=second_id))
+    if change == "missing_amount":
+        account["cash"][0]["balance"] = None
+    if change == "float":
+        account["cash"][0]["balance"] = 89.65
+    if change == "negative":
+        account["positions"][0]["quantity"] = "-1"
+    with pytest.raises(ValidationError):
+        c.PortfolioLedgerPreviewCreate.model_validate(data)
+
+
+def test_ending_equivalent_timestamp_offsets_use_the_same_instant() -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    observed = ending_statement(value).model_dump(mode="json")
+    observed["effective_at"] = "2026-01-11T02:00:00+02:00"
+    value.ending_statement = c.LedgerEndingStatement.model_validate(observed)
+    assert replay(source, value).status == "ENDING_RECONCILED"
+
+
+def test_ending_is_not_evaluated_when_opening_does_not_reconcile() -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    value.accounts[0].cash[0].balance = Decimal("99")
+    value.ending_statement = ending_statement(value)
+    result = replay(source, value)
+    assert result.status == "BLOCKED" and result.ending_status == "NOT_EVALUATED"
+    assert not result.ending_reconciliation and not result.accounts
+
+
+def test_matching_ending_cannot_clear_an_intermediate_negative_balance() -> None:
+    source = anchor()
+    value = proposal(
+        source, [cash_activity("WITHDRAWAL", 1, "101"), cash_activity("DEPOSIT", 2, "101")]
+    )
+    value.ending_statement = ending_statement(value, quantity="2.5", usd="100")
+    result = replay(source, value)
+    assert result.ending_status == "MATCH" and result.status == "BLOCKED"
+    assert any(issue.code == "NEGATIVE_CASH" for issue in result.issues)
+
+
+@pytest.mark.parametrize("domain", ["positions", "cash"])
+def test_ending_work_budget_is_enforced_across_accounts(domain: str) -> None:
+    value = proposal(anchor())
+    data = ending_statement(value).model_dump(mode="json")
+    first = data["accounts"][0]
+    second = dict(
+        first,
+        account_id=str(uuid4()),
+        evidence=evidence("ending-2").model_dump(mode="json"),
+        positions=[],
+        cash=[],
+    )
+    if domain == "positions":
+        first["positions"] = [
+            {"listing_id": str(UUID(int=1000 + index)), "quantity": "0"} for index in range(1000)
+        ]
+        second["positions"] = [{"listing_id": str(UUID(int=3000)), "quantity": "0"}]
+    else:
+        currencies = ["A" + chr(65 + index // 26) + chr(65 + index % 26) for index in range(101)]
+        first["cash"] = [{"currency": key, "balance": "0"} for key in currencies[:100]]
+        second["cash"] = [{"currency": currencies[-1], "balance": "0"}]
+    data["accounts"].append(second)
+    with pytest.raises(ValidationError, match="Ending scope exceeds"):
+        c.LedgerEndingStatement.model_validate(data)
+
+
+def test_ending_only_listing_identity_is_retained_and_bound_to_the_hash() -> None:
+    source = anchor()
+    value = proposal(source, [trade()])
+    value.ending_statement = ending_statement(value)
+    additional = source.listings[0].model_copy(
+        update={"listing_id": uuid4(), "identity_source_ref": "ending-only-evidence"}
+    )
+    value.ending_statement.accounts[0].positions.append(
+        c.LedgerPositionInput(listing_id=additional.listing_id, quantity=Decimal("0"))
+    )
+    identities = {LISTING: source.listings[0], additional.listing_id: additional}
+    first = project_ledger(source, value, identities)
+    assert first.status == "BLOCKED" and first.ending_status == "MISMATCH"
+    assert additional in first.consumed_listings
+    identities[additional.listing_id] = additional.model_copy(
+        update={"identity_source_ref": "changed-identity-evidence"}
+    )
+    assert project_ledger(source, value, identities).input_sha256 != first.input_sha256
+
+
+def test_matching_ending_cannot_clear_consolidated_storage_overflow() -> None:
+    source = anchor()
+    value = proposal(source, [cash_activity("DEPOSIT", 1, "500000000000000000")])
+    second = value.accounts[0].model_copy(
+        deep=True,
+        update={
+            "account_id": uuid4(),
+            "evidence": evidence("opening-2"),
+            "positions": [],
+            "cash": [c.LedgerCashInput(currency="USD", balance=Decimal("500000000000000000"))],
+        },
+    )
+    value.accounts[0].cash[0].balance = Decimal("1")
+    source.snapshot.cash_positions[0].balance = Decimal("500000000000000001")
+    value.accounts.append(second)
+    observed = ending_statement(value, quantity="2.5", usd="500000000000000001").accounts[0]
+    value.ending_statement = c.LedgerEndingStatement(
+        effective_at=value.as_of,
+        accounts=[
+            observed,
+            c.LedgerEndingAccount(
+                account_id=second.account_id,
+                evidence=evidence("ending-2"),
+                positions=[],
+                cash=second.cash,
+            ),
+        ],
+    )
+    result = replay(source, value)
+    assert result.ending_status == "MATCH" and result.status == "BLOCKED"
+    assert any(issue.code == "BALANCE_OUT_OF_RANGE" for issue in result.issues)
+
+
 def test_settled_buy_sell_and_cash_activity_reconcile_exactly() -> None:
     source = anchor()
     value = proposal(

@@ -7241,6 +7241,52 @@ export interface components {
             /** Currency */
             currency: string;
         };
+        /** LedgerEndingAccount */
+        LedgerEndingAccount: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Cash */
+            cash: components["schemas"]["LedgerCashInput"][];
+            evidence: components["schemas"]["LedgerEvidence"];
+            /** Positions */
+            positions: components["schemas"]["LedgerPositionInput"][];
+        };
+        /** LedgerEndingReconciliationRead */
+        LedgerEndingReconciliationRead: {
+            /** Account Id */
+            account_id: string | null;
+            /** Difference */
+            difference: string | null;
+            /**
+             * Domain
+             * @enum {string}
+             */
+            domain: "POSITION" | "CASH";
+            /** Key */
+            key: string;
+            /** Observed */
+            observed: string | null;
+            /** Projected */
+            projected: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MATCH" | "MISSING_OBSERVATION" | "EXTRA_OBSERVATION" | "DIFFERENCE";
+        };
+        /** LedgerEndingStatement */
+        LedgerEndingStatement: {
+            /** Accounts */
+            accounts: components["schemas"]["LedgerEndingAccount"][];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+        };
         /** LedgerEvidence */
         LedgerEvidence: {
             /** Source Record Id */
@@ -7260,7 +7306,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "OPENING_MISMATCH" | "NEGATIVE_POSITION" | "NEGATIVE_CASH" | "BALANCE_OUT_OF_RANGE";
+            code: "OPENING_MISMATCH" | "NEGATIVE_POSITION" | "NEGATIVE_CASH" | "BALANCE_OUT_OF_RANGE" | "ENDING_MISMATCH" | "ENDING_ACCOUNT_MISSING";
         };
         /** LedgerListingRead */
         LedgerListingRead: {
@@ -8295,6 +8341,7 @@ export interface components {
              * @constant
              */
             contract_version: "portfolio-ledger-preview-v1";
+            ending_statement?: components["schemas"]["LedgerEndingStatement"] | null;
         };
         /** PortfolioLedgerPreviewRead */
         PortfolioLedgerPreviewRead: {
@@ -8321,11 +8368,23 @@ export interface components {
             as_of: string;
             /** Cash */
             cash: components["schemas"]["LedgerCashRead"][];
+            /** Consumed Listings */
+            consumed_listings?: components["schemas"]["LedgerListingRead"][];
             /**
              * Contract Version
              * @constant
              */
             contract_version: "portfolio-ledger-preview-v1";
+            /** Ending Reconciliation */
+            ending_reconciliation?: components["schemas"]["LedgerEndingReconciliationRead"][];
+            /** Ending Statement At */
+            ending_statement_at?: string | null;
+            /**
+             * Ending Status
+             * @default NOT_PROVIDED
+             * @enum {string}
+             */
+            ending_status: "NOT_PROVIDED" | "MATCH" | "MISMATCH" | "NOT_EVALUATED";
             /** Input Sha256 */
             input_sha256: string;
             /** Issues */
@@ -8353,7 +8412,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "OPENING_RECONCILED" | "BLOCKED";
+            status: "OPENING_RECONCILED" | "ENDING_RECONCILED" | "BLOCKED";
         };
         /** PortfolioOverview */
         PortfolioOverview: {
