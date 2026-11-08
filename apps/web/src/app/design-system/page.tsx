@@ -14,6 +14,7 @@ import { PageSection } from "@/components/app/page-section";
 import { ResponsiveDataTable } from "@/components/app/responsive-data-table";
 import { SourceReference } from "@/components/app/source-reference";
 import { StatusIndicator } from "@/components/app/status-indicator";
+import { TableSearch } from "@/components/app/table-search";
 
 const stateRows = [
   { id: "fresh", label: "Canonical observation", state: "FRESH" },
@@ -25,17 +26,78 @@ const stateRows = [
 
 export default function DesignSystemPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const filteredRows = stateRows.filter((row) =>
+    `${row.label} ${row.state}`
+      .toLowerCase()
+      .includes(search.trim().toLowerCase()),
+  );
 
   return (
     <>
       <PageHeader
         eyebrow="Internal reference"
         title="Design system"
-        description="Shared interface patterns and semantic states. Every sample below is illustrative presentation content, not portfolio or investment data. The default palette follows the operating system's light or dark preference."
-        badge={<StatusIndicator label="Phase 11 foundation" tone="info" />}
+        description="Reusable patterns for clear, accessible investment work. Every example is illustrative; no portfolio data is loaded here. Choose light, dark or system appearance in the header."
+        badge={<StatusIndicator label="Shared foundation" tone="info" />}
       />
 
       <div className="space-y-10">
+        <PageSection
+          title="Foundations"
+          description="Cool neutral surfaces, a warm action color and teal information accents. Meaning is never conveyed through color alone."
+        >
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            {[
+              ["Action", "bg-primary"],
+              ["Information", "bg-info"],
+              ["Surface", "bg-card"],
+              ["Background", "bg-background"],
+              ["Text", "bg-foreground"],
+              ["Border", "bg-border"],
+            ].map(([label, color]) => (
+              <div key={label} className="rounded-lg border bg-card p-2.5">
+                <div
+                  aria-hidden="true"
+                  className={`h-16 rounded-md border ${color}`}
+                />
+                <p className="mt-2 text-xs font-medium">{label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Spacing uses a 4, 8, 12, 16, 24 and 32 px rhythm. Tabular numerals
+            keep financial comparisons aligned.
+          </p>
+        </PageSection>
+
+        <PageSection
+          title="Controls"
+          description="Actions, labels, focus and disabled states stay visible without relying on hover."
+        >
+          <div className="flex flex-wrap gap-2 rounded-lg border bg-card p-4">
+            <Button type="button" onClick={() => setDrawerOpen(true)}>
+              Primary action
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSearch("")}
+            >
+              Outline action
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDrawerOpen(true)}
+            >
+              Quiet action
+            </Button>
+            <Button type="button" disabled>
+              Unavailable
+            </Button>
+          </div>
+        </PageSection>
         <PageSection
           title="Semantic states"
           description="State is communicated in text and icon as well as color. A decision review state is not a negative return."
@@ -86,9 +148,19 @@ export default function DesignSystemPage() {
           title="Table, provenance and chart framing"
           description="Wide data keeps semantic table markup; narrow screens receive labeled row cards rather than page-wide horizontal overflow."
         >
+          <div className="mb-3">
+            <TableSearch
+              label="Search illustrative states"
+              placeholder="Search labels or states"
+              value={search}
+              onChange={setSearch}
+              resultCount={filteredRows.length}
+              totalCount={stateRows.length}
+            />
+          </div>
           <ResponsiveDataTable
             caption="Illustrative data availability states"
-            rows={stateRows}
+            rows={filteredRows}
             getRowKey={(row) => row.id}
             columns={[
               { id: "input", header: "Input", render: (row) => row.label },
@@ -118,6 +190,58 @@ export default function DesignSystemPage() {
                 title="No chart data available"
                 description="No historical observations are connected to this internal reference."
               />
+            </ChartContainer>
+          </div>
+          <div className="mt-4">
+            <ChartContainer
+              title="Example observations"
+              description="Illustrative monthly counts; a missing observation creates a gap, not zero."
+              source="Synthetic example"
+            >
+              <svg
+                viewBox="0 0 480 150"
+                role="img"
+                aria-label="Example observations: January 3, February 5, March missing, April 4"
+                className="w-full rounded-md border bg-muted/40 p-2"
+              >
+                <path
+                  d="M35 120 H450 M35 30 H450 M35 75 H450"
+                  fill="none"
+                  stroke="var(--border)"
+                  strokeDasharray="4 4"
+                />
+                <path
+                  d="M45 93 L170 48 M420 70"
+                  fill="none"
+                  stroke="var(--chart-1)"
+                  strokeWidth="3"
+                />
+                <circle cx="45" cy="93" r="4" fill="var(--chart-1)" />
+                <circle cx="170" cy="48" r="4" fill="var(--chart-1)" />
+                <circle cx="420" cy="70" r="4" fill="var(--chart-1)" />
+                <g fill="var(--muted-foreground)" fontSize="12">
+                  <text x="35" y="143">
+                    Jan
+                  </text>
+                  <text x="160" y="143">
+                    Feb
+                  </text>
+                  <text x="280" y="143">
+                    Mar
+                  </text>
+                  <text x="410" y="143">
+                    Apr
+                  </text>
+                </g>
+              </svg>
+              <details className="mt-3 border-t pt-3 text-sm">
+                <summary className="cursor-pointer font-medium text-info">
+                  View chart data
+                </summary>
+                <p className="mt-2 text-muted-foreground">
+                  January: 3 · February: 5 · March: unavailable · April: 4
+                </p>
+              </details>
             </ChartContainer>
           </div>
         </PageSection>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PageSection } from "@/components/app/page-section";
 import { ResponsiveDataTable } from "@/components/app/responsive-data-table";
+import { TableSearch } from "@/components/app/table-search";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HoldingsConfirmation } from "@/components/features/portfolio/holdings-confirmation";
@@ -30,10 +31,23 @@ export function PortfolioHoldingsSection({
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [direction, setDirection] = useState<SortDirection>("descending");
-  const sortedRows = useMemo(
-    () => sortPortfolioRows(rows, sortKey, direction),
-    [rows, sortKey, direction],
-  );
+  const [search, setSearch] = useState("");
+  const sortedRows = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+    const filtered = query
+      ? rows.filter((row) =>
+          [
+            row.companyName,
+            row.securityName,
+            row.ticker,
+            row.venue,
+            row.listingCurrency,
+            row.listingId,
+          ].some((value) => value?.toLocaleLowerCase().includes(query)),
+        )
+      : rows;
+    return sortPortfolioRows(filtered, sortKey, direction);
+  }, [rows, sortKey, direction, search]);
   const columns = [
     {
       id: "identity",
@@ -177,6 +191,16 @@ export function PortfolioHoldingsSection({
           </label>
         </CardHeader>
         <CardContent className="pt-0">
+          <div className="mb-3">
+            <TableSearch
+              label="Find a position"
+              placeholder="Company, ticker, venue or currency"
+              value={search}
+              onChange={setSearch}
+              resultCount={sortedRows.length}
+              totalCount={rows.length}
+            />
+          </div>
           <ResponsiveDataTable
             caption="Portfolio holdings and current valuation"
             rows={sortedRows}

@@ -18,7 +18,16 @@ export function MetricCard({
   className?: string;
 }) {
   return (
-    <Card className={cn("min-w-0 shadow-none", className)}>
+    <Card
+      className={cn(
+        "min-w-0 border-t-2 shadow-none",
+        tone === "default" && "border-t-info",
+        tone === "positive" && "border-t-positive",
+        tone === "negative" && "border-t-negative",
+        tone === "warning" && "border-t-warning",
+        className,
+      )}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-medium text-muted-foreground">
           {label}
@@ -27,7 +36,7 @@ export function MetricCard({
       <CardContent>
         <div
           className={cn(
-            "metric-value truncate text-xl font-semibold",
+            "metric-value break-words text-2xl font-semibold",
             tone === "positive" && "text-positive",
             tone === "negative" && "text-negative",
             tone === "warning" && "text-warning",

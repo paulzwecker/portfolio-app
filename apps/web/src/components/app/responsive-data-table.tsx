@@ -23,7 +23,7 @@ export function ResponsiveDataTable<T>({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="hidden overflow-hidden rounded-lg border md:block">
+      <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
         <table className="w-full table-fixed text-left text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead className="bg-muted/70 text-xs text-muted-foreground">
