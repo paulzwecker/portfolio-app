@@ -13,7 +13,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -43,6 +43,8 @@ from portfolio_api.external_data import (
 )
 from portfolio_api.market_data_bootstrap import (
     MarketDataBootstrapError,
+    _canonical_batch_counts,
+    _canonical_batch_fingerprint,
     _next_checkpoint,
     _parser,
     _temporal_issues,
@@ -523,6 +525,144 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
             row["code"] == "CANONICAL_FINGERPRINT_MISMATCH"
             for row in tampered["reconciliation"]["differences"]
         )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("case", "subject_kind", "expected_code"),
+    [
+        ("missing_batch", "LISTING", "BATCH_REFERENCE_MISSING"),
+        ("missing_raw", "LISTING", "SOURCE_PAYLOAD_MISSING"),
+        ("current_quote", "LISTING", "UNEXPECTED_PRICE_KIND"),
+        ("price_outside", "LISTING", "PRICE_OUTSIDE_REQUESTED_WINDOW"),
+        ("price_wrong_listing", "LISTING", "CHECKPOINT_SUBJECT_MISMATCH"),
+        ("action_outside", "LISTING", "ACTION_OUTSIDE_REQUESTED_WINDOW"),
+        ("action_wrong_listing", "LISTING", "CHECKPOINT_SUBJECT_MISMATCH"),
+        ("unexpected_fx", "LISTING", "UNEXPECTED_DOMAIN_ROWS"),
+        ("fx_outside", "FX_PAIR", "FX_OUTSIDE_REQUESTED_WINDOW"),
+        ("fx_wrong_pair", "FX_PAIR", "CHECKPOINT_SUBJECT_MISMATCH"),
+        ("fx_future_observation", "FX_PAIR", "OBSERVATION_AFTER_RETRIEVAL"),
+    ],
+)
+def test_reconciliation_rejects_missing_or_out_of_scope_persisted_evidence(
+    postgres_engine: Engine, case: str, subject_kind: str, expected_code: str
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        company, security, listing = _seed_canonical_scope(session)
+        crosswalk, digest = _crosswalk(_mapping(company.id, security.id, listing.id))
+        run_id = _prepare(session, crosswalk, digest).id
+    execute_market_data_bootstrap(
+        postgres_engine,
+        run_id,
+        target_environment="development",
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        provider=SyntheticProvider(),
+        max_checkpoints=10,
+        min_request_interval_seconds=0,
+    )
+    # Corrupt only this disposable fixture. Update receipt hashes too, proving the
+    # independent scope validation catches more than a fingerprint mismatch.
+    with Session(postgres_engine) as session, session.begin():
+        checkpoint = session.scalar(
+            select(MarketDataBootstrapCheckpoint).where(
+                MarketDataBootstrapCheckpoint.run_id == run_id,
+                MarketDataBootstrapCheckpoint.subject_kind == subject_kind,
+            )
+        )
+        assert checkpoint is not None and checkpoint.batch_id is not None
+        batch_id = checkpoint.batch_id
+        if case == "missing_batch":
+            checkpoint.batch_id = None
+        else:
+            if case == "missing_raw":
+                session.execute(
+                    delete(ExternalRawPayload).where(ExternalRawPayload.batch_id == batch_id)
+                )
+            if case in {"price_wrong_listing", "action_wrong_listing"}:
+                original = session.get(Listing, checkpoint.listing_id)
+                assert original is not None
+                alternate = Listing(
+                    id=uuid4(),
+                    security_id=original.security_id,
+                    venue="NYSE",
+                    ticker="SYNTH-ALT",
+                    currency="USD",
+                )
+                session.add(alternate)
+                session.flush()
+                model = PriceObservation if case == "price_wrong_listing" else CorporateAction
+                session.execute(
+                    update(model).where(model.batch_id == batch_id).values(listing_id=alternate.id)
+                )
+            if case == "current_quote":
+                session.execute(
+                    update(PriceObservation)
+                    .where(PriceObservation.batch_id == batch_id)
+                    .values(price_kind="CURRENT_QUOTE")
+                )
+            elif case == "price_outside":
+                session.execute(
+                    update(PriceObservation)
+                    .where(PriceObservation.batch_id == batch_id)
+                    .values(market_date=datetime(2026, 9, 30, tzinfo=UTC))
+                )
+            elif case == "action_outside":
+                session.execute(
+                    update(CorporateAction)
+                    .where(CorporateAction.batch_id == batch_id)
+                    .values(effective_date=datetime(2026, 10, 6, tzinfo=UTC))
+                )
+            elif case == "fx_outside":
+                session.execute(
+                    update(FxObservation)
+                    .where(FxObservation.batch_id == batch_id)
+                    .values(effective_at=datetime(2026, 10, 6, tzinfo=UTC))
+                )
+            elif case == "fx_wrong_pair":
+                session.execute(
+                    update(FxObservation)
+                    .where(FxObservation.batch_id == batch_id)
+                    .values(base_currency="EUR", quote_currency="USD")
+                )
+            elif case == "fx_future_observation":
+                session.execute(
+                    update(FxObservation)
+                    .where(FxObservation.batch_id == batch_id)
+                    .values(observed_at=datetime(2026, 10, 7, tzinfo=UTC))
+                )
+            elif case == "unexpected_fx":
+                session.add(
+                    FxObservation(
+                        id=uuid4(),
+                        base_currency="USD",
+                        quote_currency="EUR",
+                        rate=Decimal("0.9"),
+                        data_quality="PASS",
+                        effective_at=datetime(2026, 10, 2, tzinfo=UTC),
+                        recorded_at=RETRIEVED_AT,
+                        batch_id=batch_id,
+                        source_ref=f"synthetic-extra-{uuid4()}",
+                        provider="SYNTHETIC",
+                        source="synthetic",
+                        actor="SYSTEM",
+                        reason="fixture",
+                    )
+                )
+                session.flush()
+            checkpoint_report = dict(checkpoint.report)
+            coverage_value = checkpoint_report["coverage"]
+            assert isinstance(coverage_value, dict)
+            coverage = dict(coverage_value)
+            coverage["canonical_counts"] = _canonical_batch_counts(session, batch_id)
+            coverage["canonical_fingerprint"] = _canonical_batch_fingerprint(session, batch_id)
+            checkpoint_report["coverage"] = coverage
+            checkpoint.report = checkpoint_report
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        report = reconcile_market_data_bootstrap(session, run_id, target_environment="development")
+        assert report["reconciliation"]["status"] == "MISMATCH"
+        assert expected_code in {issue["code"] for issue in report["reconciliation"]["differences"]}
 
 
 @pytest.mark.integration

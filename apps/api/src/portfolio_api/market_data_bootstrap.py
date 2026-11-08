@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -1506,6 +1506,88 @@ def execute_market_data_bootstrap(
         return report
 
 
+def _batch_scope_issues(
+    session: Session,
+    checkpoint: MarketDataBootstrapCheckpoint,
+    batch_id: UUID,
+    counts: dict[str, int],
+) -> list[str]:
+    """Check persisted rows against frozen subject/window; never infer missing sessions."""
+    start = datetime.combine(checkpoint.start_date, datetime.min.time(), tzinfo=UTC)
+    end = datetime.combine(checkpoint.end_date + timedelta(days=1), datetime.min.time(), tzinfo=UTC)
+    issues: set[str] = set()
+    if checkpoint.subject_kind == "LISTING":
+        if checkpoint.listing_id is None:
+            return ["CHECKPOINT_IDENTITY_MISSING"]
+        if counts["fx_observations"]:
+            issues.add("UNEXPECTED_DOMAIN_ROWS")
+        price = session.execute(
+            select(
+                func.count().filter(PriceObservation.listing_id != checkpoint.listing_id),
+                func.count().filter(PriceObservation.price_kind != "DAILY_CLOSE"),
+                func.count().filter(
+                    or_(PriceObservation.market_date < start, PriceObservation.market_date >= end)
+                ),
+                func.count().filter(
+                    PriceObservation.observed_at.is_not(None),
+                    PriceObservation.observed_at > PriceObservation.recorded_at,
+                ),
+            ).where(PriceObservation.batch_id == batch_id)
+        ).one()
+        actions = session.execute(
+            select(
+                func.count().filter(CorporateAction.listing_id != checkpoint.listing_id),
+                func.count().filter(
+                    or_(
+                        CorporateAction.effective_date < start,
+                        CorporateAction.effective_date >= end,
+                    )
+                ),
+            ).where(CorporateAction.batch_id == batch_id)
+        ).one()
+        if price[0] or actions[0]:
+            issues.add("CHECKPOINT_SUBJECT_MISMATCH")
+        if price[1]:
+            issues.add("UNEXPECTED_PRICE_KIND")
+        if price[2]:
+            issues.add("PRICE_OUTSIDE_REQUESTED_WINDOW")
+        if price[3]:
+            issues.add("OBSERVATION_AFTER_RETRIEVAL")
+        if actions[1]:
+            issues.add("ACTION_OUTSIDE_REQUESTED_WINDOW")
+    elif checkpoint.subject_kind == "FX_PAIR":
+        if not checkpoint.base_currency or not checkpoint.quote_currency:
+            return ["CHECKPOINT_IDENTITY_MISSING"]
+        if counts["price_observations"] or counts["corporate_actions"]:
+            issues.add("UNEXPECTED_DOMAIN_ROWS")
+        fx = session.execute(
+            select(
+                func.count().filter(
+                    or_(
+                        FxObservation.base_currency != checkpoint.base_currency,
+                        FxObservation.quote_currency != checkpoint.quote_currency,
+                    )
+                ),
+                func.count().filter(
+                    or_(FxObservation.effective_at < start, FxObservation.effective_at >= end)
+                ),
+                func.count().filter(
+                    FxObservation.observed_at.is_not(None),
+                    FxObservation.observed_at > FxObservation.recorded_at,
+                ),
+            ).where(FxObservation.batch_id == batch_id)
+        ).one()
+        if fx[0]:
+            issues.add("CHECKPOINT_SUBJECT_MISMATCH")
+        if fx[1]:
+            issues.add("FX_OUTSIDE_REQUESTED_WINDOW")
+        if fx[2]:
+            issues.add("OBSERVATION_AFTER_RETRIEVAL")
+    else:
+        issues.add("CHECKPOINT_IDENTITY_MISSING")
+    return sorted(issues)
+
+
 def reconcile_market_data_bootstrap(
     session: Session, run_id: UUID, *, target_environment: str
 ) -> dict[str, Any]:
@@ -1534,6 +1616,10 @@ def reconcile_market_data_bootstrap(
         )
         expected_value = checkpoint_coverage.get("canonical_counts")
         expected: dict[str, Any] = dict(expected_value) if isinstance(expected_value, dict) else {}
+        if checkpoint.batch_id is None and checkpoint.status == "COMPLETE":
+            differences.append(
+                {"subject_key": checkpoint.subject_key, "code": "BATCH_REFERENCE_MISSING"}
+            )
         if checkpoint.batch_id is not None:
             batch = session.get(MarketDataBatch, checkpoint.batch_id)
             if batch is None:
@@ -1545,6 +1631,10 @@ def reconcile_market_data_bootstrap(
             else:
                 actual = _canonical_batch_counts(session, batch.id)
                 actual_fingerprint = _canonical_batch_fingerprint(session, batch.id)
+                if checkpoint.status == "COMPLETE" and actual["raw_payloads"] == 0:
+                    differences.append(
+                        {"subject_key": checkpoint.subject_key, "code": "SOURCE_PAYLOAD_MISSING"}
+                    )
                 if actual != expected:
                     differences.append(
                         {
@@ -1560,23 +1650,10 @@ def reconcile_market_data_bootstrap(
                             "code": "CANONICAL_FINGERPRINT_MISMATCH",
                         }
                     )
-                if checkpoint.subject_kind == "LISTING":
-                    temporal_bad = session.scalar(
-                        select(func.count())
-                        .select_from(PriceObservation)
-                        .where(
-                            PriceObservation.batch_id == batch.id,
-                            PriceObservation.observed_at.is_not(None),
-                            PriceObservation.observed_at > PriceObservation.recorded_at,
-                        )
-                    )
-                    if temporal_bad:
-                        differences.append(
-                            {
-                                "subject_key": checkpoint.subject_key,
-                                "code": "OBSERVATION_AFTER_RETRIEVAL",
-                            }
-                        )
+                differences.extend(
+                    {"subject_key": checkpoint.subject_key, "code": code}
+                    for code in _batch_scope_issues(session, checkpoint, batch.id, actual)
+                )
         checkpoint_reports.append(
             {
                 "subject_kind": checkpoint.subject_kind,

@@ -176,6 +176,10 @@ infer missing trading sessions or change provider/run status. One returned quote
 a completed checkpoint does not establish window completeness. Synthetic unit and
 isolated PostgreSQL verification are recorded in the active handoff. This work is
 independent of the design PR; production ingestion and release remain owner-gated.
+Read-only reconciliation now rejects missing completed-batch provenance and rows
+outside the frozen subject, time window or historical price scope. This verifies
+receipt integrity, not expected-session completeness; 13 focused unit and 21 isolated
+PostgreSQL cases pass. Next: establish reviewed session-aware coverage evidence.
 
 ## Immediate priorities and gates
 

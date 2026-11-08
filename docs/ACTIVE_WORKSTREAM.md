@@ -174,9 +174,11 @@ checkpoint execution from expected-session coverage and report normalized date s
 distinct dates and maximum calendar spacing without treating holidays/weekends as
 missing. Old receipts and unavailable responses retain unknown evidence. Current
 quotes remain excluded, and temporal quarantine cannot report stale span dates.
-Focused checks passed: 13 unit cases, 10 isolated PostgreSQL integration cases,
-strict mypy on the touched modules and Ruff. They cover sparse windows, zero versus
-unknown, quoted data, old receipts, local PostgreSQL reconciliation and replay.
-No production or provider operation ran.
-Next: strengthen current-coverage reconciliation and session-aware source validation
-before claiming complete history; separately approve any live ingestion.
+Read-only reconciliation rejects missing completed-batch/source provenance, wrong
+listing or FX pair, unexpected domains, current quotes, out-of-window rows and
+price/FX observations after retrieval, independently of receipt fingerprints.
+Legitimate unavailable checkpoints can remain without a batch. Focused checks pass:
+13 unit and 21 isolated PostgreSQL integration cases, strict mypy and Ruff. They
+cover sparse windows, missing versus zero, corrupt receipts and read-only replay.
+No production or provider operation ran. Next: establish reviewed session-aware
+source validation before claiming complete history; separately approve live ingestion.

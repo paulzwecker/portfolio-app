@@ -242,6 +242,11 @@ append-only supersession rules. Replaying a completed run performs no provider
 request. Reconciliation hashes the persisted raw receipt metadata and every
 canonical row belonging to each batch, including exact decimal and timestamp
 values. A mismatch is reported explicitly; do not repair it with manual row edits.
+Completed checkpoints must also retain a batch and raw source payload. Reconciliation
+checks listing or FX-pair identity, the frozen date window, historical price kind,
+cross-domain rows and price/FX observation times. Legitimate unavailable checkpoints
+may have no batch. These checks do not establish that every expected trading session
+or FX date is present; that coverage remains unassessed without a reviewed calendar.
 
 For a retryable network/HTTP failure, resume after the stored backoff. For
 `NO_PROVIDER_DATA`, keep the `UNAVAILABLE` result and include the gap in the
