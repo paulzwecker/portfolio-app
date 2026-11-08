@@ -12,10 +12,28 @@
 
 ## Current ledger increment
 
-Saved-candidate browser integration is in progress. The typed history/detail
-validators and owner-authenticated stage/review proxy pass 87 focused web checks,
-including raw financial text, source/receipt scope, origin controls and authorization
-errors. Explicit decision controls and isolated browser verification follow.
+`cbefcae` adds scoped history/detail/stage/review proxy contracts. The complete
+saved-candidate UI is LOCAL_VERIFIED through 90 focused web checks, 43 API/fixture
+checks (including the 26 receipt/review regressions) and four real-API desktop/mobile
+journeys, repeated after fixes. Explicit rationale, source/account/basis checks,
+per-activity correction acknowledgements and a separate hash-bound confirmation
+lead to immutable receipts. Rejection, base-history navigation, source inspection,
+private export and ambiguous commit readback work. Failed responses reset review
+checks and refetch saved state; no mutation retries run automatically. Guard tests
+preserve raw financial text, remote owner authentication, origin/size limits,
+scoped response identity, exact decimal/zero states and contradictory-state rejection.
+
+The optional `ledger-review` fixture verifies loopback `_test` identity before
+creating its own schema. Its writer allows compiled inserts only into the two
+ledger receipt tables in that schema. Other tables, updates, raw SQL writes, schema
+changes and target overrides remain blocked; ordinary fixtures stay SQL read-only.
+Canonical snapshot/targets/count hashes match before/after browser decisions.
+Desktop/mobile screenshots were inspected under ignored `apps/web/test-results`.
+Normal bounded fixture shutdown removed its own schema; both local servers stopped.
+Review corrected accessible decision labels and unknown-outcome readback. Types,
+ESLint, Ruff/mypy, generated contracts, formatting and documentation checks pass.
+The browser slice is locally verified with synthetic data. Production migration,
+authorization and ownership cutover remain outstanding.
 
 `a7557b0` durable storage passes 21 isolated PostgreSQL checks. Migration
 `a832e94d6f10` follows `9f2a6d4c81b7` and adds immutable candidate/review tables.
@@ -36,7 +54,7 @@ changes, concurrent replay, rejection, explicit corrections, stored-data integri
 production guard rejection and post-flush rollback are covered. New API behavior
 is LOCAL_VERIFIED with synthetic data. Browser decision controls remain pending.
 Production migration, activation and cutover remain owner-gated. This increment
-changes API/contracts, with no new browser decision controls.
+originally verified API/contracts. The browser follow-up above adds decision controls.
 
 `bf9f184` ending-statement reconciliation passes 79 focused checks (67 unit and 12 isolated
 PostgreSQL/API cases). Account and total comparisons preserve missing/zero, exact
@@ -254,11 +272,11 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C2.3 with explicit candidate decision/history UI, authenticated proxy
-   integration and synthetic desktop/mobile review. Reuse the durable API and
-   private-file workflow, show full-replacement changes and require explicit
-   source/account/basis acknowledgements. Then design/test dated ownership cutover
-   with preserved canonical snapshot and independent targets.
+1. Continue C2.3 with the dated ownership/cutover contract and isolated read-model
+   integration. Pin the reviewed opening anchor, covered accounts, accepted candidate
+   and cutover date. Preserve canonical snapshots/targets and require current-state
+   recovery plus separate source-ownership/schema/write authorization before
+   activation. Build the candidate path against synthetic fixtures first.
    Production schema/ownership/import changes remain owner-gated. This is the next
    high-value independent capability while #25 review and data activation wait.
    C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;

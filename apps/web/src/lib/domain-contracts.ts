@@ -6389,6 +6389,15 @@ export function isLedgerCandidates(value: unknown): value is LedgerCandidates {
   )
     return false;
   const rows = value.candidates as LedgerCandidateSummary[];
+  const current = rows.find(
+    (row) => row.id === value.current_accepted_candidate_id,
+  );
+  if (
+    current &&
+    (current.status !== "ACCEPTED" ||
+      current.review?.revision_number !== value.current_revision_number)
+  )
+    return false;
   return (
     (value.current_accepted_candidate_id === null) ===
       (value.current_revision_number === 0) &&
@@ -6429,6 +6438,15 @@ export function isLedgerCandidate(value: unknown): value is LedgerCandidate {
     ...changes.removed_activity_ids,
   ];
   if (new Set(ids).size !== ids.length) return false;
+  if (
+    !Array.isArray(packet.accounts) ||
+    packet.accounts.length < 1 ||
+    packet.accounts.length > 20 ||
+    !Array.isArray(packet.activity) ||
+    packet.activity.length > 1000 ||
+    packet.activity.length !== preview.activity_count
+  )
+    return false;
   const positions = (rows: unknown) =>
     array(
       rows,
@@ -6495,6 +6513,37 @@ export function isLedgerCandidate(value: unknown): value is LedgerCandidate {
           evidence(account.evidence) &&
           positions(account.positions) &&
           cash(account.cash),
+      ))
+  )
+    return false;
+  const activities = packet.activity as Record<string, unknown>[];
+  const activityIds = new Set(activities.map((item) => item.id));
+  const accounts = packet.accounts as Record<string, unknown>[];
+  const accountIds = new Set(accounts.map((account) => account.account_id));
+  if (
+    activityIds.size !== activities.length ||
+    accountIds.size !== accounts.length ||
+    activities.some((item) => !accountIds.has(item.account_id)) ||
+    [...changes.added_activity_ids, ...changes.changed_activity_ids].some(
+      (id) => !activityIds.has(id),
+    ) ||
+    changes.removed_activity_ids.some((id) => activityIds.has(id))
+  )
+    return false;
+  const command = value.review?.command;
+  const changedIds = changes.changed_activity_ids;
+  const removedIds = changes.removed_activity_ids;
+  if (
+    command?.decision === "ACCEPT" &&
+    (command.acknowledged_changed_activity_ids.length !==
+      changes.changed_activity_ids.length ||
+      command.acknowledged_removed_activity_ids.length !==
+        changes.removed_activity_ids.length ||
+      command.acknowledged_changed_activity_ids.some(
+        (id) => !changedIds.includes(id),
+      ) ||
+      command.acknowledged_removed_activity_ids.some(
+        (id) => !removedIds.includes(id),
       ))
   )
     return false;

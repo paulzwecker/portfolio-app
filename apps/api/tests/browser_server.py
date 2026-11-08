@@ -6,12 +6,12 @@ import ipaddress
 import json
 import os
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Timer
-from typing import cast
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import uvicorn
@@ -20,15 +20,21 @@ from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
 from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import URL, Connection, Engine, make_url
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.dml import Insert
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 from test_cloud_market_refresh import table_counts
 
-from portfolio_api.database_write_target import install_database_read_only_guard
+from portfolio_api.database_write_target import (
+    DatabaseReadOnlyError,
+    _statement_may_write,
+    install_database_read_only_guard,
+)
 from portfolio_api.domain import queries
+from portfolio_api.domain.routes import ledger_write_session_for
 from portfolio_api.domain.seed import seed
 from portfolio_api.main import create_app
 from portfolio_api.migrations import alembic_config, expected_heads
@@ -105,7 +111,7 @@ def fixture_read_engine(url: URL, schema: str, settings: Settings) -> Engine:
     return reader
 
 
-def protected_state(engine: Engine, portfolio_id: str) -> str:
+def protected_state(engine: Engine, portfolio_id: str, *, ledger_receipts: bool = False) -> str:
     with Session(engine) as session:
         overview = queries.overview(session, UUID(portfolio_id))
         value = {
@@ -113,13 +119,61 @@ def protected_state(engine: Engine, portfolio_id: str) -> str:
             "targets": overview.target_revision.model_dump(mode="json")
             if overview.target_revision
             else None,
-            "counts": table_counts(engine),
+            "counts": {
+                key: count
+                for key, count in table_counts(engine).items()
+                if not ledger_receipts
+                or key not in {"portfolio_ledger_candidates", "portfolio_ledger_reviews"}
+            },
         }
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
+def fixture_ledger_writer(url: URL, schema: str) -> Engine:
+    local_test_url(url.render_as_string(hide_password=False))
+    if not re.fullmatch(r"test_(?:browser_)?[a-f0-9]{32}", schema):
+        raise SystemExit("Ledger browser writes require an isolated test-owned schema")
+    writer = create_engine(
+        url,
+        hide_parameters=True,
+        connect_args={
+            "connect_timeout": 3,
+            "options": f"-c search_path={schema} -c statement_timeout=5000",
+        },
+    )
+    with writer.connect() as connection:
+        verify_local_identity(connection, url)
+
+    def restrict(
+        _connection: Any, _cursor: Any, statement: str, _parameters: Any, context: Any, _many: bool
+    ) -> None:
+        if not _statement_may_write(statement, context):
+            return
+        compiled = getattr(context, "compiled", None)
+        command = getattr(compiled, "statement", None)
+        if (
+            not isinstance(command, Insert)
+            or command.table.schema not in {None, schema}
+            or command.table.name
+            not in {
+                "portfolio_ledger_candidates",
+                "portfolio_ledger_reviews",
+            }
+        ):
+            raise DatabaseReadOnlyError(
+                "fixture_ledger_scope", "Fixture writes are restricted to new ledger receipts"
+            )
+
+    event.listen(writer, "before_cursor_execute", restrict)
+    return writer
+
+
 def fixture_application(
-    engine: Engine, settings: Settings, metadata: dict[str, object] | None = None
+    engine: Engine,
+    settings: Settings,
+    metadata: dict[str, object] | None = None,
+    *,
+    ledger_writer: Engine | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -129,6 +183,16 @@ def fixture_application(
 
     application = create_app(settings)
     application.router.lifespan_context = lifespan
+    if ledger_writer is not None:
+        if metadata is None or metadata.get("ledger_receipts_only") is not True:
+            raise ValueError("Ledger fixture writes require explicit test-only metadata")
+        writer_app = create_app(settings)
+        writer_app.state.database_engine = ledger_writer
+
+        def write_session() -> Iterator[Session]:
+            yield from ledger_write_session_for(Request({"type": "http", "app": writer_app}))
+
+        application.dependency_overrides[ledger_write_session_for] = write_session
     if metadata is not None:
 
         @application.middleware("http")
@@ -139,7 +203,16 @@ def fixture_application(
                 request.method == "POST"
                 and request.url.path == f"/v1/portfolios/{metadata['portfolio_id']}/ledger/preview"
             )
-            if request.method not in {"GET", "HEAD"} and not ledger_preview:
+            ledger_review = (
+                ledger_writer is not None
+                and request.method == "POST"
+                and re.fullmatch(
+                    rf"/v1/portfolios/{metadata['portfolio_id']}/ledger/candidates(?:/[a-f0-9-]{{36}}/review)?",
+                    request.url.path,
+                )
+                is not None
+            )
+            if request.method not in {"GET", "HEAD"} and not ledger_preview and not ledger_review:
                 return JSONResponse(
                     {"detail": "This fixture supports read-only inspection."}, status_code=405
                 )
@@ -150,7 +223,9 @@ def fixture_application(
             return {
                 **metadata,
                 "test_only": "portfolio-data-v1",
-                "protected_state_sha256": protected_state(engine, str(metadata["portfolio_id"])),
+                "protected_state_sha256": protected_state(
+                    engine, str(metadata["portfolio_id"]), ledger_receipts=ledger_writer is not None
+                ),
             }
 
     return application
@@ -165,6 +240,7 @@ def main(argv: list[str] | None = None) -> None:
             "unpriced",
             "fx-outage",
             "valued",
+            "ledger-review",
             "sec-covered",
             "sec-outage",
             "sec-unmapped",
@@ -193,6 +269,7 @@ def main(argv: list[str] | None = None) -> None:
         hide_parameters=True,
     )
     reader: Engine | None = None
+    ledger_writer: Engine | None = None
     try:
         with engine.begin() as connection:
             config = alembic_config()
@@ -208,7 +285,7 @@ def main(argv: list[str] | None = None) -> None:
                     engine,
                     Path(directory),
                     "unpriced"
-                    if args.scenario.startswith("sec-")
+                    if args.scenario.startswith("sec-") or args.scenario == "ledger-review"
                     else cast(PortfolioDataState, args.scenario),
                     settings,
                 )
@@ -216,7 +293,13 @@ def main(argv: list[str] | None = None) -> None:
                     prepare_sec_data(engine, metadata, args.scenario)
             metadata["schema"] = schema
             reader = fixture_read_engine(url, schema, settings)
-        application = fixture_application(reader or engine, settings, metadata)
+        if args.scenario == "ledger-review":
+            assert metadata is not None
+            metadata["ledger_receipts_only"] = True
+            ledger_writer = fixture_ledger_writer(url, schema)
+        application = fixture_application(
+            reader or engine, settings, metadata, ledger_writer=ledger_writer
+        )
         port = int(os.environ.get("BROWSER_API_PORT", "8000"))
         server = uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port))
         lifetime = args.lifetime_seconds or (120 if metadata is not None else None)
@@ -233,6 +316,8 @@ def main(argv: list[str] | None = None) -> None:
             if deadline is not None:
                 deadline.cancel()
     finally:
+        if ledger_writer is not None:
+            ledger_writer.dispose()
         if reader is not None:
             reader.dispose()
         engine.dispose()

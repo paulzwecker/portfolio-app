@@ -19,6 +19,7 @@ import {
   ledgerFileLimit,
   type LedgerReviewFile,
 } from "./portfolio-ledger-data";
+import { PortfolioLedgerCandidates } from "./portfolio-ledger-candidates";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
 
 export function PortfolioLedgerWorkspace({
@@ -197,7 +198,7 @@ export function PortfolioLedgerWorkspace({
         }
       />
       <p className="rounded-lg border bg-muted/40 p-4 text-sm">
-        Read-only candidate review. Canonical holdings and strategic targets
+        Source-bound candidate review. Canonical holdings and strategic targets
         retain authority. Account allocation, source completeness and any future
         cutover require explicit review.
       </p>
@@ -293,6 +294,9 @@ export function PortfolioLedgerWorkspace({
           {error}
         </p>
       )}
+      <a href="#ledger-candidates" className="inline-block text-sm underline">
+        Open saved candidates and decisions
+      </a>
       {visibleReview && (
         <PortfolioLedgerResults
           key={visibleReview.report.input_sha256}
@@ -300,6 +304,10 @@ export function PortfolioLedgerWorkspace({
           file={visibleReview.file}
         />
       )}
+      <PortfolioLedgerCandidates
+        portfolioId={portfolioId}
+        sourceReview={visibleReview}
+      />
     </div>
   );
 }

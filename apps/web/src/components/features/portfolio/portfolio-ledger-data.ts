@@ -1,4 +1,4 @@
-import { isRecord } from "@/lib/domain-contracts";
+import { type LedgerCandidate, isRecord } from "@/lib/domain-contracts";
 
 export const ledgerFileLimit = 1_000_000;
 
@@ -30,6 +30,24 @@ export function inspectLedgerFile(
   } catch {
     throw new Error("Choose a valid ledger review JSON file.");
   }
+  return ledgerFileMetadata(value, text, name);
+}
+
+export function savedLedgerFile(
+  packet: LedgerCandidate["packet"],
+): LedgerReviewFile {
+  return ledgerFileMetadata(
+    packet,
+    JSON.stringify(packet),
+    "saved-ledger-packet.json",
+  );
+}
+
+function ledgerFileMetadata(
+  value: unknown,
+  text: string,
+  name: string,
+): LedgerReviewFile {
   if (
     !isRecord(value) ||
     value.contract_version !== "portfolio-ledger-preview-v1" ||

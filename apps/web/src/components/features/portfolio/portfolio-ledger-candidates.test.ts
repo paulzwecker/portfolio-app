@@ -223,3 +223,27 @@ it("preserves server authorization failures and rejects mismatched response scop
   expect(await forbidden.text()).not.toContain("private");
   expect((await call()).status).toBe(503);
 });
+
+it.each(["missing-activity", "phantom-change", "contradictory-current"])(
+  "rejects inconsistent correction/history %s",
+  (kind) => {
+    const row = fixture();
+    if (kind === "missing-activity") {
+      row.preview.activity_count = 1;
+      expect(isLedgerCandidate(row)).toBe(false);
+    }
+    if (kind === "phantom-change") {
+      row.changes.changed_activity_ids = [candidateId];
+      expect(isLedgerCandidate(row)).toBe(false);
+    }
+    if (kind === "contradictory-current")
+      expect(
+        isLedgerCandidates({
+          portfolio_id: ledgerPortfolioId,
+          current_accepted_candidate_id: row.id,
+          current_revision_number: 1,
+          candidates: [row],
+        }),
+      ).toBe(false);
+  },
+);

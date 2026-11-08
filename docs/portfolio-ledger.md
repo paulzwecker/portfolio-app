@@ -162,8 +162,28 @@ Remote requests use existing private-owner API authentication and database targe
 guards. Model proposal credentials grant no remote ledger access. Local development
 retains the existing trusted-local authentication policy. The production write flag must be
 separately authorized in the approved operator scope; it defaults to false.
-The current browser/proxy review screen exposes preview only. Durable mutation
-and decision-history UI remain the next BUILD increment.
+The browser now exposes saving, candidate history and explicit decisions. After
+validation, enter a candidate reason and save the exact source-bound packet.
+Choose a saved candidate to inspect balances, account allocation, activity/source
+records, hashes and base history, or download its private packet/receipt.
+Acceptance requires individual source/account/basis/full-replacement checks and
+separate acknowledgement of every changed/removed activity ID. Enter a rationale,
+review the decision and confirm its input hash. Cancellation before confirmation
+creates no review. A confirmed request may complete after navigation or a lost
+response; reload history to inspect its terminal receipt. The client performs no
+automatic mutation retries. Stale bases, conflicts and authorization failures stay
+explicit, with fresh server checks at acceptance.
+
+The `ledger-review` browser fixture permits only inserts into candidate/review
+receipts in a verified loopback `_test` database and random test-owned schema.
+Other HTTP mutations, canonical SQL writes, schema changes and cross-schema inserts
+are rejected. Ordinary browser scenarios retain SQL read-only access. For a bounded
+synthetic rehearsal, start `npm run test:e2e:api -- --scenario ledger-review
+--lifetime-seconds 600` with child-process `BROWSER_API_PORT=8015`. Run
+`node scripts/browser.mjs test portfolio-ledger-decisions.spec.ts --workers=1`
+with `E2E_LEDGER_REVIEW_API=1`, matching loopback `API_BASE_URL`/`BROWSER_API_PORT`
+and the local web port. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
+Normal fixture shutdown removes its own schema. Screenshots remain ignored.
 
 ## Remaining acceptance gates
 
