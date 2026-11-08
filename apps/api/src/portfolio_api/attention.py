@@ -631,8 +631,11 @@ def attention_feed(
                 prior_price.provider != current_price.provider
                 or prior_price.provider_symbol != current_price.provider_symbol
                 or prior_price.currency != current_price.currency
-                or (listing.currency is not None and current_price.currency != listing.currency)
+                or listing.currency is None
+                or current_price.currency != listing.currency
                 or prior_price.adjustment_basis != current_price.adjustment_basis
+                or not current_price.adjustment_basis
+                or not current_price.adjustment_basis.strip()
             ):
                 continue
             if (

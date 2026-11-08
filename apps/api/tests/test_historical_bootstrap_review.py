@@ -5,6 +5,9 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from browser_server import fixture_application, fixture_read_engine, fixture_settings
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy import select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -19,6 +22,49 @@ from portfolio_api.domain.models import (
 from portfolio_api.historical_bootstrap_review import latest_historical_bootstrap_review
 
 NOW = datetime(2026, 11, 9, tzinfo=UTC)
+
+
+@pytest.mark.integration
+def test_history_review_http_routes_require_authentication_and_read_only_transactions(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    modes: list[tuple[object, object]] = []
+    original = latest_historical_bootstrap_review
+
+    def checked_review(session: Session, *, run_id: object = None, offset: int = 0) -> object:
+        modes.append(
+            (
+                session.scalar(text("SHOW transaction_read_only")),
+                session.scalar(text("SHOW transaction_isolation")),
+            )
+        )
+        assert run_id is None
+        return original(session, offset=offset)
+
+    monkeypatch.setattr(
+        "portfolio_api.domain.routes.latest_historical_bootstrap_review", checked_review
+    )
+    settings = fixture_settings().model_copy(
+        update={"app_env": "preview", "api_access_token": SecretStr("synthetic-history-token")}
+    )
+    with Session(postgres_engine) as session:
+        schema = str(session.scalar(text("SELECT current_schema()")))
+    reader = fixture_read_engine(postgres_engine.url, schema, fixture_settings())
+    try:
+        with TestClient(fixture_application(reader, settings)) as client:
+            path = "/v1/market-data/historical-bootstrap"
+            assert client.get(path).status_code == 401
+            headers = {"x-api-access-token": "synthetic-history-token"}
+            response = client.get(path, headers=headers)
+            assert response.status_code == 200 and response.json()["run_id"] is None
+            assert client.post(path, headers=headers).status_code == 405
+            invalid = client.get(
+                f"{path}/{uuid4()}/checkpoints/{uuid4()}/reconciliation", headers=headers
+            )
+            assert invalid.status_code == 404
+        assert modes == [("on", "repeatable read")]
+    finally:
+        reader.dispose()
 
 
 @pytest.mark.integration

@@ -8,59 +8,31 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
+| Active checkpoint           | C2.2 historical market-data reliability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                    |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Extend reviewed venue schedules and review source-coverage usability against end-to-end milestone acceptance; keep activation gated |
+| Next ready substantial task | Complete integration checks, independent review and one cohesive PR; reverify release dependencies           |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
-The current BUILD increment blocks history analytics for conflicting or unavailable
-price-adjustment descriptions and shows the evidence to investors. Fourteen focused
-PostgreSQL-backed tests, 55 web tests and a synthetic desktop/mobile journey passed.
-Matching descriptions do not verify exchange sessions or corporate-action history.
-Published NYSE 2026 schedule evidence now identifies bounded date-review candidates
-for exact `NYSE` listings. It does not certify actual trading, other venues or FX.
-The schedule is source-hashed and excluded from views before its observation time.
-Twenty-one focused backend tests, 56 web checks and a desktop/mobile browser journey pass.
-The next increment independently supports exact `NASDAQ` listings using its own
-published 2026 schedule and preserved source bytes; older knowledge cutoffs stay
-unassessed. Source capture times are exact; an unstated Nasdaq as-of date stays null.
-Twenty-four focused backend tests, 57 web checks and the desktop/mobile journey pass.
-The Xetra increment adds exact `XETRA`/`XETR` schedule review from Deutsche Börse's
-captured 2026 calendar; `XFRA` stays separate. Twenty-nine focused backend tests,
-58 web checks and a synthetic desktop/mobile journey passed. No migration.
-Schedule revisions now select only pinned, unambiguous evidence known at the
-requested cutoff; Company Explorer shows the revision and normalized fingerprint.
-Synthetic replay covers a later correction without changing the earlier view.
-The latest BUILD adds a read-only Operations review of up to 30 listing checkpoints
-from the latest historical bootstrap run, with explicit omitted counts and FX
-unassessed. It checks frozen identity, batch, provider and currency before comparing
-eligible 2026 closes with reviewed schedules. This covers only the selected close
-span, does not reconcile payloads or certify trading, and changes no receipts.
-Ten isolated PostgreSQL tests, 52 web tests, and a synthetic desktop/mobile
-browser journey passed. No migration or provider activation was performed.
-The next BUILD adds run-pinned, bounded page navigation for remaining listings.
-Each page is an independent read; offsets above 10,000 require a smaller scoped run.
-Ten isolated PostgreSQL cases, 52 web tests and a desktop/mobile paging journey
-passed; a newer run did not change the pinned page's identity.
-The requested-window increment separately exposes leading and trailing scheduled
-date candidates within the known 2026 schedule, retaining the existing selected-span
-review. Outside dates, empty series, unscheduled closures and FX stay unassessed.
-Eighteen schedule tests, ten isolated PostgreSQL cases, 53 focused web tests and
-a synthetic desktop/mobile Operations journey passed; no production activation.
-The following BUILD distinguishes recorded no-data responses, failed and blocked
-checkpoints from pending work in Operations. Receipt counts preserve missing evidence
-and do not imply payload reconciliation or trigger retries.
-Seventeen isolated PostgreSQL cases, 54 web tests and a synthetic desktop/mobile
-journey passed, including actual synthetic importer no-data and failure paths.
-The next BUILD adds an on-demand, bounded read-only stored-batch reconciliation
-to each listing, distinguishing mismatch, missing evidence, incomplete work and
-verification limits. This does not certify provider truth or session completeness.
-Thirty isolated PostgreSQL cases, seven backend units, 56 focused web tests and
-a synthetic desktop/mobile journey passed; missing-receipt/limit paths were rerun.
+The historical market-data reliability engineering checkpoint is IMPLEMENTATION_COMPLETE
+and LOCAL_VERIFIED. Company Explorer and Operations expose source conflicts, returned-row
+search, published schedule evidence, receipt diagnostics and bounded checkpoint
+reconciliation. Prior BUILD evidence remains in the
+[historical handoff](docs/history/market-history-build-through-2026-11-08.md).
+Current verification and release gates are tracked in the
+[active handoff](docs/ACTIVE_WORKSTREAM.md). C2.2 remains operationally partial until
+separately authorized live enrichment and monitored refresh acceptance.
+`npm run check`, 112 relevant PostgreSQL cases across selection/rerun and the managed
+browser suite passed. Browser evidence is 95 passed and 35 explicit skips. Independent
+review tightened alert evidence and added HTTP authentication/read-only coverage.
 
-PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
+The current integration review found Render live at `aef3572`, with Auto-Deploy
+enabled through `checksPass`. Fresh Neon verification stopped at the read-only
+target guard with a connection `OperationalError`. Release classification is BLOCKED
+until target compatibility and provider release controls are freshly verified.
+
+Historical release evidence follows. PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and
 Blueprint sync remain disabled; retain all separate production activation and recovery gates.
 

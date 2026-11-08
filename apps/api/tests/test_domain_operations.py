@@ -599,7 +599,8 @@ def test_price_history_analytics_use_canonical_closes_without_lookahead(
                 currency=listing.currency,
                 provider="YAHOO_FINANCE",
                 provider_symbol=listing.ticker,
-                adjustment_basis="Corrected split-adjusted price; dividend excluded",
+                # Numeric correction retains the same economic adjustment basis.
+                adjustment_basis="Split-adjusted price; dividend excluded",
                 data_quality="PASS",
                 source_ref="test-price-series:correction",
                 supersedes_observation_id=latest.id,

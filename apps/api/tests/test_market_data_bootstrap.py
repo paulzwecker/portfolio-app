@@ -14,6 +14,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic import AnyHttpUrl
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -325,7 +326,7 @@ class SyntheticProvider:
                 provider_id="YAHOO_FINANCE",
                 provider_schema_version="yahoo-chart-v8",
                 source_record_id=source_record_id,
-                source_url="https://synthetic.example.invalid/chart",
+                source_url=AnyHttpUrl("https://synthetic.example.invalid/chart"),
                 media_type="application/json",
                 retrieved_at=RETRIEVED_AT,
                 payload=payload,
@@ -529,7 +530,9 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
             )
         with session.begin_nested() as savepoint:
             receipt = dict(listing_checkpoint.report)
-            coverage = dict(receipt["coverage"])
+            coverage_value = receipt["coverage"]
+            assert isinstance(coverage_value, dict)
+            coverage = dict(coverage_value)
             coverage["canonical_fingerprint"] = None
             receipt["coverage"] = coverage
             listing_checkpoint.report = receipt

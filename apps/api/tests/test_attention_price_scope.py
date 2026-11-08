@@ -27,6 +27,9 @@ from portfolio_api.domain.models import PriceObservation
         ("other_symbol", 0),
         ("other_currency", 0),
         ("other_basis", 0),
+        ("missing_basis", 0),
+        ("blank_basis", 0),
+        ("unverified_currency", 0),
         ("same_day_duplicate", 0),
     ],
 )
@@ -73,6 +76,12 @@ def test_price_move_requires_known_unambiguous_compatible_closes(
             current.currency = "EUR"
         elif mode == "other_basis":
             current.adjustment_basis = "different basis"
+        elif mode == "missing_basis":
+            prior.adjustment_basis = current.adjustment_basis = ""
+        elif mode == "blank_basis":
+            prior.adjustment_basis = current.adjustment_basis = " "
+        elif mode == "unverified_currency":
+            listing.currency = None
         session.add_all([prior, current])
         if mode == "same_day_duplicate":
             session.add(observation(5, "121", suffix="duplicate"))

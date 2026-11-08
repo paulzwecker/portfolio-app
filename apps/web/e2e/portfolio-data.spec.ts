@@ -259,7 +259,7 @@ test("Portfolio data investigation reaches Operations without writes", async ({
 
 test("Historical bootstrap schedule evidence is reviewable without writes", async ({
   page,
-}) => {
+}, testInfo) => {
   const { writes } = await installRoutes(page, operationsFixture());
   await page.route(
     "**/api/research/market-data/historical-bootstrap*",
@@ -398,6 +398,16 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
       }),
     ).toBeVisible();
     await expect(panel).toContainText("1 additional listings follow this page");
+    await expect(
+      page.getByRole("link", { name: "Skip to content" }),
+    ).not.toBeInViewport();
+    await panel
+      .getByText("Historical bootstrap review", { exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath(`historical-batch-review-${width}.png`),
+      scale: "css",
+    });
     await panel.getByRole("button", { name: "Next listings" }).click();
     await expect(panel).toContainText("NYSE:LAST");
     await expect(panel).toContainText("Showing 31–31 of 31");
