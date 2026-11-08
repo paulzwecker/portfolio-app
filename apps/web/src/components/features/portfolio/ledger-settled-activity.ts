@@ -17,7 +17,8 @@ export type SettledActivityDraft = {
     | "BUY"
     | "SELL"
     | "DIVIDEND"
-    | "CASH_TRANSFER";
+    | "CASH_TRANSFER"
+    | "SECURITY_TRANSFER";
   sequence: string;
   effectiveAt: string;
   currency: string;
@@ -37,6 +38,9 @@ export type SettledActivityDraft = {
   destinationEffectiveAt?: string;
   destinationSourceSha256?: string;
   destinationSourceRecordId?: string;
+  destinationListingId?: string;
+  destinationQuantity?: string;
+  basisUnavailable?: boolean;
 };
 
 const timestamp =
@@ -86,26 +90,30 @@ export function restoreSettledActivityReview(
           item.kind !== "BUY" &&
           item.kind !== "SELL" &&
           item.kind !== "DIVIDEND" &&
-          item.kind !== "CASH_TRANSFER") ||
+          item.kind !== "CASH_TRANSFER" &&
+          item.kind !== "SECURITY_TRANSFER") ||
         typeof item.sequence !== "number" ||
         !Number.isSafeInteger(item.sequence) ||
         typeof item.effective_at !== "string" ||
-        typeof item.currency !== "string" ||
+        (item.kind !== "SECURITY_TRANSFER" &&
+          typeof item.currency !== "string") ||
         typeof item.evidence.source_sha256 !== "string" ||
         typeof item.evidence.source_record_id !== "string"
       )
         throw new Error(invalid);
       const trade = item.kind === "BUY" || item.kind === "SELL";
       const dividend = item.kind === "DIVIDEND";
-      const transfer = item.kind === "CASH_TRANSFER";
+      const securityTransfer = item.kind === "SECURITY_TRANSFER";
+      const transfer = item.kind === "CASH_TRANSFER" || securityTransfer;
       if (
         transfer &&
         (!isRecord(item.destination) ||
           !isRecord(item.destination.evidence) ||
           [
             item.destination.account_id,
-            item.destination.currency,
-            item.destination.amount,
+            ...(securityTransfer
+              ? [item.destination.listing_id, item.destination.quantity]
+              : [item.destination.currency, item.destination.amount]),
             item.destination.effective_at,
             item.destination.evidence.source_sha256,
             item.destination.evidence.source_record_id,
@@ -113,21 +121,25 @@ export function restoreSettledActivityReview(
       )
         throw new Error(invalid);
       if (
-        trade
-          ? [
-              item.listing_id,
-              item.quantity,
-              item.gross_cash,
-              item.fees,
-              item.taxes,
-              item.trade_date,
-              item.settlement_date,
-            ].some((value) => typeof value !== "string")
-          : dividend
-            ? [item.listing_id, item.gross_cash, item.fees, item.taxes].some(
-                (value) => typeof value !== "string",
-              )
-            : typeof item.amount !== "string"
+        securityTransfer
+          ? typeof item.listing_id !== "string" ||
+            typeof item.quantity !== "string" ||
+            item.basis_status !== "UNAVAILABLE"
+          : trade
+            ? [
+                item.listing_id,
+                item.quantity,
+                item.gross_cash,
+                item.fees,
+                item.taxes,
+                item.trade_date,
+                item.settlement_date,
+              ].some((value) => typeof value !== "string")
+            : dividend
+              ? [item.listing_id, item.gross_cash, item.fees, item.taxes].some(
+                  (value) => typeof value !== "string",
+                )
+              : typeof item.amount !== "string"
       )
         throw new Error(invalid);
       return {
@@ -136,8 +148,9 @@ export function restoreSettledActivityReview(
         kind: item.kind,
         sequence: String(item.sequence),
         effectiveAt: item.effective_at,
-        currency: item.currency,
-        amount: trade || dividend ? "" : (item.amount as string),
+        currency: securityTransfer ? "" : (item.currency as string),
+        amount:
+          trade || dividend || securityTransfer ? "" : (item.amount as string),
         ...(trade
           ? {
               listingId: item.listing_id as string,
@@ -148,14 +161,20 @@ export function restoreSettledActivityReview(
               tradeDate: item.trade_date as string,
               settlementDate: item.settlement_date as string,
             }
-          : dividend
+          : securityTransfer
             ? {
                 listingId: item.listing_id as string,
-                grossCash: item.gross_cash as string,
-                fees: item.fees as string,
-                taxes: item.taxes as string,
+                quantity: item.quantity as string,
+                basisUnavailable: true,
               }
-            : {}),
+            : dividend
+              ? {
+                  listingId: item.listing_id as string,
+                  grossCash: item.gross_cash as string,
+                  fees: item.fees as string,
+                  taxes: item.taxes as string,
+                }
+              : {}),
         sourceSha256: item.evidence.source_sha256,
         sourceRecordId: item.evidence.source_record_id,
         ...(transfer &&
@@ -163,8 +182,15 @@ export function restoreSettledActivityReview(
         isRecord(item.destination.evidence)
           ? {
               destinationAccountId: item.destination.account_id as string,
-              destinationCurrency: item.destination.currency as string,
-              destinationAmount: item.destination.amount as string,
+              ...(securityTransfer
+                ? {
+                    destinationListingId: item.destination.listing_id as string,
+                    destinationQuantity: item.destination.quantity as string,
+                  }
+                : {
+                    destinationCurrency: item.destination.currency as string,
+                    destinationAmount: item.destination.amount as string,
+                  }),
               destinationEffectiveAt: item.destination.effective_at as string,
               destinationSourceSha256: item.destination.evidence
                 .source_sha256 as string,
@@ -234,6 +260,7 @@ export function buildSettledActivityReview(
         "SELL",
         "DIVIDEND",
         "CASH_TRANSFER",
+        "SECURITY_TRANSFER",
       ].includes(entry.kind)
     )
       throw new Error(`${label} needs a supported type.`);
@@ -250,11 +277,12 @@ export function buildSettledActivityReview(
       throw new Error(
         `${label} needs a booking timestamp with seconds and an explicit UTC offset.`,
       );
-    if (!/^[A-Z]{3}$/.test(entry.currency))
+    const securityTransfer = entry.kind === "SECURITY_TRANSFER";
+    if (!securityTransfer && !/^[A-Z]{3}$/.test(entry.currency))
       throw new Error(`${label} needs a currency.`);
     const trade = entry.kind === "BUY" || entry.kind === "SELL";
     const dividend = entry.kind === "DIVIDEND";
-    const transfer = entry.kind === "CASH_TRANSFER";
+    const transfer = entry.kind === "CASH_TRANSFER" || securityTransfer;
     if (
       !transfer &&
       [
@@ -264,10 +292,46 @@ export function buildSettledActivityReview(
         entry.destinationEffectiveAt,
         entry.destinationSourceSha256,
         entry.destinationSourceRecordId,
+        entry.destinationListingId,
+        entry.destinationQuantity,
       ].some(Boolean)
     )
       throw new Error(`${label} contains unexpected destination details.`);
-    if (trade || dividend) {
+    if (
+      !securityTransfer &&
+      (entry.basisUnavailable ||
+        entry.destinationListingId ||
+        entry.destinationQuantity)
+    )
+      throw new Error(
+        `${label} contains unexpected security transfer details.`,
+      );
+    if (securityTransfer) {
+      if (
+        entry.currency ||
+        entry.amount ||
+        [
+          entry.grossCash,
+          entry.fees,
+          entry.taxes,
+          entry.tradeDate,
+          entry.settlementDate,
+          entry.destinationCurrency,
+          entry.destinationAmount,
+        ].some(Boolean)
+      )
+        throw new Error(`${label} contains unsupported cash or trade details.`);
+      if (
+        !anchor.listings.some((item) => item.listing_id === entry.listingId) ||
+        !entry.quantity ||
+        !amount.test(entry.quantity) ||
+        !/[1-9]/.test(entry.quantity) ||
+        entry.basisUnavailable !== true
+      )
+        throw new Error(
+          `${label} needs an anchored listing, positive exact quantity and unavailable-basis acknowledgement.`,
+        );
+    } else if (trade || dividend) {
       const listing = anchor.listings.find(
         (item) => item.listing_id === entry.listingId,
       );
@@ -338,17 +402,24 @@ export function buildSettledActivityReview(
           `${label} needs a different evidenced destination account.`,
         );
       if (
-        !entry.destinationCurrency ||
-        !/^[A-Z]{3}$/.test(entry.destinationCurrency) ||
-        !entry.destinationAmount ||
-        !amount.test(entry.destinationAmount) ||
-        !/[1-9]/.test(entry.destinationAmount) ||
+        (securityTransfer
+          ? !anchor.listings.some(
+              (item) => item.listing_id === entry.destinationListingId,
+            ) ||
+            !entry.destinationQuantity ||
+            !amount.test(entry.destinationQuantity) ||
+            !/[1-9]/.test(entry.destinationQuantity)
+          : !entry.destinationCurrency ||
+            !/^[A-Z]{3}$/.test(entry.destinationCurrency) ||
+            !entry.destinationAmount ||
+            !amount.test(entry.destinationAmount) ||
+            !/[1-9]/.test(entry.destinationAmount)) ||
         !entry.destinationEffectiveAt ||
         !timestamp.test(entry.destinationEffectiveAt) ||
         !Number.isFinite(Date.parse(entry.destinationEffectiveAt))
       )
         throw new Error(
-          `${label} needs the destination currency, positive exact amount and booking timestamp.`,
+          `${label} needs the destination ${securityTransfer ? "listing, positive exact quantity" : "currency, positive exact amount"} and booking timestamp.`,
         );
       if (
         !entry.destinationSourceSha256 ||
@@ -372,7 +443,7 @@ export function buildSettledActivityReview(
         source_sha256: entry.sourceSha256,
         source_record_id: entry.sourceRecordId,
       },
-      currency: entry.currency,
+      ...(!securityTransfer ? { currency: entry.currency } : {}),
       ...(trade
         ? {
             listing_id: entry.listingId,
@@ -390,13 +461,15 @@ export function buildSettledActivityReview(
               fees: entry.fees,
               taxes: entry.taxes,
             }
-          : transfer
+          : securityTransfer
             ? {
-                amount: entry.amount,
+                listing_id: entry.listingId,
+                quantity: entry.quantity,
+                basis_status: "UNAVAILABLE",
                 destination: {
                   account_id: entry.destinationAccountId,
-                  currency: entry.destinationCurrency,
-                  amount: entry.destinationAmount,
+                  listing_id: entry.destinationListingId,
+                  quantity: entry.destinationQuantity,
                   effective_at: entry.destinationEffectiveAt,
                   evidence: {
                     source_sha256: entry.destinationSourceSha256,
@@ -404,7 +477,21 @@ export function buildSettledActivityReview(
                   },
                 },
               }
-            : { amount: entry.amount }),
+            : transfer
+              ? {
+                  amount: entry.amount,
+                  destination: {
+                    account_id: entry.destinationAccountId,
+                    currency: entry.destinationCurrency,
+                    amount: entry.destinationAmount,
+                    effective_at: entry.destinationEffectiveAt,
+                    evidence: {
+                      source_sha256: entry.destinationSourceSha256,
+                      source_record_id: entry.destinationSourceRecordId,
+                    },
+                  },
+                }
+              : { amount: entry.amount }),
     };
   });
   const packet = JSON.parse(base.text);

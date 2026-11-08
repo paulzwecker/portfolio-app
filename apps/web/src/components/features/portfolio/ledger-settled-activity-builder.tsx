@@ -58,12 +58,13 @@ export function LedgerSettledActivityBuilder({
     <div className="space-y-4 rounded-lg border bg-card p-4">
       <p className="text-sm text-muted-foreground">
         Enter settled purchases, sales, dividends, deposits, withdrawals, fees,
-        taxes or internal cash transfers from your records. Trades and dividends
-        require a listing in the verified anchor. Dividend currency is the
-        received cash currency and can differ from the listing currency; no
-        conversion is inferred. Enter timestamps with seconds and a UTC offset,
-        for example 2026-01-15T10:30:00+01:00. The sequence determines ordering
-        when booking times match. The API checks the complete reconstruction.
+        taxes or internal transfers from your records. Trades, dividends and
+        security transfers require a listing in the verified anchor. Dividend
+        currency is the received cash currency and can differ from the listing
+        currency; no conversion is inferred. Enter timestamps with seconds and a
+        UTC offset, for example 2026-01-15T10:30:00+01:00. The sequence
+        determines ordering when booking times match. The API checks the
+        complete reconstruction.
       </p>
       <p className="text-xs text-muted-foreground">
         Discard this activity draft before changing the opening or loading
@@ -77,8 +78,8 @@ export function LedgerSettledActivityBuilder({
       )}
       {accounts.length === 1 && (
         <p className="text-sm text-muted-foreground">
-          Internal cash transfers require two evidenced brokerage accounts in
-          the opening review.
+          Internal transfers require two evidenced brokerage accounts in the
+          opening review.
         </p>
       )}
       <form
@@ -137,6 +138,15 @@ export function LedgerSettledActivityBuilder({
                   different review.
                 </p>
               )}
+              {entry.kind === "SECURITY_TRANSFER" && (
+                <p className="text-xs text-muted-foreground">
+                  Enter both independently evidenced legs. Accounts must differ;
+                  exact listing, quantity and booking instant must match. This
+                  quantity-only review does not track acquisition basis or
+                  gains. Retain lot evidence privately. ADR conversions,
+                  in-transit and external transfers require a different review.
+                </p>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm">
                   Account
@@ -183,6 +193,12 @@ export function LedgerSettledActivityBuilder({
                     >
                       Internal cash transfer
                     </option>
+                    <option
+                      value="SECURITY_TRANSFER"
+                      disabled={accounts.length < 2}
+                    >
+                      Internal security transfer
+                    </option>
                     <option value="DEPOSIT">Deposit</option>
                     <option value="WITHDRAWAL">Withdrawal</option>
                     <option value="FEE">Fee</option>
@@ -211,22 +227,25 @@ export function LedgerSettledActivityBuilder({
                     }
                   />
                 </label>
-                <label className="text-sm">
-                  {entry.kind === "DIVIDEND"
-                    ? "Received cash currency"
-                    : "Currency"}
-                  <input
-                    className={field}
-                    maxLength={3}
-                    value={entry.currency}
-                    onChange={(event) =>
-                      update(entry.id, { currency: event.target.value })
-                    }
-                  />
-                </label>
+                {entry.kind && entry.kind !== "SECURITY_TRANSFER" && (
+                  <label className="text-sm">
+                    {entry.kind === "DIVIDEND"
+                      ? "Received cash currency"
+                      : "Currency"}
+                    <input
+                      className={field}
+                      maxLength={3}
+                      value={entry.currency}
+                      onChange={(event) =>
+                        update(entry.id, { currency: event.target.value })
+                      }
+                    />
+                  </label>
+                )}
                 {entry.kind === "BUY" ||
                 entry.kind === "SELL" ||
-                entry.kind === "DIVIDEND" ? (
+                entry.kind === "DIVIDEND" ||
+                entry.kind === "SECURITY_TRANSFER" ? (
                   <>
                     <label className="text-sm">
                       Listing
@@ -250,20 +269,22 @@ export function LedgerSettledActivityBuilder({
                       </select>
                     </label>
                     {(
-                      (entry.kind === "DIVIDEND"
-                        ? [
-                            ["Gross dividend cash", "grossCash"],
-                            ["Fees", "fees"],
-                            ["Taxes withheld", "taxes"],
-                          ]
-                        : [
-                            ["Quantity", "quantity"],
-                            ["Gross settlement cash", "grossCash"],
-                            ["Fees", "fees"],
-                            ["Taxes", "taxes"],
-                            ["Trade date", "tradeDate"],
-                            ["Settlement date", "settlementDate"],
-                          ]) as ReadonlyArray<
+                      (entry.kind === "SECURITY_TRANSFER"
+                        ? [["Quantity", "quantity"]]
+                        : entry.kind === "DIVIDEND"
+                          ? [
+                              ["Gross dividend cash", "grossCash"],
+                              ["Fees", "fees"],
+                              ["Taxes withheld", "taxes"],
+                            ]
+                          : [
+                              ["Quantity", "quantity"],
+                              ["Gross settlement cash", "grossCash"],
+                              ["Fees", "fees"],
+                              ["Taxes", "taxes"],
+                              ["Trade date", "tradeDate"],
+                              ["Settlement date", "settlementDate"],
+                            ]) as ReadonlyArray<
                         readonly [
                           string,
                           (
@@ -330,7 +351,8 @@ export function LedgerSettledActivityBuilder({
                     }
                   />
                 </label>
-                {entry.kind === "CASH_TRANSFER" && (
+                {(entry.kind === "CASH_TRANSFER" ||
+                  entry.kind === "SECURITY_TRANSFER") && (
                   <>
                     <label className="text-sm">
                       Destination account
@@ -356,10 +378,41 @@ export function LedgerSettledActivityBuilder({
                         </span>
                       )}
                     </label>
+                    {entry.kind === "SECURITY_TRANSFER" && (
+                      <label className="text-sm">
+                        Destination listing
+                        <select
+                          className={field}
+                          value={entry.destinationListingId ?? ""}
+                          onChange={(event) =>
+                            update(entry.id, {
+                              destinationListingId: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Choose destination listing</option>
+                          {anchor.listings.map((listing) => (
+                            <option
+                              key={listing.listing_id}
+                              value={listing.listing_id}
+                            >
+                              {listing.ticker} · {listing.venue} ·{" "}
+                              {listing.currency} · {listing.listing_id}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     {(
                       [
-                        ["Destination currency", "destinationCurrency"],
-                        ["Destination amount", "destinationAmount"],
+                        ...(entry.kind === "SECURITY_TRANSFER"
+                          ? ([
+                              ["Destination quantity", "destinationQuantity"],
+                            ] as const)
+                          : ([
+                              ["Destination currency", "destinationCurrency"],
+                              ["Destination amount", "destinationAmount"],
+                            ] as const)),
                         [
                           "Destination booking timestamp",
                           "destinationEffectiveAt",
@@ -379,7 +432,10 @@ export function LedgerSettledActivityBuilder({
                         <input
                           className={field}
                           inputMode={
-                            key === "destinationAmount" ? "decimal" : undefined
+                            key === "destinationAmount" ||
+                            key === "destinationQuantity"
+                              ? "decimal"
+                              : undefined
                           }
                           value={entry[key] ?? ""}
                           onChange={(event) =>
@@ -391,6 +447,21 @@ export function LedgerSettledActivityBuilder({
                   </>
                 )}
               </div>
+              {entry.kind === "SECURITY_TRANSFER" && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={entry.basisUnavailable === true}
+                    onChange={(event) =>
+                      update(entry.id, {
+                        basisUnavailable: event.target.checked,
+                      })
+                    }
+                  />
+                  I understand acquisition basis and gains are unavailable in
+                  this transfer review.
+                </label>
+              )}
               <Button
                 type="button"
                 variant="ghost"

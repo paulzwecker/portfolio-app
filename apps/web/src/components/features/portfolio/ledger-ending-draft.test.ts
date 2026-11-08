@@ -448,3 +448,63 @@ it("restores ending statements with both independently evidenced cash transfer l
       .text,
   ).toBe(statement.text);
 });
+
+it("restores ending review while retaining both security transfer legs and unavailable basis", () => {
+  const receiving: OpeningAccountDraft = {
+    ...opening,
+    id: "88888888-8888-4888-8888-888888888888",
+    name: "Receiving",
+    sourceRecordId: "receiver-opening",
+    positions: [],
+    cash: [],
+  };
+  const openingFile = buildOpeningReview(
+    ledgerAnchor,
+    [opening, receiving],
+    true,
+  );
+  const transfer: SettledActivityDraft = {
+    ...activity,
+    kind: "SECURITY_TRANSFER",
+    currency: "",
+    amount: "",
+    listingId: ledgerAnchor.listings[0].listing_id,
+    quantity: "0.5000000000",
+    basisUnavailable: true,
+    sourceRecordId: "security-debit",
+    destinationAccountId: receiving.id,
+    destinationListingId: ledgerAnchor.listings[0].listing_id,
+    destinationQuantity: "0.5000000000",
+    destinationEffectiveAt: activity.effectiveAt,
+    destinationSourceSha256: "e".repeat(64),
+    destinationSourceRecordId: "security-credit",
+  };
+  const transferFile = buildSettledActivityReview(
+    ledgerAnchor,
+    openingFile,
+    "2026-01-31T23:59:59+01:00",
+    [transfer],
+  );
+  const statements = [
+    ending(),
+    {
+      ...ending(),
+      accountId: receiving.id,
+      sourceRecordId: "receiver-ending",
+      positions: [],
+      cash: [],
+    },
+  ];
+  const packet = buildEndingReview(
+    ledgerAnchor,
+    transferFile,
+    statements,
+    true,
+  );
+  const restored = restoreEndingReview(ledgerAnchor, packet.text);
+  expect(restored.file.text).toBe(transferFile.text);
+  expect(
+    buildEndingReview(ledgerAnchor, restored.file, restored.accounts, true)
+      .text,
+  ).toBe(packet.text);
+});

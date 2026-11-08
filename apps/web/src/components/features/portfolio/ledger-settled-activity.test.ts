@@ -453,3 +453,81 @@ it("rejects a destination receipt reused by a later activity", () => {
     ]),
   ).toThrow(/duplicates/);
 });
+
+function securityTransfer(): SettledActivityDraft {
+  return {
+    ...record(),
+    kind: "SECURITY_TRANSFER",
+    currency: "",
+    amount: "",
+    listingId: ledgerAnchor.listings[0].listing_id,
+    quantity: "0.5000000000",
+    basisUnavailable: true,
+    sourceRecordId: "security-debit",
+    destinationAccountId: destinationId,
+    destinationListingId: ledgerAnchor.listings[0].listing_id,
+    destinationQuantity: "0.5000000000",
+    destinationEffectiveAt: "2026-01-15T09:30:00Z",
+    destinationSourceSha256: "d".repeat(64),
+    destinationSourceRecordId: "security-credit",
+  };
+}
+it("preserves independently evidenced security transfer legs and explicit unavailable basis", () => {
+  const original = buildSettledActivityReview(
+    ledgerAnchor,
+    transferBase,
+    cutoff,
+    [securityTransfer()],
+  );
+  const row = JSON.parse(original.text).activity[0];
+  expect(row).toMatchObject({
+    kind: "SECURITY_TRANSFER",
+    basis_status: "UNAVAILABLE",
+    quantity: "0.5000000000",
+    destination: {
+      listing_id: ledgerAnchor.listings[0].listing_id,
+      quantity: "0.5000000000",
+      evidence: { source_record_id: "security-credit" },
+    },
+  });
+  expect(row).not.toHaveProperty("currency");
+  expect(row).not.toHaveProperty("amount");
+  const restored = restoreSettledActivityReview(ledgerAnchor, original.text);
+  expect(restored.entries).toEqual([securityTransfer()]);
+  expect(
+    buildSettledActivityReview(
+      ledgerAnchor,
+      restored.base,
+      restored.cutoff,
+      restored.entries,
+    ).text,
+  ).toBe(original.text);
+  row.destination.quantity = 0.5;
+  const invalid = JSON.parse(original.text);
+  invalid.activity[0] = row;
+  expect(() =>
+    restoreSettledActivityReview(ledgerAnchor, JSON.stringify(invalid)),
+  ).toThrow(/cannot be edited/);
+});
+it.each([
+  { basisUnavailable: false },
+  { listingId: "unknown" },
+  { quantity: "0" },
+  { destinationListingId: "unknown" },
+  { destinationQuantity: "" },
+  { destinationAccountId: ledgerAccountId },
+  { destinationSourceRecordId: "" },
+  { amount: "1" },
+  { currency: "USD" },
+  { destinationCurrency: "USD" },
+  { fees: "0" },
+])(
+  "rejects incomplete or unrepresentable security transfer evidence %j",
+  (change) => {
+    expect(() =>
+      buildSettledActivityReview(ledgerAnchor, transferBase, cutoff, [
+        { ...securityTransfer(), ...change },
+      ]),
+    ).toThrow();
+  },
+);

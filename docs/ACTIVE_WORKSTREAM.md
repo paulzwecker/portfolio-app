@@ -125,9 +125,21 @@ restoration. Build, typecheck, focused lint and documentation checks passed.
 Synthetic desktop and mobile forms were visually reviewed. No production or schema
 changes were made.
 
+## Current internal security transfer increment
+
+The guided form accepts paired security transfers between evidenced brokerage
+accounts, with independent listing, quantity, timestamp and source evidence for
+each leg. The user explicitly acknowledges unavailable acquisition basis; no
+lot, gain, ADR conversion or sale is inferred. The API validates matching legs
+and source quantities. Downloaded and ending-review packets retain all evidence.
+Focused checks passed 170 web tests and three isolated PostgreSQL security-transfer
+API cases and 40 synthetic desktop/mobile journeys, including basis acknowledgement
+and restoration. Build, typecheck, focused lint and documentation checks passed;
+synthetic desktop and mobile layouts were inspected. No production changes were made.
+
 ## Next increment and release boundaries
 
-Add guided security transfers and expand reviewed listing selection to complete the existing
+Expand reviewed listing selection and verify the complete candidate review journey
 candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
