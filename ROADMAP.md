@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C5 schema recovery prepared; C2.3 settled-ledger BUILD checkpoint preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                              |
-| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                        |
-| Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated  |
-| Next ready substantial task | Owner review of incident freeze/recovery; independently INTEGRATE the preserved ledger branch with its release safeguard into one cohesive PR  |
-| Parallel owner gate         | Current-state recovery, production migrations/deployment, provider activation, model acceptance and ledger ownership retain separate approvals |
-| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream    |
+| Field                       | Current value                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C5 recovery phase 1 VERIFIED; C2.3 settled-ledger BUILD checkpoint preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                    |
+| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                               |
+| Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated         |
+| Next ready substantial task | Read-only migration preflight using the verified recovery before Nov 8 18:19:38 CET; preserve the independent ledger INTEGRATE checkpoint             |
+| Parallel owner gate         | Production migration/deployment, any replacement recovery point, provider activation, model acceptance and ledger ownership retain separate approvals |
+| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream           |
 
 November 8 incident evidence confirms a healthy old Render deployment (`395f842`),
 new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail
@@ -21,8 +21,17 @@ with 404; canonical portfolio counts remain intact. A fresh populated-state reco
 point and separate migration/deployment authorization are required. The
 [release runbook](docs/deployment-and-migrations.md) records the exact plan, CI
 sequencing cause and offline release gate. The marker stays at the verified schema;
-no production or provider change occurred. Focused checks passed 16 deployment,
+the initial investigation made no production/provider change. Focused checks passed 16 deployment,
 55 readiness/preflight and three isolated migration/replay tests, plus docs/privacy.
+
+Owner-authorized recovery phase 1 passed on November 8. Render Auto-Deploy Off
+and Blueprint Auto Sync No are verified; Vercel production builds are frozen with
+Preview builds allowed. Exactly one fresh populated-state recovery was created and
+verified against production across all 95 tables, schema and data fingerprints,
+with zero differences. Existing read-only recovery guards pass. The next read-only
+preflight must use the new private recovery credentials in clean pinned main before
+**18:19:38 CET today**. Recovery expires November 15 at 14:18:37 CET. Exact IDs and
+full evidence stay private. Migration, restore and deployment remain unauthorized.
 
 ## Where we are
 

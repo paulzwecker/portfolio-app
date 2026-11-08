@@ -8,14 +8,14 @@ for this milestone. Preserve all predecessor branches, stash and private files.
 Income was committed through `0a57454`, cash transfers through `c9f58d7`, and
 security-transfer implementation starts at `35c902e`.
 
-## Current operational priority — schema recovery prepared
+## Current operational priority — recovery phase 1 verified
 
 November 8 read-only investigation confirms Render rejected main `deda2ce` and
 continues serving healthy `395f842`; Vercel production already serves `deda2ce`.
 Owner health readback is OK, but the ledger page reports missing records and the
 expected Render ledger-anchor endpoint returns 404. Candidate logs contain 85
 schema mismatches. Neon remains `9f2a6d4c81b7`, with the accepted 209 companies,
-22 positions, two cash rows and 16 targets totaling 1. Existing recovery is empty
+22 positions, two cash rows and 16 targets totaling 1. The older recovery is empty
 and predates import. Private full inventory and 11 canonical content fingerprints
 are retained outside Git. Automated authenticated browser inspection was blocked.
 
@@ -26,14 +26,27 @@ LOCAL_VERIFIED with 16 deployment-policy checks, 55 readiness/preflight tests an
 three disposable PostgreSQL migration/replay tests. Docs and privacy checks pass.
 Applied migration history matches all 57 files in the live API commit.
 The marker stays at the verified old head, so `deploy` deliberately fails closed.
-No provider setting, recovery branch, schema, canonical row or authorization changed.
+The initial investigation made no provider, recovery, schema or canonical changes.
 Keep this correction on the same milestone branch; no separate minor PR.
 
-Next owner action is review/authorization of the deployment freeze and fresh
-recovery creation. Migration and controlled deployment retain separate approvals.
-The Vercel schema hook needs reviewed operator installation; local code alone
-does not activate it. Resume the ledger INTEGRATE checkpoint below independently,
-including this safeguard in the one cohesive PR.
+Owner-authorized phase 1 subsequently passed at 14:21 CET on November 8. Render
+Auto-Deploy Off and Blueprint Auto Sync No were already set and independently
+verified. The Vercel ignore command was corrected to freeze production and retain
+Preview builds. Exactly one new recovery branch clones populated production. All
+95 public tables, schema and data fingerprints match; production before/after
+comparison has zero differences. Existing read-only recovery guards pass, TLS
+verify-full and credentials are verified, and effective Neon permission is ADMIN.
+Full IDs, lineage/LSN, receipts, comparisons and next-preflight manifest stay in the
+private incident store. The root .env recovery URL still identifies the older branch.
+
+Next is read-only migration preflight from clean pinned main with the new recovery
+credentials loaded only into its process. Its four-hour window ends **November 8
+at 18:19:38 CET**; branch expiry is November 15 at 14:18:37 CET. A replacement needs
+new authorization if that window lapses. Restore remains unexercised; project PITR
+history is 24 hours. All production freezes remain set and deployed commits remain
+unchanged. Migration, restoration and deployment require separate approvals.
+The durable schema hook still needs reviewed integration/installation; preserve
+the independent ledger INTEGRATE checkpoint and one cohesive PR.
 
 ## Complete bounded scope
 
