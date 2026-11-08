@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                                           |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.1 integration repair — synchronize PR #25 with merged main                                                                                                           |
+| Active checkpoint           | C2.1 integration repaired — PR #25 owner review gate                                                                                                                    |
 | Branch / PR                 | `codex/c2-canonical-ingestion-readiness`, [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25)                                                                |
-| Implementation              | Receipt compatibility LOCAL_VERIFIED; historical market planning PRODUCTION_PREVIEW_VERIFIED on 2026-11-07                                                              |
-| Next ready substantial task | Complete combined local checks and remote CI, freeze for owner review; then reconcile remaining integration work after owner merges                                     |
+| Implementation              | Receipt compatibility INTEGRATION_VERIFIED; historical market planning PRODUCTION_PREVIEW_VERIFIED on 2026-11-07                                                        |
+| Next ready substantial task | Owner review/merge PR #25; then synchronize PR #26 with updated main and retain its migration/recovery gates                                                            |
 | Parallel owner gate         | Completed [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) remains frozen. Production recovery, ingestion and model acceptance require separate decisions |
 | Integration rule            | Preserve main's capability roadmap and C2 receipt evidence. Keep independent BUILD features on their existing branches                                                  |
 
@@ -29,7 +29,7 @@ Auth configuration; authenticated production-server E2E remains unverified.
 Documentation links and tests pass. Independent review confirms the original
 receipt implementation/tests and baseline evidence are byte-identical to the
 prior PR head. Its diff against main retains the original six-file scope.
-Remote verification is pending the feature push. Historical live checks below
+Code `25c098e` passes all three [GitHub Actions jobs](https://github.com/paulzwecker/portfolio-app/actions/runs/42444524975) and Vercel Preview. Linux CI passes all 146 PostgreSQL cases, including the four locally skipped privilege-dependent cases. Its unit job passes 671 with 32 existing database-fixture skips; their classification correction remains on the preserved C5.2 branch. Require the latest [PR checks](https://github.com/paulzwecker/portfolio-app/pull/25/checks) before owner merge. Historical live checks below
 apply only to their recorded date; this repair performs local checks.
 
 Preserved independent work remains on `codex/ci-database-test-coverage`
