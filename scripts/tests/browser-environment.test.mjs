@@ -19,6 +19,11 @@ test("managed browser execution replaces inherited targets and credentials witho
     TEST_DATABASE_URL: "private-test",
     E2E_LIVE_API: "1",
     E2E_ALLOW_WRITES: "1",
+    E2E_REAL_API: "1",
+    E2E_SEC_API: "1",
+    E2E_LEDGER_REVIEW_API: "1",
+    E2E_LEDGER_OWNERSHIP_API: "1",
+    E2E_LEDGER_PUBLICATION_API: "1",
     DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true",
     DATABASE_LOCAL_TEST_WRITES_AUTHORIZED: "true",
     DATABASE_LOCAL_WRITES_AUTHORIZED: "true",
@@ -62,6 +67,11 @@ test("managed browser execution replaces inherited targets and credentials witho
     "E2E_LIVE_API",
     "E2E_ALLOW_WRITES",
     "E2E_DEMO_SEED",
+    "E2E_REAL_API",
+    "E2E_SEC_API",
+    "E2E_LEDGER_REVIEW_API",
+    "E2E_LEDGER_OWNERSHIP_API",
+    "E2E_LEDGER_PUBLICATION_API",
     "GOOGLE_SHEETS_POLL_SECONDS",
   ])
     assert.equal(first[name], "0");

@@ -10,7 +10,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | Consolidated Portfolio release candidate — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                  |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), based on main `395f842`        |
-| Implementation              | C1.3/C2.1/C2.2/C2.3/C3.1/C5.2 completed slices combined; integrated verification in progress                                                |
+| Implementation              | Combined quality/build, 89 managed browser and ten real-API journeys pass; full PostgreSQL/remote CI still running                          |
 | Next ready substantial task | Verify the combined candidate and update PR #26, then owner review and separately authorized recovery/schema/release preflight              |
 | Parallel owner gate         | P-GOOGL assumptions/acceptance, production migrations/deployment, provider activation and ledger source ownership retain separate approvals |
 | Integration rule            | The owner requested latest-work consolidation. Preserve all predecessor commits and evidence; freeze the passing candidate for review       |
@@ -41,6 +41,12 @@ code, follow the [native-provider freeze, current-state recovery and guarded mig
 procedure](docs/deployment-and-migrations.md). The historical empty pre-import
 recovery branch does not protect accepted holdings. Schema deployment does not
 activate ingestion, transfer ownership or accept models. Each retains its own gate.
+
+Combined quality verification passes 307 web and 831 API unit checks with two
+Windows-specific skips. Managed production-browser regression passes 89 cases
+with 29 explicit fixture/live-only gates; ten real FastAPI/PostgreSQL browser
+journeys also pass. The full PostgreSQL sweep and final remote CI remain in
+progress. The handoff records exact scope and review findings.
 
 ## How to choose work
 

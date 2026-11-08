@@ -54,6 +54,11 @@ export function managedBrowserEnvironment(inherited, directory) {
     E2E_LIVE_API: "0",
     E2E_ALLOW_WRITES: "0",
     E2E_DEMO_SEED: "0",
+    E2E_REAL_API: "0",
+    E2E_SEC_API: "0",
+    E2E_LEDGER_REVIEW_API: "0",
+    E2E_LEDGER_OWNERSHIP_API: "0",
+    E2E_LEDGER_PUBLICATION_API: "0",
   };
 }
 

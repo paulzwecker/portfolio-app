@@ -31,12 +31,26 @@ PR #25 stays separately reviewable; its dependency is included in this candidate
 
 ## Verification state
 
-Combined verification is in progress. Conflicts were resolved by retaining the
+Combined `npm run check` passes with 307 web and 831 API unit cases, two local
+Windows-specific skips, strict types (211 backend files), lint/format, generated
+contracts, source policy, script tests and production build. The skips are Windows
+symlink creation and POSIX-only credential modes. Managed production-mode browser
+regression passes 89 cases with 29 explicit fixture/live-only skips. Ten additional
+real FastAPI/PostgreSQL desktop/mobile journeys pass across valued Portfolio,
+ledger preview and SEC data, preserving protected-state hashes. The local full
+PostgreSQL sweep and final remote CI are still in progress.
+
+Conflicts were resolved by retaining the
 ledger ownership validators, SEC endpoints and exact sensitivity model/revision
 checks together. OpenAPI/TypeScript contracts are regenerated from the merged API.
 The [dated evidence](history/data-ledger-build-through-2026-11-08.md) preserves
 predecessor checks, historical source/production previews and their limitations.
-Require the combined quality, PostgreSQL, browser and CI gates before review freeze.
+Independent contract review preserves every original release API path/schema and
+adds only one sensitivity endpoint and three output schemas. AST review preserves
+130 test function bodies in the ten classification modules. Integration review
+also disables the newly combined real-API opt-ins in managed synthetic mode, with
+five isolation/cleanup checks passing. Require the complete PostgreSQL and remote
+CI gates before review freeze.
 Local PostgreSQL checks use independently verified loopback `_test` infrastructure
 and disposable schemas. Private source packages and diagnostics stay outside Git.
 
