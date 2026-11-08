@@ -47,7 +47,11 @@ def test_browser_publication_writes_only_scoped_snapshot_and_receipt(
     writer = fixture_ledger_writer(storage_engine.url, schema, publication=True)
     path = f"/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}"
     try:
-        for invalid_scope in ({}, {"ledger_receipts_only": True, "ledger_publication_only": True}):
+        invalid_scopes: tuple[dict[str, object], ...] = (
+            {},
+            {"ledger_receipts_only": True, "ledger_publication_only": True},
+        )
+        for invalid_scope in invalid_scopes:
             with pytest.raises(ValueError, match="one explicit test-only scope"):
                 fixture_application(reader, settings, invalid_scope, ledger_writer=writer)
         with TestClient(

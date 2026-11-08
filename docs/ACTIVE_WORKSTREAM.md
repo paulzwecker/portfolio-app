@@ -12,7 +12,7 @@
 
 ## Current ledger increment
 
-`a11272a` adds explicit, hash-bound whole-portfolio publication review in the
+`a11272a` and `79ae274` add explicit, hash-bound whole-portfolio publication review in the
 saved-candidate workspace. Read-only plan/authority routes and guarded publish
 proxy verify source/candidate/review/portfolio identity, exact decimal text,
 previous publication and snapshot receipt provenance. Rationale, four independent
