@@ -15,7 +15,7 @@ opening accounts/balances and up to 1,000 activity records. It permits 20 accoun
 `settled-booking-v1` supports BUY, SELL, DEPOSIT, WITHDRAWAL and FEE.
 
 `portfolio-ledger-preview-v2` explicitly opts into `settled-booking-v2`, adding
-DIVIDEND, TAX and paired CASH_TRANSFER records. Existing v1/v2 packets, projections and receipt hashes retain
+DIVIDEND, TAX and paired CASH_TRANSFER / SECURITY_TRANSFER records. Existing v1/v2 packets, projections and receipt hashes retain
 their original meaning. A v1 packet cannot contain these new kinds. Both versions
 use the same review/publication workflow and existing migrated receipt tables.
 
@@ -38,11 +38,35 @@ replaces the complete paired activity under its existing activity ID.
 
 This scope requires two matched, already-settled observations. Different booking
 instants require an explicit future in-transit accounting contract. Cross-currency
-movement, outside-portfolio accounts and security transfers remain unsupported.
+movement and outside-portfolio accounts remain unsupported.
 Fees/taxes require separate evidenced rows. Do not also enter the matched legs as
 external DEPOSIT/WITHDRAWAL rows; exact source-key reuse is rejected, and original
 statement review must catch differently keyed duplicates. Internal movement grants
 no income, external capital-flow, performance or ownership inference.
+
+### Paired internal security transfers
+
+A v2 SECURITY_TRANSFER declares the source account, exact `listing_id`, positive
+`quantity`, settled instant and source record. Its required `destination` declares
+the receiving account, the same listing/quantity/instant and independent receipt
+evidence. Both accounts must be declared evidenced brokerages inside the portfolio.
+The two source keys join duplicate checks, hashes and correction acknowledgements.
+
+Replay moves only quantity between accounts, preserving consolidated holdings and
+all currency cash. A short source position blocks review even if a later return
+repairs the closing position. Both account statements must reconcile, including
+explicit zero source positions after a whole-position transfer. Exact listing
+identity is verified, locked and hash-bound, including companyless ETFs. Different
+listings of the same security, ADR conversions and share-class exchanges require
+separate reviewed contracts.
+
+`basis_status` must explicitly be `UNAVAILABLE`. Acquisition dates/costs and gains
+remain unavailable in this quantity-only ledger contract. Retain original lot/cost
+evidence privately for later reviewed lot accounting. Known basis claims and extra
+cost fields are rejected. Separate evidenced cash rows cover any fees/taxes.
+Both legs require the same absolute settled instant; in-transit and external
+transfers remain outside this contract. Transfer records grant no sale, income,
+performance or investment-acceptance inference.
 
 ### Observed income and taxes
 

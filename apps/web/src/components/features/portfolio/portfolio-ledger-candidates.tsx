@@ -505,7 +505,28 @@ function LedgerCandidateDetail({
                 {item.kind} · {dateTime(item.effective_at)}
               </p>
               <p className="break-all font-mono text-xs">{item.id}</p>
-              {item.kind === "CASH_TRANSFER" ? (
+              {item.kind === "SECURITY_TRANSFER" ? (
+                <div className="mt-1 space-y-1 break-words">
+                  <p>
+                    Security transfer · {file.accountNames[item.account_id]} →{" "}
+                    {file.accountNames[item.destination.account_id]}
+                  </p>
+                  <p className="break-all">Listing {item.listing_id}</p>
+                  <p>Sent quantity {item.quantity}</p>
+                  <p>
+                    Received quantity {item.destination.quantity} ·{" "}
+                    {dateTime(item.destination.effective_at)}
+                  </p>
+                  <p>Acquisition basis unavailable · Gains unavailable</p>
+                  <p>
+                    Receipt source record{" "}
+                    {item.destination.evidence.source_record_id}
+                  </p>
+                  <p className="break-all font-mono text-xs">
+                    {item.destination.evidence.source_sha256}
+                  </p>
+                </div>
+              ) : item.kind === "CASH_TRANSFER" ? (
                 <div className="mt-1 space-y-1 break-words">
                   <p>
                     Internal transfer · {file.accountNames[item.account_id]} →{" "}

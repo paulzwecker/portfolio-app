@@ -256,7 +256,9 @@ def project_ledger(
                 "Ending observations must use declared opening accounts", status=422
             )
     listing_ids = {p.listing_id for a in value.accounts for p in a.positions} | {
-        a.listing_id for a in value.activity if isinstance(a, (c.LedgerTrade, c.LedgerDividend))
+        a.listing_id
+        for a in value.activity
+        if isinstance(a, (c.LedgerTrade, c.LedgerDividend, c.LedgerSecurityTransfer))
     }
     if ending is not None:
         listing_ids.update(p.listing_id for a in ending.accounts for p in a.positions)
@@ -285,12 +287,12 @@ def project_ledger(
                 raise services.DomainError(
                     "Only settled trades within the source booking date are supported", status=422
                 )
-        if isinstance(item, c.LedgerCashTransfer) and (
+        if isinstance(item, (c.LedgerCashTransfer, c.LedgerSecurityTransfer)) and (
             item.destination.account_id not in accounts
             or accounts[item.destination.account_id].kind != "BROKERAGE"
         ):
             raise services.DomainError(
-                "Internal cash transfers need a declared evidenced destination brokerage account",
+                "Internal transfers need a declared evidenced destination brokerage account",
                 status=422,
             )
 
@@ -330,6 +332,25 @@ def project_ledger(
         ]
         if not issues:
             for item in activity:
+                if isinstance(item, c.LedgerSecurityTransfer):
+                    sender = positions[item.account_id]
+                    recipient = positions[item.destination.account_id]
+                    sender[item.listing_id] = (
+                        sender.get(item.listing_id, Decimal(0)) - item.quantity
+                    )
+                    recipient[item.listing_id] = (
+                        recipient.get(item.listing_id, Decimal(0)) + item.destination.quantity
+                    )
+                    if sender[item.listing_id] < 0:
+                        issues.append(
+                            c.LedgerIssueRead(
+                                code="NEGATIVE_POSITION",
+                                activity_id=item.id,
+                                account_id=item.account_id,
+                                asset_key=str(item.listing_id),
+                            )
+                        )
+                    continue
                 account_cash = cash[item.account_id]
                 if isinstance(item, c.LedgerTrade):
                     account_positions = positions[item.account_id]
@@ -512,7 +533,9 @@ def preview_portfolio_ledger(
 ) -> c.PortfolioLedgerPreviewRead:
     anchor = portfolio_ledger_anchor(session, portfolio_id)
     ids = {p.listing_id for a in value.accounts for p in a.positions} | {
-        a.listing_id for a in value.activity if isinstance(a, (c.LedgerTrade, c.LedgerDividend))
+        a.listing_id
+        for a in value.activity
+        if isinstance(a, (c.LedgerTrade, c.LedgerDividend, c.LedgerSecurityTransfer))
     }
     if value.ending_statement is not None:
         ids.update(p.listing_id for a in value.ending_statement.accounts for p in a.positions)

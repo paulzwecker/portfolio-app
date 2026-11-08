@@ -8236,6 +8236,126 @@ export interface components {
             /** Revision Number */
             revision_number: number | null;
         };
+        /** LedgerSecurityTransfer */
+        "LedgerSecurityTransfer-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Basis Status
+             * @constant
+             */
+            basis_status: "UNAVAILABLE";
+            destination: components["schemas"]["LedgerSecurityTransferReceipt-Input"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SECURITY_TRANSFER";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerSecurityTransfer */
+        "LedgerSecurityTransfer-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Basis Status
+             * @constant
+             */
+            basis_status: "UNAVAILABLE";
+            destination: components["schemas"]["LedgerSecurityTransferReceipt-Output"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SECURITY_TRANSFER";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerSecurityTransferReceipt */
+        "LedgerSecurityTransferReceipt-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: number | string;
+        };
+        /** LedgerSecurityTransferReceipt */
+        "LedgerSecurityTransferReceipt-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Quantity */
+            quantity: string;
+        };
         /** LedgerTrade */
         "LedgerTrade-Input": {
             /**
@@ -9250,7 +9370,7 @@ export interface components {
             /** Accounts */
             accounts: components["schemas"]["LedgerOpeningAccount-Input"][];
             /** Activity */
-            activity: (components["schemas"]["LedgerTrade-Input"] | components["schemas"]["LedgerCashActivity-Input"] | components["schemas"]["LedgerDividend-Input"] | components["schemas"]["LedgerCashTransfer-Input"])[];
+            activity: (components["schemas"]["LedgerTrade-Input"] | components["schemas"]["LedgerCashActivity-Input"] | components["schemas"]["LedgerDividend-Input"] | components["schemas"]["LedgerCashTransfer-Input"] | components["schemas"]["LedgerSecurityTransfer-Input"])[];
             /** Anchor Sha256 */
             anchor_sha256: string;
             /**
@@ -9275,7 +9395,7 @@ export interface components {
             /** Accounts */
             accounts: components["schemas"]["LedgerOpeningAccount-Output"][];
             /** Activity */
-            activity: (components["schemas"]["LedgerTrade-Output"] | components["schemas"]["LedgerCashActivity-Output"] | components["schemas"]["LedgerDividend-Output"] | components["schemas"]["LedgerCashTransfer-Output"])[];
+            activity: (components["schemas"]["LedgerTrade-Output"] | components["schemas"]["LedgerCashActivity-Output"] | components["schemas"]["LedgerDividend-Output"] | components["schemas"]["LedgerCashTransfer-Output"] | components["schemas"]["LedgerSecurityTransfer-Output"])[];
             /** Anchor Sha256 */
             anchor_sha256: string;
             /**

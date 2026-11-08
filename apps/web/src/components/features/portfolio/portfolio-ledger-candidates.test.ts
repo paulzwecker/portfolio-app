@@ -166,6 +166,78 @@ it("validates paired internal transfers and retains both evidence records", () =
   row.preview.projection_version = "settled-booking-v1";
   expect(isLedgerCandidate(row)).toBe(false);
 });
+
+it("validates security transfer identity, both quantity legs and explicit unavailable basis", () => {
+  const row = fixture();
+  const destination = "88888888-8888-4888-8888-888888888888";
+  row.packet.contract_version = "portfolio-ledger-preview-v2";
+  row.preview.contract_version = "portfolio-ledger-preview-v2";
+  row.preview.projection_version = "settled-booking-v2";
+  row.packet.accounts.push({
+    ...structuredClone(row.packet.accounts[0]),
+    account_id: destination,
+    name: "Synthetic receiving account",
+    positions: [],
+    cash: [],
+    evidence: {
+      source_sha256: "b".repeat(64),
+      source_record_id: "receiving-opening",
+    },
+  });
+  row.packet.activity = [
+    {
+      id: candidateId,
+      account_id: row.packet.accounts[0].account_id,
+      kind: "SECURITY_TRANSFER",
+      sequence: 1,
+      effective_at: row.as_of,
+      listing_id: row.preview.consumed_listings[0].listing_id,
+      quantity: "1.2500000000",
+      basis_status: "UNAVAILABLE",
+      evidence: { source_sha256: "a".repeat(64), source_record_id: "sent" },
+      destination: {
+        account_id: destination,
+        listing_id: row.preview.consumed_listings[0].listing_id,
+        quantity: "1.25",
+        effective_at: row.as_of,
+        evidence: {
+          source_sha256: "b".repeat(64),
+          source_record_id: "received",
+        },
+      },
+    },
+  ];
+  row.preview.activity_count = 1;
+  expect(isLedgerCandidate(row)).toBe(true);
+  const file = inspectLedgerFile(
+    JSON.stringify(row.packet),
+    "security-transfer.json",
+  );
+  expect(
+    file.evidence.find((e) => e.role === "Transfer receipt")?.reference,
+  ).toBe("received");
+  for (const replacement of [
+    { listing_id: candidateId },
+    { account_id: candidateId },
+    { quantity: 1.25 },
+    { effective_at: "2026-01-03T00:00:00Z" },
+    { evidence: null },
+  ]) {
+    const invalid = structuredClone(row);
+    Object.assign(
+      (invalid.packet.activity[0] as { destination: object }).destination,
+      replacement,
+    );
+    expect(isLedgerCandidate(invalid)).toBe(false);
+  }
+  const fabricatedBasis = structuredClone(row);
+  Object.assign(fabricatedBasis.packet.activity[0], { basis_status: "KNOWN" });
+  expect(isLedgerCandidate(fabricatedBasis)).toBe(false);
+  row.packet.contract_version = "portfolio-ledger-preview-v1";
+  row.preview.contract_version = "portfolio-ledger-preview-v1";
+  row.preview.projection_version = "settled-booking-v1";
+  expect(isLedgerCandidate(row)).toBe(false);
+});
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");

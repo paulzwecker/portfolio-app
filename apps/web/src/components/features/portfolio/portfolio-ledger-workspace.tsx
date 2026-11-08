@@ -233,7 +233,7 @@ export function PortfolioLedgerWorkspace({
           </PageSection>
           <PageSection
             title="2. Validate a private ledger file"
-            description="Choose a UTF-8 portfolio-ledger-preview-v1 or v2 JSON file containing evidenced accounts, opening balances, activity and optional ending observations. Use v2 for observed dividends, tax debits and paired internal cash transfers. Maximum 1 MB."
+            description="Choose a UTF-8 portfolio-ledger-preview-v1 or v2 JSON file containing evidenced accounts, opening balances, activity and optional ending observations. Use v2 for observed income and paired internal cash or same-listing security transfers. Maximum 1 MB."
           >
             <label
               className="block text-sm font-medium"

@@ -91,7 +91,13 @@ function ledgerFileMetadata(
     [
       "Transfer receipt",
       activity
-        .filter((record) => isRecord(record) && record.kind === "CASH_TRANSFER")
+        .filter(
+          (record) =>
+            isRecord(record) &&
+            ["CASH_TRANSFER", "SECURITY_TRANSFER"].includes(
+              record.kind as string,
+            ),
+        )
         .map((record) => record.destination),
     ],
   ] as const) {

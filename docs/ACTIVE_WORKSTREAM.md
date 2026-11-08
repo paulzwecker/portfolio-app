@@ -1,6 +1,6 @@
 # Active workstream
 
-## C2.3 settled income and internal cash transfers — BUILD
+## C2.3 settled income and internal transfers — BUILD
 
 Continue branch `codex/portfolio-ledger-income`, based on main `deda2ce`, the merge
 of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26). No open PR is
@@ -46,15 +46,31 @@ v2 hashes/replay remain compatible. Exact behavior lives in the
   contracts, formatting and documentation checks pass. Independent review retains
   scope, evidence, identity and authorization invariants. No new migration is needed.
 
+## Security-transfer BUILD increment
+
+V2 SECURITY_TRANSFER pairs the same exact listing, quantity and settled instant
+across two declared brokerage accounts. Both evidence records are hash-bound and
+participate in duplicate checks and review/source locking. Explicit
+`basis_status=UNAVAILABLE` keeps acquisition costs/dates and gains unavailable;
+original evidence remains private for later reviewed lot accounting. Exact
+quantities move between accounts; consolidated holdings and currency cash persist.
+
+- 135 focused ledger units pass, including v1/v2 compatibility, exact quantities,
+  full-transfer zero rows, recipient-sale ordering, shorts, mismatched listing/time,
+  missing basis and rejected fabricated cost fields.
+- 79 web contract/proxy/publication cases pass. Source inspection retains both
+  transfer evidence records; the saved activity screen explains unavailable basis.
+- PostgreSQL lifecycle and responsive real-API verification are next.
+
 ## Next action
 
-Income and paired-cash-transfer slices are IMPLEMENTATION_COMPLETE and
-LOCAL_VERIFIED. Continue with evidenced same-listing security transfers between
-declared accounts, retaining exact quantities and explicit unavailable acquisition
-basis/gains. Both account statements must reconcile. Broker onboarding needs a
-reviewed first format/private sample; lot, FX and performance policy stay separate.
-Use focused checks and incremental commits. Reserve comprehensive testing and one
-cohesive PR for the settled-ledger integration milestone.
+Finish security-transfer staging/review/publication, identity-drift and rejected
+packet tests in isolated local PostgreSQL schemas, then verify desktop/mobile
+account reconciliation and saved evidence against the real fixture API. Review
+financial conservation, exact listing identity and unavailable-basis handling.
+Keep the milestone branch and focused test/commit loop. The bounded settled-ledger
+scope is income/tax plus same-instant paired cash/security transfers; broker imports,
+FX, lots and performance remain follow-on capabilities with their own decisions.
 
 ## Separate operational gates
 

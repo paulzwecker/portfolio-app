@@ -149,6 +149,44 @@ class LedgerCashTransfer(LedgerActivity):
         return self
 
 
+class LedgerSecurityTransferReceipt(Contract):
+    account_id: UUID
+    listing_id: UUID
+    quantity: PositiveQuantity
+    effective_at: datetime
+    evidence: LedgerEvidence
+
+    @field_validator("effective_at")
+    @classmethod
+    def aware_time(cls, value: datetime) -> datetime:
+        return LedgerActivity.aware_time(value)
+
+
+class LedgerSecurityTransfer(LedgerActivity):
+    kind: Literal["SECURITY_TRANSFER"]
+    listing_id: UUID
+    quantity: PositiveQuantity
+    basis_status: Literal["UNAVAILABLE"]
+    destination: LedgerSecurityTransferReceipt
+
+    @model_validator(mode="after")
+    def matching_internal_legs(self) -> Self:
+        if self.account_id == self.destination.account_id:
+            raise ValueError("An internal security transfer requires two different accounts")
+        if (
+            self.listing_id != self.destination.listing_id
+            or self.quantity != self.destination.quantity
+        ):
+            raise ValueError(
+                "Internal security transfer legs require equal quantities of one listing"
+            )
+        if self.effective_at != self.destination.effective_at:
+            raise ValueError(
+                "Internal security transfer legs require the same settled booking instant"
+            )
+        return self
+
+
 class LedgerEndingAccount(Contract):
     account_id: UUID
     evidence: LedgerEvidence
@@ -198,7 +236,11 @@ class PortfolioLedgerPreviewCreate(Contract):
     accounts: list[LedgerOpeningAccount] = Field(min_length=1, max_length=20)
     activity: list[
         Annotated[
-            LedgerTrade | LedgerCashActivity | LedgerDividend | LedgerCashTransfer,
+            LedgerTrade
+            | LedgerCashActivity
+            | LedgerDividend
+            | LedgerCashTransfer
+            | LedgerSecurityTransfer,
             Field(discriminator="kind"),
         ]
     ] = Field(max_length=1000)
@@ -217,11 +259,10 @@ class PortfolioLedgerPreviewCreate(Contract):
     @model_validator(mode="after")
     def bounded_unique_records(self) -> Self:
         if self.contract_version == "portfolio-ledger-preview-v1" and any(
-            item.kind in {"DIVIDEND", "TAX", "CASH_TRANSFER"} for item in self.activity
+            item.kind in {"DIVIDEND", "TAX", "CASH_TRANSFER", "SECURITY_TRANSFER"}
+            for item in self.activity
         ):
-            raise ValueError(
-                "Dividend, tax and internal cash transfers require portfolio-ledger-preview-v2"
-            )
+            raise ValueError("Income and internal transfers require portfolio-ledger-preview-v2")
         if len({a.account_id for a in self.accounts}) != len(self.accounts):
             raise ValueError("An account may have only one opening boundary")
         if (
@@ -237,7 +278,7 @@ class PortfolioLedgerPreviewCreate(Contract):
         evidence.extend(
             item.destination.evidence
             for item in self.activity
-            if isinstance(item, LedgerCashTransfer)
+            if isinstance(item, (LedgerCashTransfer, LedgerSecurityTransfer))
         )
         if len({(e.source_sha256, e.source_record_id) for e in evidence}) != len(evidence):
             raise ValueError("A source record may contribute only once to this ledger scope")

@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 paired internal cash transfers — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                              |
-| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                        |
-| Implementation              | Income and paired-cash-transfer slices IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED through review, publication and responsive readback            |
-| Next ready substantial task | Continue C2.3 with evidenced same-listing security transfers; preserve unknown basis and avoid gain/performance inference                      |
-| Parallel owner gate         | Current-state recovery, production migrations/deployment, provider activation, model acceptance and ledger ownership retain separate approvals |
-| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream    |
+| Field                       | Current value                                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | C2.3 same-listing security transfers — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                               |
+| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                          |
+| Implementation              | Income/cash transfers LOCAL_VERIFIED. Security projection and contracts pass 135 ledger units / 79 web cases; lifecycle verification in progress |
+| Next ready substantial task | Verify security-transfer review/publication, identity drift, rejected pairs, and desktop/mobile readback with unavailable basis                  |
+| Parallel owner gate         | Current-state recovery, production migrations/deployment, provider activation, model acceptance and ledger ownership retain separate approvals   |
+| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream      |
 
 ## Where we are
 

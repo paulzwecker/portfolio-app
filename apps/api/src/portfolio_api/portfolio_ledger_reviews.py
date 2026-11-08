@@ -270,7 +270,7 @@ def _lock_sources(
     ids.update(
         item.listing_id
         for item in packet.activity
-        if isinstance(item, (c.LedgerTrade, c.LedgerDividend))
+        if isinstance(item, (c.LedgerTrade, c.LedgerDividend, c.LedgerSecurityTransfer))
     )
     if packet.ending_statement:
         ids.update(

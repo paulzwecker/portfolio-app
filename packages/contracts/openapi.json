@@ -19571,6 +19571,240 @@
         "title": "LedgerReviewRead",
         "type": "object"
       },
+      "LedgerSecurityTransfer-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "basis_status": {
+            "const": "UNAVAILABLE",
+            "title": "Basis Status",
+            "type": "string"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/LedgerSecurityTransferReceipt-Input"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "SECURITY_TRANSFER",
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "quantity",
+          "basis_status",
+          "destination"
+        ],
+        "title": "LedgerSecurityTransfer",
+        "type": "object"
+      },
+      "LedgerSecurityTransfer-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "basis_status": {
+            "const": "UNAVAILABLE",
+            "title": "Basis Status",
+            "type": "string"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/LedgerSecurityTransferReceipt-Output"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "SECURITY_TRANSFER",
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "quantity",
+          "basis_status",
+          "destination"
+        ],
+        "title": "LedgerSecurityTransfer",
+        "type": "object"
+      },
+      "LedgerSecurityTransferReceipt-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "account_id",
+          "listing_id",
+          "quantity",
+          "effective_at",
+          "evidence"
+        ],
+        "title": "LedgerSecurityTransferReceipt",
+        "type": "object"
+      },
+      "LedgerSecurityTransferReceipt-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "listing_id",
+          "quantity",
+          "effective_at",
+          "evidence"
+        ],
+        "title": "LedgerSecurityTransferReceipt",
+        "type": "object"
+      },
       "LedgerTrade-Input": {
         "additionalProperties": false,
         "properties": {
@@ -22822,6 +23056,7 @@
                   "DEPOSIT": "#/components/schemas/LedgerCashActivity-Input",
                   "DIVIDEND": "#/components/schemas/LedgerDividend-Input",
                   "FEE": "#/components/schemas/LedgerCashActivity-Input",
+                  "SECURITY_TRANSFER": "#/components/schemas/LedgerSecurityTransfer-Input",
                   "SELL": "#/components/schemas/LedgerTrade-Input",
                   "TAX": "#/components/schemas/LedgerCashActivity-Input",
                   "WITHDRAWAL": "#/components/schemas/LedgerCashActivity-Input"
@@ -22840,6 +23075,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/LedgerCashTransfer-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerSecurityTransfer-Input"
                 }
               ]
             },
@@ -22913,6 +23151,7 @@
                   "DEPOSIT": "#/components/schemas/LedgerCashActivity-Output",
                   "DIVIDEND": "#/components/schemas/LedgerDividend-Output",
                   "FEE": "#/components/schemas/LedgerCashActivity-Output",
+                  "SECURITY_TRANSFER": "#/components/schemas/LedgerSecurityTransfer-Output",
                   "SELL": "#/components/schemas/LedgerTrade-Output",
                   "TAX": "#/components/schemas/LedgerCashActivity-Output",
                   "WITHDRAWAL": "#/components/schemas/LedgerCashActivity-Output"
@@ -22931,6 +23170,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/LedgerCashTransfer-Output"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerSecurityTransfer-Output"
                 }
               ]
             },
