@@ -5,7 +5,8 @@
 Branch `codex/market-history-coverage` includes current `origin/main` at
 `aef35724120d63d608d6ffdc6f10f88d41eff27f`. The working checkpoint before integration
 was `f28b1e2`. Repository visibility is public. Preserve predecessor worktrees,
-the owner edits and private evidence. No PR existed at the start of this review.
+the owner edits and private evidence. [Draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)
+contains the cohesive checkpoint. Implementation review commit is `9bf466c`.
 
 This engineering checkpoint delivers an investor investigation workflow through
 Company Explorer and Operations. It includes source-stream/adjustment conflicts,
@@ -53,8 +54,8 @@ remain outstanding operational acceptance criteria.
 
 ## Next action
 
-Publish the single integration PR as draft while the live target check is blocked.
-Owner review and fresh release verification precede merging. Additional venue schedules
+Draft #29 awaits owner review and fresh release verification. CI/Preview results
+must be checked for the latest head before advancing it. Additional venue schedules
 require reviewed source evidence. Detailed earlier evidence and production recovery
 history remain in the [historical handoff](history/market-history-build-through-2026-11-08.md).
 

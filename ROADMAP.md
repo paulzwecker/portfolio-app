@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | C2.2 historical market-data reliability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                    |
-| Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
-| Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Complete integration checks, independent review and one cohesive PR; reverify release dependencies           |
-| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
-| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
+| Field                       | Current value                                                                                                                          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2 historical market-data reliability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                              |
+| Branch / PR                 | `codex/market-history-coverage`, based on current main `aef3572`; [draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29) |
+| Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                                           |
+| Next ready substantial task | Reverify live Neon/provider release controls, review draft #29, then resume approved held-listing enrichment                           |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                           |
+| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                       |
 
 The historical market-data reliability engineering checkpoint is IMPLEMENTATION_COMPLETE
 and LOCAL_VERIFIED. Company Explorer and Operations expose source conflicts, returned-row
