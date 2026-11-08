@@ -165,3 +165,18 @@ Production writes, provider activation, source ownership and model acceptance ke
 separate gates. Local production/rehearsal/background flags stay disabled.
 Highest-value operational follow-up remains held-listing price/FX enrichment and
 two monitored refresh cycles, followed by reviewed SEC identities and coverage.
+
+## Independent C2.2 history coverage — BUILD
+
+`codex/market-history-coverage` starts at main `685fa7a` and is independent of the
+completed, owner-review design PR #28. Historical bootstrap receipts now distinguish
+checkpoint execution from expected-session coverage and report normalized date span,
+distinct dates and maximum calendar spacing without treating holidays/weekends as
+missing. Old receipts and unavailable responses retain unknown evidence. Current
+quotes remain excluded, and temporal quarantine cannot report stale span dates.
+Focused checks passed: 13 unit cases, 10 isolated PostgreSQL integration cases,
+strict mypy on the touched modules and Ruff. They cover sparse windows, zero versus
+unknown, quoted data, old receipts, local PostgreSQL reconciliation and replay.
+No production or provider operation ran.
+Next: strengthen current-coverage reconciliation and session-aware source validation
+before claiming complete history; separately approve any live ingestion.

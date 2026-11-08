@@ -444,11 +444,21 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     }
     assert final["listing_coverage"][0]["currency"] == "USD"
     assert final["listing_coverage"][0]["price_status"] == "AVAILABLE"
+    assert final["history_window_coverage"] == "NOT_ASSESSED"
+    assert final["status_scope"] == "CHECKPOINT_EXECUTION_NOT_EXPECTED_SESSION_COVERAGE"
+    listing_evidence = final["listing_coverage"][0]["history_window_evidence"]
+    assert listing_evidence["distinct_observed_dates"] == 2
+    assert listing_evidence["first_observed_date"] == "2026-10-02"
+    assert listing_evidence["last_observed_date"] == "2026-10-05"
+    assert listing_evidence["maximum_calendar_spacing_days"] == 3
     assert final["listing_coverage"][0]["provider_mapping"]["provider_exchange_code"] == "NMS"
     assert final["listing_coverage"][0]["provider_mapping"]["provider_instrument_type"] == "EQUITY"
     assert final["listing_coverage"][0]["provider_current_quote_rows_skipped"] == 1
     assert final["fx_coverage"][0]["pair"] == "USD/EUR"
     assert final["fx_coverage"][0]["current_quote_rows"] == 0
+    fx_evidence = final["fx_coverage"][0]["history_window_evidence"]
+    assert fx_evidence["distinct_observed_dates"] == 2
+    assert fx_evidence["last_observed_date"] == "2026-10-05"
 
     with Session(postgres_engine) as session:
         prices = list(session.scalars(select(PriceObservation)))
@@ -471,6 +481,8 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
             session, run_id, target_environment="development"
         )
         assert reconciliation["reconciliation"]["status"] == "MATCHED"
+        assert reconciliation["listing_coverage"][0]["history_window_evidence"] == listing_evidence
+        assert reconciliation["fx_coverage"][0]["history_window_evidence"] == fx_evidence
 
     count_before = len(provider.calls)
     replay = execute_market_data_bootstrap(
@@ -485,6 +497,8 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     )
     assert len(provider.calls) == count_before
     assert replay["canonical_totals"] == final["canonical_totals"]
+    assert replay["listing_coverage"][0]["history_window_evidence"] == listing_evidence
+    assert replay["fx_coverage"][0]["history_window_evidence"] == fx_evidence
 
     with Session(postgres_engine) as session, session.begin():
         checkpoint = session.scalar(

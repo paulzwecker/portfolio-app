@@ -725,9 +725,42 @@ def _quarantine_temporal_plan(plan: dict[str, Any], issues: list[dict[str, str]]
     plan["batch"]["reconciliation"] = plan["report"]
 
 
+def _history_window_evidence(
+    checkpoint: MarketDataBootstrapCheckpoint, plan: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Describe returned dates without claiming completeness or guessing market sessions."""
+    dates: set[date] | None = None
+    if plan is not None:
+        if checkpoint.subject_kind == "LISTING":
+            dates = {
+                row["market_date"].date()
+                for row in plan["prices"]
+                if row["price_kind"] == "DAILY_CLOSE"
+            }
+        else:
+            current_refs = set(plan["report"].get("current_quote_source_refs", []))
+            dates = {
+                row["effective_at"].date()
+                for row in plan["fx"]
+                if row["source_ref"] not in current_refs
+            }
+    ordered = sorted(dates) if dates is not None else []
+    spacing = [(later - earlier).days for earlier, later in zip(ordered, ordered[1:], strict=False)]
+    return {
+        "coverage_assessment": "NOT_ASSESSED",
+        "assessment_reason": "EXPECTED_SESSIONS_NOT_EVALUATED",
+        "observation_dates_known": dates is not None,
+        "distinct_observed_dates": len(ordered) if dates is not None else None,
+        "first_observed_date": ordered[0].isoformat() if ordered else None,
+        "last_observed_date": ordered[-1].isoformat() if ordered else None,
+        "maximum_calendar_spacing_days": max(spacing) if spacing else None,
+    }
+
+
 def _coverage_for_plan(
     checkpoint: MarketDataBootstrapCheckpoint, plan: dict[str, Any] | None
 ) -> dict[str, Any]:
+    window_evidence = _history_window_evidence(checkpoint, plan)
     if plan is None:
         return {
             "price_status": "UNAVAILABLE" if checkpoint.subject_kind == "LISTING" else None,
@@ -741,12 +774,12 @@ def _coverage_for_plan(
             "earliest_effective_date": None,
             "latest_effective_date": None,
             "normalization_warnings": [],
+            "history_window_evidence": window_evidence,
         }
     provider_report = plan["report"]
     if checkpoint.subject_kind == "LISTING":
         item: dict[str, Any] = next(iter(provider_report.get("mapped_listings", [])), {})
         daily_rows = int(provider_report.get("daily_price_rows", 0) or 0)
-        current_quote_rows = int(provider_report.get("current_quote_rows", 0) or 0)
         current_quote_rows = int(provider_report.get("current_quote_rows", 0) or 0)
         action_rows = int(provider_report.get("corporate_action_rows", 0) or 0)
         price_status = "AVAILABLE" if daily_rows else "UNAVAILABLE"
@@ -760,9 +793,10 @@ def _coverage_for_plan(
             "provider_current_quote_rows_skipped": int(
                 provider_report.get("provider_current_quote_rows_skipped", 0) or 0
             ),
-            "earliest_effective_date": item.get("earliest_history_date"),
-            "latest_effective_date": item.get("latest_history_date"),
+            "earliest_effective_date": item.get("earliest_history_date") if daily_rows else None,
+            "latest_effective_date": item.get("latest_history_date") if daily_rows else None,
             "normalization_warnings": provider_report.get("normalization_warnings", []),
+            "history_window_evidence": window_evidence,
         }
     pairs = provider_report.get("accepted_pairs", [])
     pair = pairs[0] if pairs else {}
@@ -780,9 +814,10 @@ def _coverage_for_plan(
         ),
         "daily_fx_observation_rows": int(pair.get("daily_observation_rows", 0) or 0),
         "current_fx_quote_rows": int(pair.get("current_quote_rows", 0) or 0),
-        "earliest_effective_date": pair.get("earliest_effective_at"),
-        "latest_effective_date": pair.get("latest_effective_at"),
+        "earliest_effective_date": pair.get("earliest_effective_at") if fx_rows else None,
+        "latest_effective_date": pair.get("latest_effective_at") if fx_rows else None,
         "normalization_warnings": provider_report.get("normalization_warnings", []),
+        "history_window_evidence": window_evidence,
     }
 
 
@@ -970,6 +1005,17 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         )
         coverage_value = details.get("coverage")
         coverage: dict[str, Any] = dict(coverage_value) if isinstance(coverage_value, dict) else {}
+        evidence = coverage.get("history_window_evidence")
+        if not isinstance(evidence, dict) or evidence.get("coverage_assessment") != "NOT_ASSESSED":
+            coverage["history_window_evidence"] = {
+                "coverage_assessment": "NOT_ASSESSED",
+                "assessment_reason": "EVIDENCE_NOT_RECORDED",
+                "observation_dates_known": False,
+                "distinct_observed_dates": None,
+                "first_observed_date": None,
+                "last_observed_date": None,
+                "maximum_calendar_spacing_days": None,
+            }
         canonical_counts_value = coverage.get("canonical_counts")
         canonical_counts: dict[str, Any] = (
             dict(canonical_counts_value) if isinstance(canonical_counts_value, dict) else {}
@@ -1048,6 +1094,7 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
                     "current_quote_rows": int(coverage.get("current_fx_quote_rows", 0) or 0),
                     "earliest_effective_date": coverage.get("earliest_effective_date"),
                     "latest_effective_date": coverage.get("latest_effective_date"),
+                    "history_window_evidence": coverage["history_window_evidence"],
                     "batch_id": str(checkpoint.batch_id) if checkpoint.batch_id else None,
                     "pair": pair,
                 }
@@ -1091,6 +1138,8 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
     )
     return {
         "status": status,
+        "history_window_coverage": "NOT_ASSESSED",
+        "status_scope": "CHECKPOINT_EXECUTION_NOT_EXPECTED_SESSION_COVERAGE",
         "run_id": str(run.id),
         "input_digest": run.input_digest,
         "provider_id": run.provider_id,

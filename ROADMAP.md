@@ -170,6 +170,13 @@ references through the linked ledgers. They do not create a second execution que
 | C2.5 Genuine performance — MISSING                                    | C2.3 complete flows plus C2.2 dated valuations/FX and verified action handling. Prove TWR and dated XIRR against independent fixtures, including same-day flows, transfers, retained/withdrawn dividends, fees/taxes, FX, zero opening value, missing valuations and absent/ambiguous IRR roots. Since-cutover coverage may precede full lot history. Hosted return drill-down must reproduce inputs and clearly label coverage, timing and net/gross methodology                                                                                                                                                                                                                                                      |
 | C5.1 Provider-only cloud operation — CROSS-CUTTING                    | C2.2/C3 need explicit cadence, source scope, request/storage limits, least privilege, current recovery and separately approved scheduling. Reuse existing durable jobs/locks/backoff and one-cycle entrypoint. Prove sleeping-runtime/restart recovery, overlap prevention, partial failures, data freshness and alerts. Broad worker activation must not silently enable Sheets writes, model/research acceptance, target changes or unrelated decision jobs                                                                                                                                                                                                                                                          |
 
+**C2.2 independent BUILD:** `codex/market-history-coverage` adds explicit
+normalized-batch date-span evidence to historical price/FX receipts. It does not
+infer missing trading sessions or change provider/run status. One returned quote or
+a completed checkpoint does not establish window completeness. Synthetic unit and
+isolated PostgreSQL verification are recorded in the active handoff. This work is
+independent of the design PR; production ingestion and release remain owner-gated.
+
 ## Immediate priorities and gates
 
 1. **Daily valued portfolio with reliable refresh.** PR #26 merged with C2.1's

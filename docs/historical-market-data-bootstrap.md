@@ -47,6 +47,20 @@ window are rejected. Corporate actions outside the window are rejected as well.
 Yahoo's current quote is not a historical observation for this stage and is not
 inserted.
 
+`AVAILABLE` for a listing or FX pair means that at least one normalized historical
+observation was returned. A `COMPLETE` run means its checkpoints completed; neither
+proves that every expected trading or FX session in the requested window is covered.
+Reports expose `history_window_coverage: NOT_ASSESSED` and per-checkpoint
+`history_window_evidence` with distinct observed dates, their first and last dates,
+and maximum calendar spacing. Spacing is descriptive: weekends, holidays, exchange
+closures and provider conventions are not classified as missing sessions. Dates
+refer to the normalized batch, not all observations already in the database.
+Current quotes are excluded. No response has unknown date evidence; a returned
+empty series has zero dates. Older checkpoint receipts without the new fields remain
+`EVIDENCE_NOT_RECORDED`, not zero or complete. The observation span does not certify
+usable price history, FX coverage, completeness or freshness. Review expected sessions
+and source conventions separately before interpreting coverage or chart readiness.
+
 The prepared run pins the provider/crosswalk hash, normalizer versions, exact
 listing identities, required currency pairs, target environment, and date window.
 Listings are ordered as held positions first, other Portfolio listings second, and
