@@ -290,3 +290,15 @@ Twenty-nine focused backend tests including isolated PostgreSQL, 58 web checks,
 contract/type/lint checks and a synthetic desktop/mobile browser journey passed.
 No schema migration or hosted changes. Next: preserve schedule revision history
 and handle later schedule updates without changing earlier point-in-time reviews.
+
+Current increment retains an append-only reviewed schedule catalog, pins normalized
+schedule fingerprints, and selects the latest unambiguous version known at the
+requested cutoff. Missing pins, altered historical entries, duplicate IDs or equal
+observation times fail closed. A synthetic correction preserves earlier replay in
+unit and PostgreSQL-backed query tests. The Company view exposes the revision ID,
+source hash and schedule hash; legacy responses remain supported. Thirty-four focused
+backend tests including isolated PostgreSQL, an additional 16-case calendar unit
+run, 58 web checks, type/contract/lint checks and a desktop/mobile browser journey
+passed. No source revision was accepted or production changed. Next: connect bounded
+schedule evidence to the historical bootstrap/Operations workflow without treating
+unassessed venues or unplanned closures as complete coverage.

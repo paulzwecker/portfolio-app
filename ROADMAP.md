@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Preserve schedule revisions and point-in-time updates; keep activation separately authorized                 |
+| Next ready substantial task | Connect schedule evidence to historical bootstrap and Operations; keep activation gated                      |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
@@ -30,6 +30,9 @@ Twenty-four focused backend tests, 57 web checks and the desktop/mobile journey 
 The Xetra increment adds exact `XETRA`/`XETR` schedule review from Deutsche Börse's
 captured 2026 calendar; `XFRA` stays separate. Twenty-nine focused backend tests,
 58 web checks and a synthetic desktop/mobile journey passed. No migration.
+Schedule revisions now select only pinned, unambiguous evidence known at the
+requested cutoff; Company Explorer shows the revision and normalized fingerprint.
+Synthetic replay covers a later correction without changing the earlier view.
 
 PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and

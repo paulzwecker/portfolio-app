@@ -535,11 +535,20 @@ export function HistoryCoverageNotice({
                 rel="noreferrer"
               >
                 Published {schedule.venue} calendar
-              </a>
+              </a>{" "}
+              The current link may differ from the captured source.
+            </p>
+            <p className="break-all">
+              Schedule version: {schedule.schedule_id}
             </p>
             <p className="break-all">
               Source SHA-256: {schedule.source_sha256}
             </p>
+            {schedule.schedule_fingerprint && (
+              <p className="break-all">
+                Schedule SHA-256: {schedule.schedule_fingerprint}
+              </p>
+            )}
             {schedule.absent_scheduled_dates.length > 0 && (
               <p className="break-words">
                 Scheduled dates without selected closes:{" "}

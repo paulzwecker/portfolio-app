@@ -2813,6 +2813,8 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                   source_observed_at: "2026-11-08T18:42:31.412425Z",
                   source_sha256:
                     "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
+                  schedule_fingerprint:
+                    "89d25110d0c7a4ae07c049a7fe7d840a1a0ea027df3edc005ea96ec7759377da",
                   start_date: "2026-10-01",
                   end_date: "2026-10-04",
                   full_selected_span_covered: false,
@@ -3511,6 +3513,8 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ).toBeVisible();
     await page.getByText(/Review scheduled XETRA dates/).click();
     await expect(page.getByText(/not a confirmed missing trade/)).toBeVisible();
+    await expect(page.getByText(/Schedule SHA-256/)).toBeVisible();
+    await expect(page.getByText(/Schedule version: XETRA-2026/)).toBeVisible();
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
     ).toHaveCount(0);

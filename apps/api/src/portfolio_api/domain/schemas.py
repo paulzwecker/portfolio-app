@@ -843,6 +843,7 @@ class ScheduledSessionReviewRead(Contract):
     schedule_id: str
     source_url: str
     source_sha256: str
+    schedule_fingerprint: str | None = None
     source_as_of: date | None
     source_observed_at: datetime
     start_date: date

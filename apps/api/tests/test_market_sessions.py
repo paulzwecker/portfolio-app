@@ -1,7 +1,11 @@
 """The bounded schedule is evidence, never a complete trading calendar."""
 
-from datetime import UTC, date, datetime
+from dataclasses import replace
+from datetime import UTC, date, datetime, timedelta
 
+import pytest
+
+import portfolio_api.market_sessions as sessions
 from portfolio_api.market_sessions import scheduled_session_review
 
 KNOWN = datetime(2026, 11, 9, tzinfo=UTC)
@@ -138,3 +142,90 @@ def test_knowledge_cutoff_cannot_compare_future_dates() -> None:
     assert result.end_date == date(2026, 11, 8)
     assert result.absent_scheduled_dates == []
     assert not result.full_selected_span_covered
+
+
+def test_source_revision_preserves_point_in_time_results(monkeypatch: pytest.MonkeyPatch) -> None:
+    original = sessions.SCHEDULES["NYSE"][0]
+    revised = replace(
+        original,
+        schedule_id="synthetic-nyse-revision-2",
+        observed_at=original.observed_at + timedelta(days=2),
+        source_sha256="b" * 64,
+        holidays=original.holidays | {date(2026, 7, 6)},
+    )
+    pins = {
+        **sessions.SCHEDULE_FINGERPRINTS,
+        revised.schedule_id: sessions.schedule_fingerprint(revised),
+    }
+    monkeypatch.setitem(sessions.SCHEDULES, "NYSE", (revised, original))
+    monkeypatch.setattr(sessions, "SCHEDULE_FINGERPRINTS", pins)
+    dates = [date(2026, 7, 2), date(2026, 7, 7)]
+    before = scheduled_session_review(
+        "NYSE", dates, revised.observed_at - timedelta(microseconds=1)
+    )
+    after = scheduled_session_review("NYSE", dates, revised.observed_at)
+    replay = scheduled_session_review(
+        "NYSE", dates, revised.observed_at - timedelta(microseconds=1)
+    )
+    assert before is not None and after is not None
+    assert before == replay
+    assert before.absent_scheduled_dates == [date(2026, 7, 6)]
+    assert after.absent_scheduled_dates == []
+    assert before.schedule_id == original.schedule_id
+    assert after.schedule_id == revised.schedule_id
+    assert before.schedule_fingerprint == pins[original.schedule_id]
+    assert after.schedule_fingerprint == pins[revised.schedule_id]
+
+
+def test_unpinned_tampered_or_ambiguous_revisions_fail_closed() -> None:
+    original = sessions.SCHEDULES["NYSE"][0]
+    tampered = replace(original, holidays=original.holidays | {date(2026, 7, 6)})
+    assert sessions.schedule_at((tampered,), KNOWN) is None
+    unknown = replace(
+        original, schedule_id="unreviewed", observed_at=original.observed_at + timedelta(hours=1)
+    )
+    assert sessions.schedule_at((original, unknown), KNOWN) is None
+    assert sessions.schedule_at((original, unknown), original.observed_at) == original
+    duplicate_id = replace(original, observed_at=original.observed_at + timedelta(hours=1))
+    assert sessions.schedule_at((original, duplicate_id), KNOWN) is None
+    duplicate_time = replace(original, schedule_id="another")
+    duplicate_pins = {
+        original.schedule_id: sessions.schedule_fingerprint(original),
+        duplicate_time.schedule_id: sessions.schedule_fingerprint(duplicate_time),
+    }
+    assert sessions.schedule_at((original, duplicate_time), KNOWN, duplicate_pins) is None
+    assert sessions.schedule_at((original,), datetime(2026, 11, 9)) is None
+
+
+def test_existing_published_revisions_remain_in_the_catalog() -> None:
+    original_pins = {
+        "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1": (
+            "7c7ebf9ac233d1f850adbc70aa3e16245fcf2b38cf34d9922295db9775fe4283"
+        ),
+        "NASDAQ-2026-observed-2026-11-08-v1": (
+            "5d230288dd1d158d28107fba0eea183d3517f890e8b8e34675c69e0443837af5"
+        ),
+        "XETRA-2026-observed-2026-11-08-v1": (
+            "89d25110d0c7a4ae07c049a7fe7d840a1a0ea027df3edc005ea96ec7759377da"
+        ),
+    }
+    all_versions = [entry for versions in sessions.SCHEDULES.values() for entry in versions]
+    for revision_id, expected in original_pins.items():
+        matches = [entry for entry in all_versions if entry.schedule_id == revision_id]
+        assert len(matches) == 1
+        assert sessions.SCHEDULE_FINGERPRINTS[revision_id] == expected
+        assert sessions.schedule_fingerprint(matches[0]) == expected
+
+
+def test_fingerprint_binds_source_metadata_and_is_independent_of_holiday_order() -> None:
+    original = sessions.SCHEDULES["NYSE"][0]
+    reordered = replace(original, holidays=frozenset(reversed(sorted(original.holidays))))
+    assert sessions.schedule_fingerprint(original) == sessions.schedule_fingerprint(reordered)
+    assert sessions.schedule_fingerprint(original) != sessions.schedule_fingerprint(
+        replace(original, source_sha256="c" * 64)
+    )
+
+
+def test_wrong_venue_catalog_does_not_fall_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sessions.SCHEDULES, "NYSE", sessions.SCHEDULES["NASDAQ"])
+    assert scheduled_session_review("NYSE", [date(2026, 7, 2)], KNOWN) is None

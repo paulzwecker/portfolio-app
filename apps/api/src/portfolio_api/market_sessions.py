@@ -3,8 +3,11 @@
 Schedules describe planned exchange openings, not verified trading or listing activity.
 """
 
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from hashlib import sha256
 from typing import Literal
 
 from portfolio_api.domain.schemas import ScheduledSessionReviewRead
@@ -82,34 +85,93 @@ class PublishedSchedule:
 
 
 SCHEDULES = {
-    "NYSE": PublishedSchedule(
-        "NYSE",
-        "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
-        NYSE_2026_SOURCE,
-        NYSE_2026_SOURCE_SHA256,
-        date(2025, 12, 10),
-        NYSE_2026_KNOWN_SINCE,
-        NYSE_2026_HOLIDAYS,
+    "NYSE": (
+        PublishedSchedule(
+            "NYSE",
+            "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+            NYSE_2026_SOURCE,
+            NYSE_2026_SOURCE_SHA256,
+            date(2025, 12, 10),
+            NYSE_2026_KNOWN_SINCE,
+            NYSE_2026_HOLIDAYS,
+        ),
     ),
-    "NASDAQ": PublishedSchedule(
-        "NASDAQ",
-        "NASDAQ-2026-observed-2026-11-08-v1",
-        NASDAQ_2026_SOURCE,
-        NASDAQ_2026_SOURCE_SHA256,
-        None,
-        NASDAQ_2026_KNOWN_SINCE,
-        NASDAQ_2026_HOLIDAYS,
+    "NASDAQ": (
+        PublishedSchedule(
+            "NASDAQ",
+            "NASDAQ-2026-observed-2026-11-08-v1",
+            NASDAQ_2026_SOURCE,
+            NASDAQ_2026_SOURCE_SHA256,
+            None,
+            NASDAQ_2026_KNOWN_SINCE,
+            NASDAQ_2026_HOLIDAYS,
+        ),
     ),
-    "XETRA": PublishedSchedule(
-        "XETRA",
-        "XETRA-2026-observed-2026-11-08-v1",
-        XETRA_2026_SOURCE,
-        XETRA_2026_SOURCE_SHA256,
-        None,
-        XETRA_2026_KNOWN_SINCE,
-        XETRA_2026_HOLIDAYS,
+    "XETRA": (
+        PublishedSchedule(
+            "XETRA",
+            "XETRA-2026-observed-2026-11-08-v1",
+            XETRA_2026_SOURCE,
+            XETRA_2026_SOURCE_SHA256,
+            None,
+            XETRA_2026_KNOWN_SINCE,
+            XETRA_2026_HOLIDAYS,
+        ),
     ),
 }
+
+# Reviewers must retain these pins and add a new ID/pin for each revision.
+# They protect the interpreted holiday set as well as the raw source identity.
+SCHEDULE_FINGERPRINTS = {
+    "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1": (
+        "7c7ebf9ac233d1f850adbc70aa3e16245fcf2b38cf34d9922295db9775fe4283"
+    ),
+    "NASDAQ-2026-observed-2026-11-08-v1": (
+        "5d230288dd1d158d28107fba0eea183d3517f890e8b8e34675c69e0443837af5"
+    ),
+    "XETRA-2026-observed-2026-11-08-v1": (
+        "89d25110d0c7a4ae07c049a7fe7d840a1a0ea027df3edc005ea96ec7759377da"
+    ),
+}
+
+
+def schedule_fingerprint(schedule: PublishedSchedule) -> str:
+    """Hash the interpreted schedule and provenance, independent of set order."""
+    payload = {
+        "contract": "published-schedule-2026-v1",
+        "venue": schedule.venue,
+        "schedule_id": schedule.schedule_id,
+        "source_url": schedule.source_url,
+        "source_sha256": schedule.source_sha256,
+        "source_as_of": schedule.source_as_of.isoformat() if schedule.source_as_of else None,
+        "observed_at": schedule.observed_at.astimezone(UTC).isoformat(),
+        "year": 2026,
+        "holidays": sorted(day.isoformat() for day in schedule.holidays),
+    }
+    return sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def schedule_at(
+    versions: tuple[PublishedSchedule, ...],
+    known_at: datetime,
+    pins: Mapping[str, str] | None = None,
+) -> PublishedSchedule | None:
+    """Pick the latest unambiguous source observed by the knowledge cutoff."""
+    if known_at.utcoffset() is None or any(
+        item.observed_at.utcoffset() is None for item in versions
+    ):
+        return None
+    pins = SCHEDULE_FINGERPRINTS if pins is None else pins
+    eligible = [item for item in versions if item.observed_at <= known_at]
+    if not eligible:
+        return None
+    if len({item.schedule_id for item in eligible}) != len(eligible):
+        return None
+    if len({item.observed_at for item in eligible}) != len(eligible):
+        return None
+    if any(pins.get(item.schedule_id) != schedule_fingerprint(item) for item in eligible):
+        return None
+    return max(eligible, key=lambda item: item.observed_at)
 
 
 def scheduled_session_review(
@@ -117,8 +179,10 @@ def scheduled_session_review(
 ) -> ScheduledSessionReviewRead | None:
     """Compare selected series dates with the exact venue's published schedule."""
     # XETR is the ISO 10383 MIC of Deutsche Börse Xetra. It is not XFRA.
-    schedule = SCHEDULES.get("XETRA" if venue == "XETR" else venue or "")
-    if schedule is None or not observed_dates or known_at < schedule.observed_at:
+    schedule_venue = "XETRA" if venue == "XETR" else venue or ""
+    versions = SCHEDULES.get(schedule_venue, ())
+    schedule = schedule_at(versions, known_at)
+    if schedule is None or schedule.venue != schedule_venue or not observed_dates:
         return None
     start = max(min(observed_dates), date(2026, 1, 1))
     known_day = known_at.astimezone(UTC).date()
@@ -142,6 +206,7 @@ def scheduled_session_review(
         schedule_id=schedule.schedule_id,
         source_url=schedule.source_url,
         source_sha256=schedule.source_sha256,
+        schedule_fingerprint=schedule_fingerprint(schedule),
         source_as_of=schedule.source_as_of,
         source_observed_at=schedule.observed_at,
         start_date=start,

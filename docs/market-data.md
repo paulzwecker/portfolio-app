@@ -203,6 +203,18 @@ captured [2026 Xetra schedule](https://www.cashmarket.deutsche-boerse.com/resour
 observed November 8, 2026; no as-of date stated). Deutsche Börse identifies XETR
 as Xetra's MIC; it is distinct from XFRA. Other venues and years remain unassessed;
 no FX schedule is inferred.
+
+Schedule revisions are retained in the versioned application catalog. For a given
+venue, a read uses the latest uniquely identified revision observed by `known_at`;
+duplicate IDs, equal observation times or a mismatched/unreviewed normalized
+fingerprint make that review unavailable. Each fingerprint binds the venue, schedule
+ID, source URL and SHA-256, source as-of and observation times, year and ordered
+holiday dates. The UI displays the schedule version and both hashes. Before adding a
+correction, preserve earlier catalog entries and pins, retain the captured source
+bytes outside Git, append a new ID/observation time and fingerprint, and review the
+change with point-in-time tests. Catalog and pins are code-reviewed safeguards, not
+an immutable database or proof that a market actually traded. The local source store
+still needs an independently approved durable backup.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because
 the stored dividend facts are not independently verified, so the figures are not

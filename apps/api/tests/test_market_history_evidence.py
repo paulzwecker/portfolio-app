@@ -2,6 +2,7 @@
 
 import gzip
 import hashlib
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, cast
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 from test_market_data_bootstrap import _seed_canonical_scope
 
 import portfolio_api.market_data_bootstrap as bootstrap
+import portfolio_api.market_sessions as sessions
 from portfolio_api.domain import queries
 from portfolio_api.domain.models import (
     Listing,
@@ -222,10 +224,10 @@ def test_schedule_review_uses_only_point_in_time_selected_closes(
             )
     with Session(postgres_engine) as session, session.begin():
         session.execute(text("SET TRANSACTION READ ONLY"))
-        listing = session.get(Listing, listing_id)
-        assert listing is not None
+        fetched_listing = session.get(Listing, listing_id)
+        assert fetched_listing is not None
         result = queries.listing_market_data(
-            session, listing, known_at=datetime(2026, 11, 9, tzinfo=UTC)
+            session, fetched_listing, known_at=datetime(2026, 11, 9, tzinfo=UTC)
         )
         review = result.analytics.scheduled_session_review
         assert review is not None
@@ -237,9 +239,71 @@ def test_schedule_review_uses_only_point_in_time_selected_closes(
         )
         assert result.analytics.session_coverage == "NOT_ASSESSED"
         earlier = queries.listing_market_data(
-            session, listing, known_at=datetime(2026, 7, 4, tzinfo=UTC)
+            session, fetched_listing, known_at=datetime(2026, 7, 4, tzinfo=UTC)
         )
         assert earlier.analytics.scheduled_session_review is None
+
+
+@pytest.mark.integration
+def test_database_history_replays_the_schedule_known_at_each_cutoff(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = sessions.SCHEDULES["NYSE"][0]
+    revised = replace(
+        original,
+        schedule_id="synthetic-nyse-revision-2",
+        observed_at=datetime(2026, 11, 10, tzinfo=UTC),
+        source_sha256="b" * 64,
+        holidays=original.holidays | {date(2026, 7, 6)},
+    )
+    pins = {
+        **sessions.SCHEDULE_FINGERPRINTS,
+        revised.schedule_id: sessions.schedule_fingerprint(revised),
+    }
+    monkeypatch.setitem(sessions.SCHEDULES, "NYSE", (original, revised))
+    monkeypatch.setattr(sessions, "SCHEDULE_FINGERPRINTS", pins)
+    with Session(postgres_engine) as session, session.begin():
+        _, _, listing = _seed_canonical_scope(session)
+        listing.venue = "NYSE"
+        listing_id = listing.id
+        for day in (2, 7):
+            session.add(
+                PriceObservation(
+                    listing_id=listing.id,
+                    price_kind="DAILY_CLOSE",
+                    market_date=datetime(2026, 7, day, tzinfo=UTC),
+                    recorded_at=datetime(2026, 7, 8, tzinfo=UTC),
+                    split_adjusted_close=Decimal("100"),
+                    currency="USD",
+                    provider="SYNTHETIC",
+                    provider_symbol="SYNTH",
+                    adjustment_basis="Synthetic split-adjusted close",
+                    data_quality="PASS",
+                    source_ref=f"revision-replay-{day}-{uuid4()}",
+                )
+            )
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        fetched_listing = session.get(Listing, listing_id)
+        assert fetched_listing is not None
+        before = queries.listing_market_data(
+            session, fetched_listing, known_at=datetime(2026, 11, 9, tzinfo=UTC)
+        )
+        after = queries.listing_market_data(
+            session, fetched_listing, known_at=datetime(2026, 11, 11, tzinfo=UTC)
+        )
+        replay = queries.listing_market_data(
+            session, fetched_listing, known_at=datetime(2026, 11, 9, tzinfo=UTC)
+        )
+        assert (
+            before.analytics.scheduled_session_review == replay.analytics.scheduled_session_review
+        )
+        assert before.analytics.scheduled_session_review is not None
+        assert after.analytics.scheduled_session_review is not None
+        assert before.analytics.scheduled_session_review.absent_scheduled_dates == [
+            date(2026, 7, 6)
+        ]
+        assert after.analytics.scheduled_session_review.absent_scheduled_dates == []
 
 
 def stamp(day: int) -> datetime:

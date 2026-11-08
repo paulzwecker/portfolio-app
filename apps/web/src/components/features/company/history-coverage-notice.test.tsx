@@ -247,6 +247,8 @@ describe("historical market coverage notice", () => {
           "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf",
         source_sha256:
           "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
+        schedule_fingerprint:
+          "89d25110d0c7a4ae07c049a7fe7d840a1a0ea027df3edc005ea96ec7759377da",
         source_as_of: null,
         source_observed_at: "2026-11-08T18:42:31.412425Z",
         start_date: "2026-07-02",
@@ -261,6 +263,10 @@ describe("historical market coverage notice", () => {
       <HistoryCoverageNotice analytics={analytics} />,
     );
     expect(html).toContain("Review scheduled XETRA dates");
+    expect(html).toContain("Schedule SHA-256");
+    expect(html).toContain(
+      "The current link may differ from the captured source",
+    );
     expect(html).toContain("2 without selected closes");
     expect(html).toContain("not a confirmed missing trade");
   });

@@ -909,21 +909,23 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
           v.scheduled_session_review.venue as string,
         ) &&
         string(v.scheduled_session_review.schedule_id) &&
+        string(v.scheduled_session_review.source_sha256) &&
+        /^[a-f0-9]{64}$/.test(v.scheduled_session_review.source_sha256) &&
+        (v.scheduled_session_review.schedule_fingerprint === undefined ||
+          v.scheduled_session_review.schedule_fingerprint === null ||
+          (string(v.scheduled_session_review.schedule_fingerprint) &&
+            /^[a-f0-9]{64}$/.test(
+              v.scheduled_session_review.schedule_fingerprint,
+            ))) &&
         ((v.scheduled_session_review.venue === "NYSE" &&
           v.scheduled_session_review.source_url ===
-            "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf" &&
-          v.scheduled_session_review.source_sha256 ===
-            "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f") ||
+            "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf") ||
           (v.scheduled_session_review.venue === "NASDAQ" &&
             v.scheduled_session_review.source_url ===
-              "https://nasdaqtrader.com/Trader.aspx?id=Calendar" &&
-            v.scheduled_session_review.source_sha256 ===
-              "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f") ||
+              "https://nasdaqtrader.com/Trader.aspx?id=Calendar") ||
           (v.scheduled_session_review.venue === "XETRA" &&
             v.scheduled_session_review.source_url ===
-              "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf" &&
-            v.scheduled_session_review.source_sha256 ===
-              "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6")) &&
+              "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf")) &&
         (v.scheduled_session_review.source_as_of === null ||
           dateOnly(v.scheduled_session_review.source_as_of)) &&
         timestamp(v.scheduled_session_review.source_observed_at) &&

@@ -1682,6 +1682,8 @@ describe("domain display integrity", () => {
           source_observed_at: "2026-11-08T18:37:45.016120Z",
           source_sha256:
             "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
+          schedule_fingerprint:
+            "7c7ebf9ac233d1f850adbc70aa3e16245fcf2b38cf34d9922295db9775fe4283",
           start_date: "2026-07-02",
           end_date: "2026-07-07",
           full_selected_span_covered: true,
@@ -1692,6 +1694,31 @@ describe("domain display integrity", () => {
       },
     };
     expect(isListingMarketData(withEvidence)).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            source_sha256: "b".repeat(64),
+            schedule_fingerprint: "c".repeat(64),
+          },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            schedule_fingerprint: "not-a-digest",
+          },
+        },
+      }),
+    ).toBe(false);
     expect(
       isListingMarketData({
         ...withEvidence,

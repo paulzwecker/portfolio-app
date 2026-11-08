@@ -31203,6 +31203,17 @@
             "title": "Full Selected Span Covered",
             "type": "boolean"
           },
+          "schedule_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Fingerprint"
+          },
           "schedule_id": {
             "title": "Schedule Id",
             "type": "string"

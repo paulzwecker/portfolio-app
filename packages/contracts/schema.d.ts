@@ -11899,6 +11899,8 @@ export interface components {
             end_date: string;
             /** Full Selected Span Covered */
             full_selected_span_covered: boolean;
+            /** Schedule Fingerprint */
+            schedule_fingerprint?: string | null;
             /** Schedule Id */
             schedule_id: string;
             /** Scheduled Count */
