@@ -13,6 +13,7 @@ import { CanonicalDcfExplorer } from "@/components/canonical-dcf";
 import { ModelMigrationStatus } from "@/components/model-migration-status";
 import { ModelOutputs as CompanyModelOutputHistory } from "@/components/features/company/company-model-output-history";
 import { ModelRevisionProposalReview } from "@/components/features/modeling/model-revision-proposal-review";
+import { DcfSensitivityPanel } from "@/components/features/modeling/dcf-sensitivity";
 import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyExpectedReturnHistory,
@@ -80,6 +81,7 @@ type ModelDescriptor = {
   method: ModelMethod | null;
   name: string;
   modelId: string | null;
+  revisionId: string | null;
   ticker: string | null;
   venue: string | null;
   listingCurrency: string | null;
@@ -318,6 +320,7 @@ function nativeDescriptor(
     native: true,
     method,
     modelId: readString(modelRecord.id),
+    revisionId: readString(revision?.id),
     name: readString(modelRecord.model_name) ?? "Accepted model",
     ticker: readString(listing?.ticker),
     venue: readString(listing?.venue),
@@ -353,6 +356,7 @@ function importedDescriptor(snapshot: unknown): ModelDescriptor | null {
     native: false,
     method: null,
     modelId: null,
+    revisionId: null,
     name: `Imported output · ${modelKey}`,
     ticker: null,
     venue: null,
@@ -1039,6 +1043,16 @@ export function CompanyValuationWorkspace({
           />
         )}
       </PageSection>
+
+      {activeDescriptor?.method === "UFCF_DCF_10Y_FADE" &&
+        activeDescriptor.modelId &&
+        activeDescriptor.revisionId && (
+          <DcfSensitivityPanel
+            key={`${activeDescriptor.modelId}:${activeDescriptor.revisionId}`}
+            modelId={activeDescriptor.modelId}
+            revisionId={activeDescriptor.revisionId}
+          />
+        )}
 
       <ModelRevisionProposalReview companyId={companyId} />
 

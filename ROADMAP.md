@@ -10,8 +10,8 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C1.3 read-only native DCF sensitivity — BUILD. [Handoff](docs/financial-models.md#current-build-checkpoint)                                                                                               |
 | Branch / PR                 | `codex/native-dcf-sensitivity`, from merged main `395f842`. Local BUILD branch                                                                                                                            |
-| Implementation              | Revision-bound nine-cell API LOCAL_VERIFIED. Responsive valuation workspace in progress                                                                                                                   |
-| Next ready substantial task | Verify scenario switching, unavailable cells, stale responses and desktop/mobile presentation; commit the complete local slice                                                                            |
+| Implementation              | C1.3 read-only sensitivity API and responsive workspace LOCAL_VERIFIED with fictional inputs and isolated PostgreSQL                                                                                      |
+| Next ready substantial task | Integrate completed data/ledger, CI coverage and this slice after owner-reviewed PRs merge; run comprehensive checks once on that combined baseline                                                       |
 | Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await review/merge. C1 investment acceptance remains separate |
 | Integration rule            | Keep completed PRs stable. Reconcile this independent slice and the preserved CI correction with latest main at the integration gate                                                                      |
 
@@ -21,13 +21,25 @@ The independent PostgreSQL test-classification correction is preserved on
 handoff in that branch's testing reference. This branch adds a user-facing C1
 review capability independently of the pending schema/data work.
 
+Final read-only GitHub inspection still reports both PRs open at their frozen
+heads. PR #25 has a base conflict and needs a scoped integration repair before
+owner merge. Preserve its C2 receipt evidence and main's capability ledger when
+resolving it. PR #26 remains mergeable. Feature expansion belongs on BUILD branches.
+
 C1.3's API calculates nine hypothetical fair-value combinations with the existing
 UFCF engine and accepted inputs. It requires an exact current revision, preserves
 probabilities/operating inputs/tail assumptions, and exposes invalid combinations
 as unavailable. Nineteen focused backend checks pass, including an API test under
 PostgreSQL read-only enforcement on verified loopback PostgreSQL 18.3. Accepted
-model readback is unchanged. Focused strict typing passes. This evidence establishes
-local calculation and read semantics; responsive browser verification is next.
+model readback is unchanged. Twelve focused web checks and sixteen desktop/mobile
+browser cases pass, including ten sensitivity cases and six existing model-selection,
+proposal-review and contract-import regressions. Sensitivity checks cover scenario switching, unavailable combinations,
+stale/mismatched revisions, transient retry, deferred fetch and GET-only requests.
+Desktop/mobile screenshots were visually reviewed. Browser review identified and
+corrected hidden 409 conflicts with a scoped reload instruction. Strict backend
+typing (180 files), frontend typing, scoped lint, generated contracts, source
+policy, docs links and whitespace pass. This is a local BUILD checkpoint. Combined
+integration, production build/full CI and hosted model readback remain unverified.
 
 ## How to choose work
 

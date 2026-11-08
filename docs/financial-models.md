@@ -300,10 +300,15 @@ native engine. Invalid rate bounds or terminal spreads produce explicit
 unavailable cells with null values.
 
 Outputs are Bear/Base/Bull and probability-weighted fair values per share in
-model currency, rounded to the existing 18-place model precision. This calculation
-needs no quote or Google connection. It has no persistence or acceptance operation.
+model currency, rounded to the existing 18-place model precision. Fair values
+are calculated solely from accepted inputs through a read-only endpoint.
 Discount-rate sensitivity retains the source DCF methodology. Investor hurdle and
 enterprise/shareholder return definitions remain governed by their own contracts.
+
+In Company Valuation select an accepted native DCF and open **Explore sensitivity**.
+Switch between probability-weighted, Bear, Base and Bull fair values. The panel
+fetches on demand, pins the displayed model/revision and explains unavailable
+combinations. A changed accepted revision requires reloading the company.
 
 ### Current BUILD checkpoint
 
@@ -311,10 +316,23 @@ enterprise/shareholder return definitions remain governed by their own contracts
 completed `codex/ci-database-test-coverage` correction. The API passes 19 focused
 backend checks including a transaction-enforced read-only PostgreSQL integration
 case, exact native-engine reconciliation, deterministic replay, explicit tail,
-invalid cells and stale revision rejection. Focused strict typing passes.
-The workspace integration and responsive browser checks are in progress. Next
-complete that user-facing slice, review and commit before a later combined
-integration gate. Real production model acceptance and readback remain owner-gated.
+invalid cells and stale revision rejection. The complete user-facing slice is
+LOCAL_VERIFIED with 12 focused web checks and 16 desktop/mobile browser cases
+(10 sensitivity and six existing model/proposal/contract regressions).
+Scenario switching, deferred GET-only fetching, invalid cells, stale/mismatched
+revision reload and transient retry pass. Both responsive screenshots were reviewed.
+Strict backend/frontend typing, scoped lint/format, generated contracts, source
+policy, docs links and whitespace pass. An optional caller-owned conflict message
+in the shared fetch hook makes revision conflicts actionable while preserving
+its existing default behavior. The panel keeps hypothetical fair values separate
+from the existing acceptance workflow.
+
+Next resolve PR #25's reported base conflict as a scoped integration repair before
+owner merge. Keep the completed feature scopes stable for review. Integrate this
+slice and the CI correction after the pending PRs merge, preserving each ledger.
+Run comprehensive checks and production build once
+on the combined baseline. Remote CI, combined integration and real hosted model
+readback remain unverified. Production model acceptance remains owner-gated.
 
 ## Google Sheets interoperability
 

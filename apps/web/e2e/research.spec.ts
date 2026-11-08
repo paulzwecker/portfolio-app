@@ -267,6 +267,185 @@ const contractModel = {
   current_revision: contractRevision,
   history: [contractRevision],
 };
+
+function sensitivityFixture() {
+  return {
+    calculation_version: "ufcf-dcf-sensitivity-v1",
+    model_id: contractModelId,
+    revision_id: contractRevisionId,
+    revision_number: 1,
+    methodology_version: "ufcf-dcf-fade-v1",
+    model_currency: "USD",
+    discount_rate_shifts: ["-0.01", "0", "0.01"],
+    terminal_growth_shifts: ["-0.005", "0", "0.005"],
+    scenarios: scenarioNames.map((scenario) => ({
+      scenario,
+      probability: scenario === "BASE" ? "0.6" : "0.2",
+      year5_discount_rate: "0.09",
+      terminal_growth: "0.025",
+    })),
+    cells: ["-0.01", "0", "0.01"].flatMap((discount_rate_shift) =>
+      ["-0.005", "0", "0.005"].map((terminal_growth_shift) => ({
+        discount_rate_shift,
+        terminal_growth_shift,
+        status: "AVAILABLE",
+        unavailable_reason: null as string | null,
+        bear_fv: "15" as string | null,
+        base_fv: "20" as string | null,
+        bull_fv: "30" as string | null,
+        weighted_fv: "21" as string | null,
+      })),
+    ),
+  };
+}
+
+for (const mode of [
+  "complete",
+  "invalid-cell",
+  "stale",
+  "wrong-revision",
+  "unavailable",
+] as const) {
+  test(`DCF sensitivity ${mode} stays read-only and revision-bound`, async ({
+    page,
+  }, testInfo) => {
+    let sensitivityReads = 0;
+    let writes = 0;
+    const data = sensitivityFixture();
+    if (mode === "invalid-cell") {
+      data.cells[0] = {
+        ...data.cells[0],
+        status: "INVALID_ASSUMPTIONS",
+        unavailable_reason: "Terminal growth reaches a scenario discount rate.",
+        weighted_fv: null,
+        bear_fv: null,
+        base_fv: null,
+        bull_fv: null,
+      };
+    }
+    if (mode === "wrong-revision")
+      data.revision_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    await page.route(/\/api\/research\//, async (route) => {
+      const url = new URL(route.request().url());
+      const path = url.pathname.replace("/api/research/", "");
+      if (route.request().method() !== "GET") writes += 1;
+      if (path === `companies/${id}`)
+        return route.fulfill({
+          json: {
+            company,
+            securities: [],
+            listings: [contractListing],
+            lifecycle_history: [],
+            portfolio: null,
+            portfolio_context: null,
+            holding_snapshot: null,
+            positions: [],
+            target_weight: null,
+            target_revision_id: null,
+          },
+        });
+      if (path === `companies/${id}/financial-models`)
+        return route.fulfill({ json: [contractModel] });
+      if (
+        path === `companies/${id}/canonical-financial-models` ||
+        path === "model-revision-proposals"
+      )
+        return route.fulfill({ json: [] });
+      if (path === `financial-models/${contractModelId}/sensitivity`) {
+        sensitivityReads += 1;
+        expect(url.searchParams.get("base_revision_id")).toBe(
+          contractRevisionId,
+        );
+        if (mode === "stale")
+          return route.fulfill({
+            status: 409,
+            json: {
+              detail:
+                "The model changed since it was read; reload before sensitivity",
+            },
+          });
+        if (mode === "unavailable")
+          return route.fulfill({
+            status: 503,
+            json: { detail: "Synthetic API unavailable" },
+          });
+        return route.fulfill({ json: data });
+      }
+      return route.fulfill({
+        status: 404,
+        json: { detail: "No synthetic route" },
+      });
+    });
+    await page.goto(`/company/${id}?view=valuation`);
+    const panel = page.getByRole("region", {
+      name: "DCF valuation sensitivity",
+    });
+    const explore = page.getByRole("button", { name: "Explore sensitivity" });
+    await expect(explore).toBeVisible();
+    expect(sensitivityReads).toBe(0);
+    await explore.click();
+    if (
+      mode === "stale" ||
+      mode === "wrong-revision" ||
+      mode === "unavailable"
+    ) {
+      await expect(panel.getByRole("alert")).toContainText(
+        mode === "stale"
+          ? "The accepted model changed. Reload the company"
+          : mode === "wrong-revision"
+            ? "does not match the selected model revision"
+            : "Research data is unavailable",
+      );
+      await expect(panel.getByRole("table")).toHaveCount(0);
+      if (mode === "unavailable") {
+        await panel.getByRole("button", { name: "Retry", exact: true }).click();
+        await expect.poll(() => sensitivityReads).toBe(2);
+      } else {
+        await expect(
+          panel.getByRole("button", { name: "Reload company" }),
+        ).toBeVisible();
+        expect(sensitivityReads).toBe(1);
+      }
+    } else {
+      await expect(panel.getByRole("table")).toBeVisible();
+      const baseline = panel.getByRole("cell", {
+        name: "Accepted assumptions",
+      });
+      await expect(baseline).toHaveText("$21.00");
+      await panel.getByLabel("Sensitivity scenario").selectOption("bear_fv");
+      await expect(baseline).toHaveText("$15.00");
+      await panel.getByLabel("Sensitivity scenario").selectOption("bull_fv");
+      await expect(baseline).toHaveText("$30.00");
+      await panel
+        .getByLabel("Sensitivity scenario")
+        .selectOption("weighted_fv");
+      if (mode === "invalid-cell") {
+        await expect(panel.getByRole("status")).toContainText(
+          "Terminal growth reaches a scenario discount rate.",
+        );
+        await expect(
+          panel.getByRole("cell", { name: "Unavailable", exact: true }),
+        ).toHaveCount(1);
+      }
+      expect(sensitivityReads).toBe(1);
+      await expect(
+        panel.getByRole("button", { name: /accept|save/i }),
+      ).toHaveCount(0);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflow).toBe(false);
+      if (mode === "complete")
+        await panel.screenshot({
+          path: `../../.cache/dcf-sensitivity/${testInfo.project.name}.png`,
+        });
+      await page.getByRole("button", { name: "Hide sensitivity" }).click();
+      await expect(panel.getByRole("table")).toHaveCount(0);
+    }
+    expect(writes).toBe(0);
+  });
+}
+
 const portableContract = {
   contract_version: "1.0.0",
   exported_at: "2026-10-05T00:00:00Z",
