@@ -4366,6 +4366,21 @@ export function isCompanySecCoverage(
     !Array.isArray(value.metrics_missing)
   )
     return false;
+  const identity = value.fundamental_identity_counts;
+  if (
+    identity !== undefined &&
+    identity !== null &&
+    (!isRecord(identity) ||
+      ![identity.matching_cik, identity.other_cik, identity.unverified].every(
+        (count) => Number.isSafeInteger(count) && Number(count) >= 0,
+      ) ||
+      !isRecord(value.fundamentals) ||
+      Number(identity.matching_cik) +
+        Number(identity.other_cik) +
+        Number(identity.unverified) !==
+        value.fundamentals.record_count)
+  )
+    return false;
   const metric = (item: unknown) =>
     typeof item === "string" &&
     reportedFundamentalMetrics.includes(

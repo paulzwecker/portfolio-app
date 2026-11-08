@@ -3615,6 +3615,7 @@ export interface components {
             /** Company Name */
             company_name: string;
             filings: components["schemas"]["SecDomainCoverageRead"];
+            fundamental_identity_counts?: components["schemas"]["SecFundamentalIdentityCountsRead"] | null;
             fundamentals: components["schemas"]["SecDomainCoverageRead"];
             /** Identity Evidence Url */
             identity_evidence_url: string | null;
@@ -12285,6 +12286,15 @@ export interface components {
             /** Record Count */
             record_count: number;
             refresh?: components["schemas"]["SecRefreshRead"] | null;
+        };
+        /** SecFundamentalIdentityCountsRead */
+        SecFundamentalIdentityCountsRead: {
+            /** Matching Cik */
+            matching_cik: number;
+            /** Other Cik */
+            other_cik: number;
+            /** Unverified */
+            unverified: number;
         };
         /** SecIssuerIdentityRead */
         SecIssuerIdentityRead: {

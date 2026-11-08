@@ -1275,9 +1275,16 @@ class SecDomainCoverageRead(Contract):
     refresh: SecRefreshRead | None = None
 
 
+class SecFundamentalIdentityCountsRead(Contract):
+    matching_cik: Annotated[int, Field(ge=0)]
+    other_cik: Annotated[int, Field(ge=0)]
+    unverified: Annotated[int, Field(ge=0)]
+
+
 class CompanySecCoverageRead(Contract):
     company_id: UUID
     company_name: str
+    fundamental_identity_counts: SecFundamentalIdentityCountsRead | None = None
     mapping_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS", "INVALID"]
     cik: str | None
     provider_company_name: str | None

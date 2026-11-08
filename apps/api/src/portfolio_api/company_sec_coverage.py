@@ -20,6 +20,7 @@ from portfolio_api.domain.models import (
     FundamentalMetric,
     FundamentalsBootstrapCheckpoint,
     FundamentalsBootstrapRun,
+    ReportedFundamentalBatch,
     ReportedFundamentalObservation,
     SourceDocument,
 )
@@ -447,6 +448,33 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             func.max(fact.recorded_at),
         ).where(fact.company_id == company_id, fact.provider_id == SEC_PROVIDER_ID)
     ).one()
+    # Compare retained observation and batch metadata, not the latest refresh.
+    # The batch scope is historical metadata, not proof of payload authenticity.
+    identity_counts = {"matching_cik": 0, "other_cik": 0, "unverified": 0}
+    batch = ReportedFundamentalBatch
+    grouped_facts = session.execute(
+        select(fact.provider_entity_id, batch, func.count(fact.id))
+        .outerjoin(batch, batch.id == fact.batch_id)
+        .where(fact.company_id == company_id, fact.provider_id == SEC_PROVIDER_ID)
+        .group_by(fact.provider_entity_id, batch.id)
+    )
+    for entity_id, source_batch, count in grouped_facts:
+        scope = source_batch.query_scope if source_batch else None
+        if (
+            mapping is None
+            or source_batch is None
+            or source_batch.provider_id != SEC_PROVIDER_ID
+            or not isinstance(scope, dict)
+            or scope.get("company_id") != str(company_id)
+            or not isinstance(entity_id, str)
+            or not re.fullmatch(r"[0-9]{10}", entity_id)
+            or scope.get("cik") != entity_id
+        ):
+            identity_counts["unverified"] += count
+        elif entity_id == mapping.cik:
+            identity_counts["matching_cik"] += count
+        else:
+            identity_counts["other_cik"] += count
     metrics = set(
         session.scalars(
             select(fact.metric)
@@ -475,6 +503,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
     return s.CompanySecCoverageRead(
         company_id=issuer.id,
         company_name=issuer.name,
+        fundamental_identity_counts=s.SecFundamentalIdentityCountsRead(**identity_counts),
         mapping_status=mapping_status,
         cik=mapping.cik if mapping else None,
         provider_company_name=mapping.provider_company_name if mapping else None,

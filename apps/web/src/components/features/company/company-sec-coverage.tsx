@@ -229,6 +229,32 @@ export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
                 <dd>{retainedTime(domain.latest_recorded_at)}</dd>
               </div>
             </dl>
+            {key === "fundamentals" && data.fundamental_identity_counts && (
+              <div className="space-y-1 border-t pt-3 text-sm">
+                <h4 className="font-medium">
+                  Recorded issuer CIK on retained facts
+                </h4>
+                <p>
+                  {data.fundamental_identity_counts.matching_cik} matching ·{" "}
+                  {data.fundamental_identity_counts.other_cik} different ·{" "}
+                  {data.fundamental_identity_counts.unverified} unverifiable
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Counts compare saved observation and batch metadata with the
+                  current reviewed CIK. They do not verify source bytes,
+                  historical mapping, economic validity or freshness. Filing
+                  records are separate.
+                </p>
+                {(data.fundamental_identity_counts.other_cik > 0 ||
+                  data.fundamental_identity_counts.unverified > 0) && (
+                  <p className="text-warning">
+                    Review issuer attribution before relying on reported
+                    financial statements; their existing resolution can include
+                    these retained facts.
+                  </p>
+                )}
+              </div>
+            )}
             {domain.refresh ? (
               <SecRefreshDetails
                 refresh={domain.refresh}
@@ -372,7 +398,13 @@ export function CompanySecCoveragePanel({
       </CardHeader>
       <CardContent className="space-y-3">
         {!data ? (
-          <PendingOrError {...state} />
+          <>
+            <PendingOrError {...state} />
+            <p className="text-sm text-warning">
+              Retained issuer attribution has not been checked. Review source
+              identities before relying on reported statements.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-sm">
@@ -383,6 +415,23 @@ export function CompanySecCoveragePanel({
               Retained counts can include earlier runs; the latest identity
               checks do not verify every historical record.
             </p>
+            {!data.fundamental_identity_counts &&
+              data.fundamentals.record_count > 0 && (
+                <p className="text-sm text-warning">
+                  This API version does not report retained issuer attribution.
+                  Review source identities before relying on reported
+                  statements.
+                </p>
+              )}
+            {data.fundamental_identity_counts &&
+              (data.fundamental_identity_counts.other_cik > 0 ||
+                data.fundamental_identity_counts.unverified > 0) && (
+                <p role="alert" className="text-sm text-warning">
+                  Retained facts include different or unverifiable issuer CIK
+                  metadata. Financial statements may include them; review
+                  attribution before use.
+                </p>
+              )}
             <p className="text-xs text-muted-foreground">
               Latest fact retrieval{" "}
               {retainedTime(data.fundamentals.latest_retrieved_at)} · Latest

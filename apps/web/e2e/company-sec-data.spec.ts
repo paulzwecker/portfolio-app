@@ -225,8 +225,14 @@ test("a changed issuer identity is visible beside the historical refresh", async
     throw new Error("Synthetic SEC refresh is unavailable");
   const historical = {
     ...data,
+    fundamental_identity_counts: {
+      matching_cik: 0,
+      other_cik: Math.max(1, data.fundamentals.record_count),
+      unverified: 0,
+    },
     fundamentals: {
       ...data.fundamentals,
+      record_count: Math.max(1, data.fundamentals.record_count),
       refresh: {
         ...data.fundamentals.refresh,
         identity: { status: "CHANGED", frozen_cik: "0000000999" },
@@ -254,6 +260,9 @@ test("a changed issuer identity is visible beside the historical refresh", async
       )
       .filter({ visible: true }),
   ).toBeVisible();
+  await expect(panel.getByRole("alert")).toContainText(
+    "Financial statements may include them",
+  );
   await panel.screenshot({
     path: info.outputPath("sec-identity-drift-summary.png"),
     scale: "css",
@@ -263,6 +272,9 @@ test("a changed issuer identity is visible beside the historical refresh", async
     name: "SEC coverage and provenance",
   });
   await expect(drawer.getByText(/Frozen refresh CIK 0000000999/)).toBeVisible();
+  await expect(
+    drawer.getByText("Recorded issuer CIK on retained facts"),
+  ).toBeVisible();
   await expect(
     drawer.getByText(/historical, not evidence for the current identity/),
   ).toBeVisible();

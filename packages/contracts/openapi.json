@@ -3629,6 +3629,16 @@
           "filings": {
             "$ref": "#/components/schemas/SecDomainCoverageRead"
           },
+          "fundamental_identity_counts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecFundamentalIdentityCountsRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "fundamentals": {
             "$ref": "#/components/schemas/SecDomainCoverageRead"
           },
@@ -32244,6 +32254,33 @@
           "bootstrap"
         ],
         "title": "SecDomainCoverageRead",
+        "type": "object"
+      },
+      "SecFundamentalIdentityCountsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "matching_cik": {
+            "minimum": 0.0,
+            "title": "Matching Cik",
+            "type": "integer"
+          },
+          "other_cik": {
+            "minimum": 0.0,
+            "title": "Other Cik",
+            "type": "integer"
+          },
+          "unverified": {
+            "minimum": 0.0,
+            "title": "Unverified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matching_cik",
+          "other_cik",
+          "unverified"
+        ],
+        "title": "SecFundamentalIdentityCountsRead",
         "type": "object"
       },
       "SecIssuerIdentityRead": {

@@ -425,6 +425,43 @@ describe("Company SEC coverage", () => {
     expect(html).toContain("Next attempt after");
     expect(html).not.toContain("Fresh");
   });
+  it("validates exhaustive recorded CIK counts and warns about retained facts", () => {
+    const counts = { matching_cik: 0, other_cik: 1, unverified: 0 };
+    const withCounts = { ...data, fundamental_identity_counts: counts };
+    expect(isCompanySecCoverage(withCounts)).toBe(true);
+    expect(
+      isCompanySecCoverage({
+        ...data,
+        fundamental_identity_counts: { ...counts, other_cik: 2 },
+      }),
+    ).toBe(false);
+    expect(
+      isCompanySecCoverage({
+        ...data,
+        fundamental_identity_counts: { ...counts, unverified: -1 },
+      }),
+    ).toBe(false);
+    coverageState.data = withCounts;
+    const panel = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(panel).toContain("Financial statements may include them");
+    const details = renderToStaticMarkup(
+      <SecCoverageDetails data={withCounts} />,
+    );
+    expect(details).toContain("Recorded issuer CIK on retained facts");
+    expect(details).toContain("They do not verify source bytes");
+  });
+  it("does not imply attribution is checked when coverage is absent or from an older API", () => {
+    coverageState.data = null;
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("Retained issuer attribution has not been checked");
+    coverageState.data = data;
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("This API version does not report retained issuer attribution");
+  });
   it("keeps absent coverage and missing identity explicit", () => {
     const html = renderToStaticMarkup(
       <SecCoverageDetails

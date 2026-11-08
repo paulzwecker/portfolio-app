@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from browser_server import fixture_application, fixture_read_engine, fixture_settings
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_cloud_market_refresh import table_counts
@@ -19,8 +19,11 @@ from portfolio_api.company_sec_coverage import _bootstrap_identity, company_sec_
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     Actor,
+    CompanyProviderIdentifier,
     FundamentalsBootstrapCheckpoint,
     FundamentalsBootstrapRun,
+    ReportedFundamentalBatch,
+    ReportedFundamentalObservation,
 )
 from portfolio_api.fundamentals_bootstrap import (
     BOOTSTRAP_VERSION,
@@ -131,6 +134,11 @@ def test_unmapped_coverage_is_empty_and_api_reads_are_database_read_only(
             data = response.json()
             assert data["mapping_status"] == "UNMAPPED" and data["cik"] is None
             assert data["fundamentals"]["record_count"] == data["filings"]["record_count"] == 0
+            assert data["fundamental_identity_counts"] == {
+                "matching_cik": 0,
+                "other_cik": 0,
+                "unverified": 0,
+            }
             assert data["fundamentals"]["latest_retrieved_at"] is None
             assert data["fundamentals"]["latest_period_end"] is None
             assert data["fundamentals"]["bootstrap"] is None
@@ -242,6 +250,85 @@ def test_imported_coverage_keeps_economic_filing_retrieval_and_recording_dates_d
         assert replay.fundamentals.latest_retrieved_at == coverage.fundamentals.latest_retrieved_at
         assert replay.fundamentals.latest_recorded_at == coverage.fundamentals.latest_recorded_at
         assert replay.fundamentals.record_count == coverage.fundamentals.record_count
+
+
+@pytest.mark.integration
+def test_retained_fact_identity_counts_follow_recorded_batch_and_current_mapping(
+    postgres_engine: Engine,
+) -> None:
+    source = _source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        run_id = prepare_fundamentals_bootstrap(
+            session, target_environment="rehearsal", portfolio_id=source.portfolio_id
+        ).id
+    _execute(postgres_engine, run_id, SyntheticSecProvider(), 10)
+    with Session(postgres_engine) as session:
+        initial = company_sec_coverage(session, COMPANY_ID)
+        counts = initial.fundamental_identity_counts
+        assert counts is not None and counts.matching_cik == initial.fundamentals.record_count > 1
+        assert counts.other_cik == counts.unverified == 0
+    # Corrupt fixture-only historical metadata through SQL: ORM history is append-only.
+    with postgres_engine.begin() as connection:
+        fact_id = connection.scalar(
+            select(ReportedFundamentalObservation.id)
+            .where(ReportedFundamentalObservation.company_id == COMPANY_ID)
+            .limit(1)
+        )
+        assert fact_id is not None
+        connection.execute(
+            update(ReportedFundamentalObservation)
+            .where(ReportedFundamentalObservation.id == fact_id)
+            .values(provider_entity_id="malformed")
+        )
+    with Session(postgres_engine) as session:
+        counts = company_sec_coverage(session, COMPANY_ID).fundamental_identity_counts
+        assert counts is not None and counts.unverified == 1
+        assert counts.matching_cik == initial.fundamentals.record_count - 1
+    with postgres_engine.begin() as connection:
+        connection.execute(
+            update(CompanyProviderIdentifier)
+            .where(
+                CompanyProviderIdentifier.company_id == COMPANY_ID,
+                CompanyProviderIdentifier.provider_id == "sec_edgar",
+            )
+            .values(
+                identifier_value="0000000099",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=99",
+            )
+        )
+    with Session(postgres_engine) as session:
+        counts = company_sec_coverage(session, COMPANY_ID).fundamental_identity_counts
+        assert counts is not None and counts.matching_cik == 0
+        assert counts.other_cik == initial.fundamentals.record_count - 1
+        assert counts.unverified == 1
+    with postgres_engine.begin() as connection:
+        connection.execute(
+            update(ReportedFundamentalBatch).values(
+                query_scope={"company_id": str(COMPANY_ID), "cik": "bad"}
+            )
+        )
+    with Session(postgres_engine) as session:
+        counts = company_sec_coverage(session, COMPANY_ID).fundamental_identity_counts
+        assert counts is not None and counts.unverified == initial.fundamentals.record_count
+    with postgres_engine.begin() as connection:
+        connection.execute(
+            update(ReportedFundamentalBatch).values(
+                query_scope={"company_id": str(COMPANY_ID), "cik": "0000000001"}
+            )
+        )
+        connection.execute(
+            update(CompanyProviderIdentifier)
+            .where(
+                CompanyProviderIdentifier.company_id == COMPANY_ID,
+                CompanyProviderIdentifier.provider_id == "sec_edgar",
+            )
+            .values(evidence_source="invalid")
+        )
+    with Session(postgres_engine) as session:
+        coverage = company_sec_coverage(session, COMPANY_ID)
+        assert coverage.mapping_status == "INVALID"
+        assert coverage.fundamental_identity_counts is not None
+        assert coverage.fundamental_identity_counts.unverified == coverage.fundamentals.record_count
 
 
 @pytest.mark.integration
