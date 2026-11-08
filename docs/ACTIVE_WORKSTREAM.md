@@ -1,6 +1,6 @@
 # Active workstream
 
-## C2.3 — Ledger foundation (BUILD)
+## C2.2/C3.1/C2.3 — Local capability integration (INTEGRATE)
 
 - Branch `codex/portfolio-data-ledger-capabilities`, based on main `395f842`.
 - PR #25 is complete and awaiting owner review. Keep it frozen. Integrate its
@@ -9,6 +9,16 @@
   projection → reconciliation, preserving the canonical snapshot and targets.
 - C2.2 and the C3.1 scoped SEC slice are locally verified. Their hosted scopes and
   activation retain owner gates. C2.3 can progress independently while #25 waits.
+
+## Integration gate
+
+Main remains `395f842`; only #25 is open and unchanged. The public repository and
+clean feature lineage were verified. The isolated loopback `_test` target is
+PostgreSQL 18.3 with matching installed client tools. Its role lacks CREATEROLE and
+CREATEDB, so role/restore tests may remain environment-skipped locally. Quality and
+all 341 selected synthetic PostgreSQL cases are running with a process-only test
+DATABASE_URL and all production/ingestion controls disabled. Initial formatting
+caught a handoff wrap; it was corrected before the quality rerun.
 
 ## Current ledger increment
 
@@ -329,27 +339,24 @@ Bounded normal shutdown removes its own schema. Five pre-existing browser schema
 are preserved. Commands are in the
 [development runbook](codex-cloud-development.md#portfolio-data-rehearsal).
 
-## Next build steps
+## Next integration steps
 
-1. Finish C2.3 publication preview/confirmation UI on the guarded API, including
-   current ownership, exact proposed quantities/cash, source/previous-publication
-   hash binding and explicit recovery/ownership approval. Rehearse both failures and
-   successful synthetic readback. Assess INTEGRATE only at a cohesive milestone gate.
-   Real scope/recovery/schema/write authorization precede production activation.
-   Production schema/ownership/import changes remain owner-gated. This is the next
-   high-value independent capability while #25 review and data activation wait.
-   C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;
-   mapping persistence/provider ingestion require separate production authorization.
-2. After owner merge of #25, integrate its receipt adapter and preserve both sets
-   of roadmap evidence. Keep the completed PR frozen during owner review. Then
-   enter INTEGRATE for comprehensive local checks and one cohesive C2.2 PR.
-3. Review the 90-date/30-subject policy, provider scope, three-attempt/15-minute
-   retry budget and expected holdings/cash reconciliation. Require a verified
-   current-state recovery point and separate production authorization before any
-   backfill or provider cycle. The old recovery point predates accepted holdings.
-4. After explicit authorization, prove two hosted refresh cycles including restart,
-   partial/failure visibility and investor readback. Scheduling/recurring activation
-   remains a separate owner decision. No hosted cycles have run in this increment.
+1. Run comprehensive local quality, migration, PostgreSQL and browser checks for
+   the completed provider/SEC/ledger implementation. Resolve code failures while
+   retaining explicit environment skips. Review release compatibility and privacy.
+2. Keep completed #25 frozen for owner review. Its receipt adapter remains a
+   dependency of real production provider previews. After owner merge, integrate
+   it non-destructively and preserve both sets of roadmap evidence. One cohesive
+   local capability PR can be reviewed independently, with this dependency explicit.
+3. Before merging schema-dependent code, review native provider deployment freezes
+   and the data-bearing migration procedure. Production remains at the last
+   verified `9f2a6d4c81b7`; this branch adds `a832e94d6f10` then `b59f16c8a203`.
+   Current-state recovery, migration and deployment require separate authorization.
+4. After integration review, the highest-value operational outcome is an authorized
+   held-listing price/FX backfill and two monitored refresh cycles including restart.
+   Real SEC CIK evidence/international gaps and ledger account/basis/source review
+   remain separate prerequisites. Scheduling and source/model acceptance retain
+   their independent owner decisions.
 
 Keep tests focused during BUILD. Comprehensive quality, browser review and one PR
 belong to the completed milestone's INTEGRATE gate. Production backfill/scheduling,

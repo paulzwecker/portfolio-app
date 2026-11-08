@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                       |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 publication workflow LOCAL_VERIFIED - BUILD checkpoint. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                   |
+| Active checkpoint           | C2.2/C3.1/C2.3 local milestone - INTEGRATE in progress. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                        |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | PARTIAL / BUILD. C2.2/C3.1 synthetic workflows and C2.3 publication workflow locally verified. Hosted data/cutover pending                          |
-| Next ready substantial task | C2.2/C3.1/C2.3 milestone integration checks and one cohesive PR. Recheck #25 owner merge before integration                                         |
+| Implementation              | LOCAL_VERIFIED slices / INTEGRATE. Comprehensive checks in progress; hosted population and cutover remain pending                                   |
+| Next ready substantial task | Finish comprehensive verification and one cohesive PR. Preserve #25 as a separate owner merge dependency                                            |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
 
