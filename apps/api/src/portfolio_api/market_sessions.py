@@ -3,7 +3,9 @@
 Schedules describe planned exchange openings, not verified trading or listing activity.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from typing import Literal
 
 from portfolio_api.domain.schemas import ScheduledSessionReviewRead
 
@@ -12,7 +14,7 @@ NYSE_2026_SOURCE_SHA256 = "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3
 # The NYSE document says its dates were correct as of 10 December 2025. We observed
 # the document at this later time; its earlier availability is not established.
 # Ad hoc closures and instrument halts are not captured.
-NYSE_2026_KNOWN_SINCE = datetime(2026, 11, 8, 18, 34, tzinfo=UTC)
+NYSE_2026_KNOWN_SINCE = datetime(2026, 11, 8, 18, 37, 45, 16120, tzinfo=UTC)
 NYSE_2026_HOLIDAYS = frozenset(
     date.fromisoformat(day)
     for day in (
@@ -29,12 +31,65 @@ NYSE_2026_HOLIDAYS = frozenset(
     )
 )
 
+NASDAQ_2026_SOURCE = "https://nasdaqtrader.com/Trader.aspx?id=Calendar"
+NASDAQ_2026_SOURCE_SHA256 = "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f"
+NASDAQ_2026_KNOWN_SINCE = datetime(2026, 11, 8, 18, 37, 45, 961889, tzinfo=UTC)
+NASDAQ_2026_HOLIDAYS = frozenset(
+    date.fromisoformat(day)
+    for day in (
+        "2026-01-01",
+        "2026-01-19",
+        "2026-02-16",
+        "2026-04-03",
+        "2026-05-25",
+        "2026-06-19",
+        "2026-07-03",
+        "2026-09-07",
+        "2026-11-26",
+        "2026-12-25",
+    )
+)
+
+
+@dataclass(frozen=True)
+class PublishedSchedule:
+    venue: Literal["NYSE", "NASDAQ"]
+    schedule_id: str
+    source_url: str
+    source_sha256: str
+    source_as_of: date | None
+    observed_at: datetime
+    holidays: frozenset[date]
+
+
+SCHEDULES = {
+    "NYSE": PublishedSchedule(
+        "NYSE",
+        "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+        NYSE_2026_SOURCE,
+        NYSE_2026_SOURCE_SHA256,
+        date(2025, 12, 10),
+        NYSE_2026_KNOWN_SINCE,
+        NYSE_2026_HOLIDAYS,
+    ),
+    "NASDAQ": PublishedSchedule(
+        "NASDAQ",
+        "NASDAQ-2026-observed-2026-11-08-v1",
+        NASDAQ_2026_SOURCE,
+        NASDAQ_2026_SOURCE_SHA256,
+        None,
+        NASDAQ_2026_KNOWN_SINCE,
+        NASDAQ_2026_HOLIDAYS,
+    ),
+}
+
 
 def scheduled_session_review(
     venue: str | None, observed_dates: list[date], known_at: datetime
 ) -> ScheduledSessionReviewRead | None:
-    """Compare only the selected series span with the published NYSE 2026 schedule."""
-    if venue != "NYSE" or not observed_dates or known_at < NYSE_2026_KNOWN_SINCE:
+    """Compare selected series dates with the exact venue's published schedule."""
+    schedule = SCHEDULES.get(venue or "")
+    if schedule is None or not observed_dates or known_at < schedule.observed_at:
         return None
     start = max(min(observed_dates), date(2026, 1, 1))
     known_day = known_at.astimezone(UTC).date()
@@ -51,14 +106,15 @@ def scheduled_session_review(
         start + timedelta(days=offset)
         for offset in range((end - start).days + 1)
         if (start + timedelta(days=offset)).weekday() < 5
-        and (start + timedelta(days=offset)) not in NYSE_2026_HOLIDAYS
+        and (start + timedelta(days=offset)) not in schedule.holidays
     }
     return ScheduledSessionReviewRead(
-        schedule_id="NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
-        source_url=NYSE_2026_SOURCE,
-        source_sha256=NYSE_2026_SOURCE_SHA256,
-        source_as_of=date(2025, 12, 10),
-        source_observed_at=NYSE_2026_KNOWN_SINCE,
+        venue=schedule.venue,
+        schedule_id=schedule.schedule_id,
+        source_url=schedule.source_url,
+        source_sha256=schedule.source_sha256,
+        source_as_of=schedule.source_as_of,
+        source_observed_at=schedule.observed_at,
         start_date=start,
         end_date=end,
         full_selected_span_covered=start == min(observed_dates) and end == max(observed_dates),

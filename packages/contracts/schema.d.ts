@@ -11905,11 +11905,8 @@ export interface components {
             scheduled_count: number;
             /** Selected Unscheduled Dates */
             selected_unscheduled_dates: string[];
-            /**
-             * Source As Of
-             * Format: date
-             */
-            source_as_of: string;
+            /** Source As Of */
+            source_as_of: string | null;
             /**
              * Source Observed At
              * Format: date-time
@@ -11924,6 +11921,11 @@ export interface components {
              * Format: date
              */
             start_date: string;
+            /**
+             * Venue
+             * @enum {string}
+             */
+            venue: "NYSE" | "NASDAQ";
         };
         /** ScoreAssessmentCreate */
         ScoreAssessmentCreate: {

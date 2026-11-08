@@ -31220,9 +31220,16 @@
             "type": "array"
           },
           "source_as_of": {
-            "format": "date",
-            "title": "Source As Of",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source As Of"
           },
           "source_observed_at": {
             "format": "date-time",
@@ -31241,9 +31248,18 @@
             "format": "date",
             "title": "Start Date",
             "type": "string"
+          },
+          "venue": {
+            "enum": [
+              "NYSE",
+              "NASDAQ"
+            ],
+            "title": "Venue",
+            "type": "string"
           }
         },
         "required": [
+          "venue",
           "schedule_id",
           "source_url",
           "source_sha256",

@@ -839,10 +839,11 @@ class PriceHistorySourceStreamRead(Contract):
 
 
 class ScheduledSessionReviewRead(Contract):
+    venue: Literal["NYSE", "NASDAQ"]
     schedule_id: str
     source_url: str
     source_sha256: str
-    source_as_of: date
+    source_as_of: date | None
     source_observed_at: datetime
     start_date: date
     end_date: date

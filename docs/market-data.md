@@ -190,7 +190,14 @@ The comparison is limited to the intersection of 2026 and the first-to-last sele
 daily closes. It excludes weekends and published holidays, but includes early-close
 sessions. Absent dates are review candidates, not proof of a missing trade: later
 schedule changes, unplanned closures, suspensions and provider conventions are not
-verified. Other venues and years remain unassessed; no FX schedule is inferred.
+verified. For an exact `NASDAQ` venue, the same bounded comparison uses Nasdaq's
+[U.S. equity holiday schedule](https://nasdaqtrader.com/Trader.aspx?id=Calendar),
+independently observed November 8, 2026, with SHA-256
+`33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f`. The captured
+Nasdaq source does not state an as-of date; none is inferred. Separate local
+content-addressed source copies are retained outside Git in
+`%LOCALAPPDATA%/PortfolioResearch/reference-calendars`; this local store is not a
+durable backup. Other venues and years remain unassessed; no FX schedule is inferred.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because
 the stored dividend facts are not independently verified, so the figures are not

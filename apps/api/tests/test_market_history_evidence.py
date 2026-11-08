@@ -195,12 +195,14 @@ def test_listing_analytics_reject_incompatible_price_streams(
 
 
 @pytest.mark.integration
-def test_nyse_schedule_review_uses_only_point_in_time_selected_closes(
+@pytest.mark.parametrize("venue", ["NYSE", "NASDAQ"])
+def test_schedule_review_uses_only_point_in_time_selected_closes(
     postgres_engine: Engine,
+    venue: str,
 ) -> None:
     with Session(postgres_engine) as session, session.begin():
         _, _, listing = _seed_canonical_scope(session)
-        listing.venue = "NYSE"
+        listing.venue = venue
         listing_id = listing.id
         for day, recorded in ((2, 3), (7, 8)):
             session.add(
@@ -227,6 +229,7 @@ def test_nyse_schedule_review_uses_only_point_in_time_selected_closes(
         )
         review = result.analytics.scheduled_session_review
         assert review is not None
+        assert review.venue == venue
         assert review.absent_scheduled_dates == [date(2026, 7, 6)]
         assert result.analytics.session_coverage == "NOT_ASSESSED"
         earlier = queries.listing_market_data(

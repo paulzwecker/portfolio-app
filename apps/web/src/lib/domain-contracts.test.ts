@@ -1674,11 +1674,12 @@ describe("domain display integrity", () => {
         first_market_date: null,
         max_calendar_gap_days: null,
         scheduled_session_review: {
+          venue: "NYSE",
           schedule_id: "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
           source_url:
             "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
           source_as_of: "2025-12-10",
-          source_observed_at: "2026-11-08T18:34:00Z",
+          source_observed_at: "2026-11-08T18:37:45.016120Z",
           source_sha256:
             "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
           start_date: "2026-07-02",
@@ -1691,6 +1692,23 @@ describe("domain display integrity", () => {
       },
     };
     expect(isListingMarketData(withEvidence)).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
+            venue: "NASDAQ",
+            source_url: "https://nasdaqtrader.com/Trader.aspx?id=Calendar",
+            source_sha256:
+              "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f",
+            source_as_of: null,
+            source_observed_at: "2026-11-08T18:37:45.961889Z",
+          },
+        },
+      }),
+    ).toBe(true);
     expect(
       isListingMarketData({
         ...withEvidence,

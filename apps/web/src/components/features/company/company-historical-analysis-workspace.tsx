@@ -507,7 +507,7 @@ export function HistoryCoverageNotice({
       {schedule && (
         <details className="mt-2 rounded-md border bg-muted/30 px-3 py-2">
           <summary className="cursor-pointer font-medium">
-            Review scheduled NYSE dates ·{" "}
+            Review scheduled {schedule.venue} dates ·{" "}
             {schedule.absent_scheduled_dates.length} without selected closes
           </summary>
           <div className="mt-2 space-y-2 text-muted-foreground">
@@ -523,16 +523,18 @@ export function HistoryCoverageNotice({
               confirmed missing trade.
             </p>
             <p>
-              {schedule.scheduled_count} scheduled dates. Calendar as of{" "}
-              {dateOnly(schedule.source_as_of)}, observed{" "}
-              {dateOnly(schedule.source_observed_at)}.{" "}
+              {schedule.scheduled_count} scheduled dates. Calendar as-of date:{" "}
+              {schedule.source_as_of
+                ? dateOnly(schedule.source_as_of)
+                : "not stated"}
+              ; observed {dateOnly(schedule.source_observed_at)}.{" "}
               <a
                 className="underline"
                 href={schedule.source_url}
                 target="_blank"
                 rel="noreferrer"
               >
-                Published NYSE calendar
+                Published {schedule.venue} calendar
               </a>
             </p>
             <p className="break-all">

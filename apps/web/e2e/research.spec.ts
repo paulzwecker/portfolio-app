@@ -2793,7 +2793,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         json: incompatibleHistory
           ? marketData.map((market) => ({
               ...market,
-              listing: { ...market.listing, venue: "NYSE" },
+              listing: { ...market.listing, venue: "NASDAQ" },
               availability: "PARTIAL",
               history: conflictHistory,
               analytics: {
@@ -2805,14 +2805,14 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                   "ADJUSTMENT_BASIS_MISMATCH",
                 ],
                 scheduled_session_review: {
-                  schedule_id:
-                    "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
+                  venue: "NASDAQ",
+                  schedule_id: "NASDAQ-2026-observed-2026-11-08-v1",
                   source_url:
-                    "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
-                  source_as_of: "2025-12-10",
-                  source_observed_at: "2026-11-08T18:34:00Z",
+                    "https://nasdaqtrader.com/Trader.aspx?id=Calendar",
+                  source_as_of: null,
+                  source_observed_at: "2026-11-08T18:37:45.961889Z",
                   source_sha256:
-                    "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
+                    "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f",
                   start_date: "2026-10-01",
                   end_date: "2026-10-04",
                   full_selected_span_covered: false,
@@ -3509,7 +3509,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByText(/price adjustment descriptions differ/),
     ).toBeVisible();
-    await page.getByText(/Review scheduled NYSE dates/).click();
+    await page.getByText(/Review scheduled NASDAQ dates/).click();
     await expect(page.getByText(/not a confirmed missing trade/)).toBeVisible();
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),

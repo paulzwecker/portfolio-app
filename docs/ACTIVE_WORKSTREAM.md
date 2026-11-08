@@ -270,3 +270,14 @@ unassessed. Twenty-one synthetic backend tests including isolated PostgreSQL cas
 56 web tests and a desktop/mobile browser journey pass. No migration or hosted
 change. Next: review additional venue calendars and durable observation provenance
 before expanding coverage or claiming complete sessions.
+
+Current increment adds the independently sourced 2026 `NASDAQ` holiday schedule,
+without assigning it to `XNAS`, Nordic or other ambiguous venues. Published NYSE
+and Nasdaq source bytes and immutable manifests are retained locally outside Git
+under `%LOCALAPPDATA%/PortfolioResearch/reference-calendars`; this is not a backup.
+The displayed observation times now match those actual captures. Nasdaq's source
+does not state an as-of date and the UI displays that uncertainty. Schedule dates
+remain review candidates, not verified sessions or full history coverage.
+Twenty-four focused backend tests including isolated PostgreSQL cases, 57 web
+checks, contract/type/lint checks and a synthetic desktop/mobile browser journey
+passed. No schema migration or hosted changes.

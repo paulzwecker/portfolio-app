@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Expand reviewed session evidence beyond NYSE 2026; keep production activation separately authorized          |
+| Next ready substantial task | Review further venues and schedule updates; keep production activation separately authorized                 |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
@@ -23,6 +23,10 @@ Published NYSE 2026 schedule evidence now identifies bounded date-review candida
 for exact `NYSE` listings. It does not certify actual trading, other venues or FX.
 The schedule is source-hashed and excluded from views before its observation time.
 Twenty-one focused backend tests, 56 web checks and a desktop/mobile browser journey pass.
+The next increment independently supports exact `NASDAQ` listings using its own
+published 2026 schedule and preserved source bytes; older knowledge cutoffs stay
+unassessed. Source capture times are exact; an unstated Nasdaq as-of date stays null.
+Twenty-four focused backend tests, 57 web checks and the desktop/mobile journey pass.
 
 PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and

@@ -905,12 +905,22 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
     (v.scheduled_session_review === undefined ||
       v.scheduled_session_review === null ||
       (isRecord(v.scheduled_session_review) &&
+        ["NYSE", "NASDAQ"].includes(
+          v.scheduled_session_review.venue as string,
+        ) &&
         string(v.scheduled_session_review.schedule_id) &&
-        v.scheduled_session_review.source_url ===
-          "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf" &&
-        v.scheduled_session_review.source_sha256 ===
-          "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f" &&
-        dateOnly(v.scheduled_session_review.source_as_of) &&
+        ((v.scheduled_session_review.venue === "NYSE" &&
+          v.scheduled_session_review.source_url ===
+            "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf" &&
+          v.scheduled_session_review.source_sha256 ===
+            "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f") ||
+          (v.scheduled_session_review.venue === "NASDAQ" &&
+            v.scheduled_session_review.source_url ===
+              "https://nasdaqtrader.com/Trader.aspx?id=Calendar" &&
+            v.scheduled_session_review.source_sha256 ===
+              "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f")) &&
+        (v.scheduled_session_review.source_as_of === null ||
+          dateOnly(v.scheduled_session_review.source_as_of)) &&
         timestamp(v.scheduled_session_review.source_observed_at) &&
         dateOnly(v.scheduled_session_review.start_date) &&
         dateOnly(v.scheduled_session_review.end_date) &&

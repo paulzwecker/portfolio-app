@@ -151,11 +151,12 @@ describe("historical market coverage notice", () => {
   it("shows the bounded published schedule as review evidence, not confirmed missing trades", () => {
     const analytics = {
       scheduled_session_review: {
+        venue: "NYSE",
         schedule_id: "NYSE-2026-asof-2025-12-10-observed-2026-11-08-v1",
         source_url:
           "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
         source_as_of: "2025-12-10",
-        source_observed_at: "2026-11-08T18:34:00Z",
+        source_observed_at: "2026-11-08T18:37:45.016120Z",
         source_sha256:
           "70f5577eb43e60a9dbbecaae3cec23d0f02028c05c7f175013bb3e97816d394f",
         start_date: "2026-07-02",
@@ -174,6 +175,50 @@ describe("historical market coverage notice", () => {
     expect(html).toContain("not a confirmed missing trade");
     expect(html).toContain(dateOnly("2026-07-06"));
     expect(html).toContain(dateOnly("2026-07-03"));
+  });
+
+  it("labels Nasdaq evidence without inventing a calendar as-of date", () => {
+    const analytics = {
+      status: "PARTIAL",
+      methodology_version: "fixture",
+      observation_count: 2,
+      as_of: null,
+      session_coverage: "NOT_ASSESSED",
+      daily_return: null,
+      dma_20: null,
+      dma_50: null,
+      dma_200: null,
+      high_52w: null,
+      drawdown_52w: null,
+      price_return_1m: null,
+      price_return_3m: null,
+      price_return_6m: null,
+      realized_vol_20d: null,
+      trend_state: null,
+      correction_state: null,
+      scheduled_session_review: {
+        venue: "NASDAQ",
+        schedule_id: "NASDAQ-2026-observed-2026-11-08-v1",
+        source_url: "https://nasdaqtrader.com/Trader.aspx?id=Calendar",
+        source_sha256:
+          "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f",
+        source_as_of: null,
+        source_observed_at: "2026-11-08T18:37:45.961889Z",
+        start_date: "2026-07-02",
+        end_date: "2026-07-07",
+        full_selected_span_covered: true,
+        scheduled_count: 3,
+        absent_scheduled_dates: ["2026-07-06"],
+        selected_unscheduled_dates: [],
+      },
+    } satisfies PriceHistoryAnalytics;
+    const html = renderToStaticMarkup(
+      <HistoryCoverageNotice analytics={analytics} />,
+    );
+    expect(html).toContain("Review scheduled NASDAQ dates");
+    expect(html).toContain("Calendar as-of date:");
+    expect(html).toContain("not stated");
+    expect(html).toContain("Published NASDAQ calendar");
   });
 
   it("filters all returned observations and keeps exact close text", () => {
