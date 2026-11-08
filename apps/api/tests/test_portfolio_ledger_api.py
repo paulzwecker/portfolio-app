@@ -246,6 +246,53 @@ def test_guided_v2_cash_activity_replays_read_only(postgres_engine: Engine) -> N
     assert baseline(postgres_engine, portfolio_id) == before
 
 
+def test_guided_ending_after_cash_activity_preserves_baseline(postgres_engine: Engine) -> None:
+    portfolio_id = source(postgres_engine)
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger"
+        headers = {"x-api-access-token": "synthetic-token"}
+        anchor = c.PortfolioLedgerAnchorRead.model_validate(
+            client.get(f"{path}/anchor", headers=headers).json()
+        )
+        value = candidate(anchor)
+        value.contract_version = "portfolio-ledger-preview-v2"
+        value.activity = [cash_activity("DEPOSIT", 1, "1.25")]
+        value.ending_statement = c.LedgerEndingStatement(
+            effective_at=value.as_of,
+            accounts=[
+                c.LedgerEndingAccount(
+                    account_id=value.accounts[0].account_id,
+                    evidence=evidence("guided-ending"),
+                    positions=value.accounts[0].positions,
+                    cash=[
+                        c.LedgerCashInput(currency="USD", balance=Decimal("101.25")),
+                        c.LedgerCashInput(currency="EUR", balance=Decimal("0")),
+                    ],
+                )
+            ],
+        )
+        payload = value.model_dump(mode="json")
+        response = client.post(f"{path}/preview", headers=headers, json=payload)
+        assert response.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(response.json())
+        assert result.status == "ENDING_RECONCILED" and result.ending_status == "MATCH"
+        assert (
+            client.post(f"{path}/preview", headers=headers, json=payload).json() == response.json()
+        )
+        payload["ending_statement"]["accounts"][0]["cash"].pop()
+        missing = client.post(f"{path}/preview", headers=headers, json=payload)
+        assert missing.status_code == 200 and missing.json()["status"] == "BLOCKED"
+        assert any(
+            row["status"] == "MISSING_OBSERVATION" and row["key"] == "EUR"
+            for row in missing.json()["ending_reconciliation"]
+        )
+    assert baseline(postgres_engine, portfolio_id) == before
+
+
 def test_guided_v2_opening_at_anchor_boundary_preserves_canonical_state(
     postgres_engine: Engine,
 ) -> None:

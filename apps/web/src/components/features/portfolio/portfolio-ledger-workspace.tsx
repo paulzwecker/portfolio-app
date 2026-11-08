@@ -16,6 +16,7 @@ import { dateTime } from "@/lib/display";
 import {
   downloadLedgerJson,
   inspectLedgerFile,
+  ledgerSameInstant,
   ledgerFileLimit,
   type LedgerReviewFile,
 } from "./portfolio-ledger-data";
@@ -27,6 +28,9 @@ import {
   restoreCashActivityReview,
   type CashActivitySession,
 } from "./ledger-cash-activity";
+import { LedgerEndingBuilder } from "./ledger-ending-builder";
+import { endingOpeningAccounts } from "./ledger-ending-draft";
+import type { OpeningAccountDraft } from "./ledger-opening-draft";
 
 export function PortfolioLedgerWorkspace({
   portfolioId,
@@ -45,6 +49,10 @@ export function PortfolioLedgerWorkspace({
   const [activityBase, setActivityBase] = useState<CashActivitySession | null>(
     null,
   );
+  const [endingBase, setEndingBase] = useState<{
+    file: LedgerReviewFile;
+    opening: OpeningAccountDraft[];
+  } | null>(null);
   const [review, setReview] = useState<{
     report: PortfolioLedgerPreview;
     file: LedgerReviewFile;
@@ -78,6 +86,7 @@ export function PortfolioLedgerWorkspace({
 
   const loadFile = async (selected: File | undefined) => {
     setActivityBase(null);
+    setEndingBase(null);
     const version = ++fileVersion.current;
     activeRequest.current?.abort();
     activeRequest.current = null;
@@ -159,7 +168,9 @@ export function PortfolioLedgerWorkspace({
         data.portfolio_id !== portfolioId ||
         data.anchor_snapshot_id !== candidate.anchorSnapshotId ||
         data.anchor_sha256 !== candidate.anchorSha256 ||
-        Date.parse(data.as_of) !== Date.parse(candidate.asOf)
+        !ledgerSameInstant(data.as_of, candidate.asOf) ||
+        (data.ending_statement_at != null &&
+          !ledgerSameInstant(data.ending_statement_at, data.as_of))
       )
         throw new Error(
           "The ledger result could not be verified against this file and portfolio.",
@@ -180,8 +191,9 @@ export function PortfolioLedgerWorkspace({
     }
   };
 
-  const clear = (retainActivity = false) => {
+  const clear = (retainActivity = false, retainEnding = false) => {
     if (!retainActivity) setActivityBase(null);
+    if (!retainEnding) setEndingBase(null);
     fileVersion.current += 1;
     activeRequest.current?.abort();
     activeRequest.current = null;
@@ -205,13 +217,16 @@ export function PortfolioLedgerWorkspace({
         actions={
           <Button
             variant="outline"
-            disabled={Boolean(activityBase) || pending || loadingFile}
+            disabled={
+              Boolean(activityBase || endingBase) || pending || loadingFile
+            }
             onClick={() => {
               activeRequest.current?.abort();
               activeRequest.current = null;
               setPending(false);
               setReview(null);
               setActivityBase(null);
+              setEndingBase(null);
               anchor.retry();
             }}
           >
@@ -260,8 +275,10 @@ export function PortfolioLedgerWorkspace({
             <LedgerOpeningBuilder
               key={verified.anchor_sha256}
               anchor={verified}
-              disabled={pending || loadingFile || Boolean(activityBase)}
-              collapsed={Boolean(activityBase)}
+              disabled={
+                pending || loadingFile || Boolean(activityBase || endingBase)
+              }
+              collapsed={Boolean(activityBase || endingBase)}
               onChange={() => clear()}
               onReview={runPreview}
             />
@@ -285,6 +302,28 @@ export function PortfolioLedgerWorkspace({
                 />
               </PageSection>
             )}
+          {endingBase &&
+            endingBase.file.anchorSha256 === verified.anchor_sha256 && (
+              <PageSection
+                title="Ending statement"
+                description="Enter independent observations for each opening account at the review cutoff."
+              >
+                <LedgerEndingBuilder
+                  key={endingBase.file.text}
+                  anchor={verified}
+                  base={endingBase.file}
+                  opening={endingBase.opening}
+                  disabled={pending || loadingFile}
+                  onChange={() => clear(false, true)}
+                  onReview={runPreview}
+                  onClose={() => {
+                    const previous = endingBase.file;
+                    clear();
+                    setFile(previous);
+                  }}
+                />
+              </PageSection>
+            )}
           <PageSection
             title="3. Validate a private ledger file"
             description="Choose a UTF-8 portfolio-ledger-preview-v1 or v2 JSON file containing evidenced accounts, opening balances, activity and optional ending observations. Use v2 for observed income and paired internal cash or same-listing security transfers. Maximum 1 MB."
@@ -299,7 +338,7 @@ export function PortfolioLedgerWorkspace({
                 ref={input}
                 type="file"
                 accept=".json,application/json"
-                disabled={Boolean(activityBase)}
+                disabled={Boolean(activityBase || endingBase)}
                 onChange={(event) => void loadFile(event.target.files?.[0])}
                 className="mt-2 block w-full min-w-0 rounded-md border bg-background p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-3 file:py-2 file:text-foreground"
               />
@@ -326,7 +365,7 @@ export function PortfolioLedgerWorkspace({
                   !matchesAnchor ||
                   pending ||
                   loadingFile ||
-                  Boolean(activityBase)
+                  Boolean(activityBase || endingBase)
                 }
                 onClick={() => void runPreview()}
               >
@@ -340,7 +379,7 @@ export function PortfolioLedgerWorkspace({
                 variant="ghost"
                 onClick={() => clear()}
                 disabled={
-                  Boolean(activityBase) ||
+                  Boolean(activityBase || endingBase) ||
                   (!file && !error && !pending && !loadingFile)
                 }
               >
@@ -366,7 +405,8 @@ export function PortfolioLedgerWorkspace({
           {visibleReview.report.status === "OPENING_RECONCILED" &&
             visibleReview.report.activity_count === 0 &&
             visibleReview.file.name === "opening-balances.json" &&
-            !activityBase && (
+            !activityBase &&
+            !endingBase && (
               <Button
                 variant="outline"
                 onClick={() =>
@@ -384,7 +424,8 @@ export function PortfolioLedgerWorkspace({
             visibleReview.report.status === "OPENING_RECONCILED" &&
             visibleReview.report.activity_count > 0 &&
             visibleReview.report.ending_status === "NOT_PROVIDED" &&
-            !activityBase && (
+            !activityBase &&
+            !endingBase && (
               <Button
                 variant="outline"
                 onClick={() => {
@@ -410,6 +451,54 @@ export function PortfolioLedgerWorkspace({
                 }}
               >
                 Edit supported cash activity
+              </Button>
+            )}
+          {verified &&
+            visibleReview.report.status === "OPENING_RECONCILED" &&
+            visibleReview.report.ending_status === "NOT_PROVIDED" &&
+            !endingBase && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  try {
+                    const opening = endingOpeningAccounts(
+                      verified,
+                      visibleReview.file,
+                    );
+                    const activity: unknown = JSON.parse(
+                      visibleReview.file.text,
+                    ).activity;
+                    const projectedAccounts = new Set(
+                      visibleReview.report.accounts.map((account) =>
+                        account.account_id.toLowerCase(),
+                      ),
+                    );
+                    if (
+                      !Array.isArray(activity) ||
+                      activity.length !== visibleReview.report.activity_count ||
+                      visibleReview.report.accounts.length !== opening.length ||
+                      projectedAccounts.size !== opening.length ||
+                      opening.some(
+                        (account) =>
+                          !projectedAccounts.has(account.id.toLowerCase()),
+                      )
+                    )
+                      throw new Error(
+                        "The review does not match the source activity and accounts.",
+                      );
+                    setError(null);
+                    setActivityBase(null);
+                    setEndingBase({ file: visibleReview.file, opening });
+                  } catch (failure) {
+                    setError(
+                      failure instanceof Error
+                        ? failure.message
+                        : "This review cannot use the guided ending form.",
+                    );
+                  }
+                }}
+              >
+                Add ending statement
               </Button>
             )}
           <PortfolioLedgerResults

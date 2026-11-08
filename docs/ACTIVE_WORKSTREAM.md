@@ -43,8 +43,8 @@ after an opening reconciles. Account, type, amount, currency, sequence, timestam
 cutoff and source evidence are explicit. Native preview results display account
 and portfolio balances. Editing invalidates the result, and the cash draft must be
 discarded before switching its opening or source file. Full activity packets can
-be downloaded and replayed in the existing file workflow. Guided
-trade/dividend/transfer entry and ending statements remain outstanding.
+be downloaded and replayed in the existing file workflow. At that checkpoint,
+guided trade/dividend/transfer entry and ending statements were outstanding.
 
 Verification passed 112 focused web tests, 14 isolated PostgreSQL/API cases and
 12 managed desktop/mobile browser cases using synthetic data. Typecheck, the
@@ -63,9 +63,21 @@ cases, including reload, identical replay and refusal of unsupported activity.
 Typecheck, production build, focused lint and documentation checks passed. The
 resumed mobile form was visually reviewed.
 
+## Current ending statement increment
+
+The guided workflow adds independently entered ending positions, cash and source
+evidence for every opening account at the existing cutoff. Fields start empty, the
+user confirms the observation time, and the API evaluates missing rows, zeroes and
+differences. Edits invalidate the result. Discarding the ending draft returns the
+previous packet for revalidation. Guided restoration of ending fields remains open.
+Preview cutoff and ending timestamps are checked at full fractional precision.
+The increment passed 120 focused web tests, 15 isolated PostgreSQL/API cases and
+28 synthetic desktop/mobile browser checks. Build, typecheck, focused lint and
+documentation checks passed. Desktop and mobile synthetic layouts were inspected.
+
 ## Next increment and release boundaries
 
-Add guided trade/dividend entry and ending-statement entry to complete the existing
+Add guided trade/dividend entry and restoration of ending fields to complete the existing
 candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,

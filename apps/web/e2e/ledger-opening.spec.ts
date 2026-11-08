@@ -52,10 +52,52 @@ async function setup(page: Page, status = 200) {
         report.accounts[0].cash.find((row) => row.currency === "USD")!.balance =
           "101.2500000000";
       }
-      report.status = "OPENING_RECONCILED";
-      report.ending_status = "NOT_PROVIDED";
-      report.ending_statement_at = null;
-      report.ending_reconciliation = [];
+      if (packet.ending_statement) {
+        report.status = "ENDING_RECONCILED";
+        report.ending_status = "MATCH";
+        report.ending_statement_at = packet.as_of;
+        report.ending_reconciliation = report.ending_reconciliation.map(
+          (row) => ({
+            ...row,
+            account_id: row.account_id ? packet.accounts[0].account_id : null,
+            ...(packet.activity.length > 0 && row.key === "USD"
+              ? { projected: "101.2500000000", observed: "101.2500000000" }
+              : {}),
+          }),
+        );
+        if (
+          !packet.ending_statement.accounts[0].cash.some(
+            (row: { currency: string }) => row.currency === "EUR",
+          )
+        ) {
+          report.status = "BLOCKED";
+          report.ending_status = "MISMATCH";
+          report.issues = [
+            {
+              code: "ENDING_MISMATCH",
+              activity_id: null,
+              account_id: null,
+              asset_key: "EUR",
+            },
+          ];
+          report.ending_reconciliation = report.ending_reconciliation.map(
+            (row) =>
+              row.key === "EUR"
+                ? {
+                    ...row,
+                    observed: null,
+                    difference: null,
+                    status: "MISSING_OBSERVATION",
+                  }
+                : row,
+          );
+        }
+      } else {
+        report.status = "OPENING_RECONCILED";
+        report.ending_status = "NOT_PROVIDED";
+        report.ending_statement_at = null;
+        report.ending_reconciliation = [];
+      }
       report.accounts[0].account_id = packet.accounts[0].account_id;
       expect(isPortfolioLedgerPreview(report)).toBe(true);
       return route.fulfill({ json: report });
@@ -568,6 +610,353 @@ test("guided cash activity reviews exact source evidence against a reconciled op
   ).toBeEnabled();
 });
 
+test("independent ending observations reconcile and edits invalidate the result", async ({
+  page,
+}, info) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Reload observed anchor", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByLabel("Ledger review JSON", { exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Statement SHA-256", { exact: true })
+    .fill("d".repeat(64));
+  await page
+    .getByLabel("Statement record reference", { exact: true })
+    .fill("ending-observation");
+  await page
+    .getByRole("button", { name: "Add ending position", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Ending position 1 quantity", { exact: true }),
+  ).toHaveValue("");
+  await page
+    .getByRole("combobox", { name: "Ending position 1 listing", exact: true })
+    .selectOption(ledgerAnchor.listings[0].listing_id);
+  await page
+    .getByLabel("Ending position 1 quantity", { exact: true })
+    .fill("2.5000000000");
+  for (const [index, currency, balance] of [
+    [1, "USD", "100.0000000000"],
+    [2, "EUR", "0"],
+  ] as const) {
+    await page
+      .getByRole("button", { name: "Add ending cash", exact: true })
+      .click();
+    await page
+      .getByLabel(`Ending cash ${index} currency`, { exact: true })
+      .fill(currency);
+    await page
+      .getByLabel(`Ending cash ${index} balance`, { exact: true })
+      .fill(balance);
+  }
+  const confirmed = page.getByLabel(
+    "I confirm these ending observations are effective at the review cutoff.",
+    { exact: true },
+  );
+  await confirmed.check();
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls).toHaveLength(2);
+  const packet = JSON.parse(calls[1].text);
+  expect(packet.accounts).toEqual(JSON.parse(calls[0].text).accounts);
+  expect(packet.activity).toEqual([]);
+  expect(packet.ending_statement).toEqual({
+    effective_at: packet.as_of,
+    accounts: [
+      {
+        account_id: packet.accounts[0].account_id,
+        evidence: {
+          source_sha256: "d".repeat(64),
+          source_record_id: "ending-observation",
+        },
+        positions: [
+          {
+            listing_id: ledgerAnchor.listings[0].listing_id,
+            quantity: "2.5000000000",
+          },
+        ],
+        cash: [
+          { currency: "USD", balance: "100.0000000000" },
+          { currency: "EUR", balance: "0" },
+        ],
+      },
+    ],
+  });
+  await page
+    .getByRole("heading", { name: "Ending statement", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("ending-statement.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Remove ending cash 2", exact: true })
+    .click();
+  await expect(confirmed).not.toBeChecked();
+  await confirmed.check();
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(page.getByText("Review blocked", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByText("MISSING OBSERVATION", { exact: true })
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add ending cash", exact: true })
+    .click();
+  await page.getByLabel("Ending cash 2 currency", { exact: true }).fill("EUR");
+  await page.getByLabel("Ending cash 2 balance", { exact: true }).fill("0");
+  await confirmed.check();
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Ending cash 2 balance", { exact: true }).fill("1");
+  await expect(confirmed).not.toBeChecked();
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Discard ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Validate and reconcile", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[4].text).toBe(calls[0].text);
+  expect(calls.map((call) => call.path)).toEqual(Array(5).fill(previewPath));
+});
+
+test("a reviewed cash draft can transition to ending observations without losing activity", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add settled cash activity", exact: true })
+    .click();
+  await page
+    .getByLabel("Review cutoff timestamp", { exact: true })
+    .fill("2026-01-31T23:59:59+01:00");
+  await page
+    .getByRole("button", { name: "Add cash record", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption(JSON.parse(calls[0].text).accounts[0].account_id);
+  await page
+    .getByRole("combobox", { name: "Type", exact: true })
+    .selectOption("DEPOSIT");
+  await page
+    .getByLabel("Booking timestamp", { exact: true })
+    .fill("2026-01-15T10:30:00+01:00");
+  await page.getByLabel("Sequence", { exact: true }).fill("1");
+  await page.getByLabel("Currency", { exact: true }).fill("USD");
+  await page.getByLabel("Amount", { exact: true }).fill("1.2500000000");
+  await page
+    .getByLabel("Source document SHA-256", { exact: true })
+    .last()
+    .fill("c".repeat(64));
+  await page
+    .getByLabel("Source record reference", { exact: true })
+    .fill("deposit");
+  await page
+    .getByRole("button", { name: "Review cash activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add ending statement", exact: true })
+    .click();
+  await page
+    .getByLabel("Statement SHA-256", { exact: true })
+    .fill("d".repeat(64));
+  await page
+    .getByLabel("Statement record reference", { exact: true })
+    .fill("ending");
+  await page
+    .getByRole("button", { name: "Add ending position", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Ending position 1 listing", exact: true })
+    .selectOption(ledgerAnchor.listings[0].listing_id);
+  await page
+    .getByLabel("Ending position 1 quantity", { exact: true })
+    .fill("2.5000000000");
+  for (const [index, currency, balance] of [
+    [1, "USD", "101.2500000000"],
+    [2, "EUR", "0"],
+  ] as const) {
+    await page
+      .getByRole("button", { name: "Add ending cash", exact: true })
+      .click();
+    await page
+      .getByLabel(`Ending cash ${index} currency`, { exact: true })
+      .fill(currency);
+    await page
+      .getByLabel(`Ending cash ${index} balance`, { exact: true })
+      .fill(balance);
+  }
+  await page
+    .getByLabel(
+      "I confirm these ending observations are effective at the review cutoff.",
+      { exact: true },
+    )
+    .check();
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(JSON.parse(calls[2].text).activity).toEqual(
+    JSON.parse(calls[1].text).activity,
+  );
+  await page
+    .getByRole("button", { name: "Discard ending statement", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[3].text).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Edit supported cash activity", exact: true })
+    .click();
+  await expect(page.getByLabel("Amount", { exact: true })).toHaveValue(
+    "1.2500000000",
+  );
+});
+
+for (const mismatch of ["cutoff", "ending"] as const) {
+  test(`preview rejects mismatched ${mismatch} timestamps below one millisecond`, async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.route(`**${previewPath}`, async (route) => {
+      const packet = JSON.parse(route.request().postData() ?? "{}");
+      const report = ledgerReport();
+      report.contract_version = "portfolio-ledger-preview-v2";
+      report.projection_version = "settled-booking-v2";
+      report.as_of =
+        mismatch === "cutoff" ? "2026-01-01T00:00:00.000001Z" : packet.as_of;
+      report.accounts[0].account_id = packet.accounts[0].account_id;
+      if (mismatch === "ending") {
+        report.ending_statement_at = "2026-01-01T00:00:00.000001Z";
+        report.ending_reconciliation = report.ending_reconciliation.map(
+          (row) => ({
+            ...row,
+            account_id: row.account_id ? packet.accounts[0].account_id : null,
+          }),
+        );
+      } else {
+        report.status = "OPENING_RECONCILED";
+        report.ending_status = "NOT_PROVIDED";
+        report.ending_statement_at = null;
+        report.ending_reconciliation = [];
+      }
+      expect(isPortfolioLedgerPreview(report)).toBe(true);
+      await route.fulfill({ json: report });
+    });
+    await page.getByLabel(acknowledgement, { exact: true }).check();
+    await page
+      .getByRole("button", { name: "Reconcile opening balances", exact: true })
+      .click();
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(
+      "could not be verified",
+    );
+    await expect(
+      page.getByLabel("Ledger review result", { exact: true }),
+    ).toHaveCount(0);
+  });
+}
+
+for (const mismatch of ["account", "activity", "duplicate account"] as const) {
+  test(`ending form rejects a preview with mismatched ${mismatch} metadata`, async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.route(`**${previewPath}`, async (route) => {
+      const packet = JSON.parse(route.request().postData() ?? "{}");
+      const report = ledgerReport();
+      report.contract_version = "portfolio-ledger-preview-v2";
+      report.projection_version = "settled-booking-v2";
+      report.as_of = packet.as_of;
+      report.status = "OPENING_RECONCILED";
+      report.ending_status = "NOT_PROVIDED";
+      report.ending_statement_at = null;
+      report.ending_reconciliation = [];
+      report.accounts[0].account_id =
+        mismatch === "account"
+          ? "77777777-7777-4777-8777-777777777777"
+          : packet.accounts[0].account_id;
+      report.activity_count = mismatch === "activity" ? 1 : 0;
+      if (mismatch === "duplicate account")
+        report.accounts.push({ ...report.accounts[0] });
+      expect(isPortfolioLedgerPreview(report)).toBe(true);
+      await route.fulfill({ json: report });
+    });
+    await page.getByLabel(acknowledgement, { exact: true }).check();
+    await page
+      .getByRole("button", { name: "Reconcile opening balances", exact: true })
+      .click();
+    await expect(
+      page.getByText("Opening balances reconciled", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Add ending statement", exact: true })
+      .click();
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(
+      "review does not match the source activity and accounts",
+    );
+    await expect(
+      page.getByRole("heading", { name: "Ending statement", exact: true }),
+    ).toHaveCount(0);
+  });
+}
+
 test("unsupported reviewed activity stays available in its original file", async ({
   page,
 }) => {
@@ -600,13 +989,11 @@ test("unsupported reviewed activity stays available in its original file", async
     },
   ];
   const text = JSON.stringify(packet);
-  await page
-    .getByLabel("Ledger review JSON", { exact: true })
-    .setInputFiles({
-      name: "dividend.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(text),
-    });
+  await page.getByLabel("Ledger review JSON", { exact: true }).setInputFiles({
+    name: "dividend.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(text),
+  });
   await page
     .getByRole("button", { name: "Validate and reconcile", exact: true })
     .click();

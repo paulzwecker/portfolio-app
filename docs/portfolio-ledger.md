@@ -199,8 +199,18 @@ the opening or source file is changed. To resume it, load the unchanged download
 review JSON, validate it against the current anchor and select the cash editor.
 Restoration preserves account and record IDs, source evidence and exact amounts.
 Packets with other activities, ending statements or extra fields remain available
-through the file workflow. Guided trades, dividends, transfers and ending
-statements remain future work.
+through the file workflow. Guided trades, dividends, transfers and restoration
+of ending statements remain future work.
+
+After a guided opening or supported cash review reconciles, the ending form accepts
+independently entered positions, native cash and source evidence for every account
+at the existing review cutoff. Fields start empty. The user confirms the observation
+time, and the API distinguishes missing rows, explicit zeros and differences.
+Edits invalidate the prior result. Discarding the ending draft returns the preceding
+packet for revalidation. Downloaded ending packets replay through the file workflow;
+guided restoration of their ending fields remains future work.
+Preview cutoff and ending timestamps are compared at full fractional precision
+across UTC offsets before a result is shown.
 
 For activity and ending observations, prepare the typed ledger JSON and choose it
 using the file control. Files stay in

@@ -11,7 +11,11 @@ import {
   ledgerPortfolioId,
   ledgerReport,
 } from "../../../../e2e/fixtures/ledger";
-import { inspectLedgerFile, ledgerFileLimit } from "./portfolio-ledger-data";
+import {
+  inspectLedgerFile,
+  ledgerFileLimit,
+  ledgerSameInstant,
+} from "./portfolio-ledger-data";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
 
 beforeEach(() => {
@@ -20,6 +24,34 @@ beforeEach(() => {
   vi.stubEnv("API_ACCESS_TOKEN", "");
   vi.stubEnv("WEB_ACCESS_USERNAME", "");
   vi.stubEnv("WEB_ACCESS_PASSWORD", "");
+});
+
+it("compares source timestamps at full fractional precision across UTC offsets", () => {
+  expect(
+    ledgerSameInstant(
+      "2026-01-01T01:00:00.123456+01:00",
+      "2026-01-01T00:00:00.123456Z",
+    ),
+  ).toBe(true);
+  expect(
+    ledgerSameInstant(
+      "2026-01-01T00:00:00.123400Z",
+      "2026-01-01T00:00:00.1234Z",
+    ),
+  ).toBe(true);
+  expect(
+    ledgerSameInstant("2026-01-01T00:00:00Z", "2026-01-01T00:00:00.000000Z"),
+  ).toBe(true);
+  expect(
+    ledgerSameInstant(
+      "2026-01-01T00:00:00.123456Z",
+      "2026-01-01T00:00:00.123457Z",
+    ),
+  ).toBe(false);
+  expect(
+    ledgerSameInstant("2026-01-01T00:00:00Z", "2026-01-01T00:00:00.000001Z"),
+  ).toBe(false);
+  expect(ledgerSameInstant("not-a-time", "not-a-time")).toBe(false);
 });
 
 it("does not present candidate balances as usable when replay is blocked", () => {
