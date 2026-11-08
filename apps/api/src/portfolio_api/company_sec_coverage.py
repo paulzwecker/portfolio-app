@@ -1,5 +1,6 @@
 """Current SEC evidence and attributed refresh diagnostics, without provider calls."""
 
+import re
 from contextlib import suppress
 from datetime import date, datetime
 from typing import Any, Literal, cast
@@ -24,10 +25,16 @@ from portfolio_api.domain.models import (
 )
 from portfolio_api.fundamentals_bootstrap import (
     FundamentalsBootstrapError,
+    ReviewedCikMapping,
     _load_reviewed_cik_mappings,
 )
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
-from portfolio_api.sec_refresh_scope import SEC_SCOPE_VERSION
+from portfolio_api.sec_refresh_scope import (
+    MAX_SEC_ISSUERS,
+    SEC_SCOPE_VERSION,
+    _mapping_hash,
+    _mapping_values,
+)
 from portfolio_api.source_documents import (
     SEC_ISSUER_RECONCILIATION_VERSION,
     SecIssuerFilingReconciliation,
@@ -196,7 +203,68 @@ def _issuer_result(
     return "REPORTED", count
 
 
-def _refresh(session: Session, company_id: UUID, domain: str) -> s.SecRefreshRead | None:
+def _refresh_identity(
+    scope: dict[str, Any], company_id: UUID, current: ReviewedCikMapping | None
+) -> s.SecRefreshIdentityRead:
+    """Relate retained, hash-bound scope evidence to today's reviewed identity."""
+    unknown = s.SecRefreshIdentityRead(status="UNVERIFIED", frozen_cik=None)
+    try:
+        mappings = scope["verified_cik_mappings"]
+        ids = scope["company_ids"]
+        if (
+            scope.get("scope") != "sec_issuer_refresh"
+            or scope.get("sec_scope_version") != SEC_SCOPE_VERSION
+            or not isinstance(ids, list)
+            or not all(isinstance(item, str) and str(UUID(item)) == item for item in ids)
+            or len(set(ids)) != len(ids)
+            or str(company_id) not in ids
+            or [item["company_id"] for item in scope["selection"]["companies"]] != ids
+            or not isinstance(mappings, list)
+            or len(mappings) > MAX_SEC_ISSUERS
+            or not all(isinstance(item, dict) for item in mappings)
+            or _mapping_hash(mappings) != scope.get("mapping_sha256")
+        ):
+            return unknown
+        mapped_ids = [item["company_id"] for item in mappings]
+        if len(set(mapped_ids)) != len(mapped_ids) or not set(mapped_ids).issubset(ids):
+            return unknown
+        matches = [item for item in mappings if item["company_id"] == str(company_id)]
+        if not matches:
+            return s.SecRefreshIdentityRead(status="UNMAPPED_IN_SCOPE", frozen_cik=None)
+        frozen = matches[0]
+        cik = frozen["cik"]
+        if (
+            not isinstance(cik, str)
+            or not re.fullmatch(r"[0-9]{10}", cik)
+            or not isinstance(frozen["mapping_identifier_id"], str)
+            or str(UUID(frozen["mapping_identifier_id"])) != frozen["mapping_identifier_id"]
+            or not all(
+                isinstance(frozen[key], str)
+                for key in (
+                    "company_name",
+                    "provider_company_name",
+                    "evidence_source",
+                    "effective_at",
+                    "recorded_at",
+                )
+            )
+        ):
+            return unknown
+        if current is None:
+            return s.SecRefreshIdentityRead(status="CURRENT_UNAVAILABLE", frozen_cik=cik)
+        status = (
+            "MATCHED"
+            if _mapping_values([frozen]) == _mapping_values([current.manifest()])
+            else "CHANGED"
+        )
+        return s.SecRefreshIdentityRead(status=status, frozen_cik=cik)
+    except (KeyError, TypeError, ValueError):
+        return unknown
+
+
+def _refresh(
+    session: Session, company_id: UUID, domain: str, mapping: ReviewedCikMapping | None
+) -> s.SecRefreshRead | None:
     run = session.scalar(
         select(ExternalIngestionRun)
         .where(
@@ -271,6 +339,7 @@ def _refresh(session: Session, company_id: UUID, domain: str) -> s.SecRefreshRea
         mapped_company_count=len(mapped_ids) if mapped_ids is not None else None,
         issuer_outcome=outcome,
         source_record_count=count,
+        identity=_refresh_identity(scope, company_id, mapping),
     )
 
 
@@ -353,7 +422,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             latest_retrieved_at=fact_summary[4],
             latest_recorded_at=fact_summary[5],
             bootstrap=_bootstrap(session, company_id, "REPORTED_FUNDAMENTALS"),
-            refresh=_refresh(session, company_id, "REPORTED_FUNDAMENTALS"),
+            refresh=_refresh(session, company_id, "REPORTED_FUNDAMENTALS", mapping),
         ),
         filings=s.SecDomainCoverageRead(
             record_count=filing_summary[0],
@@ -363,7 +432,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             latest_retrieved_at=filing_summary[4],
             latest_recorded_at=filing_summary[5],
             bootstrap=_bootstrap(session, company_id, "SOURCE_DOCUMENTS"),
-            refresh=_refresh(session, company_id, "SOURCE_DOCUMENTS"),
+            refresh=_refresh(session, company_id, "SOURCE_DOCUMENTS", mapping),
         ),
         metrics_present=[metric for metric in FundamentalMetric if metric in metrics],
         metrics_missing=[metric for metric in FundamentalMetric if metric not in metrics],

@@ -197,6 +197,90 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
   );
 });
 
+test("a changed issuer identity is visible beside the historical refresh", async ({
+  page,
+  request,
+}, info) => {
+  const api = "http://127.0.0.1:8011";
+  if (
+    process.env.BROWSER_API_PORT !== "8011" ||
+    process.env.API_BASE_URL !== api
+  )
+    throw new Error("Use the isolated loopback SEC fixture");
+  const before = await (await request.get(`${api}/__test/fixture`)).json();
+  expect(before.test_only).toBe("portfolio-data-v1");
+  expect(before.schema).toMatch(/^test_browser_[a-f0-9]{32}$/);
+  test.skip(
+    before.scenario !== "sec-refresh-partial",
+    "Requires a synthetic recorded refresh",
+  );
+  const path = `/api/research/companies/${before.company_id}/sec-coverage`;
+  const response = await request.get(path);
+  const data: unknown = await response.json();
+  if (
+    !response.ok() ||
+    !isCompanySecCoverage(data) ||
+    !data.fundamentals.refresh
+  )
+    throw new Error("Synthetic SEC refresh is unavailable");
+  const historical = {
+    ...data,
+    fundamentals: {
+      ...data.fundamentals,
+      refresh: {
+        ...data.fundamentals.refresh,
+        identity: { status: "CHANGED", frozen_cik: "0000000999" },
+      },
+    },
+  };
+  expect(isCompanySecCoverage(historical)).toBe(true);
+  await page.route(`**${path}`, (route) => route.fulfill({ json: historical }));
+  const writes: string[] = [];
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("request", (req) => {
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method()))
+      writes.push(req.method());
+  });
+  await page.goto(`/company/${before.company_id}?view=financials`);
+  const panel = page.getByRole("region", {
+    name: "SEC source coverage",
+    exact: true,
+  });
+  await expect(
+    panel
+      .getByText(
+        /Issuer mapping or recorded issuer details changed since this refresh/,
+      )
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await panel.screenshot({
+    path: info.outputPath("sec-identity-drift-summary.png"),
+    scale: "css",
+  });
+  await panel.getByRole("button", { name: "Inspect SEC coverage" }).click();
+  const drawer = page.getByRole("dialog", {
+    name: "SEC coverage and provenance",
+  });
+  await expect(drawer.getByText(/Frozen refresh CIK 0000000999/)).toBeVisible();
+  await expect(
+    drawer.getByText(/historical, not evidence for the current identity/),
+  ).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("sec-identity-drift-detail.png"),
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect(writes).toEqual([]);
+  expect(errors).toEqual([]);
+  const after = await (await request.get(`${api}/__test/fixture`)).json();
+  expect(after.protected_state_sha256).toBe(before.protected_state_sha256);
+});
+
 test("scoped company controls queue only the selected SEC job and retain terminal diagnostics", async ({
   page,
   request,

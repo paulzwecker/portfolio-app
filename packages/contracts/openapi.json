@@ -32236,6 +32236,39 @@
         "title": "SecDomainCoverageRead",
         "type": "object"
       },
+      "SecRefreshIdentityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "frozen_cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frozen Cik"
+          },
+          "status": {
+            "enum": [
+              "MATCHED",
+              "CHANGED",
+              "UNMAPPED_IN_SCOPE",
+              "CURRENT_UNAVAILABLE",
+              "UNVERIFIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "frozen_cik"
+        ],
+        "title": "SecRefreshIdentityRead",
+        "type": "object"
+      },
       "SecRefreshRead": {
         "additionalProperties": false,
         "properties": {
@@ -32291,6 +32324,16 @@
               }
             ],
             "title": "Finished At"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecRefreshIdentityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "issuer_outcome": {
             "enum": [

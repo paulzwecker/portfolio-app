@@ -12285,6 +12285,16 @@ export interface components {
             record_count: number;
             refresh?: components["schemas"]["SecRefreshRead"] | null;
         };
+        /** SecRefreshIdentityRead */
+        SecRefreshIdentityRead: {
+            /** Frozen Cik */
+            frozen_cik: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MATCHED" | "CHANGED" | "UNMAPPED_IN_SCOPE" | "CURRENT_UNAVAILABLE" | "UNVERIFIED";
+        };
         /** SecRefreshRead */
         SecRefreshRead: {
             /** Attempt Count */
@@ -12300,6 +12310,7 @@ export interface components {
             failure_code: string | null;
             /** Finished At */
             finished_at: string | null;
+            identity?: components["schemas"]["SecRefreshIdentityRead"] | null;
             /**
              * Issuer Outcome
              * @enum {string}

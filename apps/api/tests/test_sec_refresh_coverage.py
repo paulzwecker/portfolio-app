@@ -1,6 +1,7 @@
 """Operational scope evidence never becomes invented issuer success or freshness."""
 
-from datetime import UTC, datetime, timedelta
+from dataclasses import replace
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -18,10 +19,108 @@ from test_fundamentals_bootstrap import COMPANY_ID
 from test_fundamentals_portfolio_scope import _source
 from test_sec_incremental_refresh import FACTS, FILINGS, _refresh, _transports
 
-from portfolio_api.company_sec_coverage import _issuer_result, company_sec_coverage
+from portfolio_api.company_sec_coverage import (
+    _issuer_result,
+    _refresh_identity,
+    company_sec_coverage,
+)
 from portfolio_api.domain.models import ExternalIngestionAttempt, ExternalIngestionRun
+from portfolio_api.fundamentals_bootstrap import ReviewedCikMapping
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
-from portfolio_api.sec_refresh_scope import SEC_SCOPE_VERSION
+from portfolio_api.sec_refresh_scope import (
+    SEC_SCOPE_VERSION,
+    _mapping_hash,
+    capture_sec_refresh_scope,
+)
+
+
+def test_refresh_identity_distinguishes_current_changed_unmapped_and_unverified() -> None:
+    mapping = ReviewedCikMapping(
+        mapping_id=uuid4(),
+        company_id=COMPANY_ID,
+        company_name="Synthetic company",
+        cik="0000000001",
+        provider_company_name="Synthetic issuer",
+        evidence_source="https://www.sec.gov/edgar/browse/?CIK=1",
+        lifecycle="WATCHLIST",
+        effective_at=datetime(2026, 1, 1, tzinfo=UTC),
+        recorded_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    frozen = [mapping.manifest()]
+    scope = {
+        "scope": "sec_issuer_refresh",
+        "sec_scope_version": SEC_SCOPE_VERSION,
+        "company_ids": [str(COMPANY_ID)],
+        "selection": {"companies": [{"company_id": str(COMPANY_ID)}]},
+        "verified_cik_mappings": frozen,
+        "mapping_sha256": _mapping_hash(frozen),
+    }
+    assert _refresh_identity(scope, COMPANY_ID, mapping).model_dump() == {
+        "status": "MATCHED",
+        "frozen_cik": "0000000001",
+    }
+    assert (
+        _refresh_identity(scope, COMPANY_ID, replace(mapping, lifecycle="PORTFOLIO")).status
+        == "MATCHED"
+    )
+    assert (
+        _refresh_identity(scope, COMPANY_ID, replace(mapping, cik="0000000002")).status == "CHANGED"
+    )
+    assert (
+        _refresh_identity(scope, COMPANY_ID, replace(mapping, mapping_id=uuid4())).status
+        == "CHANGED"
+    )
+    assert (
+        _refresh_identity(scope, COMPANY_ID, replace(mapping, company_name="Renamed issuer")).status
+        == "CHANGED"
+    )
+    assert _refresh_identity(scope, COMPANY_ID, None).status == "CURRENT_UNAVAILABLE"
+    assert (
+        _refresh_identity({**scope, "mapping_sha256": "bad"}, COMPANY_ID, mapping).status
+        == "UNVERIFIED"
+    )
+    assert (
+        _refresh_identity({"company_ids": [str(COMPANY_ID)]}, COMPANY_ID, mapping).status
+        == "UNVERIFIED"
+    )
+    assert _refresh_identity({**scope, "selection": {}}, COMPANY_ID, mapping).status == "UNVERIFIED"
+    empty = {**scope, "verified_cik_mappings": [], "mapping_sha256": _mapping_hash([])}
+    assert _refresh_identity(empty, COMPANY_ID, mapping).status == "UNMAPPED_IN_SCOPE"
+    invalid = [{**frozen[0], "cik": "not-a-cik"}]
+    assert (
+        _refresh_identity(
+            {**scope, "verified_cik_mappings": invalid, "mapping_sha256": _mapping_hash(invalid)},
+            COMPANY_ID,
+            mapping,
+        ).status
+        == "UNVERIFIED"
+    )
+    malformed = [{**frozen[0], "mapping_identifier_id": {"unexpected": "object"}}]
+    assert (
+        _refresh_identity(
+            {
+                **scope,
+                "verified_cik_mappings": malformed,
+                "mapping_sha256": _mapping_hash(malformed),
+            },
+            COMPANY_ID,
+            mapping,
+        ).status
+        == "UNVERIFIED"
+    )
+    duplicate = frozen * 2
+    assert (
+        _refresh_identity(
+            {
+                **scope,
+                "verified_cik_mappings": duplicate,
+                "mapping_sha256": _mapping_hash(duplicate),
+            },
+            COMPANY_ID,
+            mapping,
+        ).status
+        == "UNVERIFIED"
+    )
 
 
 def _record_run(
@@ -90,6 +189,7 @@ def test_real_scoped_results_reach_read_only_api_without_conflating_batch_gaps(
             assert response.status_code == 200
             data = response.json()
             facts, filings = data["fundamentals"]["refresh"], data["filings"]["refresh"]
+            assert facts["identity"]["status"] == filings["identity"]["status"] == "MATCHED"
             assert facts["batch_status"] == filings["batch_status"] == "PARTIAL"
             assert facts["issuer_outcome"] == "DATA_CHECK" and facts["source_record_count"] > 0
             assert filings["issuer_outcome"] == "REPORTED" and filings["source_record_count"] == 2
@@ -97,10 +197,51 @@ def test_real_scoped_results_reach_read_only_api_without_conflating_batch_gaps(
             assert facts["scope_company_count"] == 3 and facts["mapped_company_count"] == 1
             missing = client.get(f"/v1/companies/{source.unmapped_company_id}/sec-coverage").json()
             assert missing["fundamentals"]["refresh"]["issuer_outcome"] == "UNMAPPED"
+            assert missing["fundamentals"]["refresh"]["identity"]["status"] == "UNMAPPED_IN_SCOPE"
             assert missing["fundamentals"]["refresh"]["source_record_count"] is None
     finally:
         reader.dispose()
     assert len(calls) == 2 and table_counts(postgres_engine) == before
+
+
+@pytest.mark.integration
+def test_recorded_refresh_is_historical_when_reviewed_issuer_changes(
+    postgres_engine: Engine,
+) -> None:
+    _source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        scope = capture_sec_refresh_scope(
+            session, company_ids={COMPANY_ID}, run_date=date(2026, 1, 1), request_id=uuid4()
+        )
+        assert scope is not None
+        frozen = [
+            {
+                **item,
+                "cik": "0000000999",
+                "evidence_source": "https://www.sec.gov/edgar/browse/?CIK=999",
+            }
+            for item in scope["verified_cik_mappings"]
+        ]
+        scope["verified_cik_mappings"] = frozen
+        scope["mapping_sha256"] = _mapping_hash(frozen)
+        run = _record_run(
+            session,
+            [COMPANY_ID],
+            status="COMPLETE",
+            mapped_ids=[COMPANY_ID],
+            report={
+                "mapped_results": [
+                    {"company_id": str(COMPANY_ID), "reconciliation": {"source_fact_count": 12}}
+                ]
+            },
+        )
+        run.request_scope = scope
+        session.flush()
+        after = company_sec_coverage(session, COMPANY_ID).fundamentals.refresh
+        assert after is not None and after.identity is not None
+        assert after.identity.status == "CHANGED"
+        assert after.identity.frozen_cik == "0000000999"
+        assert after.run_id == run.id and after.issuer_outcome == "REPORTED"
 
 
 @pytest.mark.integration

@@ -38,6 +38,21 @@ const issuerOutcomeLabels: Record<SecRefresh["issuer_outcome"], string> = {
   NOT_REPORTED: "No issuer-specific result recorded",
 };
 
+function identityGuidance(refresh: SecRefresh): string {
+  switch (refresh.identity?.status) {
+    case "MATCHED":
+      return "Refresh issuer identity matches the current reviewed mapping; freshness is separate.";
+    case "CHANGED":
+      return "Issuer mapping or recorded issuer details changed since this refresh. Its result is historical, not evidence for the current identity.";
+    case "UNMAPPED_IN_SCOPE":
+      return "This issuer was not mapped in the refresh scope.";
+    case "CURRENT_UNAVAILABLE":
+      return "Current reviewed issuer identity is unavailable; this historical refresh cannot verify it.";
+    default:
+      return "The refresh issuer identity could not be verified from retained scope evidence.";
+  }
+}
+
 function SecRefreshDetails({
   refresh,
   filings,
@@ -62,6 +77,17 @@ function SecRefreshDetails({
           ` · ${refresh.mapped_company_count} mapped SEC ${refresh.mapped_company_count === 1 ? "issuer" : "issuers"}`}
       </p>
       <p>Issuer result · {issuerOutcomeLabels[refresh.issuer_outcome]}</p>
+      <p
+        className={
+          refresh.identity?.status === "MATCHED"
+            ? "text-xs text-muted-foreground"
+            : "text-sm text-warning"
+        }
+      >
+        {identityGuidance(refresh)}
+        {refresh.identity?.frozen_cik &&
+          ` Frozen refresh CIK ${refresh.identity.frozen_cik}.`}
+      </p>
       {refresh.source_record_count !== null && (
         <p>
           {filings
@@ -377,6 +403,11 @@ export function CompanySecCoveragePanel({
                     <span className="text-muted-foreground">
                       {issuerOutcomeLabels[refresh.issuer_outcome]}
                     </span>
+                    {refresh.identity?.status !== "MATCHED" && (
+                      <span className="text-warning">
+                        {identityGuidance(refresh)}
+                      </span>
+                    )}
                   </p>
                 );
               return checkpoint &&
