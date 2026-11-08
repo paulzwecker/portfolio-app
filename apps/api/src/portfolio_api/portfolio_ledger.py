@@ -2,18 +2,20 @@
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, localcontext
 from typing import Any, Literal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from portfolio_api import portfolio_ledger_contracts as c
 from portfolio_api.domain import queries, services
 from portfolio_api.domain.models import (
+    Company,
     HoldingSnapshot,
     Listing,
     PortfolioLedgerPublication,
@@ -60,6 +62,50 @@ def _listing_identities(session: Session, ids: set[UUID]) -> dict[UUID, c.Ledger
             identity_source_ref=listing.identity_source_ref,
         )
     return result
+
+
+def search_ledger_listings(
+    session: Session, portfolio_id: UUID, ticker: str
+) -> c.LedgerListingSearchRead:
+    """Return exact canonical ticker matches; selection never modifies the anchor."""
+    services.portfolio(session, portfolio_id)
+    ticker = ticker.strip()
+    if not ticker or len(ticker) > 40 or "\x00" in ticker:
+        raise services.DomainError("Enter an exact listing ticker", status=422)
+    rows = session.execute(
+        select(Listing, Security, Company.name, Company.is_demo)
+        .join(Security, Security.id == Listing.security_id)
+        .outerjoin(Company, Company.id == Security.company_id)
+        .where(
+            func.upper(Listing.ticker) == ticker.upper(),
+            Security.security_type.in_(["COMMON_STOCK", "ADR", "PREFERRED", "ETF"]),
+        )
+        .order_by(Listing.venue, Listing.id)
+        .limit(51)
+    ).all()
+    supported = [
+        (listing, security, company_name, company_is_demo)
+        for listing, security, company_name, company_is_demo in rows[:50]
+        if listing.currency is not None and re.fullmatch(r"[A-Z]{3}", listing.currency)
+    ]
+    identities = _listing_identities(session, {listing.id for listing, _, _, _ in supported})
+    return c.LedgerListingSearchRead(
+        results=[
+            c.LedgerListingSearchItem(
+                **identities[listing.id].model_dump(),
+                security_name=security.name,
+                share_class=security.share_class,
+                company_name=company_name,
+                is_demo=listing.is_demo or security.is_demo or bool(company_is_demo),
+            )
+            for listing, security, company_name, company_is_demo in supported
+        ],
+        truncated=len(rows) > 50,
+        unsupported_results=any(
+            listing.currency is None or not re.fullmatch(r"[A-Z]{3}", listing.currency)
+            for listing, _, _, _ in rows
+        ),
+    )
 
 
 def portfolio_ledger_anchor(session: Session, portfolio_id: UUID) -> c.PortfolioLedgerAnchorRead:

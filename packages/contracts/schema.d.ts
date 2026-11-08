@@ -1896,6 +1896,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/ledger/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ledger Listings */
+        get: operations["get_ledger_listings_v1_portfolios__portfolio_id__ledger_listings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/ledger/ownership": {
         parameters: {
             query?: never;
@@ -8059,6 +8076,48 @@ export interface components {
             ticker: string;
             /** Venue */
             venue: string;
+        };
+        /** LedgerListingSearchItem */
+        LedgerListingSearchItem: {
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /** Currency */
+            currency: string;
+            /** Identity Source Ref */
+            identity_source_ref: string | null;
+            /** Is Demo */
+            is_demo: boolean;
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /**
+             * Security Id
+             * Format: uuid
+             */
+            security_id: string;
+            /** Security Name */
+            security_name: string;
+            /** Security Type */
+            security_type: string;
+            /** Share Class */
+            share_class: string | null;
+            /** Ticker */
+            ticker: string;
+            /** Venue */
+            venue: string;
+        };
+        /** LedgerListingSearchRead */
+        LedgerListingSearchRead: {
+            /** Results */
+            results: components["schemas"]["LedgerListingSearchItem"][];
+            /** Truncated */
+            truncated: boolean;
+            /** Unsupported Results */
+            unsupported_results: boolean;
         };
         /** LedgerOpeningAccount */
         "LedgerOpeningAccount-Input": {
@@ -16808,6 +16867,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerCandidateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ledger_listings_v1_portfolios__portfolio_id__ledger_listings_get: {
+        parameters: {
+            query: {
+                ticker: string;
+            };
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerListingSearchRead"];
                 };
             };
             /** @description Validation Error */

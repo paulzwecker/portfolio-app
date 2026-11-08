@@ -776,3 +776,159 @@ def test_guided_dividend_preserves_native_currency_and_rejects_excess_charges(
         payload["activity"][0]["taxes"] = "1.26"
         assert client.post(f"{path}/preview", headers=headers, json=payload).status_code == 422
     assert baseline(postgres_engine, portfolio_id) == before
+
+
+def test_listing_search_is_exact_bounded_authenticated_and_read_only(
+    postgres_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    portfolio_id = source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        company = services.create_company(session, s.CompanyCreate(name="Synthetic other issuer"))
+        stock = services.create_security(
+            session,
+            company.id,
+            s.SecurityCreate(
+                name="Synthetic B shares", security_type="COMMON_STOCK", share_class="B"
+            ),
+        )
+        other = Listing(
+            security_id=stock.id,
+            ticker="SYNF",
+            venue="XLON",
+            currency="GBP",
+            identity_source_ref="synthetic-other",
+            is_demo=True,
+        )
+        missing_currency = Listing(security_id=stock.id, ticker="SYNF", venue="XAMS", currency=None)
+        malformed_currency = Listing(
+            security_id=stock.id, ticker="SYNF", venue="XBER", currency="usd"
+        )
+        session.add_all([other, missing_currency, malformed_currency])
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    original_search = ledger.search_ledger_listings
+    transaction_modes: list[tuple[object, object]] = []
+
+    def inspect_search(
+        session: Session, portfolio_id: UUID, ticker: str
+    ) -> c.LedgerListingSearchRead:
+        transaction_modes.append(
+            (
+                session.scalar(text("SHOW transaction_read_only")),
+                session.scalar(text("SHOW transaction_isolation")),
+            )
+        )
+        return original_search(session, portfolio_id, ticker)
+
+    monkeypatch.setattr(ledger, "search_ledger_listings", inspect_search)
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger/listings"
+        assert client.get(path, params={"ticker": "SYNF"}).status_code == 401
+        headers = {"x-api-access-token": "synthetic-token"}
+        response = client.get(path, params={"ticker": "synf"}, headers=headers)
+        assert response.status_code == 200
+        result = response.json()
+        assert result["truncated"] is False and len(result["results"]) == 2
+        assert result["unsupported_results"] is True
+        fund, stock_row = result["results"]
+        assert (
+            fund["security_type"] == "ETF"
+            and fund["company_id"] is None
+            and fund["company_name"] is None
+        )
+        assert (
+            stock_row["security_name"],
+            stock_row["share_class"],
+            stock_row["venue"],
+            stock_row["currency"],
+        ) == ("Synthetic B shares", "B", "XLON", "GBP")
+        assert stock_row["company_name"] == "Synthetic other issuer"
+        assert stock_row["is_demo"] is True and fund["is_demo"] is False
+        anchor = c.PortfolioLedgerAnchorRead.model_validate(
+            client.get(f"/v1/portfolios/{portfolio_id}/ledger/anchor", headers=headers).json()
+        )
+        assert stock_row["listing_id"] not in {str(row.listing_id) for row in anchor.listings}
+        packet = candidate(anchor).model_dump(mode="json")
+        packet["contract_version"] = "portfolio-ledger-preview-v2"
+        deposit = cash_activity("DEPOSIT", 1, "20").model_dump(mode="json")
+        deposit["currency"] = "GBP"
+        purchase = trade("BUY", 2).model_dump(mode="json")
+        purchase["listing_id"] = stock_row["listing_id"]
+        purchase["currency"] = "GBP"
+        packet["activity"] = [deposit, purchase]
+        preview = client.post(
+            f"/v1/portfolios/{portfolio_id}/ledger/preview", headers=headers, json=packet
+        )
+        assert preview.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(preview.json())
+        assert result.status == "OPENING_RECONCILED" and not result.issues
+        assert next(row.balance for row in result.cash if row.currency == "GBP") == Decimal("9.65")
+        assert next(
+            row.quantity
+            for row in result.positions
+            if str(row.listing_id) == stock_row["listing_id"]
+        ) == Decimal("1.25")
+        assert any(
+            str(row.listing_id) == stock_row["listing_id"] for row in result.consumed_listings
+        )
+        assert client.get(path, params={"ticker": "SYN"}, headers=headers).json()["results"] == []
+        assert client.get(path, params={"ticker": "%"}, headers=headers).json()["results"] == []
+        assert client.get(path, params={"ticker": " "}, headers=headers).status_code == 422
+        assert client.get(path, params={"ticker": "SYN\x00F"}, headers=headers).status_code == 422
+        assert (
+            client.get(
+                f"/v1/portfolios/{uuid4()}/ledger/listings",
+                params={"ticker": "SYNF"},
+                headers=headers,
+            ).status_code
+            == 404
+        )
+    assert transaction_modes and set(transaction_modes) == {("on", "repeatable read")}
+    assert baseline(postgres_engine, portfolio_id) == before
+
+
+def test_listing_search_reports_truncation_at_the_51st_match(postgres_engine: Engine) -> None:
+    portfolio_id = source(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        fund = Security(name="Synthetic test fund", security_type="ETF", company_id=None)
+        session.add(fund)
+        session.flush()
+        for number in range(50):
+            session.add(
+                Listing(
+                    security_id=fund.id, ticker="BOUND", venue=f"VENUE{number:02}", currency="USD"
+                )
+            )
+        fund_id = fund.id
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    headers = {"x-api-access-token": "synthetic-token"}
+    path = f"/v1/portfolios/{portfolio_id}/ledger/listings"
+    before = baseline(postgres_engine, portfolio_id)
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        first = client.get(path, params={"ticker": "BOUND"}, headers=headers).json()
+        assert (
+            len(first["results"]) == 50
+            and not first["truncated"]
+            and not first["unsupported_results"]
+        )
+        assert baseline(postgres_engine, portfolio_id) == before
+        with Session(postgres_engine) as session, session.begin():
+            session.add(
+                Listing(security_id=fund_id, ticker="BOUND", venue="VENUE50", currency="USD")
+            )
+        before_second = baseline(postgres_engine, portfolio_id)
+        second = client.get(path, params={"ticker": "BOUND"}, headers=headers).json()
+        assert (
+            len(second["results"]) == 50
+            and second["truncated"]
+            and not second["unsupported_results"]
+        )
+        assert [row["listing_id"] for row in second["results"]] == [
+            row["listing_id"] for row in first["results"]
+        ]
+        assert baseline(postgres_engine, portfolio_id) == before_second

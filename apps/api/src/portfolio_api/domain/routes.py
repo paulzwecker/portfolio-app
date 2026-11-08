@@ -1999,6 +1999,16 @@ def post_ledger_preview(
 
 
 @router.get(
+    "/portfolios/{portfolio_id}/ledger/listings",
+    response_model=ledger_contracts.LedgerListingSearchRead,
+)
+def get_ledger_listings(
+    portfolio_id: UUID, db: LedgerDb, ticker: str = Query(min_length=1, max_length=40)
+) -> ledger_contracts.LedgerListingSearchRead:
+    return ledger.search_ledger_listings(db, portfolio_id, ticker)
+
+
+@router.get(
     "/portfolios/{portfolio_id}/ledger/candidates",
     response_model=ledger_contracts.LedgerCandidatesRead,
 )

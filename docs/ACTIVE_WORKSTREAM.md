@@ -137,10 +137,18 @@ API cases and 40 synthetic desktop/mobile journeys, including basis acknowledgem
 and restoration. Build, typecheck, focused lint and documentation checks passed;
 synthetic desktop and mobile layouts were inspected. No production changes were made.
 
+## Non-anchor listing lookup API
+
+An authenticated read-only exact-ticker lookup returns at most 50 reviewed
+identity candidates, flags truncation, missing/invalid currency and demo records,
+and keeps the snapshot anchor unchanged. Names, share class and demo status are
+lookup context; the existing preview hash binds the core listing identity instead.
+Two focused isolated PostgreSQL/API tests pass, including non-anchor purchase replay
+and 50/51-result boundaries. UI integration remains in progress.
+
 ## Next increment and release boundaries
 
-Expand reviewed listing selection and verify the complete candidate review journey
-candidate review journey. Reuse the versioned ledger contract, server calculations,
+Finish guided listing selection and verify the complete candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
 lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.
