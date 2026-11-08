@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -29,6 +30,7 @@ from portfolio_api.domain.models import (
     HoldingSnapshot,
     LifecycleEvent,
     Listing,
+    MarketDataBatch,
     MarketDataBootstrapCheckpoint,
     MarketDataBootstrapRun,
     Portfolio,
@@ -533,6 +535,9 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     [
         ("missing_batch", "LISTING", "BATCH_REFERENCE_MISSING"),
         ("missing_raw", "LISTING", "SOURCE_PAYLOAD_MISSING"),
+        ("raw_corrupt", "LISTING", "SOURCE_PAYLOAD_HASH_MISMATCH"),
+        ("raw_provenance", "LISTING", "SOURCE_PAYLOAD_PROVENANCE_MISMATCH"),
+        ("batch_provider", "LISTING", "BATCH_PROVIDER_MISMATCH"),
         ("current_quote", "LISTING", "UNEXPECTED_PRICE_KIND"),
         ("price_outside", "LISTING", "PRICE_OUTSIDE_REQUESTED_WINDOW"),
         ("price_wrong_listing", "LISTING", "CHECKPOINT_SUBJECT_MISMATCH"),
@@ -578,6 +583,24 @@ def test_reconciliation_rejects_missing_or_out_of_scope_persisted_evidence(
             if case == "missing_raw":
                 session.execute(
                     delete(ExternalRawPayload).where(ExternalRawPayload.batch_id == batch_id)
+                )
+            if case == "raw_corrupt":
+                session.execute(
+                    update(ExternalRawPayload)
+                    .where(ExternalRawPayload.batch_id == batch_id)
+                    .values(payload_bytes=gzip.compress(b"changed source bytes"))
+                )
+            if case == "raw_provenance":
+                session.execute(
+                    update(ExternalRawPayload)
+                    .where(ExternalRawPayload.batch_id == batch_id)
+                    .values(domain="FX")
+                )
+            if case == "batch_provider":
+                session.execute(
+                    update(MarketDataBatch)
+                    .where(MarketDataBatch.id == batch_id)
+                    .values(provider_id="OTHER_PROVIDER")
                 )
             if case in {"price_wrong_listing", "action_wrong_listing"}:
                 original = session.get(Listing, checkpoint.listing_id)

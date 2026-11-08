@@ -180,5 +180,9 @@ price/FX observations after retrieval, independently of receipt fingerprints.
 Legitimate unavailable checkpoints can remain without a batch. Focused checks pass:
 13 unit and 21 isolated PostgreSQL integration cases, strict mypy and Ruff. They
 cover sparse windows, missing versus zero, corrupt receipts and read-only replay.
+The subsequent raw-evidence increment verifies provider/domain and decoded payload
+SHA-256, flags corrupt gzip and explicitly fails closed when a per-payload 64 MiB
+verification budget is exceeded. Fourteen focused units and 24 PostgreSQL cases pass,
+as do Ruff and strict mypy. These checks establish integrity, not source accuracy.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.

@@ -9,16 +9,19 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import gzip
 import hashlib
+import io
 import json
 import os
 import sys
 import time
+import zlib
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, or_, select, text
@@ -82,6 +85,8 @@ MAX_HISTORY_DAYS = 3650
 MAX_CHECKPOINTS_PER_INVOCATION = 10
 DEFAULT_CHECKPOINTS_PER_INVOCATION = 5
 MAX_CHECKPOINT_ATTEMPTS = 3
+MAX_RAW_PAYLOAD_VERIFY_BYTES = 64 * 1024 * 1024
+RAW_PAYLOAD_VERIFY_CHUNK_BYTES = 64 * 1024
 MIN_PROVIDER_REQUEST_INTERVAL_SECONDS = 1.0
 LOCK_NAMESPACE = 1296319029  # ASCII-like namespace for the market bootstrap runner.
 LOCK_KEY = 1112759376
@@ -1506,6 +1511,30 @@ def execute_market_data_bootstrap(
         return report
 
 
+def _raw_payload_issue(payload: bytes, encoding: str, expected_hash: str) -> str | None:
+    """Verify one retained payload with bounded input and decompression work."""
+    if len(payload) > MAX_RAW_PAYLOAD_VERIFY_BYTES:
+        return "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+    if encoding not in {"gzip", "identity"}:
+        return "SOURCE_PAYLOAD_ENCODING_INVALID"
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with (
+            gzip.GzipFile(fileobj=io.BytesIO(payload))
+            if encoding == "gzip"
+            else io.BytesIO(payload)
+        ) as stream:
+            while chunk := stream.read(RAW_PAYLOAD_VERIFY_CHUNK_BYTES):
+                size += len(chunk)
+                if size > MAX_RAW_PAYLOAD_VERIFY_BYTES:
+                    return "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+                digest.update(chunk)
+    except (OSError, EOFError, zlib.error):
+        return "SOURCE_PAYLOAD_INVALID"
+    return None if digest.hexdigest() == expected_hash else "SOURCE_PAYLOAD_HASH_MISMATCH"
+
+
 def _batch_scope_issues(
     session: Session,
     checkpoint: MarketDataBootstrapCheckpoint,
@@ -1588,6 +1617,58 @@ def _batch_scope_issues(
     return sorted(issues)
 
 
+def _raw_batch_issues(
+    session: Session,
+    run: MarketDataBootstrapRun,
+    checkpoint: MarketDataBootstrapCheckpoint,
+    batch: MarketDataBatch,
+) -> list[str]:
+    """Check retained provider bytes and provenance without returning their contents."""
+    issues: set[str] = set()
+    if (
+        batch.source_kind != "PROVIDER_RESPONSE"
+        or batch.provider_id != run.provider_id
+        or batch.provider_schema_version != run.provider_schema_version
+    ):
+        issues.add("BATCH_PROVIDER_MISMATCH")
+    domain = (
+        ExternalDataDomain.MARKET_DATA.value
+        if checkpoint.subject_kind == "LISTING"
+        else ExternalDataDomain.FX.value
+    )
+    metadata = session.execute(
+        select(
+            ExternalRawPayload.id,
+            ExternalRawPayload.provider_id,
+            ExternalRawPayload.domain,
+            ExternalRawPayload.content_encoding,
+            ExternalRawPayload.payload_sha256,
+            func.octet_length(ExternalRawPayload.payload_bytes),
+        )
+        .where(ExternalRawPayload.batch_id == batch.id)
+        .execution_options(yield_per=20)
+    )
+    for row in metadata:
+        raw_id, provider, raw_domain, encoding, expected_hash, length = cast(
+            tuple[UUID, str, str, str, str, int], row
+        )
+        if provider != run.provider_id or raw_domain != domain:
+            issues.add("SOURCE_PAYLOAD_PROVENANCE_MISMATCH")
+        if length > MAX_RAW_PAYLOAD_VERIFY_BYTES:
+            issues.add("SOURCE_PAYLOAD_VERIFICATION_LIMIT")
+            continue
+        payload = session.scalar(
+            select(ExternalRawPayload.payload_bytes).where(ExternalRawPayload.id == raw_id)
+        )
+        if payload is None:
+            issues.add("SOURCE_PAYLOAD_MISSING")
+            continue
+        issue = _raw_payload_issue(payload, encoding, expected_hash)
+        if issue:
+            issues.add(issue)
+    return sorted(issues)
+
+
 def reconcile_market_data_bootstrap(
     session: Session, run_id: UUID, *, target_environment: str
 ) -> dict[str, Any]:
@@ -1653,6 +1734,10 @@ def reconcile_market_data_bootstrap(
                 differences.extend(
                     {"subject_key": checkpoint.subject_key, "code": code}
                     for code in _batch_scope_issues(session, checkpoint, batch.id, actual)
+                )
+                differences.extend(
+                    {"subject_key": checkpoint.subject_key, "code": code}
+                    for code in _raw_batch_issues(session, run, checkpoint, batch)
                 )
         checkpoint_reports.append(
             {

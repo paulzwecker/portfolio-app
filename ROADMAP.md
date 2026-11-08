@@ -180,6 +180,9 @@ Read-only reconciliation now rejects missing completed-batch provenance and rows
 outside the frozen subject, time window or historical price scope. This verifies
 receipt integrity, not expected-session completeness; 13 focused unit and 21 isolated
 PostgreSQL cases pass. Next: establish reviewed session-aware coverage evidence.
+The next increment verifies retained raw provider bytes and identity as part of
+reconciliation, with an explicit per-payload work limit. Fourteen unit and 24
+isolated PostgreSQL cases pass; live-source and production coverage remain unverified.
 
 ## Immediate priorities and gates
 

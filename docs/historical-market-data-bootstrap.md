@@ -247,6 +247,10 @@ checks listing or FX-pair identity, the frozen date window, historical price kin
 cross-domain rows and price/FX observation times. Legitimate unavailable checkpoints
 may have no batch. These checks do not establish that every expected trading session
 or FX date is present; that coverage remains unassessed without a reviewed calendar.
+For each retained source payload, reconciliation also verifies provider/domain and
+the SHA-256 of the decoded bytes, including gzip integrity. Verification is bounded
+to 64 MiB per encoded and decoded payload; a larger payload is reported as a
+verification-limit mismatch, not as verified or as proven data corruption.
 
 For a retryable network/HTTP failure, resume after the stored backoff. For
 `NO_PROVIDER_DATA`, keep the `UNAVAILABLE` result and include the gap in the

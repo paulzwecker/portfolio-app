@@ -1,18 +1,44 @@
 """Historical receipt evidence must not claim unverified session coverage."""
 
+import gzip
+import hashlib
 from datetime import UTC, date, datetime
 from typing import Any, cast
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+import portfolio_api.market_data_bootstrap as bootstrap
 from portfolio_api.domain.models import MarketDataBootstrapCheckpoint, MarketDataBootstrapRun
 from portfolio_api.market_data_bootstrap import (
     _coverage_for_plan,
     _history_window_evidence,
     _quarantine_temporal_plan,
+    _raw_payload_issue,
     _run_report,
 )
+
+
+def test_raw_payload_verification_handles_integrity_and_limits(monkeypatch: Any) -> None:
+    content = b"synthetic provider response"
+    expected = hashlib.sha256(content).hexdigest()
+    assert _raw_payload_issue(gzip.compress(content), "gzip", expected) is None
+    assert _raw_payload_issue(content, "identity", expected) is None
+    assert _raw_payload_issue(gzip.compress(b"different"), "gzip", expected) == (
+        "SOURCE_PAYLOAD_HASH_MISMATCH"
+    )
+    assert _raw_payload_issue(b"bad gzip", "gzip", expected) == "SOURCE_PAYLOAD_INVALID"
+    assert _raw_payload_issue(gzip.compress(content)[:-4], "gzip", expected) == (
+        "SOURCE_PAYLOAD_INVALID"
+    )
+    assert _raw_payload_issue(content, "unknown", expected) == "SOURCE_PAYLOAD_ENCODING_INVALID"
+    monkeypatch.setattr(bootstrap, "MAX_RAW_PAYLOAD_VERIFY_BYTES", 64)
+    assert (
+        _raw_payload_issue(b"x" * 65, "identity", expected) == "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+    )
+    assert _raw_payload_issue(gzip.compress(b"x" * 65), "gzip", expected) == (
+        "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+    )
 
 
 def stamp(day: int) -> datetime:
