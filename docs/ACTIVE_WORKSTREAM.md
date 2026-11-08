@@ -7,6 +7,10 @@ merge `813651e` from updated main `e070406` ([merged PR #29](https://github.com/
 The owner edits, predecessor branches/worktrees and private source artifacts remain
 preserved. No new PR has been opened for this BUILD increment.
 
+Completed PRs stay frozen for owner review. Continue independent milestones from
+updated main, or record an explicit stacked branch when a dependency is unmerged.
+Fetch and reconcile remote merges at the start of each run while preserving work.
+
 At `/portfolio/ledger`, the opening builder collects explicit evidenced accounts,
 exact listing quantities and native-currency cash. A statement can be SHA-256
 hashed locally or identified by an existing hash/reference. Drafts remain in page

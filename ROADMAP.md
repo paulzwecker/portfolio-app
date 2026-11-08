@@ -13,7 +13,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Implementation              | Evidenced account/opening entry, exact decimals, local statement hashes and read-only reconciliation LOCAL_VERIFIED |
 | Next ready substantial task | Guided settled-activity and ending-statement entry using the existing ledger contracts and review workflow          |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals        |
-| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                    |
+| Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work    |
 
 Opening-balance onboarding `18f1f15` lets the investor enter evidenced accounts,
 exact listing quantities and currency cash, review native reconciliation and
