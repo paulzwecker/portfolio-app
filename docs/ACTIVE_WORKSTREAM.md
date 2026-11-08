@@ -3,8 +3,9 @@
 ## C2.3 settled multi-account ledger — BUILD checkpoint complete
 
 Continue branch `codex/portfolio-ledger-income`, based on main `deda2ce`, the merge
-of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26). No open PR exists
-for this milestone. Preserve all predecessor branches, stash and private files.
+of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26). The combined
+candidate is [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27).
+Preserve all predecessor branches, stash and private files.
 Income was committed through `0a57454`, cash transfers through `c9f58d7`, and
 security-transfer implementation starts at `35c902e`.
 
@@ -147,9 +148,8 @@ Exact contracts live in the [ledger reference](portfolio-ledger.md).
 
 The bounded settled-ledger and release-safety scope is IMPLEMENTATION_COMPLETE /
 LOCAL_VERIFIED. Main was fetched and is the branch base; the integrated checks and
-remaining full-CI limitation are recorded above. Review the combined branch and
-open ONE cohesive PR; require all three GitHub jobs and freeze a passing candidate
-for owner review. Provider activation and durable production recovery remain
+remaining full-CI limitation are recorded above. Review PR #27, require all three
+GitHub jobs and freeze a passing candidate for owner review. Provider activation and durable production recovery remain
 separately authorized work. Broker imports, normalized account
 management, lots/gains, FX/in-transit rules and genuine TWR/XIRR remain subsequent
 capabilities with their own source/policy dependencies.

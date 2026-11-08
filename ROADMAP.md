@@ -9,7 +9,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Field                       | Current value                                                                                                                                 |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.3 settled ledger and C5 release-safety integration candidate. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                         |
-| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                       |
+| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`; [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)               |
 | Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated |
 | Next ready substantial task | Review combined milestone PR and CI; prepare separately authorized backup and provider activation                                             |
 | Parallel owner gate         | Production deployment unfreeze, release configuration, future migrations and ingestion retain separate approvals                              |
