@@ -9,9 +9,9 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Field                       | Current value                                                                                                                                           |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | Personal Universe design foundation and Portfolio experience — INTEGRATE. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
-| Branch / PR                 | `codex/personal-universe-design-system`, based on merged main `685fa7a` after [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)            |
+| Branch / PR                 | `codex/personal-universe-design-system` / [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28), based on main `685fa7a`                       |
 | Implementation              | Reference-based shared tokens, appearance selector, showcase and Portfolio holdings search are LOCAL_VERIFIED                                           |
-| Next ready substantial task | Open one design PR and require CI and owner review; retain production deployment freezes                                                                |
+| Next ready substantial task | Review PR #28 after CI; retain production deployment freezes                                                                                            |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                            |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                                        |
 

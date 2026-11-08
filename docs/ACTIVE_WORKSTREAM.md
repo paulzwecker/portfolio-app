@@ -12,8 +12,8 @@ The design contract is [here](design/design-system-and-frontend-architecture-11b
 regression passed 91 tests with 35 explicit fixture/live-only skips. Synthetic
 desktop/mobile screenshots were visually reviewed outside Git; appearance, search,
 drawer keyboard handling and 320 px overflow checks pass. The full production
-release and recovery controls remain separate. Next: open one design PR, require CI
-and owner review, and keep production frozen. No production action.
+release and recovery controls remain separate. [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28)
+requires CI and owner review; keep production frozen. No production action.
 
 The following ledger and release notes preserve historical evidence from PR #27.
 
