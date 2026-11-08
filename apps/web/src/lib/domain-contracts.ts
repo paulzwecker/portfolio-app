@@ -913,6 +913,15 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
       v.max_calendar_gap_days === null ||
       (Number.isInteger(v.max_calendar_gap_days) &&
         (v.max_calendar_gap_days as number) >= 0)) &&
+    (v.input_issues === undefined ||
+      array(v.input_issues, (issue) =>
+        [
+          "DUPLICATE_MARKET_DATE",
+          "MULTIPLE_SOURCE_STREAMS",
+          "LISTING_CURRENCY_MISMATCH",
+          "LISTING_CURRENCY_UNVERIFIED",
+        ].includes(issue as string),
+      )) &&
     [
       "daily_return",
       "dma_20",

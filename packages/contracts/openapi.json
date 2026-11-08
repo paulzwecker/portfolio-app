@@ -24656,6 +24656,19 @@
             ],
             "title": "High 52W"
           },
+          "input_issues": {
+            "items": {
+              "enum": [
+                "DUPLICATE_MARKET_DATE",
+                "MULTIPLE_SOURCE_STREAMS",
+                "LISTING_CURRENCY_MISMATCH",
+                "LISTING_CURRENCY_UNVERIFIED"
+              ],
+              "type": "string"
+            },
+            "title": "Input Issues",
+            "type": "array"
+          },
           "max_calendar_gap_days": {
             "anyOf": [
               {

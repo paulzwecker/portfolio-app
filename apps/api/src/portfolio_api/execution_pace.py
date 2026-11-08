@@ -145,7 +145,12 @@ def _price_regime_input(
                 "FRESH",
             )
 
-    if analytics is not None and analytics.status == "AVAILABLE" and analytics.as_of is not None:
+    if (
+        analytics is not None
+        and analytics.status == "AVAILABLE"
+        and analytics.as_of is not None
+        and not analytics.input_issues
+    ):
         age = (as_of.date() - analytics.as_of.date()).days
         normalized = normalize_price_regime(None, analytics.trend_state)
         if 0 <= age <= 5 and normalized is not None:

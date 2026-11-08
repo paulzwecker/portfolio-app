@@ -805,17 +805,30 @@ def listing_market_data(
     )
     ordered_analytics = list(reversed(analytics_rows))
     closes = [row.split_adjusted_close for row in ordered_analytics]
-    values = calculate_price_history_metrics([value for value in closes if value is not None])
     observation_count = len(closes)
     market_dates = sorted({row.market_date.astimezone(UTC).date() for row in ordered_analytics})
+    input_issues: list[s.PriceHistoryInputIssue] = []
+    if len(market_dates) != observation_count:
+        input_issues.append("DUPLICATE_MARKET_DATE")
+    if len({(row.provider, row.provider_symbol, row.currency) for row in ordered_analytics}) > 1:
+        input_issues.append("MULTIPLE_SOURCE_STREAMS")
+    if ordered_analytics and listing.currency is None:
+        input_issues.append("LISTING_CURRENCY_UNVERIFIED")
+    elif listing.currency is not None and any(
+        row.currency != listing.currency for row in ordered_analytics
+    ):
+        input_issues.append("LISTING_CURRENCY_MISMATCH")
+    values = calculate_price_history_metrics(
+        [value for value in closes if value is not None] if not input_issues else []
+    )
     calendar_gaps = [
         (later - earlier).days
         for earlier, later in zip(market_dates, market_dates[1:], strict=False)
     ]
     analytics_status = "UNAVAILABLE"
-    if observation_count >= 252:
+    if not input_issues and observation_count >= 252:
         analytics_status = "AVAILABLE"
-    elif observation_count >= 2:
+    elif not input_issues and observation_count >= 2:
         analytics_status = "PARTIAL"
     analytics = s.PriceHistoryAnalyticsRead(
         status=analytics_status,
@@ -826,6 +839,7 @@ def listing_market_data(
         distinct_market_dates=len(market_dates),
         first_market_date=market_dates[0] if market_dates else None,
         max_calendar_gap_days=max(calendar_gaps, default=None),
+        input_issues=input_issues,
         daily_return=_metric_decimal(values["daily_return"]),
         dma_20=_metric_decimal(values["dma_20"]),
         dma_50=_metric_decimal(values["dma_50"]),

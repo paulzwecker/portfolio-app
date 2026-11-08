@@ -9798,6 +9798,8 @@ export interface components {
             first_market_date?: string | null;
             /** High 52W */
             high_52w: string | null;
+            /** Input Issues */
+            input_issues?: ("DUPLICATE_MARKET_DATE" | "MULTIPLE_SOURCE_STREAMS" | "LISTING_CURRENCY_MISMATCH" | "LISTING_CURRENCY_UNVERIFIED")[];
             /** Max Calendar Gap Days */
             max_calendar_gap_days?: number | null;
             /** Methodology Version */

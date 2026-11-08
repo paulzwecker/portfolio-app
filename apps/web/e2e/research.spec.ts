@@ -2744,6 +2744,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
   };
 
   let marketDataRequestCount = 0;
+  let incompatibleHistory = false;
   await page.route(/\/api\/research\//, (route) => {
     const pathname = new URL(route.request().url()).pathname.replace(
       "/api/research/",
@@ -2775,7 +2776,30 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       return route.fulfill({ json: migrationStatus });
     if (pathname === `companies/${id}/market-data`) {
       marketDataRequestCount += 1;
-      return route.fulfill({ json: marketData });
+      return route.fulfill({
+        json: incompatibleHistory
+          ? marketData.map((market) => ({
+              ...market,
+              analytics: {
+                ...market.analytics,
+                status: "UNAVAILABLE",
+                input_issues: ["MULTIPLE_SOURCE_STREAMS"],
+                daily_return: null,
+                dma_20: null,
+                dma_50: null,
+                dma_200: null,
+                high_52w: null,
+                drawdown_52w: null,
+                price_return_1m: null,
+                price_return_3m: null,
+                price_return_6m: null,
+                realized_vol_20d: null,
+                trend_state: null,
+                correction_state: null,
+              },
+            }))
+          : marketData,
+      });
     }
     if (pathname === "market-data/status")
       return route.fulfill({
@@ -3399,6 +3423,29 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
   }
+  incompatibleHistory = true;
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`/company/${id}`);
+    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await expect(page.getByText("Price series needs review")).toBeVisible();
+    await expect(
+      page.getByText(/different provider, symbol or currency/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
+    ).toHaveCount(0);
+    await page.getByText(/Inspect price observations/).click();
+    await expect(
+      page.getByRole("cell", { name: /Fixture market source/ }).first(),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  incompatibleHistory = false;
   consensusEstimateRead = {
     company_id: id,
     continuity_status: "NO_MAPPING",

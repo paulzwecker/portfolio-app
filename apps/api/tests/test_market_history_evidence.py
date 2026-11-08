@@ -93,6 +93,9 @@ def test_listing_coverage_describes_sparse_dates_without_claiming_sessions(
         assert result.analytics.first_market_date == date(2024, 1, 1)
         assert result.analytics.max_calendar_gap_days == 366
         assert result.analytics.session_coverage == "NOT_ASSESSED"
+        assert result.analytics.input_issues == ["DUPLICATE_MARKET_DATE"]
+        assert result.analytics.status == "UNAVAILABLE"
+        assert result.analytics.daily_return is None
         one_date = queries.listing_market_data(
             session,
             fetched_listing,
@@ -110,6 +113,54 @@ def test_listing_coverage_describes_sparse_dates_without_claiming_sessions(
         assert no_dates.analytics.distinct_market_dates == 0
         assert no_dates.analytics.first_market_date is None
         assert no_dates.analytics.max_calendar_gap_days is None
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("mode", "expected_issue"),
+    [
+        ("provider", "MULTIPLE_SOURCE_STREAMS"),
+        ("symbol", "MULTIPLE_SOURCE_STREAMS"),
+        ("currency", "LISTING_CURRENCY_MISMATCH"),
+        ("missing_listing_currency", "LISTING_CURRENCY_UNVERIFIED"),
+    ],
+)
+def test_listing_analytics_reject_incompatible_price_streams(
+    postgres_engine: Engine, mode: str, expected_issue: str
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        _, _, listing = _seed_canonical_scope(session)
+        listing_id = listing.id
+        if mode == "missing_listing_currency":
+            listing.currency = None
+        for index in range(2):
+            session.add(
+                PriceObservation(
+                    listing_id=listing_id,
+                    price_kind="DAILY_CLOSE",
+                    market_date=datetime(2026, 10, index + 2, tzinfo=UTC),
+                    recorded_at=datetime(2026, 10, 4, tzinfo=UTC),
+                    split_adjusted_close=Decimal("100") + index * 30,
+                    currency="EUR" if index == 1 and mode == "currency" else "USD",
+                    provider="OTHER" if index == 1 and mode == "provider" else "SYNTHETIC",
+                    provider_symbol="OTHER" if index == 1 and mode == "symbol" else "SYNTH",
+                    adjustment_basis="Synthetic split-adjusted close",
+                    data_quality="PASS",
+                    source_ref=f"stream-fixture-{index}-{uuid4()}",
+                )
+            )
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        fetched_listing = session.get(Listing, listing_id)
+        assert fetched_listing is not None
+        result = queries.listing_market_data(
+            session, fetched_listing, known_at=datetime(2026, 10, 5, tzinfo=UTC)
+        )
+        assert expected_issue in result.analytics.input_issues
+        assert result.analytics.status == "UNAVAILABLE"
+        assert result.analytics.daily_return is None
+        assert result.analytics.trend_state is None
+        assert len(result.history) == 2
 
 
 def stamp(day: int) -> datetime:

@@ -321,13 +321,20 @@ function chartBounds(values: number[]) {
   return { low: min - padding, high: max + padding };
 }
 
-function PriceHistoryChart({
+export function PriceHistoryChart({
   market,
   observations,
 }: {
   market: ListingMarketData;
   observations: ListingMarketData["history"];
 }) {
+  if ((market.analytics.input_issues?.length ?? 0) > 0)
+    return (
+      <EmptyState
+        title="Price series needs review"
+        description="The analytics window contains incompatible or ambiguous inputs. Recent observations are listed below; the issue may be outside the displayed range."
+      />
+    );
   const values = observations
     .map((item) => item.split_adjusted_close)
     .filter((value): value is string => value !== null)
@@ -450,8 +457,27 @@ export function HistoryCoverageNotice({
 }: {
   analytics: PriceHistoryAnalytics;
 }) {
+  const issueLabels: Record<
+    NonNullable<PriceHistoryAnalytics["input_issues"]>[number],
+    string
+  > = {
+    DUPLICATE_MARKET_DATE: "duplicate market dates",
+    MULTIPLE_SOURCE_STREAMS: "different provider, symbol or currency",
+    LISTING_CURRENCY_MISMATCH: "price currency differs from listing currency",
+    LISTING_CURRENCY_UNVERIFIED: "listing currency is unavailable",
+  };
   return (
     <p className="leading-5 text-muted-foreground">
+      {(analytics.input_issues?.length ?? 0) > 0 && (
+        <>
+          Analytics and chart are unavailable:{" "}
+          {analytics.input_issues
+            ?.map((issue) => issueLabels[issue])
+            .join("; ")}
+          . Recent observations are listed below; the issue may be outside the
+          displayed range.{" "}
+        </>
+      )}
       Exchange-session coverage has not been assessed; these metrics use
       recorded closes and may span missing sessions. Calendar gaps include
       weekends and holidays.
@@ -616,7 +642,7 @@ function MarketHistory({
               <p className="border-t pt-3 leading-5 text-muted-foreground">
                 {selected.analytics.status === "AVAILABLE"
                   ? `Analytics as of ${dateTime(selected.analytics.as_of)} · ${selected.analytics.methodology_version}`
-                  : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations were used.`}
+                  : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations were examined.`}
               </p>
               <HistoryCoverageNotice analytics={selected.analytics} />
             </CardContent>

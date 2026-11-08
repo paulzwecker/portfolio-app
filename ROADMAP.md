@@ -6,16 +6,16 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                           |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Personal Universe design foundation and Portfolio experience — INTEGRATE. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
-| Branch / PR                 | `codex/personal-universe-design-system` / [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28), based on main `685fa7a`                       |
-| Implementation              | Reference-based shared tokens, appearance selector, showcase and Portfolio holdings search are LOCAL_VERIFIED                                           |
-| Next ready substantial task | Review PR #28 after CI; retain production deployment freezes                                                                                            |
-| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                            |
-| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                                        |
+| Field                       | Current value                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
+| Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
+| Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
+| Next ready substantial task | Establish reviewed session-aware coverage; retain production deployment freezes                              |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
+| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
-PR #27 is merged into main; deployment freezes and recovery authorization gates remain in effect.
+PRs #27 and #28 are merged into main; deployment freezes and recovery authorization gates remain in effect.
 
 Historical November 8 incident evidence identified a healthy old Render deployment (`395f842`),
 new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail
@@ -192,6 +192,10 @@ Company historical analytics now expose their observed date span and explicitly 
 that exchange-session coverage is unassessed, including for older API responses.
 Synthetic API/DB, web and responsive browser checks are recorded in the handoff;
 no trading calendar or production coverage is inferred.
+History analytics and charts now fail closed on duplicate dates or incompatible
+provider, symbol or currency streams; source rows remain inspectable. Focused local
+checks pass, including responsive conflict-state coverage. Session completeness,
+source adjustment consistency and live ingestion remain unverified.
 
 ## Immediate priorities and gates
 

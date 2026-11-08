@@ -165,6 +165,13 @@ reports distinct market dates, earliest date and maximum calendar spacing for th
 calculation inputs; weekends and holidays are included and no missing session count
 is inferred. Older API responses may omit this date-span evidence. Price charts use the requested
 recent observations while analytics retain enough history for the full window.
+Analytics and the connected chart are unavailable when the selected inputs contain
+duplicate market dates, differing provider/symbol/currency streams, a currency that
+conflicts with the listing, or an unverified listing currency. The API reports the
+specific `input_issues`; recent observations remain inspectable in the UI, while the
+full calculation window can be requested through the market-data API. This
+conservative check does not certify consistent corporate-action adjustments or prove
+that all sessions are present. Old API responses without the field remain compatible.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because
 the stored dividend facts are not independently verified, so the figures are not

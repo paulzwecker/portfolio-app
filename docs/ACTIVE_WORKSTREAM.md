@@ -1,6 +1,6 @@
 # Active workstream
 
-## Personal Universe design system — INTEGRATE
+## Historical Personal Universe design system checkpoint
 
 The independent `codex/personal-universe-design-system` worktree starts at current
 main `685fa7a` after merging [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)
@@ -13,7 +13,8 @@ regression passed 91 tests with 35 explicit fixture/live-only skips. Synthetic
 desktop/mobile screenshots were visually reviewed outside Git; appearance, search,
 drawer keyboard handling and 320 px overflow checks pass. The full production
 release and recovery controls remain separate. [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28)
-requires CI and owner review; keep production frozen. No production action.
+merged as `aef3572`; the independent C2.2 branch integrated it. Keep production
+frozen. No production action was performed by this workstream.
 
 The following ledger and release notes preserve historical evidence from PR #27.
 
@@ -183,8 +184,8 @@ two monitored refresh cycles, followed by reviewed SEC identities and coverage.
 
 ## Independent C2.2 history coverage — BUILD
 
-`codex/market-history-coverage` starts at main `685fa7a` and is independent of the
-completed, owner-review design PR #28. Historical bootstrap receipts now distinguish
+`codex/market-history-coverage` started at main `685fa7a` and now includes the merged
+design PR #28 at main `aef3572`. Historical bootstrap receipts now distinguish
 checkpoint execution from expected-session coverage and report normalized date span,
 distinct dates and maximum calendar spacing without treating holidays/weekends as
 missing. Old receipts and unavailable responses retain unknown evidence. Current
@@ -213,5 +214,13 @@ from absent evidence. Focused checks pass: 56 web cases, nine Python cases inclu
 two isolated PostgreSQL cases, generated contracts and strict types; the synthetic
 browser journey checks the notice and overflow at 390 and 1440 pixels. No migration
 is needed. This is LOCAL_VERIFIED, not live coverage or calendar validation.
+After integrating PR #28, the history query rejects duplicate market dates,
+provider/symbol/currency stream changes and missing or conflicting listing currency.
+Conflicting analytics and line charts become unavailable while observations remain
+inspectable; this does not certify adjustment consistency or session completeness.
+Thirteen focused Python cases (six isolated PostgreSQL), 57 web cases, strict types,
+contract generation and responsive browser checks pass for clean and conflicting
+states at 390 and 1440 px. The Execution Pace fallback independently refuses
+conflicted analytics; its 23 focused unit cases pass. No schema migration is introduced.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.

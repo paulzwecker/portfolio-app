@@ -818,6 +818,14 @@ class PriceRegimeRead(Contract):
     source_ref: str
 
 
+PriceHistoryInputIssue = Literal[
+    "DUPLICATE_MARKET_DATE",
+    "MULTIPLE_SOURCE_STREAMS",
+    "LISTING_CURRENCY_MISMATCH",
+    "LISTING_CURRENCY_UNVERIFIED",
+]
+
+
 class PriceHistoryAnalyticsRead(Contract):
     """Price metrics and descriptive coverage over canonical daily observations."""
 
@@ -829,6 +837,7 @@ class PriceHistoryAnalyticsRead(Contract):
     distinct_market_dates: int | None = None
     first_market_date: date | None = None
     max_calendar_gap_days: int | None = None
+    input_issues: list[PriceHistoryInputIssue] = Field(default_factory=list)
     daily_return: FixedDecimal | None
     dma_20: FixedDecimal | None
     dma_50: FixedDecimal | None

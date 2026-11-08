@@ -1679,6 +1679,21 @@ describe("domain display integrity", () => {
     expect(
       isListingMarketData({
         ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          input_issues: ["DUPLICATE_MARKET_DATE"],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: { ...withEvidence.analytics, input_issues: ["INVENTED"] },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
         analytics: { ...withEvidence.analytics, session_coverage: "COMPLETE" },
       }),
     ).toBe(false);

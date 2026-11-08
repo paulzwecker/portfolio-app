@@ -1,7 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { PriceHistoryAnalytics } from "@/lib/domain-contracts";
-import { HistoryCoverageNotice } from "./company-historical-analysis-workspace";
+import type {
+  ListingMarketData,
+  PriceHistoryAnalytics,
+} from "@/lib/domain-contracts";
+import {
+  HistoryCoverageNotice,
+  PriceHistoryChart,
+} from "./company-historical-analysis-workspace";
 
 describe("historical market coverage notice", () => {
   it("warns that a long sparse history is not proof of complete sessions", () => {
@@ -33,5 +39,24 @@ describe("historical market coverage notice", () => {
       />,
     );
     expect(empty).toContain("0 distinct market dates");
+  });
+
+  it("hides the chart and explains incompatible inputs", () => {
+    const analytics = {
+      input_issues: ["MULTIPLE_SOURCE_STREAMS", "DUPLICATE_MARKET_DATE"],
+    } as PriceHistoryAnalytics;
+    const notice = renderToStaticMarkup(
+      <HistoryCoverageNotice analytics={analytics} />,
+    );
+    expect(notice).toContain("different provider, symbol or currency");
+    expect(notice).toContain("duplicate market dates");
+    const chart = renderToStaticMarkup(
+      <PriceHistoryChart
+        market={{ analytics } as ListingMarketData}
+        observations={[]}
+      />,
+    );
+    expect(chart).toContain("Price series needs review");
+    expect(chart).not.toContain('role="img"');
   });
 });
