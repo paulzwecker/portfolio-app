@@ -57,13 +57,13 @@ export function LedgerSettledActivityBuilder({
   return (
     <div className="space-y-4 rounded-lg border bg-card p-4">
       <p className="text-sm text-muted-foreground">
-        Enter settled purchases, sales, dividends, deposits, withdrawals, fees
-        or taxes from your records. Trades and dividends require a listing in
-        the verified anchor. Dividend currency is the received cash currency and
-        can differ from the listing currency; no conversion is inferred. Enter
-        timestamps with seconds and a UTC offset, for example
-        2026-01-15T10:30:00+01:00. The sequence determines ordering when booking
-        times match. The API checks the complete reconstruction.
+        Enter settled purchases, sales, dividends, deposits, withdrawals, fees,
+        taxes or internal cash transfers from your records. Trades and dividends
+        require a listing in the verified anchor. Dividend currency is the
+        received cash currency and can differ from the listing currency; no
+        conversion is inferred. Enter timestamps with seconds and a UTC offset,
+        for example 2026-01-15T10:30:00+01:00. The sequence determines ordering
+        when booking times match. The API checks the complete reconstruction.
       </p>
       <p className="text-xs text-muted-foreground">
         Discard this activity draft before changing the opening or loading
@@ -73,6 +73,12 @@ export function LedgerSettledActivityBuilder({
         <p className="text-sm text-warning">
           Activity requires an evidenced brokerage account in the opening
           review.
+        </p>
+      )}
+      {accounts.length === 1 && (
+        <p className="text-sm text-muted-foreground">
+          Internal cash transfers require two evidenced brokerage accounts in
+          the opening review.
         </p>
       )}
       <form
@@ -123,6 +129,14 @@ export function LedgerSettledActivityBuilder({
                   separate tax.
                 </p>
               )}
+              {entry.kind === "CASH_TRANSFER" && (
+                <p className="text-xs text-muted-foreground">
+                  Enter both independently evidenced legs. Accounts must differ;
+                  currency, amount and booking instant must match. Transfers are
+                  not deposits or withdrawals. FX and unmatched legs require a
+                  different review.
+                </p>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm">
                   Account
@@ -163,6 +177,12 @@ export function LedgerSettledActivityBuilder({
                     <option value="BUY">Purchase</option>
                     <option value="SELL">Sale</option>
                     <option value="DIVIDEND">Dividend</option>
+                    <option
+                      value="CASH_TRANSFER"
+                      disabled={accounts.length < 2}
+                    >
+                      Internal cash transfer
+                    </option>
                     <option value="DEPOSIT">Deposit</option>
                     <option value="WITHDRAWAL">Withdrawal</option>
                     <option value="FEE">Fee</option>
@@ -310,6 +330,66 @@ export function LedgerSettledActivityBuilder({
                     }
                   />
                 </label>
+                {entry.kind === "CASH_TRANSFER" && (
+                  <>
+                    <label className="text-sm">
+                      Destination account
+                      <select
+                        className={field}
+                        value={entry.destinationAccountId ?? ""}
+                        onChange={(event) =>
+                          update(entry.id, {
+                            destinationAccountId: event.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Choose destination account</option>
+                        {accounts.map((account) => (
+                          <option key={account.id} value={account.id}>
+                            {account.name} · {account.brokerName} · {account.id}
+                          </option>
+                        ))}
+                      </select>
+                      {entry.destinationAccountId && (
+                        <span className="mt-1 block break-all text-xs text-muted-foreground">
+                          Destination account ID {entry.destinationAccountId}
+                        </span>
+                      )}
+                    </label>
+                    {(
+                      [
+                        ["Destination currency", "destinationCurrency"],
+                        ["Destination amount", "destinationAmount"],
+                        [
+                          "Destination booking timestamp",
+                          "destinationEffectiveAt",
+                        ],
+                        [
+                          "Destination source document SHA-256",
+                          "destinationSourceSha256",
+                        ],
+                        [
+                          "Destination source record reference",
+                          "destinationSourceRecordId",
+                        ],
+                      ] as const
+                    ).map(([label, key]) => (
+                      <label className="text-sm" key={key}>
+                        {label}
+                        <input
+                          className={field}
+                          inputMode={
+                            key === "destinationAmount" ? "decimal" : undefined
+                          }
+                          value={entry[key] ?? ""}
+                          onChange={(event) =>
+                            update(entry.id, { [key]: event.target.value })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </>
+                )}
               </div>
               <Button
                 type="button"

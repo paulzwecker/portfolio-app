@@ -46,6 +46,13 @@ async function setup(page: Page, status = 200) {
       report.projection_version = "settled-booking-v2";
       report.as_of = packet.as_of;
       report.activity_count = packet.activity.length;
+      if (packet.accounts.length === 2) {
+        report.accounts.push({
+          account_id: packet.accounts[1].account_id,
+          positions: [],
+          cash: [],
+        });
+      }
       if (packet.activity.length > 0) {
         const hasBuy = packet.activity.some(
           (row: { kind: string }) => row.kind === "BUY",
@@ -53,11 +60,16 @@ async function setup(page: Page, status = 200) {
         const hasDividend = packet.activity.some(
           (row: { kind: string }) => row.kind === "DIVIDEND",
         );
-        const usd = hasBuy
-          ? "89.7500000000"
-          : hasDividend
-            ? "100.0000000000"
-            : "101.2500000000";
+        const hasTransfer = packet.activity.some(
+          (row: { kind: string }) => row.kind === "CASH_TRANSFER",
+        );
+        const usd = hasTransfer
+          ? "100.0000000000"
+          : hasBuy
+            ? "89.7500000000"
+            : hasDividend
+              ? "100.0000000000"
+              : "101.2500000000";
         if (hasDividend) {
           report.cash.find((row) => row.currency === "EUR")!.balance =
             "1.1000000000";
@@ -71,6 +83,14 @@ async function setup(page: Page, status = 200) {
         if (hasBuy) {
           report.positions[0].quantity = "3.0000000000";
           report.accounts[0].positions[0].quantity = "3.0000000000";
+        }
+        if (hasTransfer && report.accounts.length === 2) {
+          report.accounts[0].cash.find(
+            (row) => row.currency === "USD",
+          )!.balance = "90.0000000000";
+          report.accounts[1].cash = [
+            { currency: "USD", balance: "10.0000000000" },
+          ];
         }
       }
       if (packet.ending_statement) {
@@ -487,6 +507,9 @@ test("guided cash activity reviews exact source evidence against a reconciled op
   await page
     .getByRole("button", { name: "Add activity record", exact: true })
     .click();
+  await expect(
+    page.getByRole("option", { name: "Internal cash transfer", exact: true }),
+  ).toHaveAttribute("disabled", "");
   const selected = JSON.parse(calls[0].text).accounts[0].account_id;
   await page
     .getByRole("combobox", { name: "Account", exact: true })
@@ -1545,6 +1568,159 @@ test("guided dividend preserves its received currency and evidence through resto
   ).toBeVisible();
   expect(calls[3].text).toBe(calls[1].text);
   await page.getByLabel("Fees", { exact: true }).fill("0.01");
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+});
+
+test("guided internal cash transfer retains independent debit and receipt evidence", async ({
+  page,
+}, info) => {
+  const calls = await setup(page);
+  await page
+    .getByRole("button", { name: "Add opening account", exact: true })
+    .click();
+  const receiver = page.getByRole("group", {
+    name: "Opening account 2",
+    exact: true,
+  });
+  await receiver
+    .getByLabel("Account name", { exact: true })
+    .fill("Synthetic receiving account");
+  await receiver
+    .getByLabel("Broker name", { exact: true })
+    .fill("Synthetic receiving broker");
+  await receiver
+    .getByLabel("Statement reference", { exact: true })
+    .fill("receiving-opening");
+  await receiver
+    .getByLabel("Source document SHA-256", { exact: true })
+    .fill("d".repeat(64));
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  const accounts = JSON.parse(calls[0].text).accounts;
+  await page
+    .getByRole("button", { name: "Add settled activity", exact: true })
+    .click();
+  await page
+    .getByLabel("Review cutoff timestamp", { exact: true })
+    .fill("2026-01-31T23:59:59+01:00");
+  await page
+    .getByRole("button", { name: "Add activity record", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption(accounts[0].account_id);
+  await page
+    .getByRole("combobox", { name: "Type", exact: true })
+    .selectOption("CASH_TRANSFER");
+  await page
+    .getByLabel("Booking timestamp", { exact: true })
+    .fill("2026-01-15T10:30:00+01:00");
+  await page.getByLabel("Sequence", { exact: true }).fill("1");
+  await page.getByLabel("Currency", { exact: true }).fill("USD");
+  await page.getByLabel("Amount", { exact: true }).fill("10.0000000000");
+  const record = page.getByRole("group", {
+    name: "Activity record 1",
+    exact: true,
+  });
+  await record
+    .getByLabel("Source document SHA-256", { exact: true })
+    .fill("e".repeat(64));
+  await record
+    .getByLabel("Source record reference", { exact: true })
+    .fill("synthetic-debit");
+  await record
+    .getByRole("combobox", { name: "Destination account", exact: true })
+    .selectOption(accounts[1].account_id);
+  await record.getByLabel("Destination currency", { exact: true }).fill("USD");
+  await record
+    .getByLabel("Destination amount", { exact: true })
+    .fill("10.0000000000");
+  await record
+    .getByLabel("Destination booking timestamp", { exact: true })
+    .fill("2026-01-15T09:30:00Z");
+  await record
+    .getByLabel("Destination source document SHA-256", { exact: true })
+    .fill("f".repeat(64));
+  await record
+    .getByLabel("Destination source record reference", { exact: true })
+    .fill("synthetic-credit");
+  await page
+    .getByRole("heading", { name: "Settled activity", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("cash-transfer.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  const transfer = JSON.parse(calls[1].text).activity[0];
+  expect(transfer).toMatchObject({
+    kind: "CASH_TRANSFER",
+    amount: "10.0000000000",
+    destination: {
+      account_id: accounts[1].account_id,
+      amount: "10.0000000000",
+      effective_at: "2026-01-15T09:30:00Z",
+      evidence: {
+        source_sha256: "f".repeat(64),
+        source_record_id: "synthetic-credit",
+      },
+    },
+  });
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const savedPath = await (await download).path();
+  if (!savedPath) throw new Error("Synthetic transfer review download missing");
+  expect(await readFile(savedPath, "utf8")).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Discard activity", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(savedPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Edit supported activity", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Destination amount", { exact: true }),
+  ).toHaveValue("10.0000000000");
+  await expect(
+    page.getByLabel("Destination source record reference", { exact: true }),
+  ).toHaveValue("synthetic-credit");
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[3].text).toBe(calls[1].text);
+  await page.getByLabel("Destination amount", { exact: true }).fill("11");
   await expect(
     page.getByLabel("Ledger review result", { exact: true }),
   ).toHaveCount(0);

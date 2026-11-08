@@ -392,3 +392,59 @@ it("retains dividend evidence through ending-statement restoration", () => {
       .text,
   ).toBe(original.text);
 });
+
+it("restores ending statements with both independently evidenced cash transfer legs", () => {
+  const receiving: OpeningAccountDraft = {
+    ...opening,
+    id: "88888888-8888-4888-8888-888888888888",
+    name: "Receiving",
+    sourceRecordId: "receiver-opening",
+    positions: [],
+    cash: [],
+  };
+  const openingFile = buildOpeningReview(
+    ledgerAnchor,
+    [opening, receiving],
+    true,
+  );
+  const transfer: SettledActivityDraft = {
+    ...activity,
+    kind: "CASH_TRANSFER",
+    amount: "10.00",
+    sourceRecordId: "debit",
+    destinationAccountId: receiving.id,
+    destinationCurrency: "USD",
+    destinationAmount: "10.00",
+    destinationEffectiveAt: activity.effectiveAt,
+    destinationSourceSha256: "e".repeat(64),
+    destinationSourceRecordId: "credit",
+  };
+  const transferFile = buildSettledActivityReview(
+    ledgerAnchor,
+    openingFile,
+    "2026-01-31T23:59:59+01:00",
+    [transfer],
+  );
+  const endingAccounts = [
+    ending(),
+    {
+      ...ending(),
+      accountId: receiving.id,
+      sourceRecordId: "receiver-ending",
+      positions: [],
+      cash: [],
+    },
+  ];
+  const statement = buildEndingReview(
+    ledgerAnchor,
+    transferFile,
+    endingAccounts,
+    true,
+  );
+  const restored = restoreEndingReview(ledgerAnchor, statement.text);
+  expect(restored.file.text).toBe(transferFile.text);
+  expect(
+    buildEndingReview(ledgerAnchor, restored.file, restored.accounts, true)
+      .text,
+  ).toBe(statement.text);
+});

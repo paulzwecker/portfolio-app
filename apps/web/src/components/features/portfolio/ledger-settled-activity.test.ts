@@ -354,3 +354,102 @@ it.each([
     ]),
   ).toThrow();
 });
+
+const destinationId = "88888888-8888-4888-8888-888888888888";
+const transferBase = buildOpeningReview(
+  ledgerAnchor,
+  [
+    opening,
+    {
+      ...opening,
+      id: destinationId,
+      name: "Second synthetic account",
+      sourceRecordId: "second-opening",
+      positions: [],
+      cash: [],
+    },
+  ],
+  true,
+);
+function transfer(): SettledActivityDraft {
+  return {
+    ...record(),
+    kind: "CASH_TRANSFER",
+    amount: "10.0000000000",
+    sourceRecordId: "debit",
+    destinationAccountId: destinationId,
+    destinationCurrency: "USD",
+    destinationAmount: "10.0000000000",
+    destinationEffectiveAt: "2026-01-15T09:30:00Z",
+    destinationSourceSha256: "d".repeat(64),
+    destinationSourceRecordId: "credit",
+  };
+}
+it("round-trips independently evidenced paired cash transfer legs without losing precision", () => {
+  const original = buildSettledActivityReview(
+    ledgerAnchor,
+    transferBase,
+    cutoff,
+    [transfer()],
+  );
+  const activity = JSON.parse(original.text).activity[0];
+  expect(activity.destination).toEqual({
+    account_id: destinationId,
+    currency: "USD",
+    amount: "10.0000000000",
+    effective_at: "2026-01-15T09:30:00Z",
+    evidence: { source_sha256: "d".repeat(64), source_record_id: "credit" },
+  });
+  expect(original.evidence).toHaveLength(4);
+  const session = restoreSettledActivityReview(ledgerAnchor, original.text);
+  expect(session.entries).toEqual([transfer()]);
+  expect(
+    buildSettledActivityReview(
+      ledgerAnchor,
+      session.base,
+      session.cutoff,
+      session.entries,
+    ).text,
+  ).toBe(original.text);
+  activity.destination.amount = 10;
+  const altered = JSON.parse(original.text);
+  altered.activity[0] = activity;
+  expect(() =>
+    restoreSettledActivityReview(ledgerAnchor, JSON.stringify(altered)),
+  ).toThrow(/cannot be edited/);
+});
+it.each([
+  { destinationAccountId: ledgerAccountId },
+  { destinationAccountId: "missing" },
+  { destinationAmount: "0" },
+  { destinationCurrency: "usd" },
+  { destinationEffectiveAt: "2026-01-15T09:30:00" },
+  { destinationSourceSha256: "" },
+  { destinationSourceRecordId: "" },
+  {
+    destinationSourceSha256: "c".repeat(64),
+    destinationSourceRecordId: "debit",
+  },
+])("rejects incomplete or duplicate destination evidence %j", (change) => {
+  expect(() =>
+    buildSettledActivityReview(ledgerAnchor, transferBase, cutoff, [
+      { ...transfer(), ...change },
+    ]),
+  ).toThrow();
+});
+
+it("rejects a destination receipt reused by a later activity", () => {
+  const reused: SettledActivityDraft = {
+    ...record(),
+    id: "99999999-9999-4999-8999-999999999999",
+    sequence: "2",
+    sourceSha256: "d".repeat(64),
+    sourceRecordId: "credit",
+  };
+  expect(() =>
+    buildSettledActivityReview(ledgerAnchor, transferBase, cutoff, [
+      transfer(),
+      reused,
+    ]),
+  ).toThrow(/duplicates/);
+});

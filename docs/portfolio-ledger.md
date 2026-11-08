@@ -189,7 +189,7 @@ and requires the source-date confirmation again. Packets with activity, ending
 statements, changed anchors or other fields use the existing file review workflow.
 
 After a guided opening reconciles, the screen can add evidenced BUY, SELL, DIVIDEND,
-DEPOSIT, WITHDRAWAL, FEE and TAX records for declared brokerage accounts. Each
+DEPOSIT, WITHDRAWAL, FEE, TAX and CASH_TRANSFER records for declared brokerage accounts. Each
 record has an explicit type, sequence, settled timestamp with UTC offset, currency,
 document hash and source-record reference. Trades additionally require a verified
 anchor listing in its trading currency, exact quantity and gross settlement cash,
@@ -203,8 +203,10 @@ review cutoff. The API owns ordering, dates, balance and source validation and
 calculates candidate balances. The activity draft must be discarded before its
 opening or source file is changed. Revalidate an unchanged downloaded review JSON
 to resume; account and record IDs, evidence and exact amounts remain intact.
-Other activities, listings outside the current anchor, or extra fields use the file
-workflow; guided transfers remain future work.
+Guided internal cash transfers require two evidenced brokerage accounts and
+independently entered debit and receipt amounts, currencies, booking timestamps
+and source keys. The API verifies that the legs match. Guided security transfers,
+other activities, listings outside the anchor or extra fields use the file workflow.
 
 After a guided opening or supported activity review reconciles, the ending form accepts
 independently entered positions, native cash and source evidence for every account

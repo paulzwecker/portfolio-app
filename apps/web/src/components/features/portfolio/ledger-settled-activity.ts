@@ -9,7 +9,15 @@ export type SettledActivityDraft = {
   id: string;
   accountId: string;
   kind:
-    "" | "DEPOSIT" | "WITHDRAWAL" | "FEE" | "TAX" | "BUY" | "SELL" | "DIVIDEND";
+    | ""
+    | "DEPOSIT"
+    | "WITHDRAWAL"
+    | "FEE"
+    | "TAX"
+    | "BUY"
+    | "SELL"
+    | "DIVIDEND"
+    | "CASH_TRANSFER";
   sequence: string;
   effectiveAt: string;
   currency: string;
@@ -23,6 +31,12 @@ export type SettledActivityDraft = {
   taxes?: string;
   tradeDate?: string;
   settlementDate?: string;
+  destinationAccountId?: string;
+  destinationCurrency?: string;
+  destinationAmount?: string;
+  destinationEffectiveAt?: string;
+  destinationSourceSha256?: string;
+  destinationSourceRecordId?: string;
 };
 
 const timestamp =
@@ -71,7 +85,8 @@ export function restoreSettledActivityReview(
           item.kind !== "TAX" &&
           item.kind !== "BUY" &&
           item.kind !== "SELL" &&
-          item.kind !== "DIVIDEND") ||
+          item.kind !== "DIVIDEND" &&
+          item.kind !== "CASH_TRANSFER") ||
         typeof item.sequence !== "number" ||
         !Number.isSafeInteger(item.sequence) ||
         typeof item.effective_at !== "string" ||
@@ -82,6 +97,21 @@ export function restoreSettledActivityReview(
         throw new Error(invalid);
       const trade = item.kind === "BUY" || item.kind === "SELL";
       const dividend = item.kind === "DIVIDEND";
+      const transfer = item.kind === "CASH_TRANSFER";
+      if (
+        transfer &&
+        (!isRecord(item.destination) ||
+          !isRecord(item.destination.evidence) ||
+          [
+            item.destination.account_id,
+            item.destination.currency,
+            item.destination.amount,
+            item.destination.effective_at,
+            item.destination.evidence.source_sha256,
+            item.destination.evidence.source_record_id,
+          ].some((value) => typeof value !== "string"))
+      )
+        throw new Error(invalid);
       if (
         trade
           ? [
@@ -128,6 +158,20 @@ export function restoreSettledActivityReview(
             : {}),
         sourceSha256: item.evidence.source_sha256,
         sourceRecordId: item.evidence.source_record_id,
+        ...(transfer &&
+        isRecord(item.destination) &&
+        isRecord(item.destination.evidence)
+          ? {
+              destinationAccountId: item.destination.account_id as string,
+              destinationCurrency: item.destination.currency as string,
+              destinationAmount: item.destination.amount as string,
+              destinationEffectiveAt: item.destination.effective_at as string,
+              destinationSourceSha256: item.destination.evidence
+                .source_sha256 as string,
+              destinationSourceRecordId: item.destination.evidence
+                .source_record_id as string,
+            }
+          : {}),
       };
     },
   );
@@ -189,6 +233,7 @@ export function buildSettledActivityReview(
         "BUY",
         "SELL",
         "DIVIDEND",
+        "CASH_TRANSFER",
       ].includes(entry.kind)
     )
       throw new Error(`${label} needs a supported type.`);
@@ -209,6 +254,19 @@ export function buildSettledActivityReview(
       throw new Error(`${label} needs a currency.`);
     const trade = entry.kind === "BUY" || entry.kind === "SELL";
     const dividend = entry.kind === "DIVIDEND";
+    const transfer = entry.kind === "CASH_TRANSFER";
+    if (
+      !transfer &&
+      [
+        entry.destinationAccountId,
+        entry.destinationCurrency,
+        entry.destinationAmount,
+        entry.destinationEffectiveAt,
+        entry.destinationSourceSha256,
+        entry.destinationSourceRecordId,
+      ].some(Boolean)
+    )
+      throw new Error(`${label} contains unexpected destination details.`);
     if (trade || dividend) {
       const listing = anchor.listings.find(
         (item) => item.listing_id === entry.listingId,
@@ -270,6 +328,40 @@ export function buildSettledActivityReview(
     if (sources.has(source))
       throw new Error(`${label} duplicates another source record.`);
     sources.add(source);
+    if (transfer) {
+      if (
+        !entry.destinationAccountId ||
+        !brokerIds.has(entry.destinationAccountId) ||
+        entry.destinationAccountId === entry.accountId
+      )
+        throw new Error(
+          `${label} needs a different evidenced destination account.`,
+        );
+      if (
+        !entry.destinationCurrency ||
+        !/^[A-Z]{3}$/.test(entry.destinationCurrency) ||
+        !entry.destinationAmount ||
+        !amount.test(entry.destinationAmount) ||
+        !/[1-9]/.test(entry.destinationAmount) ||
+        !entry.destinationEffectiveAt ||
+        !timestamp.test(entry.destinationEffectiveAt) ||
+        !Number.isFinite(Date.parse(entry.destinationEffectiveAt))
+      )
+        throw new Error(
+          `${label} needs the destination currency, positive exact amount and booking timestamp.`,
+        );
+      if (
+        !entry.destinationSourceSha256 ||
+        !/^[a-f0-9]{64}$/.test(entry.destinationSourceSha256) ||
+        !entry.destinationSourceRecordId?.trim() ||
+        entry.destinationSourceRecordId.trim().length > 200
+      )
+        throw new Error(`${label} needs destination source evidence.`);
+      const destinationSource = `${entry.destinationSourceSha256}:${entry.destinationSourceRecordId.trim()}`;
+      if (sources.has(destinationSource))
+        throw new Error(`${label} duplicates another source record.`);
+      sources.add(destinationSource);
+    }
     return {
       id: entry.id,
       account_id: entry.accountId,
@@ -298,7 +390,21 @@ export function buildSettledActivityReview(
               fees: entry.fees,
               taxes: entry.taxes,
             }
-          : { amount: entry.amount }),
+          : transfer
+            ? {
+                amount: entry.amount,
+                destination: {
+                  account_id: entry.destinationAccountId,
+                  currency: entry.destinationCurrency,
+                  amount: entry.destinationAmount,
+                  effective_at: entry.destinationEffectiveAt,
+                  evidence: {
+                    source_sha256: entry.destinationSourceSha256,
+                    source_record_id: entry.destinationSourceRecordId,
+                  },
+                },
+              }
+            : { amount: entry.amount }),
     };
   });
   const packet = JSON.parse(base.text);
