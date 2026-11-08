@@ -8,12 +8,24 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                       |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2/C3.1/C2.3 local milestone - INTEGRATE in progress. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                        |
+| Active checkpoint           | C2.2/C3.1/C2.3 local release candidate - INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                            |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | LOCAL_VERIFIED slices / INTEGRATE. Comprehensive checks in progress; hosted population and cutover remain pending                                   |
-| Next ready substantial task | Finish comprehensive verification and one cohesive PR. Preserve #25 as a separate owner merge dependency                                            |
+| Implementation              | LOCAL_VERIFIED workflows. Full quality/build and browser checks pass; final CI/owner review and hosted activation remain pending                    |
+| Next ready substantial task | Complete milestone PR/CI, then freeze for owner review. Preserve #25 as a separate owner merge dependency                                           |
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
 | Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
+
+Integration review corrected the pre-ledger bootstrap path and added all ledger
+history to the recovery inventory. `9048c47` also pins the existing read-only release
+preflight to the current target and reviewed `9f2a6d4c81b7` → `b59f16c8a203` range.
+The full quality/build command passes with 294 web checks and 810 API unit checks
+(two Windows skips). Browser evidence covers 71 regression and ten actual-API
+journeys. The pre-fix DB sweep found one regression among 341 selected cases; its
+corrected path and 34 schema/publication checks pass. Final CI must exercise the
+complete updated PostgreSQL suite, including local privilege-dependent skips.
+[Handoff](docs/ACTIVE_WORKSTREAM.md) records evidence, release prerequisites and
+[earlier BUILD history](docs/history/data-ledger-build-through-2026-11-08.md).
+Hosted source freshness, ingestion, schema/cutover and model acceptance remain gated.
 
 `a11272a` adds scoped publication plan/ownership/publish proxy contracts and the
 explicit whole-portfolio approval UI. The workflow is LOCAL_VERIFIED through 135
