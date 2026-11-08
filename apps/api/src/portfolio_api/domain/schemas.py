@@ -1226,6 +1226,11 @@ class CompanyReportedFundamentalsRead(Contract):
     latest_observed_at: datetime | None
 
 
+class SecIssuerIdentityRead(Contract):
+    status: Literal["MATCHED", "CHANGED", "UNMAPPED_IN_SCOPE", "CURRENT_UNAVAILABLE", "UNVERIFIED"]
+    frozen_cik: str | None
+
+
 class SecBootstrapCheckpointRead(Contract):
     run_id: UUID
     checkpoint_id: UUID
@@ -1237,11 +1242,7 @@ class SecBootstrapCheckpointRead(Contract):
     retryable: bool
     next_attempt_at: datetime | None
     provider_request_count: Annotated[int, Field(ge=0)]
-
-
-class SecRefreshIdentityRead(Contract):
-    status: Literal["MATCHED", "CHANGED", "UNMAPPED_IN_SCOPE", "CURRENT_UNAVAILABLE", "UNVERIFIED"]
-    frozen_cik: str | None
+    identity: SecIssuerIdentityRead | None = None
 
 
 class SecRefreshRead(Contract):
@@ -1260,7 +1261,7 @@ class SecRefreshRead(Contract):
     mapped_company_count: Annotated[int, Field(ge=0)] | None
     issuer_outcome: Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"]
     source_record_count: Annotated[int, Field(ge=0)] | None
-    identity: SecRefreshIdentityRead | None = None
+    identity: SecIssuerIdentityRead | None = None
 
 
 class SecDomainCoverageRead(Contract):

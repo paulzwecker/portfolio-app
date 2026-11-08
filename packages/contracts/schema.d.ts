@@ -12244,6 +12244,7 @@ export interface components {
             failure_code: string | null;
             /** Finished At */
             finished_at: string | null;
+            identity?: components["schemas"]["SecIssuerIdentityRead"] | null;
             /** Next Attempt At */
             next_attempt_at: string | null;
             /**
@@ -12285,8 +12286,8 @@ export interface components {
             record_count: number;
             refresh?: components["schemas"]["SecRefreshRead"] | null;
         };
-        /** SecRefreshIdentityRead */
-        SecRefreshIdentityRead: {
+        /** SecIssuerIdentityRead */
+        SecIssuerIdentityRead: {
             /** Frozen Cik */
             frozen_cik: string | null;
             /**
@@ -12310,7 +12311,7 @@ export interface components {
             failure_code: string | null;
             /** Finished At */
             finished_at: string | null;
-            identity?: components["schemas"]["SecRefreshIdentityRead"] | null;
+            identity?: components["schemas"]["SecIssuerIdentityRead"] | null;
             /**
              * Issuer Outcome
              * @enum {string}

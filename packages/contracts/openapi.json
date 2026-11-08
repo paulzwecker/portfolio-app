@@ -32071,6 +32071,16 @@
             ],
             "title": "Finished At"
           },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecIssuerIdentityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "next_attempt_at": {
             "anyOf": [
               {
@@ -32236,7 +32246,7 @@
         "title": "SecDomainCoverageRead",
         "type": "object"
       },
-      "SecRefreshIdentityRead": {
+      "SecIssuerIdentityRead": {
         "additionalProperties": false,
         "properties": {
           "frozen_cik": {
@@ -32266,7 +32276,7 @@
           "status",
           "frozen_cik"
         ],
-        "title": "SecRefreshIdentityRead",
+        "title": "SecIssuerIdentityRead",
         "type": "object"
       },
       "SecRefreshRead": {
@@ -32328,7 +32338,7 @@
           "identity": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SecRefreshIdentityRead"
+                "$ref": "#/components/schemas/SecIssuerIdentityRead"
               },
               {
                 "type": "null"

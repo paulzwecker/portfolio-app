@@ -24,9 +24,12 @@ from portfolio_api.domain.models import (
     SourceDocument,
 )
 from portfolio_api.fundamentals_bootstrap import (
+    BOOTSTRAP_VERSION,
     FundamentalsBootstrapError,
     ReviewedCikMapping,
+    _canonical_json,
     _load_reviewed_cik_mappings,
+    _sha256,
 )
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
 from portfolio_api.sec_refresh_scope import (
@@ -48,7 +51,7 @@ def _date(value: date | datetime | None) -> date | None:
 
 
 def _bootstrap(
-    session: Session, company_id: UUID, stage: str
+    session: Session, company_id: UUID, stage: str, mapping: ReviewedCikMapping | None
 ) -> s.SecBootstrapCheckpointRead | None:
     checkpoint, run = FundamentalsBootstrapCheckpoint, FundamentalsBootstrapRun
     latest = session.execute(
@@ -76,6 +79,7 @@ def _bootstrap(
         retryable=item.retryable,
         next_attempt_at=item.next_attempt_at,
         provider_request_count=item.provider_request_count,
+        identity=_bootstrap_identity(parent, item, mapping),
     )
 
 
@@ -203,11 +207,98 @@ def _issuer_result(
     return "REPORTED", count
 
 
+def _mapping_identity(
+    frozen: dict[str, Any], current: ReviewedCikMapping | None
+) -> s.SecIssuerIdentityRead:
+    unknown = s.SecIssuerIdentityRead(status="UNVERIFIED", frozen_cik=None)
+    try:
+        cik = frozen["cik"]
+        mapping_id = frozen["mapping_identifier_id"]
+        if (
+            not isinstance(cik, str)
+            or not re.fullmatch(r"[0-9]{10}", cik)
+            or not isinstance(mapping_id, str)
+            or str(UUID(mapping_id)) != mapping_id
+            or not all(
+                isinstance(frozen[key], str)
+                for key in (
+                    "company_name",
+                    "provider_company_name",
+                    "evidence_source",
+                    "effective_at",
+                    "recorded_at",
+                )
+            )
+        ):
+            return unknown
+        if current is None:
+            return s.SecIssuerIdentityRead(status="CURRENT_UNAVAILABLE", frozen_cik=cik)
+        status = (
+            "MATCHED"
+            if _mapping_values([frozen]) == _mapping_values([current.manifest()])
+            else "CHANGED"
+        )
+        return s.SecIssuerIdentityRead(status=status, frozen_cik=cik)
+    except (KeyError, TypeError, ValueError):
+        return unknown
+
+
+def _bootstrap_identity(
+    run: FundamentalsBootstrapRun,
+    checkpoint: FundamentalsBootstrapCheckpoint,
+    current: ReviewedCikMapping | None,
+) -> s.SecIssuerIdentityRead:
+    """Verify the frozen run and checkpoint before comparing issuer identities."""
+    unknown = s.SecIssuerIdentityRead(status="UNVERIFIED", frozen_cik=None)
+    try:
+        scope = run.scope
+        mappings = scope["mappings"]
+        if (
+            run.bootstrap_version != BOOTSTRAP_VERSION
+            or checkpoint.run_id != run.id
+            or scope["bootstrap_version"] != BOOTSTRAP_VERSION
+            or scope["provider_id"] != SEC_PROVIDER_ID
+            or not isinstance(mappings, list)
+            or not all(isinstance(item, dict) for item in mappings)
+            or _sha256(_canonical_json(_mapping_values(mappings)).encode("utf-8"))
+            != run.mapping_sha256
+            or scope["mapping_sha256"] != run.mapping_sha256
+            or _sha256(
+                _canonical_json(
+                    {"target_environment": run.target_environment, "scope": scope}
+                ).encode("utf-8")
+            )
+            != run.input_digest
+        ):
+            return unknown
+        ids = [item["company_id"] for item in mappings]
+        mapping_ids = [item["mapping_identifier_id"] for item in mappings]
+        if (
+            not all(isinstance(item, str) and str(UUID(item)) == item for item in ids)
+            or not all(isinstance(item, str) and str(UUID(item)) == item for item in mapping_ids)
+            or len(set(ids)) != len(ids)
+            or len(set(mapping_ids)) != len(mapping_ids)
+            or any(_mapping_identity(item, None).status == "UNVERIFIED" for item in mappings)
+            or len({item["cik"] for item in mappings}) != len(mappings)
+        ):
+            return unknown
+        matches = [item for item in mappings if item["company_id"] == str(checkpoint.company_id)]
+        if (
+            len(matches) != 1
+            or matches[0]["mapping_identifier_id"] != str(checkpoint.mapping_identifier_id)
+            or matches[0]["cik"] != checkpoint.cik
+        ):
+            return unknown
+        return _mapping_identity(matches[0], current)
+    except (KeyError, TypeError, ValueError):
+        return unknown
+
+
 def _refresh_identity(
     scope: dict[str, Any], company_id: UUID, current: ReviewedCikMapping | None
-) -> s.SecRefreshIdentityRead:
+) -> s.SecIssuerIdentityRead:
     """Relate retained, hash-bound scope evidence to today's reviewed identity."""
-    unknown = s.SecRefreshIdentityRead(status="UNVERIFIED", frozen_cik=None)
+    unknown = s.SecIssuerIdentityRead(status="UNVERIFIED", frozen_cik=None)
     try:
         mappings = scope["verified_cik_mappings"]
         ids = scope["company_ids"]
@@ -230,34 +321,8 @@ def _refresh_identity(
             return unknown
         matches = [item for item in mappings if item["company_id"] == str(company_id)]
         if not matches:
-            return s.SecRefreshIdentityRead(status="UNMAPPED_IN_SCOPE", frozen_cik=None)
-        frozen = matches[0]
-        cik = frozen["cik"]
-        if (
-            not isinstance(cik, str)
-            or not re.fullmatch(r"[0-9]{10}", cik)
-            or not isinstance(frozen["mapping_identifier_id"], str)
-            or str(UUID(frozen["mapping_identifier_id"])) != frozen["mapping_identifier_id"]
-            or not all(
-                isinstance(frozen[key], str)
-                for key in (
-                    "company_name",
-                    "provider_company_name",
-                    "evidence_source",
-                    "effective_at",
-                    "recorded_at",
-                )
-            )
-        ):
-            return unknown
-        if current is None:
-            return s.SecRefreshIdentityRead(status="CURRENT_UNAVAILABLE", frozen_cik=cik)
-        status = (
-            "MATCHED"
-            if _mapping_values([frozen]) == _mapping_values([current.manifest()])
-            else "CHANGED"
-        )
-        return s.SecRefreshIdentityRead(status=status, frozen_cik=cik)
+            return s.SecIssuerIdentityRead(status="UNMAPPED_IN_SCOPE", frozen_cik=None)
+        return _mapping_identity(matches[0], current)
     except (KeyError, TypeError, ValueError):
         return unknown
 
@@ -421,7 +486,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             latest_filed_at=_date(fact_summary[3]),
             latest_retrieved_at=fact_summary[4],
             latest_recorded_at=fact_summary[5],
-            bootstrap=_bootstrap(session, company_id, "REPORTED_FUNDAMENTALS"),
+            bootstrap=_bootstrap(session, company_id, "REPORTED_FUNDAMENTALS", mapping),
             refresh=_refresh(session, company_id, "REPORTED_FUNDAMENTALS", mapping),
         ),
         filings=s.SecDomainCoverageRead(
@@ -431,7 +496,7 @@ def company_sec_coverage(session: Session, company_id: UUID) -> s.CompanySecCove
             latest_filed_at=_date(filing_summary[3]),
             latest_retrieved_at=filing_summary[4],
             latest_recorded_at=filing_summary[5],
-            bootstrap=_bootstrap(session, company_id, "SOURCE_DOCUMENTS"),
+            bootstrap=_bootstrap(session, company_id, "SOURCE_DOCUMENTS", mapping),
             refresh=_refresh(session, company_id, "SOURCE_DOCUMENTS", mapping),
         ),
         metrics_present=[metric for metric in FundamentalMetric if metric in metrics],

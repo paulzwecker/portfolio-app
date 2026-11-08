@@ -102,6 +102,93 @@ afterEach(() => {
 });
 
 describe("Company SEC coverage", () => {
+  it("retains older identity warnings beside a newer matched execution", () => {
+    const matched = { status: "MATCHED" as const, frozen_cik: "0000000001" };
+    const changed = { status: "CHANGED" as const, frozen_cik: "0000000002" };
+    coverageState.data = {
+      ...data,
+      filings: {
+        ...data.filings,
+        refresh: { ...refresh, identity: matched },
+        bootstrap: {
+          ...data.filings.bootstrap!,
+          status: "COMPLETE",
+          identity: changed,
+        },
+      },
+    };
+    const newerRefresh = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    ).split("<dialog")[0];
+    expect(newerRefresh).toContain("Other recorded bootstrap:");
+    expect(newerRefresh).toContain(
+      "issuer details changed since this bootstrap",
+    );
+    coverageState.data = {
+      ...data,
+      filings: {
+        ...data.filings,
+        refresh: {
+          ...refresh,
+          requested_at: "2026-10-18T09:00:00Z",
+          started_at: "2026-10-18T09:00:00Z",
+          finished_at: "2026-10-18T09:01:00Z",
+          identity: changed,
+        },
+        bootstrap: {
+          ...data.filings.bootstrap!,
+          status: "COMPLETE",
+          identity: matched,
+        },
+      },
+    };
+    const newerBootstrap = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    ).split("<dialog")[0];
+    expect(newerBootstrap).toContain("Other recorded refresh:");
+    expect(newerBootstrap).toContain(
+      "issuer details changed since this refresh",
+    );
+  });
+  it("surfaces a changed bootstrap issuer even when its checkpoint completed", () => {
+    const bootstrap = {
+      ...data.filings.bootstrap!,
+      status: "COMPLETE" as const,
+      identity: { status: "CHANGED" as const, frozen_cik: "0000000002" },
+    };
+    coverageState.data = { ...data, filings: { ...data.filings, bootstrap } };
+    expect(isCompanySecCoverage(coverageState.data)).toBe(true);
+    const panel = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(panel).toContain("Filings bootstrap");
+    expect(panel).toContain("issuer details changed since this bootstrap");
+    const details = renderToStaticMarkup(
+      <SecCoverageDetails data={coverageState.data} />,
+    );
+    expect(details).toContain("Frozen bootstrap CIK 0000000002");
+    expect(details).toContain(
+      "historical, not evidence for the current identity",
+    );
+  });
+  it("handles old and malformed bootstrap identity evidence conservatively", () => {
+    expect(isCompanySecCoverage(data)).toBe(true);
+    const bad = {
+      ...data,
+      filings: {
+        ...data.filings,
+        bootstrap: {
+          ...data.filings.bootstrap!,
+          identity: { status: "MATCHED", frozen_cik: null },
+        },
+      },
+    };
+    expect(isCompanySecCoverage(bad)).toBe(false);
+    coverageState.data = data;
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("bootstrap issuer identity could not be verified");
+  });
   it("keeps a newer bootstrap warning visible over older incremental success", () => {
     coverageState.data = {
       ...data,

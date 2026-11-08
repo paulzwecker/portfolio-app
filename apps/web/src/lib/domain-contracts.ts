@@ -4227,26 +4227,31 @@ export type CompanySecCoverage =
 type SecDomainCoverage = CompanySecCoverage["fundamentals"];
 type SecRefresh = NonNullable<SecDomainCoverage["refresh"]>;
 
+function isSecIssuerIdentity(identity: unknown): boolean {
+  return (
+    identity === undefined ||
+    identity === null ||
+    (isRecord(identity) &&
+      [
+        "MATCHED",
+        "CHANGED",
+        "UNMAPPED_IN_SCOPE",
+        "CURRENT_UNAVAILABLE",
+        "UNVERIFIED",
+      ].includes(identity.status as string) &&
+      (["MATCHED", "CHANGED", "CURRENT_UNAVAILABLE"].includes(
+        identity.status as string,
+      )
+        ? typeof identity.frozen_cik === "string" &&
+          /^[0-9]{10}$/.test(identity.frozen_cik)
+        : identity.frozen_cik === null))
+  );
+}
+
 function isSecRefresh(value: unknown): value is SecRefresh {
   if (!isRecord(value)) return false;
-  const identity = value.identity;
   return (
-    (identity === undefined ||
-      identity === null ||
-      (isRecord(identity) &&
-        [
-          "MATCHED",
-          "CHANGED",
-          "UNMAPPED_IN_SCOPE",
-          "CURRENT_UNAVAILABLE",
-          "UNVERIFIED",
-        ].includes(identity.status as string) &&
-        (["MATCHED", "CHANGED", "CURRENT_UNAVAILABLE"].includes(
-          identity.status as string,
-        )
-          ? typeof identity.frozen_cik === "string" &&
-            /^[0-9]{10}$/.test(identity.frozen_cik)
-          : identity.frozen_cik === null))) &&
+    isSecIssuerIdentity(value.identity) &&
     uuid(value.run_id) &&
     (value.attempt_id === null || uuid(value.attempt_id)) &&
     (value.request_id === null || uuid(value.request_id)) &&
@@ -4312,6 +4317,7 @@ function isSecDomainCoverage(value: unknown): value is SecDomainCoverage {
       timestamp(value.latest_recorded_at)) &&
     (bootstrap === null ||
       (isRecord(bootstrap) &&
+        isSecIssuerIdentity(bootstrap.identity) &&
         uuid(bootstrap.run_id) &&
         uuid(bootstrap.checkpoint_id) &&
         [

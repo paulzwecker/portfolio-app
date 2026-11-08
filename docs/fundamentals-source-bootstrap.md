@@ -38,10 +38,12 @@ for target gating, bounded execution and historical coverage caveats.
   workbook consensus cells, calls FMP, recalculates financial models, or creates
   accepted decisions.
 
-Company SEC coverage compares the frozen, fingerprinted refresh issuer scope with
-the current reviewed mapping. A changed mapping or issuer detail, an unmapped
-historical scope, or missing scope evidence stays visible alongside the historical
-result. A matching identity does not establish current filing or fact freshness.
+Company SEC coverage compares frozen, fingerprinted refresh and bootstrap issuer
+scopes with the current reviewed mapping. A changed mapping or issuer detail, an
+unmapped historical scope, or missing scope evidence stays visible alongside the
+historical result. Latest-run checks do not establish the identity of every record
+in aggregate history. A matching identity does not establish current filing or fact
+freshness.
 
 `COMPLETE` means every mapped checkpoint completed without availability or review
 flags. `PARTIAL` means data was fetched but there are unavailable checkpoints,
