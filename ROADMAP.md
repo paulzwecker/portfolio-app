@@ -25,7 +25,11 @@ corrected path and 34 schema/publication checks pass. Final CI must exercise the
 complete updated PostgreSQL suite, including local privilege-dependent skips.
 [Handoff](docs/ACTIVE_WORKSTREAM.md) records evidence, release prerequisites and
 [earlier BUILD history](docs/history/data-ledger-build-through-2026-11-08.md).
-Hosted source freshness, ingestion, schema/cutover and model acceptance remain gated.
+Linux CI additionally identified the Docker-published test service's non-loopback
+server address. Test-only container/image/address/port attestation now preserves
+exact identity verification, with 23 focused safety cases passing. The complete
+CI rerun remains the merge gate. Hosted source freshness, ingestion, schema/cutover
+and model acceptance remain gated.
 
 `a11272a` adds scoped publication plan/ownership/publish proxy contracts and the
 explicit whole-portfolio approval UI. The workflow is LOCAL_VERIFIED through 135

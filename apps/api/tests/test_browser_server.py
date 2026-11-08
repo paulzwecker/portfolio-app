@@ -1,3 +1,5 @@
+import json
+import subprocess
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -203,3 +205,84 @@ def test_actual_browser_fixture_import_and_read_only_application(
             connection.execute(text("UPDATE portfolios SET name = 'forbidden'"))
     finally:
         reader.dispose()
+
+
+@pytest.mark.parametrize(
+    "difference",
+    [
+        None,
+        "database",
+        "address",
+        "port",
+        "binding",
+        "image",
+        "stopped",
+        "ci",
+        "container",
+        "malformed",
+        "timeout",
+    ],
+)
+def test_ci_docker_identity_requires_exact_service_and_published_loopback_port(
+    monkeypatch: pytest.MonkeyPatch, difference: str | None
+) -> None:
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("MIGRATION_PG_TOOLS_CONTAINER", "a" * 12)
+    metadata = {
+        "image": "postgres:18",
+        "running": True,
+        "ports": {"5432/tcp": [{"HostIp": "0.0.0.0", "HostPort": "5432"}]},
+        "networks": {"isolated-ci-network": {"IPAddress": "172.19.0.2", "GlobalIPv6Address": ""}},
+    }
+    database, address = "portfolio_test", "172.19.0.2"
+    if difference == "database":
+        database = "neondb"
+    if difference == "address":
+        address = "172.19.0.3"
+    if difference == "port":
+        metadata["ports"] = {"5432/tcp": [{"HostIp": "0.0.0.0", "HostPort": "5433"}]}
+    if difference == "binding":
+        metadata["ports"] = {"5432/tcp": [{"HostIp": "192.0.2.10", "HostPort": "5432"}]}
+    if difference == "image":
+        metadata["image"] = "postgres:17"
+    if difference == "stopped":
+        metadata["running"] = False
+    if difference == "ci":
+        monkeypatch.setenv("GITHUB_ACTIONS", "false")
+    if difference == "container":
+        monkeypatch.setenv("MIGRATION_PG_TOOLS_CONTAINER", "unverified-name")
+    inspect = Mock(
+        return_value=Mock(stdout="malformed" if difference == "malformed" else json.dumps(metadata))
+    )
+    if difference == "timeout":
+        inspect.side_effect = subprocess.TimeoutExpired("docker", 5)
+    monkeypatch.setattr("browser_server.subprocess.run", inspect)
+    connection = Mock()
+    connection.execute.return_value.one.return_value = (database, address)
+    url = make_url("postgresql+psycopg://localhost:5432/portfolio_test")
+    if difference:
+        with pytest.raises(SystemExit, match="identity did not match"):
+            verify_local_identity(cast(Connection, connection), url)
+    else:
+        verify_local_identity(cast(Connection, connection), url)
+        command = inspect.call_args.args[0]
+        assert command[:2] == ["docker", "inspect"] and command[-1] == "a" * 12
+        assert ".Config.Env" not in command[3]
+        assert inspect.call_args.kwargs["timeout"] == 5
+
+
+def test_ci_container_metadata_never_authorizes_a_remote_or_overridden_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("MIGRATION_PG_TOOLS_CONTAINER", "a" * 12)
+    inspect = Mock()
+    monkeypatch.setattr("browser_server.subprocess.run", inspect)
+    for raw in (
+        "postgresql+psycopg://remote.example/portfolio_test",
+        "postgresql+psycopg://localhost/portfolio_test?host=remote.example",
+        "postgresql+psycopg://localhost/neondb",
+    ):
+        with pytest.raises(SystemExit, match="loopback"):
+            verify_local_identity(cast(Connection, Mock()), make_url(raw))
+    inspect.assert_not_called()

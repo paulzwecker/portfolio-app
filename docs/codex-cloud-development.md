@@ -239,3 +239,16 @@ strings, API tokens, Sheets credentials and provider keys outside GitHub.
   credentials and source permissions.
 - Render/Vercel deployment and Neon data transfer are not part of cloud
   environment initialization.
+
+### CI PostgreSQL fixture identity
+
+Browser/ledger fixtures require a loopback URL, a disposable `_test` database and
+an independently checked SQL identity before creating a schema. In GitHub Actions,
+Docker publishing can report the PostgreSQL container's own server address. The
+fixture verifies the existing `MIGRATION_PG_TOOLS_CONTAINER` through read-only
+Docker metadata, requiring the running `postgres:18` image, that exact server
+address and the configured loopback-published database port. The existing CI
+workflow selects the container; no additional service or credential is required.
+Missing or mismatched metadata fails closed. Ordinary workstation fixtures retain
+loopback-server verification. Production database-target guards keep their existing
+scope and authorization requirements.

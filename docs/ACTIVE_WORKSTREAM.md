@@ -54,6 +54,14 @@ Detailed increment results are in the
   `b59f16c8a203`, with fresh recovery, exact confirmation and write controls retained.
   The runbook separates database verification from post-deployment readiness.
 
+The first Linux PostgreSQL run exposed a test-harness identity mismatch through
+Docker port publishing. The fixture now attests the existing CI PostgreSQL 18
+container, its running state, server address and exact loopback-published port
+using the existing container ID. Remote/overridden URLs, mismatched ports, images,
+addresses and missing metadata fail closed. Production verification continues
+through the existing database-target guard. Fifty-one focused fixture/storage
+checks and strict mypy pass before the full CI rerun.
+
 ## Release and next action
 
 1. Require PR #26's GitHub quality/PostgreSQL/Windows checks and Vercel Preview.

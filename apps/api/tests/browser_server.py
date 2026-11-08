@@ -6,8 +6,9 @@ import ipaddress
 import json
 import os
 import re
+import subprocess
 from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Timer
@@ -63,15 +64,55 @@ def local_test_url(raw: str | None) -> URL:
     return url
 
 
+def _ci_container_matches(url: URL, address: str) -> bool:
+    """Attest the existing CI service's address and exact published database port."""
+    container = os.environ.get("MIGRATION_PG_TOOLS_CONTAINER", "")
+    if os.environ.get("GITHUB_ACTIONS") != "true" or not re.fullmatch(
+        r"[a-f0-9]{12,64}", container
+    ):
+        return False
+    template = (
+        '{"image":{{json .Config.Image}},"running":{{json .State.Running}},'
+        '"ports":{{json .NetworkSettings.Ports}},"networks":{{json .NetworkSettings.Networks}}}'
+    )
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "--format", template, container],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        metadata = json.loads(result.stdout)
+        if metadata["image"] != "postgres:18" or metadata["running"] is not True:
+            return False
+        bindings = metadata["ports"]["5432/tcp"]
+        published = any(
+            binding["HostIp"] in {"0.0.0.0", "::", "127.0.0.1", "::1"}
+            and binding["HostPort"] == str(url.port or 5432)
+            for binding in bindings
+        )
+        return published and any(
+            address in {network.get("IPAddress"), network.get("GlobalIPv6Address")}
+            for network in metadata["networks"].values()
+        )
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError):
+        return False
+
+
 def verify_local_identity(connection: Connection, url: URL) -> None:
+    local_test_url(url.render_as_string(hide_password=False))
     database, address = connection.execute(
         text("SELECT current_database(), host(inet_server_addr())")
     ).one()
-    if (
-        database != url.database
-        or not isinstance(address, str)
-        or not ipaddress.ip_address(address).is_loopback
-    ):
+    matched = False
+    if database == url.database and isinstance(address, str):
+        with suppress(ValueError):
+            matched = ipaddress.ip_address(address).is_loopback or _ci_container_matches(
+                url, address
+            )
+    if not matched:
         raise SystemExit("Browser fixture database identity did not match its local test target")
 
 
