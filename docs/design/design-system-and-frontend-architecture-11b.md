@@ -4,7 +4,38 @@
 
 This document turns the approved hierarchy in [Milestone 11A](./product-ux-audit-and-information-architecture-11a.md) into a shared frontend foundation. It covers visual tokens, reusable presentation patterns and incremental migration rules. It does not change financial calculations, API contracts, accepted state or feature methodology, and it does not redesign every route.
 
-The primary visual direction is a restrained, light default with a system-preference dark palette. Dense data uses tabular numerals, compact labels and explicit source/status context. Color supports readable status; text and icons carry the meaning so color is never the sole signal.
+## Current visual contract
+
+The owner's reference screenshots establish a calm, information-dense workspace:
+cool slate text on pale gray canvas, white outlined surfaces, warm orange actions,
+teal information accents and a charcoal/slate dark mode. Use the existing CSS
+semantic tokens and shared components instead of copying individual screen styles.
+The orange is deliberately darkened for accessible light-mode text; dark mode uses
+a lighter orange and dark text for action contrast. Status colors remain separate
+from investment judgment. Text and icons, not color alone, communicate meaning.
+
+Use the system sans-serif stack (Segoe UI where available) rather than introducing
+a remote font dependency. Apply a 4/8/12/16/24/32 px spacing rhythm, 6–10 px
+control/card radii, compact headers and tabular numerals. Prefer flat bordered
+cards to decoration. Keep navigation, active page, source, currency, time and
+availability visible. Support keyboard focus, labels, disabled/error states and
+comfortable touch targets; never put a required action behind hover.
+
+Tables use a distinct header, aligned numeric columns and an explicit empty state.
+Use the shared `TableSearch` for presentation-only filtering, showing the total,
+matching count and an accessible reset; it must not alter canonical data or totals.
+At narrow widths use labeled cards, not page-wide horizontal overflow. KPI cards
+lead with a supplied value and retain its basis and timestamp; missing is unavailable,
+never zero. Charts label units, source and dates, expose underlying data, avoid
+bridging missing observations and must not imply interpolated financial facts.
+
+Light, dark and system appearance are available in the shared header. The preference
+is local to the browser; system mode follows operating-system changes. Storage can
+be unavailable without blocking the current page's selection. Semantic text/action
+contrast is checked for both palettes. The interactive `/design-system` reference
+uses synthetic, non-financial examples and remains accessible through the existing
+development navigation. Portfolio is the first complete consumer; other routes
+inherit the foundation and migrate deliberately when edited.
 
 ## Ownership boundaries
 
@@ -22,7 +53,7 @@ The existing shadcn-compatible Button, Badge and Card are extended in place. No 
 
 `src/app/globals.css` is the token source. Tailwind v4 maps the CSS custom properties into utilities. Tokens cover background/foreground, card and popover surfaces, primary/secondary/muted/accent, borders and focus ring, positive/negative/warning/info states, sidebar surfaces, chart palette, radii, content width, sidebar width and responsive page gutters.
 
-Light tokens are the default. A `prefers-color-scheme: dark` override provides a complete dark palette. Both themes retain contrast for text, semantic labels, focus rings and borders. Feature pages should use semantic utilities such as `bg-card`, `text-muted-foreground`, `text-positive`, `text-warning` and `border-border`; avoid hard-coded colors for new work.
+Light tokens are the default. System preference and explicit `data-theme` selection provide the same complete dark palette. Both themes retain contrast for text, semantic labels, focus rings and borders. Feature pages should use semantic utilities such as `bg-card`, `text-muted-foreground`, `text-positive`, `text-warning` and `border-border`; avoid hard-coded colors for new work.
 
 The shared application content frame uses `--app-content-width`, `--app-page-gutter` and `--app-page-vertical`. Tables collapse into labeled mobile definition-list cards below the medium breakpoint. Components must use `min-w-0` in grid/flex children where long identifiers or values could otherwise force horizontal overflow.
 
@@ -36,6 +67,8 @@ The shared application content frame uses `--app-content-width`, `--app-page-gut
 - `EmptyState`, `PendingOrError` and `LoadingSkeleton` distinguish no data, loading and recoverable errors.
 - `SourceReference` displays an identifier if no canonical URL exists and opens supplied sources in a separate tab safely.
 - `ResponsiveDataTable` renders semantic desktop tables and labeled mobile rows instead of forcing page-wide horizontal scrolling.
+- `TableSearch` supplies a labeled, controlled search, live result count and reset; the calling feature defines what can be searched.
+- `ThemeSelector` applies a local system/light/dark preference across the shared shell; it does not change the operating environment or stored application data.
 - `ChartContainer` standardizes chart title, description and source context. Feature code owns the series, domain meaning and accessibility description.
 - `DetailDrawer` uses the browser's native dialog semantics, Escape handling and a clear close control for short contextual inspection. Long authoring and review workflows stay on routes.
 
@@ -70,7 +103,7 @@ The internal `/design-system` reference uses illustrative content only. It demon
 
 - The implemented shell and current route ownership are recorded in [Milestone 11C — Application Shell & Navigation](./application-shell-and-navigation-11c.md). Its implementation follows the user-directed milestone sequence; the 11A milestone table remains the original proposed ordering.
 - Reused the existing Tailwind v4, shadcn-compatible Button/Badge/Card, Radix Slot, and Lucide setup; added only a light Skeleton primitive because the repository did not have one.
-- Chose CSS custom properties over another theme framework. Dark mode follows the user's OS preference to keep one coherent default configuration.
+- Chose CSS custom properties over another theme framework. System preference is the default; explicit light/dark choices remain local to the browser.
 - Used a native `<dialog>` for the first detail drawer instead of adding a dialog dependency.
 - The 11A information architecture remains a staged plan. Feature routes are not being reorganized wholesale in this milestone.
 - Before further route/component relocation, verify the source/target map and preserve any uncommitted files. The current working tree contains outstanding changes outside this design-system scope; migration and full application verification must be completed against a reconciled source tree.

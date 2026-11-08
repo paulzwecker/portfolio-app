@@ -6,14 +6,19 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Consolidated Portfolio release candidate — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                  |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), based on main `395f842`        |
-| Implementation              | INTEGRATION_VERIFIED code candidate; 307 web / 833 Linux units / 380 Linux PostgreSQL cases and all CI jobs pass                            |
-| Next ready substantial task | Owner review of PR #26, then current-state recovery and separately authorized migration/deployment with exact reviewed commit               |
-| Parallel owner gate         | P-GOOGL assumptions/acceptance, production migrations/deployment, provider activation and ledger source ownership retain separate approvals |
-| Integration rule            | The owner requested latest-work consolidation. Preserve all predecessor commits and evidence; freeze the passing candidate for review       |
+| Field                       | Current value                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Personal Universe design foundation and Portfolio experience — BUILD. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
+| Branch / PR                 | `codex/personal-universe-design-system`, based on main `deda2ce`; independent of [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)     |
+| Implementation              | Shared reference-based tokens, appearance selector, accessible showcase and Portfolio holdings search under local verification                      |
+| Next ready substantial task | Finish desktop/mobile design review and integration checks; prepare one cohesive design PR                                                          |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                        |
+| Integration rule            | Preserve the owner edits and PR #27 worktree; reconcile its roadmap changes if it merges before this branch                                         |
+
+PR #26 merged as `deda2ce`. The subsequent release/recovery and settled-ledger
+work is isolated in PR #27 and awaits owner review. Production is restored, while
+automatic deployments remain frozen. Earlier PR #26 status below is historical;
+this design branch does not alter recovery, deployment or financial ownership.
 
 ## Where we are
 

@@ -1,5 +1,18 @@
 # Active workstream
 
+## Personal Universe design system — BUILD
+
+The independent `codex/personal-universe-design-system` worktree starts at current
+main `deda2ce`; [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)
+retains the separate ledger/release work. Owner reference screenshots stay untracked
+in the original workspace. The shared token palette, accessible appearance selector,
+interactive component reference and Portfolio holdings search are under review.
+The design contract is [here](design/design-system-and-frontend-architecture-11b.md).
+Next: complete focused light/dark and mobile verification, independently review,
+then run integration checks and open a single design PR. No production action.
+
+The following PR #26 context is retained as historical evidence; it was merged.
+
 ## Consolidated Portfolio release candidate — INTEGRATE
 
 The owner requested latest-work consolidation on 2026-11-08.

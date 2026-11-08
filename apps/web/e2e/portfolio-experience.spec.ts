@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { portfolioFixture, portfolioId, iso } from "./fixtures/portfolio";
+import path from "node:path";
 
 test("Portfolio presents 22 exact positions, cash and missing states on desktop and mobile", async ({
   page,
-}) => {
+}, testInfo) => {
   const overview = portfolioFixture();
   const writeRequests: string[] = [];
   page.on("request", (request) => {
@@ -47,6 +48,14 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
   await expect(
     page.getByRole("heading", { name: "Portfolio at a glance" }),
   ).toBeVisible();
+  if (process.env.DESIGN_REVIEW_SCREENSHOTS) {
+    await page.screenshot({
+      path: path.join(
+        process.env.DESIGN_REVIEW_SCREENSHOTS,
+        `portfolio-${testInfo.project.name}.png`,
+      ),
+    });
+  }
   await expect(
     page.getByText("Holdings confirmation is 6 days old."),
   ).toBeVisible();
@@ -81,6 +90,22 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
   ).toBeVisible();
   await page.getByLabel("Sort holdings by").selectOption("company");
   await expect(page.getByText("Fixture issuer 01").first()).toBeVisible();
+  const search = page.getByRole("searchbox", { name: "Find a position" });
+  await search.fill("SPYY");
+  await expect(
+    page.getByRole("status").filter({ hasText: "1 of 22 rows shown" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("SPYY · XETRA · EUR").filter({ visible: true }).first(),
+  ).toBeVisible();
+  await search.fill("no-such-listing");
+  await expect(
+    page.getByRole("status").filter({ hasText: "0 of 22 rows shown" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "22 of 22 rows shown" }),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
@@ -91,6 +116,12 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
       '[aria-label="Portfolio holdings and current valuation, mobile view"] dl',
     ),
   ).toHaveCount(22);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 320, height: 720 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
