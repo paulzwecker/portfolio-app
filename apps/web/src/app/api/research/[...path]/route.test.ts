@@ -182,6 +182,7 @@ it("forwards the historical bootstrap review as a validated read-only endpoint",
       offset: 30,
       listings: [
         {
+          checkpoint_id: "22222222-2222-4222-8222-222222222222",
           subject_key: "NYSE:LAST",
           checkpoint_status: "PENDING",
           reason: "CHECKPOINT_NOT_COMPLETE",
@@ -216,6 +217,42 @@ it("forwards the historical bootstrap review as a validated read-only endpoint",
   );
   expect(mutation.status).not.toBe(200);
   expect(mock).toHaveBeenCalledTimes(3);
+});
+it("binds read-only checkpoint reconciliation to both path identities", async () => {
+  const run = "11111111-1111-4111-8111-111111111111",
+    checkpoint = "22222222-2222-4222-8222-222222222222";
+  const path = [
+    "market-data",
+    "historical-bootstrap",
+    run,
+    "checkpoints",
+    checkpoint,
+    "reconciliation",
+  ];
+  const response = {
+    run_id: run,
+    checkpoint_id: checkpoint,
+    checked_at: "2026-11-09T00:00:00Z",
+    status: "MATCHED",
+    issue_codes: [],
+  };
+  const mock = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(response))
+    .mockResolvedValueOnce(
+      Response.json({
+        ...response,
+        checkpoint_id: "33333333-3333-4333-8333-333333333333",
+      }),
+    );
+  vi.stubGlobal("fetch", mock);
+  const url = `http://localhost/api/research/${path.join("/")}`;
+  expect((await GET(new Request(url), context(path))).status).toBe(200);
+  expect((await GET(new Request(url), context(path))).status).toBe(503);
+  expect(
+    (await POST(new Request(url, { method: "POST" }), context(path))).status,
+  ).not.toBe(200);
+  expect(mock).toHaveBeenCalledTimes(2);
 });
 it("validates recurring operations status before forwarding it", async () => {
   const response = {

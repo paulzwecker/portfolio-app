@@ -1535,9 +1535,16 @@ def execute_market_data_bootstrap(
         return report
 
 
-def _raw_payload_issue(payload: bytes, encoding: str, expected_hash: str) -> str | None:
+def _raw_payload_issue(
+    payload: bytes,
+    encoding: str,
+    expected_hash: str,
+    *,
+    max_bytes: int | None = None,
+) -> str | None:
     """Verify one retained payload with bounded input and decompression work."""
-    if len(payload) > MAX_RAW_PAYLOAD_VERIFY_BYTES:
+    max_bytes = MAX_RAW_PAYLOAD_VERIFY_BYTES if max_bytes is None else max_bytes
+    if len(payload) > max_bytes:
         return "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
     if encoding not in {"gzip", "identity"}:
         return "SOURCE_PAYLOAD_ENCODING_INVALID"
@@ -1551,7 +1558,7 @@ def _raw_payload_issue(payload: bytes, encoding: str, expected_hash: str) -> str
         ) as stream:
             while chunk := stream.read(RAW_PAYLOAD_VERIFY_CHUNK_BYTES):
                 size += len(chunk)
-                if size > MAX_RAW_PAYLOAD_VERIFY_BYTES:
+                if size > max_bytes:
                     return "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
                 digest.update(chunk)
     except (OSError, EOFError, zlib.error):
@@ -1646,8 +1653,11 @@ def _raw_batch_issues(
     run: MarketDataBootstrapRun,
     checkpoint: MarketDataBootstrapCheckpoint,
     batch: MarketDataBatch,
+    *,
+    max_bytes: int | None = None,
 ) -> list[str]:
     """Check retained provider bytes and provenance without returning their contents."""
+    max_bytes = MAX_RAW_PAYLOAD_VERIFY_BYTES if max_bytes is None else max_bytes
     issues: set[str] = set()
     if (
         batch.source_kind != "PROVIDER_RESPONSE"
@@ -1678,7 +1688,7 @@ def _raw_batch_issues(
         )
         if provider != run.provider_id or raw_domain != domain:
             issues.add("SOURCE_PAYLOAD_PROVENANCE_MISMATCH")
-        if length > MAX_RAW_PAYLOAD_VERIFY_BYTES:
+        if length > max_bytes:
             issues.add("SOURCE_PAYLOAD_VERIFICATION_LIMIT")
             continue
         payload = session.scalar(
@@ -1687,7 +1697,7 @@ def _raw_batch_issues(
         if payload is None:
             issues.add("SOURCE_PAYLOAD_MISSING")
             continue
-        issue = _raw_payload_issue(payload, encoding, expected_hash)
+        issue = _raw_payload_issue(payload, encoding, expected_hash, max_bytes=max_bytes)
         if issue:
             issues.add(issue)
     return sorted(issues)

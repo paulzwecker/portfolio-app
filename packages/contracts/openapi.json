@@ -16434,6 +16434,11 @@
               }
             ]
           },
+          "checkpoint_id": {
+            "format": "uuid",
+            "title": "Checkpoint Id",
+            "type": "string"
+          },
           "checkpoint_status": {
             "title": "Checkpoint Status",
             "type": "string"
@@ -16481,12 +16486,60 @@
           }
         },
         "required": [
+          "checkpoint_id",
           "subject_key",
           "checkpoint_status",
           "reason",
           "scheduled_session_review"
         ],
         "title": "HistoricalBootstrapListingReviewRead",
+        "type": "object"
+      },
+      "HistoricalBootstrapReconciliationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "checkpoint_id": {
+            "format": "uuid",
+            "title": "Checkpoint Id",
+            "type": "string"
+          },
+          "issue_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issue Codes",
+            "type": "array"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "MATCHED",
+              "MISMATCH",
+              "NOT_RECORDED",
+              "INCOMPLETE",
+              "LIMIT_EXCEEDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "checkpoint_id",
+          "checked_at",
+          "status",
+          "issue_codes"
+        ],
+        "title": "HistoricalBootstrapReconciliationRead",
         "type": "object"
       },
       "HistoricalBootstrapReviewRead": {
@@ -40094,6 +40147,59 @@
           }
         },
         "summary": "Get Historical Bootstrap Review",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/market-data/historical-bootstrap/{run_id}/checkpoints/{checkpoint_id}/reconciliation": {
+      "get": {
+        "operationId": "get_historical_checkpoint_reconciliation_v1_market_data_historical_bootstrap__run_id__checkpoints__checkpoint_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "checkpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Checkpoint Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalBootstrapReconciliationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Historical Checkpoint Reconciliation",
         "tags": [
           "Portfolio research"
         ]

@@ -58,7 +58,10 @@ from portfolio_api.google_sheets_sync import (
     run_sync_check,
     test_google_sheets_connection,
 )
-from portfolio_api.historical_bootstrap_review import latest_historical_bootstrap_review
+from portfolio_api.historical_bootstrap_review import (
+    latest_historical_bootstrap_review,
+    reconcile_historical_checkpoint,
+)
 from portfolio_api.investment_thesis import (
     company_investment_thesis,
     publish_investment_thesis_revision,
@@ -908,6 +911,19 @@ def get_historical_bootstrap_review(
         raise HTTPException(status_code=422, detail="Invalid review page") from error
     except LookupError as error:
         raise HTTPException(status_code=404, detail="Bootstrap run unavailable") from error
+
+
+@router.get(
+    "/market-data/historical-bootstrap/{run_id}/checkpoints/{checkpoint_id}/reconciliation",
+    response_model=s.HistoricalBootstrapReconciliationRead,
+)
+def get_historical_checkpoint_reconciliation(
+    db: LedgerDb, run_id: UUID, checkpoint_id: UUID
+) -> s.HistoricalBootstrapReconciliationRead:
+    try:
+        return reconcile_historical_checkpoint(db, run_id, checkpoint_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail="Bootstrap checkpoint unavailable") from error
 
 
 @router.get(

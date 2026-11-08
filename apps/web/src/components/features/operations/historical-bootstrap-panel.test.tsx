@@ -1,9 +1,39 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { isHistoricalBootstrapReview } from "@/lib/domain-contracts";
+import {
+  isHistoricalBootstrapReview,
+  isHistoricalBootstrapReconciliation,
+} from "@/lib/domain-contracts";
 import { HistoricalBootstrapPanelContent } from "./historical-bootstrap-panel";
 
 describe("historical bootstrap review", () => {
+  it("rejects malformed or unexplained reconciliation states", () => {
+    const result = {
+      run_id: "11111111-1111-4111-8111-111111111111",
+      checkpoint_id: "22222222-2222-4222-8222-222222222222",
+      checked_at: "2026-11-09T00:00:00Z",
+      status: "MATCHED",
+      issue_codes: [],
+    };
+    expect(isHistoricalBootstrapReconciliation(result)).toBe(true);
+    expect(
+      isHistoricalBootstrapReconciliation({ ...result, status: "MISMATCH" }),
+    ).toBe(false);
+    expect(
+      isHistoricalBootstrapReconciliation({
+        ...result,
+        status: "MISMATCH",
+        issue_codes: ["SOURCE_PAYLOAD_HASH_MISMATCH"],
+      }),
+    ).toBe(true);
+    expect(
+      isHistoricalBootstrapReconciliation({
+        ...result,
+        status: "MISMATCH",
+        issue_codes: ["arbitrary source content"],
+      }),
+    ).toBe(false);
+  });
   const payload = {
     run_id: "11111111-1111-4111-8111-111111111111",
     run_status: "COMPLETE",
@@ -17,6 +47,7 @@ describe("historical bootstrap review", () => {
     omitted_listing_count: 1,
     listings: [
       {
+        checkpoint_id: "22222222-2222-4222-8222-222222222222",
         subject_key: "NYSE:SYNTH",
         checkpoint_status: "COMPLETE",
         reason: "AVAILABLE",
@@ -147,6 +178,7 @@ describe("historical bootstrap review", () => {
       ...payload,
       listings: [
         {
+          checkpoint_id: "22222222-2222-4222-8222-222222222222",
           subject_key: "NYSE:SYNTH",
           checkpoint_status: "UNAVAILABLE",
           reason: "CHECKPOINT_UNAVAILABLE",

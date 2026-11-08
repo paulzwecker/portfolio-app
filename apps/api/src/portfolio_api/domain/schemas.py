@@ -865,6 +865,7 @@ class HistoricalBootstrapCheckpointDiagnosticsRead(Contract):
 
 
 class HistoricalBootstrapListingReviewRead(Contract):
+    checkpoint_id: UUID
     subject_key: str
     checkpoint_status: str
     reason: Literal[
@@ -883,6 +884,14 @@ class HistoricalBootstrapListingReviewRead(Contract):
     scheduled_session_review: ScheduledSessionReviewRead | None
     requested_window_review: ScheduledSessionReviewRead | None = None
     checkpoint_diagnostics: HistoricalBootstrapCheckpointDiagnosticsRead | None = None
+
+
+class HistoricalBootstrapReconciliationRead(Contract):
+    run_id: UUID
+    checkpoint_id: UUID
+    checked_at: datetime
+    status: Literal["MATCHED", "MISMATCH", "NOT_RECORDED", "INCOMPLETE", "LIMIT_EXCEEDED"]
+    issue_codes: list[str]
 
 
 class HistoricalBootstrapReviewRead(Contract):

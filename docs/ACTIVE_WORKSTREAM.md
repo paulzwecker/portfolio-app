@@ -343,3 +343,13 @@ investigation and extend venue schedules only with reviewed provenance. Seventee
 isolated PostgreSQL cases include the synthetic importer no-data and transport-failure
 paths; 54 web tests, strict types, contract checks and a desktop/mobile browser
 journey passed. No production or provider request was made.
+
+The current BUILD adds an explicitly requested, read-only checkpoint reconciliation
+to Operations, reusing existing payload, fingerprint and scope checks with bounded
+rows and bytes. The result is scoped to stored evidence, not provider truth or full
+coverage. Missing receipts and work exceeding interactive limits remain explicit.
+Next extend reviewed schedule venues and assess the end-to-end milestone boundary.
+Thirty isolated PostgreSQL cases passed, including tampered raw bytes and row scope;
+the intact-batch case was rerun with missing-receipt and size-limit checks. Seven
+focused backend units, 56 web checks, strict types/contracts and a synthetic
+desktop/mobile journey passed. No production or provider operation ran.

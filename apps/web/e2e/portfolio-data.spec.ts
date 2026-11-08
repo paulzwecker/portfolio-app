@@ -286,6 +286,7 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
             new URL(route.request().url()).searchParams.get("offset") === "30"
               ? [
                   {
+                    checkpoint_id: "22222222-2222-4222-8222-222222222222",
                     subject_key: "NYSE:LAST",
                     checkpoint_status: "UNAVAILABLE",
                     reason: "CHECKPOINT_UNAVAILABLE",
@@ -303,6 +304,7 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
                 ]
               : [
                   {
+                    checkpoint_id: "22222222-2222-4222-8222-222222222222",
                     subject_key: "NYSE:SYNTH",
                     checkpoint_status: "COMPLETE",
                     reason: "AVAILABLE",
@@ -344,12 +346,26 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
                     },
                   },
                   ...Array.from({ length: 29 }, (_, i) => ({
+                    checkpoint_id: "22222222-2222-4222-8222-222222222222",
                     subject_key: `NYSE:TEST${i}`,
                     checkpoint_status: "PENDING",
                     reason: "CHECKPOINT_NOT_COMPLETE",
                     scheduled_session_review: null,
                   })),
                 ],
+        },
+      }),
+  );
+  await page.route(
+    "**/api/research/market-data/historical-bootstrap/*/checkpoints/*/reconciliation",
+    (route) =>
+      route.fulfill({
+        json: {
+          run_id: "11111111-1111-4111-8111-111111111111",
+          checkpoint_id: "22222222-2222-4222-8222-222222222222",
+          checked_at: "2026-11-09T00:00:00Z",
+          status: "MISMATCH",
+          issue_codes: ["SOURCE_PAYLOAD_HASH_MISMATCH"],
         },
       }),
   );
@@ -365,6 +381,10 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
       .last();
     await expect(panel).toContainText("FX sessions remain unassessed");
     await panel.getByText("NYSE:SYNTH", { exact: false }).click();
+    await panel.getByRole("button", { name: "Check stored batch" }).click();
+    await expect(
+      panel.getByText("SOURCE_PAYLOAD_HASH_MISMATCH", { exact: false }),
+    ).toBeVisible();
     await expect(panel).toContainText("not confirmed missing trades");
     await panel.getByText("Requested-window schedule review").click();
     await expect(

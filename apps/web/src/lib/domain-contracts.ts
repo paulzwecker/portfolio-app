@@ -322,6 +322,8 @@ export type MarketRefreshStatus =
   components["schemas"]["MarketRefreshStatusRead"];
 export type HistoricalBootstrapReview =
   components["schemas"]["HistoricalBootstrapReviewRead"];
+export type HistoricalBootstrapReconciliation =
+  components["schemas"]["HistoricalBootstrapReconciliationRead"];
 export type MarketRefreshRun = components["schemas"]["MarketRefreshRunRead"];
 export type RecurringOperationJob =
   components["schemas"]["RecurringOperationJobRead"];
@@ -951,6 +953,7 @@ export function isHistoricalBootstrapReview(
       v.listings,
       (row) =>
         isRecord(row) &&
+        uuid(row.checkpoint_id) &&
         string(row.subject_key) &&
         string(row.checkpoint_status) &&
         [
@@ -1032,6 +1035,50 @@ export function isHistoricalBootstrapReview(
         v.listings.length +
         (v.omitted_listing_count as number) &&
     v.listings.length <= 30
+  );
+}
+
+export function isHistoricalBootstrapReconciliation(
+  v: unknown,
+): v is HistoricalBootstrapReconciliation {
+  const allowed = [
+    "BATCH_REFERENCE_MISSING",
+    "BATCH_MISSING",
+    "BATCH_DIGEST_MISMATCH",
+    "BATCH_PROVIDER_MISMATCH",
+    "SOURCE_PAYLOAD_MISSING",
+    "SOURCE_PAYLOAD_PROVENANCE_MISMATCH",
+    "SOURCE_PAYLOAD_VERIFICATION_LIMIT",
+    "SOURCE_PAYLOAD_ENCODING_INVALID",
+    "SOURCE_PAYLOAD_INVALID",
+    "SOURCE_PAYLOAD_HASH_MISMATCH",
+    "CHECKPOINT_IDENTITY_MISSING",
+    "UNEXPECTED_DOMAIN_ROWS",
+    "CHECKPOINT_SUBJECT_MISMATCH",
+    "UNEXPECTED_PRICE_KIND",
+    "PRICE_OUTSIDE_REQUESTED_WINDOW",
+    "OBSERVATION_AFTER_RETRIEVAL",
+    "ACTION_OUTSIDE_REQUESTED_WINDOW",
+    "CANONICAL_ROW_COUNT_MISMATCH",
+    "CANONICAL_FINGERPRINT_MISMATCH",
+  ];
+  return (
+    isRecord(v) &&
+    uuid(v.run_id) &&
+    uuid(v.checkpoint_id) &&
+    timestamp(v.checked_at) &&
+    [
+      "MATCHED",
+      "MISMATCH",
+      "NOT_RECORDED",
+      "INCOMPLETE",
+      "LIMIT_EXCEEDED",
+    ].includes(v.status as string) &&
+    Array.isArray(v.issue_codes) &&
+    array(v.issue_codes, (item) => string(item) && allowed.includes(item)) &&
+    (v.status === "MISMATCH"
+      ? v.issue_codes.length > 0
+      : v.issue_codes.length === 0)
   );
 }
 

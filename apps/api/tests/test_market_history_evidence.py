@@ -52,6 +52,9 @@ def test_raw_payload_verification_handles_integrity_and_limits(monkeypatch: Any)
     assert _raw_payload_issue(gzip.compress(b"x" * 65), "gzip", expected) == (
         "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
     )
+    assert _raw_payload_issue(gzip.compress(b"x" * 65), "gzip", expected, max_bytes=32) == (
+        "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+    )
 
 
 @pytest.mark.integration

@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Extend reviewed venue schedules and connect source reconciliation evidence to the Operations investigation; keep activation gated |
+| Next ready substantial task | Extend reviewed venue schedules and review source-coverage usability against end-to-end milestone acceptance; keep activation gated |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
@@ -54,6 +54,11 @@ checkpoints from pending work in Operations. Receipt counts preserve missing evi
 and do not imply payload reconciliation or trigger retries.
 Seventeen isolated PostgreSQL cases, 54 web tests and a synthetic desktop/mobile
 journey passed, including actual synthetic importer no-data and failure paths.
+The next BUILD adds an on-demand, bounded read-only stored-batch reconciliation
+to each listing, distinguishing mismatch, missing evidence, incomplete work and
+verification limits. This does not certify provider truth or session completeness.
+Thirty isolated PostgreSQL cases, seven backend units, 56 focused web tests and
+a synthetic desktop/mobile journey passed; missing-receipt/limit paths were rerun.
 
 PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and

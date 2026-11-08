@@ -495,6 +495,52 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
             session, run_id, target_environment="development"
         )
         assert reconciliation["reconciliation"]["status"] == "MATCHED"
+        from portfolio_api.historical_bootstrap_review import reconcile_historical_checkpoint
+
+        listing_checkpoint = session.scalar(
+            select(MarketDataBootstrapCheckpoint).where(
+                MarketDataBootstrapCheckpoint.run_id == run_id,
+                MarketDataBootstrapCheckpoint.subject_kind == "LISTING",
+            )
+        )
+        assert listing_checkpoint is not None
+        scoped = reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id)
+        assert scoped.status == "MATCHED" and scoped.issue_codes == []
+        assert set(scoped.model_dump()) == {
+            "run_id",
+            "checkpoint_id",
+            "checked_at",
+            "status",
+            "issue_codes",
+        }
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr("portfolio_api.historical_bootstrap_review.MAX_RECONCILIATION_ROWS", 0)
+            assert (
+                reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id).status
+                == "LIMIT_EXCEEDED"
+            )
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(
+                "portfolio_api.historical_bootstrap_review.MAX_RECONCILIATION_PAYLOAD_BYTES", 1
+            )
+            assert (
+                reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id).status
+                == "LIMIT_EXCEEDED"
+            )
+        with session.begin_nested() as savepoint:
+            receipt = dict(listing_checkpoint.report)
+            coverage = dict(receipt["coverage"])
+            coverage["canonical_fingerprint"] = None
+            receipt["coverage"] = coverage
+            listing_checkpoint.report = receipt
+            session.flush()
+            assert (
+                reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id).status
+                == "NOT_RECORDED"
+            )
+            savepoint.rollback()
+        with pytest.raises(LookupError):
+            reconcile_historical_checkpoint(session, uuid4(), listing_checkpoint.id)
         assert reconciliation["listing_coverage"][0]["history_window_evidence"] == listing_evidence
         assert reconciliation["fx_coverage"][0]["history_window_evidence"] == fx_evidence
 
@@ -672,6 +718,7 @@ def test_reconciliation_rejects_missing_or_out_of_scope_persisted_evidence(
             )
         )
         assert checkpoint is not None and checkpoint.batch_id is not None
+        checkpoint_id = checkpoint.id
         batch_id = checkpoint.batch_id
         if case == "missing_batch":
             checkpoint.batch_id = None
@@ -782,6 +829,11 @@ def test_reconciliation_rejects_missing_or_out_of_scope_persisted_evidence(
         report = reconcile_market_data_bootstrap(session, run_id, target_environment="development")
         assert report["reconciliation"]["status"] == "MISMATCH"
         assert expected_code in {issue["code"] for issue in report["reconciliation"]["differences"]}
+        if subject_kind == "LISTING":
+            from portfolio_api.historical_bootstrap_review import reconcile_historical_checkpoint
+
+            scoped = reconcile_historical_checkpoint(session, run_id, checkpoint_id)
+            assert scoped.status == "MISMATCH" and expected_code in scoped.issue_codes
 
 
 @pytest.mark.integration

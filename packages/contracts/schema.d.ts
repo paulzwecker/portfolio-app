@@ -1585,6 +1585,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/market-data/historical-bootstrap/{run_id}/checkpoints/{checkpoint_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Historical Checkpoint Reconciliation */
+        get: operations["get_historical_checkpoint_reconciliation_v1_market_data_historical_bootstrap__run_id__checkpoints__checkpoint_id__reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/market-data/status": {
         parameters: {
             query?: never;
@@ -7093,6 +7110,11 @@ export interface components {
         /** HistoricalBootstrapListingReviewRead */
         HistoricalBootstrapListingReviewRead: {
             checkpoint_diagnostics?: components["schemas"]["HistoricalBootstrapCheckpointDiagnosticsRead"] | null;
+            /**
+             * Checkpoint Id
+             * Format: uuid
+             */
+            checkpoint_id: string;
             /** Checkpoint Status */
             checkpoint_status: string;
             /**
@@ -7104,6 +7126,31 @@ export interface components {
             scheduled_session_review: components["schemas"]["ScheduledSessionReviewRead"] | null;
             /** Subject Key */
             subject_key: string;
+        };
+        /** HistoricalBootstrapReconciliationRead */
+        HistoricalBootstrapReconciliationRead: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /**
+             * Checkpoint Id
+             * Format: uuid
+             */
+            checkpoint_id: string;
+            /** Issue Codes */
+            issue_codes: string[];
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MATCHED" | "MISMATCH" | "NOT_RECORDED" | "INCOMPLETE" | "LIMIT_EXCEEDED";
         };
         /** HistoricalBootstrapReviewRead */
         HistoricalBootstrapReviewRead: {
@@ -16019,6 +16066,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HistoricalBootstrapReviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_historical_checkpoint_reconciliation_v1_market_data_historical_bootstrap__run_id__checkpoints__checkpoint_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                checkpoint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoricalBootstrapReconciliationRead"];
                 };
             };
             /** @description Validation Error */

@@ -81,6 +81,14 @@ provider responses and failures, normalized rows, rejections and warnings. Missi
 or malformed evidence remains “Not recorded”; these counts do not verify raw
 payloads or establish why a listing did not trade. No retry is initiated.
 
+For an individual listing, **Check stored batch** performs a fresh read-only
+reconciliation of recorded counts and fingerprint, retained payload hashes and
+provenance, and frozen subject/window scope. It examines at most 5,000 persisted
+rows and two payloads of at most 4 MiB each, including decompressed bytes; larger
+batches remain `LIMIT_EXCEEDED` and require the operator reconciliation command.
+Missing receipt evidence stays `NOT_RECORDED`. A matched batch is not proof of
+provider accuracy, current listing identity, expected sessions or whole-run coverage.
+
 The prepared run pins the provider/crosswalk hash, normalizer versions, exact
 listing identities, required currency pairs, target environment, and date window.
 Listings are ordered as held positions first, other Portfolio listings second, and

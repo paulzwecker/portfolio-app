@@ -31,6 +31,7 @@ import {
   isListingMarketData,
   isMarketRefreshStatus,
   isHistoricalBootstrapReview,
+  isHistoricalBootstrapReconciliation,
   isOperationalJobRequest,
   isOperationalJobRequestList,
   isRecurringOperationsStatus,
@@ -118,6 +119,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "no-store" };
 const id = "[0-9a-fA-F-]{36}";
+const historicalReconciliationPath = new RegExp(
+  `^market-data/historical-bootstrap/${id}/checkpoints/${id}/reconciliation$`,
+);
 const sensitivityPath = new RegExp(`^financial-models/${id}/sensitivity$`);
 const digest = "[0-9a-f]{64}";
 const ledgerPreviewPath = new RegExp(`^portfolios/${id}/ledger/preview$`);
@@ -292,6 +296,12 @@ function validRead(path: string, data: unknown): boolean {
   if (path === "research-agent-operations/events")
     return isResearchAgentWorkEvents(data);
   if (path === "market-data/status") return isMarketRefreshStatus(data);
+  if (historicalReconciliationPath.test(path))
+    return (
+      isHistoricalBootstrapReconciliation(data) &&
+      data.run_id.toLowerCase() === path.split("/")[2].toLowerCase() &&
+      data.checkpoint_id.toLowerCase() === path.split("/")[4].toLowerCase()
+    );
   if (path === "market-data/historical-bootstrap")
     return isHistoricalBootstrapReview(data);
   if (path === "research-queue") return isResearchQueue(data);
@@ -424,7 +434,10 @@ async function proxy(request: Request, path: string[]) {
   if (accessRejection) return accessRejection;
 
   const joined = path.join("/");
-  if (!(request.method === "GET" ? readable : writable).test(joined)) {
+  if (
+    !(request.method === "GET" ? readable : writable).test(joined) &&
+    !(request.method === "GET" && historicalReconciliationPath.test(joined))
+  ) {
     return Response.json(
       { detail: "Unknown research operation" },
       { status: 404, headers },

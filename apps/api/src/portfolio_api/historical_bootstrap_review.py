@@ -8,16 +8,122 @@ from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
+    ExternalRawPayload,
     Listing,
     MarketDataBatch,
     MarketDataBootstrapCheckpoint,
     MarketDataBootstrapRun,
     PriceObservation,
 )
+from portfolio_api.market_data_bootstrap import (
+    _batch_scope_issues,
+    _canonical_batch_counts,
+    _canonical_batch_fingerprint,
+    _raw_batch_issues,
+)
 from portfolio_api.market_sessions import scheduled_session_review
 
 MAX_LISTINGS = 30
 MAX_DAILY_TIMESTAMPS = 366
+MAX_RECONCILIATION_ROWS = 5000
+MAX_RECONCILIATION_PAYLOADS = 2
+MAX_RECONCILIATION_PAYLOAD_BYTES = 4 * 1024 * 1024
+
+
+def reconcile_historical_checkpoint(
+    session: Session, run_id: UUID, checkpoint_id: UUID, *, checked_at: datetime | None = None
+) -> s.HistoricalBootstrapReconciliationRead:
+    """Recheck one bounded stored batch; this does not verify provider truth or completeness."""
+    at = checked_at or datetime.now(UTC)
+    run = session.get(MarketDataBootstrapRun, run_id)
+    checkpoint = session.get(MarketDataBootstrapCheckpoint, checkpoint_id)
+    if (
+        run is None
+        or checkpoint is None
+        or checkpoint.run_id != run.id
+        or checkpoint.subject_kind != "LISTING"
+        or run.prepared_at > at
+    ):
+        raise LookupError("Checkpoint unavailable")
+
+    def result(
+        status: str, codes: list[str] | None = None
+    ) -> s.HistoricalBootstrapReconciliationRead:
+        return s.HistoricalBootstrapReconciliationRead.model_validate(
+            {
+                "run_id": run_id,
+                "checkpoint_id": checkpoint_id,
+                "checked_at": at,
+                "status": status,
+                "issue_codes": sorted(set(codes or [])),
+            }
+        )
+
+    if (
+        checkpoint.status not in {"COMPLETE", "UNAVAILABLE"}
+        or checkpoint.finished_at is None
+        or checkpoint.finished_at > at
+    ):
+        return result("INCOMPLETE")
+    if checkpoint.batch_id is None:
+        return (
+            result("MISMATCH", ["BATCH_REFERENCE_MISSING"])
+            if checkpoint.status == "COMPLETE"
+            else result("NOT_RECORDED")
+        )
+    batch = session.get(MarketDataBatch, checkpoint.batch_id)
+    if batch is None:
+        return result("MISMATCH", ["BATCH_MISSING"])
+    if not checkpoint.source_digest or batch.source_digest != checkpoint.source_digest:
+        return result("MISMATCH", ["BATCH_DIGEST_MISMATCH"])
+    if batch.recorded_at > at:
+        return result("INCOMPLETE")
+    counts = _canonical_batch_counts(session, batch.id)
+    raw_bytes = session.scalar(
+        select(
+            func.coalesce(func.sum(func.octet_length(ExternalRawPayload.payload_bytes)), 0)
+        ).where(ExternalRawPayload.batch_id == batch.id)
+    )
+    if (
+        sum(counts.values()) > MAX_RECONCILIATION_ROWS
+        or counts["raw_payloads"] > MAX_RECONCILIATION_PAYLOADS
+        or int(raw_bytes or 0) > MAX_RECONCILIATION_PAYLOADS * MAX_RECONCILIATION_PAYLOAD_BYTES
+    ):
+        return result("LIMIT_EXCEEDED")
+    issues = _batch_scope_issues(session, checkpoint, batch.id, counts)
+    issues.extend(
+        _raw_batch_issues(
+            session, run, checkpoint, batch, max_bytes=MAX_RECONCILIATION_PAYLOAD_BYTES
+        )
+    )
+    if checkpoint.status == "COMPLETE" and not counts["raw_payloads"]:
+        issues.append("SOURCE_PAYLOAD_MISSING")
+    details = checkpoint.report if isinstance(checkpoint.report, dict) else {}
+    coverage = details.get("coverage")
+    coverage = coverage if isinstance(coverage, dict) else {}
+    expected = coverage.get("canonical_counts")
+    fingerprint = coverage.get("canonical_fingerprint")
+    expected_valid = (
+        isinstance(expected, dict)
+        and set(expected) == set(counts)
+        and all(type(value) is int and value >= 0 for value in expected.values())
+    )
+    fingerprint_valid = (
+        isinstance(fingerprint, str)
+        and len(fingerprint) == 64
+        and all(ch in "0123456789abcdef" for ch in fingerprint)
+    )
+    if expected_valid and expected != counts:
+        issues.append("CANONICAL_ROW_COUNT_MISMATCH")
+    if fingerprint_valid and _canonical_batch_fingerprint(session, batch.id) != fingerprint:
+        issues.append("CANONICAL_FINGERPRINT_MISMATCH")
+    if issues and set(issues) != {"SOURCE_PAYLOAD_VERIFICATION_LIMIT"}:
+        return result("MISMATCH", issues)
+    if issues:
+        return result("LIMIT_EXCEEDED")
+    if not counts["raw_payloads"] or not expected_valid or not fingerprint_valid:
+        return result("NOT_RECORDED")
+    return result("MATCHED")
 
 
 def latest_historical_bootstrap_review(
@@ -140,6 +246,7 @@ def _listing_review(
         return s.HistoricalBootstrapListingReviewRead.model_validate(
             {
                 "subject_key": checkpoint.subject_key,
+                "checkpoint_id": checkpoint.id,
                 "checkpoint_status": checkpoint.status,
                 "reason": reason,
                 "scheduled_session_review": review,

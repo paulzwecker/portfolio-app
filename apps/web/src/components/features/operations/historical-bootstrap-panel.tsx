@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useResearch } from "@/hooks/use-research";
 import {
   isHistoricalBootstrapReview,
+  isHistoricalBootstrapReconciliation,
   type HistoricalBootstrapReview,
 } from "@/lib/domain-contracts";
 import { dateOnly, dateTime } from "@/lib/display";
@@ -23,6 +24,73 @@ const reasonLabels = {
   NO_SCHEDULE: "No reviewed schedule for these dates or venue",
   DATE_LIMIT_EXCEEDED: "Date limit exceeded; review the source separately",
 } as const;
+
+function CheckpointReconciliation({
+  runId,
+  checkpointId,
+}: {
+  runId: string;
+  checkpointId: string;
+}) {
+  const [enabled, setEnabled] = useState(false);
+  const { data, error, retry } = useResearch(
+    `market-data/historical-bootstrap/${runId}/checkpoints/${checkpointId}/reconciliation`,
+    isHistoricalBootstrapReconciliation,
+    0,
+    enabled,
+  );
+  return (
+    <div className="mt-3 space-y-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => (enabled ? retry() : setEnabled(true))}
+      >
+        Check stored batch
+      </Button>
+      {enabled && !data && !error && (
+        <p role="status">Checking stored batch…</p>
+      )}
+      {error && (
+        <p role="status">
+          Batch check unavailable. Retry or use the operator reconciliation
+          command.
+        </p>
+      )}
+      {data && (
+        <div role="status" className="space-y-1 text-muted-foreground">
+          <p>
+            Stored batch check: {data.status.replaceAll("_", " ")} · checked{" "}
+            {dateTime(data.checked_at)}
+          </p>
+          {data.issue_codes.length > 0 && (
+            <p className="break-words">Issues: {data.issue_codes.join(", ")}</p>
+          )}
+          {data.status === "LIMIT_EXCEEDED" && (
+            <p>
+              This batch exceeds the interactive check limit. Use the operator
+              reconciliation command.
+            </p>
+          )}
+          {data.status === "NOT_RECORDED" && (
+            <p>
+              The required receipt or source payload evidence was not recorded;
+              a match cannot be established.
+            </p>
+          )}
+          {data.status === "INCOMPLETE" && (
+            <p>The checkpoint was not finished when checked.</p>
+          )}
+          <p>
+            Checks compare retained payloads and rows with the recorded receipt
+            for this checkpoint. They do not establish provider accuracy,
+            current listing identity, expected sessions or whole-run coverage.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function HistoricalBootstrapPanel() {
   const [page, setPage] = useState<{ runId: string; offset: number } | null>(
@@ -128,6 +196,10 @@ export function HistoricalBootstrapPanelContent({
                   <p className="mt-2 text-muted-foreground">
                     Checkpoint: {row.checkpoint_status}
                   </p>
+                  <CheckpointReconciliation
+                    runId={data.run_id!}
+                    checkpointId={row.checkpoint_id}
+                  />
                   {row.checkpoint_diagnostics && (
                     <div className="mt-2 space-y-1 text-muted-foreground">
                       <p>
