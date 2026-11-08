@@ -1,19 +1,31 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | MP2.1 read-only model publication preflight plus owner-requested capability/vision alignment                                                                                    |
-| Branch / PR                 | `codex/mp2-readonly-publication-preflight`, [PR #24](https://github.com/paulzwecker/portfolio-app/pull/24), open and unmerged at inspection                                     |
-| Implementation              | MP2.1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. PR #23 is merged as `0717498`                                                                                                   |
-| Next ready substantial task | C2.1 read-only held-listing/FX coverage and current-state recovery assessment using existing bootstrap previews                                                                 |
-| Parallel owner gate         | C1.2 dated P-GOOGL source/template and assumption review, then separately authorized canonical seed/publication lifecycle                                                       |
-| Integration rule            | Finish this documentation checkpoint in PR #24. Keep it stable during review. Resume from merged main, or take independent C2 work without depending on unmerged implementation |
+| Field                       | Current value                                                                                                                                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C5.2 PostgreSQL test coverage — BUILD. [Handoff](docs/testing.md#current-build-checkpoint)                                                                                                                                |
+| Branch / PR                 | `codex/ci-database-test-coverage`, from merged main `395f842`. Local BUILD branch                                                                                                                                         |
+| Implementation              | Thirty-two database-dependent cases reclassified and LOCAL_VERIFIED in isolated PostgreSQL schemas                                                                                                                        |
+| Next ready substantial task | Add fail-fast collection classification checks and prove unit/integration selection without database access                                                                                                               |
+| Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await owner review/merge. Production operations retain separate authorization |
+| Integration rule            | Keep completed PRs stable. Integrate this independent test work with latest main after owner merges; preserve both capability and evidence ledgers                                                                        |
+
+PR #24 is merged as `395f842`. The data/ledger implementation on PR #26 is passing
+and frozen. This BUILD uses main and does not depend on its unmerged code.
+
+C5.2 found 32 ordinary PostgreSQL cases in 28 functions without integration markers.
+CI's unit job skipped them without TEST_DATABASE_URL, while the PostgreSQL job's
+marker selection omitted them. Explicit markers restore financial-statement,
+consensus/history, source-evidence, scheduler and manual-refresh checks. All 32
+pass on verified loopback PostgreSQL 18.3 using only random disposable schemas.
+Test bodies and financial assertions are preserved. Collection now selects 643 unit
+cases with zero PostgreSQL consumers and 178 integration cases. Source-bound tests
+retain their separate privacy/opt-in policy. The preventive collection guard is next.
 
 ## How to choose work
 

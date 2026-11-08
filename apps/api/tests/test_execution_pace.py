@@ -409,6 +409,7 @@ def test_momentum_is_required_only_when_the_selected_legacy_branch_consumes_it()
     assert unknown_faster_exit.pace is None
 
 
+@pytest.mark.integration
 def test_recorded_run_keeps_review_states_and_does_not_mutate_targets_or_models(
     postgres_engine: Engine,
 ) -> None:

@@ -61,6 +61,7 @@ def _record(*, fy: int, value: int, filed: str, observed: datetime) -> RawProvid
     )
 
 
+@pytest.mark.integration
 def test_filing_context_does_not_duplicate_period_or_relabel_comparatives(
     postgres_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,
@@ -135,6 +136,7 @@ def test_filing_context_does_not_duplicate_period_or_relabel_comparatives(
         )
 
 
+@pytest.mark.integration
 def test_later_comparative_without_original_context_keeps_fiscal_label_unknown(
     postgres_engine: Engine,
 ) -> None:
@@ -165,6 +167,7 @@ def test_later_comparative_without_original_context_keeps_fiscal_label_unknown(
 
 
 @pytest.mark.parametrize("missing", ["period", "currency", "observed", "units", "stale"])
+@pytest.mark.integration
 def test_unknown_consensus_metadata_never_becomes_an_available_aligned_line(
     postgres_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,

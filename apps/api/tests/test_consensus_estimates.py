@@ -8,6 +8,7 @@ from email.message import Message
 from typing import Any
 from uuid import UUID, uuid4
 
+import pytest
 from pytest import MonkeyPatch
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -278,6 +279,7 @@ def test_consensus_batches_and_observations_are_append_only() -> None:
             raise AssertionError("Consensus history mutation was not rejected")
 
 
+@pytest.mark.integration
 def test_company_query_is_point_in_time_and_does_not_fill_a_primary_gap(
     postgres_engine: Engine,
 ) -> None:
