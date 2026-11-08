@@ -156,7 +156,8 @@ $env:MIGRATION_CONFIRMATION = 'MIGRATE blue-pond-96398788/br-square-butterfly-ba
 npm run db:production-preflight -- migration-preflight
 ```
 
-Both commands are read-only; the current recovery branch fails the existing guard.
+Both commands are read-only; the older empty pre-import branch fails the existing
+guard. Use the freshly verified populated-state recovery point.
 Only a separately authorized migration may run `npm run db:migrate` using the
 temporary authorization/finally block below. Post-check existing application
 rows/content, three new empty tables and the expected Alembic version-row update
