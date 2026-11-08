@@ -1,86 +1,69 @@
 # Active workstream
 
-## C2.3 income and paired internal cash transfers — BUILD
+## C2.3 settled income and internal cash transfers — BUILD
 
-Branch `codex/portfolio-ledger-income` starts from main `deda2ce`, the verified
-merge of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26).
-No open PR was present at either BUILD run's start. Predecessor branches, stash and private
-artifacts are preserved. The consolidated release's verification remains in
-[dated history](history/data-ledger-build-through-2026-11-08.md) and PR #26.
+Continue branch `codex/portfolio-ledger-income`, based on main `deda2ce`, the merge
+of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26). No open PR is
+present for this milestone. Predecessor branches, stash and private artifacts are
+preserved. Income was committed through `0a57454`; transfer implementation starts
+at `7e3b82b`. This is a BUILD checkpoint, with integration/PR work still deferred.
 
-## Outcome and scope
+## Operational scope in isolated development
 
-Extend the existing ledger preview/review/publication workflow with evidenced
-account DIVIDEND receipts, explicit withholding/fees and standalone TAX debits.
-Use existing exact-decimal accounting, identity locks and immutable receipts.
-`portfolio-ledger-preview-v2` / `settled-booking-v2` explicitly opts into income.
-V1 packets and hashes remain compatible. See the
-[ledger contract](portfolio-ledger.md#observed-income-and-taxes).
+The existing preview → saved candidate → explicit review → separate publication
+workflow supports v2 DIVIDEND, TAX and paired CASH_TRANSFER records. V1 and existing
+v2 hashes/replay remain compatible. Exact behavior lives in the
+[ledger contract](portfolio-ledger.md).
 
-Gross, fees and withholding use the observed settlement currency. Quote currency
-is independent. No provider payout inference, automatic FX, position change or
-reinvestment is introduced. A paid-after-sale dividend can reference an existing
-unheld listing; the exact identity remains locked and hash-bound. Companyless ETFs
-retain their own identity. Source review must catch overlapping statement evidence.
+- Income uses observed settlement currency, explicit gross, fees and withholding.
+  Listing quote currency stays independent. No payout, FX or reinvestment is inferred.
+- Internal cash transfers require equal amounts/currency and the same settled
+  instant across two declared brokerage accounts. Both source keys are mandatory,
+  duplicate-checked, hash-bound and retained in review/correction history.
+- Transfers preserve consolidated cash and all quantities. Account reconciliation
+  and intermediate overdrafts remain blocking. Different-time settlement,
+  cross-currency, outside-portfolio and security transfers require later contracts.
+- Candidate acceptance preserves canonical holdings/targets. Publication retains
+  its separate typed confirmation, ownership/recovery attestations and DB guard.
 
-## Verified increment
+## Verification
 
-- 93 focused ledger unit tests pass, including v1 hash replay, v2 opt-in, exact
-  precision, full withholding/zero, native currencies, missing/error values,
-  income-only identity binding and tax-before-income overdraft detection.
-- 77 focused web contract/proxy/publication tests pass. API contracts regenerated.
-- 73 focused PostgreSQL ledger API/review/publication cases pass on independently
-  verified loopback `_test` infrastructure and disposable schemas. New coverage
-  proves income preview leaves records unchanged, review is explicit, publication
-  changes only the intended snapshot/cash with exact replay, failed publication
-  rolls back flushed records, and income-only identity drift blocks acceptance.
-- Two real-API desktop/mobile income journeys pass through the existing Next.js
-  proxy, including exact 10-place values, evidence, review confirmation and readback.
-  Protected canonical-state hashes remain unchanged. Visual inspection confirms
-  readable wrapping and no horizontal overflow. Fixture shutdown removes its schema.
-- Backend strict mypy passes all 213 source/test files without incremental cache.
-  Web lint/typecheck, generated contract check and documentation checks pass.
-- Independent review preserves v1 hashes/outputs, source/identity locks, explicit
-  paid currency and withholding, and separate acceptance/publication authority.
-  Only synthetic local verification was performed; no real account data was used.
-
-## Paired-transfer increment
-
-Additive v2 CASH_TRANSFER records carry a source debit and an independently
-identified destination receipt. Matching settled instant, currency and exact
-amount are required across two declared brokerage accounts. Both evidence keys
-join duplicate detection, hash-bound replay and saved review. Consolidated cash
-and security quantities remain unchanged by the transfer itself. Distinct-time
-settlement, cross-currency and outside-portfolio movement require later contracts.
-
-- 113 focused ledger units pass, covering conservation, precision, overdrafts,
-  source reuse, incomplete/mismatched legs and account-level ending differences.
-- The pre-transfer v2 income hash and every output field match implementation
-  `0a57454`. Existing v1 hash regression remains passing.
-- 78 focused web contract/proxy/publication tests pass; generated contracts are
-  updated. Source inspection preserves original financial text and both leg keys.
-- Isolated PostgreSQL lifecycle/corrections and desktop/mobile evidence are next.
+- 113 focused ledger units pass, including exact conservation, missing/zero,
+  precision, source reuse, mismatched legs, overdrafts and account reconciliation.
+  The historical v2 income hash and every output match pre-transfer `0a57454`.
+- 78 web contract/proxy/publication tests pass. Original financial text and both
+  transfer evidence records survive source-file inspection and saved replay.
+- The 76-case PostgreSQL sweep passed 75 and exposed an order-only income assertion.
+  Exact identity-keyed quantities plus row counts replace the ordering assumption;
+  all six affected income/transfer lifecycle cases pass on rerun. These prove
+  preview immutability, explicit review/publication, idempotency, rollback,
+  changed-receipt acknowledgements and rejected packets leaving no records.
+- Two real-API desktop/mobile transfer journeys pass with exact ten-place values,
+  account drill-down, both source records and explicit review/readback. Protected
+  canonical-state hashes are unchanged. Visual inspection confirms wrapping and
+  no horizontal overflow. The bounded fixture removed its own schema on shutdown.
+- Strict backend mypy covers 215 source/test files. Web types/lint, generated
+  contracts, formatting and documentation checks pass. Independent review retains
+  scope, evidence, identity and authorization invariants. No new migration is needed.
 
 ## Next action
 
-Complete paired-transfer staging/review/publication, rollback and correction
-regressions on independently verified loopback `_test` schemas. Verify the actual
-review screen at desktop/mobile sizes with the existing restricted API fixture.
-Keep the same milestone branch and commit verified increments. Broker onboarding
-still requires a reviewed first format/private sample. Production execution and
-lot/FX/performance policy remain separate. Reserve PR/full-suite work for the
-larger ledger integration checkpoint.
+Income and paired-cash-transfer slices are IMPLEMENTATION_COMPLETE and
+LOCAL_VERIFIED. Continue with evidenced same-listing security transfers between
+declared accounts, retaining exact quantities and explicit unavailable acquisition
+basis/gains. Both account statements must reconcile. Broker onboarding needs a
+reviewed first format/private sample; lot, FX and performance policy stay separate.
+Use focused checks and incremental commits. Reserve comprehensive testing and one
+cohesive PR for the settled-ledger integration milestone.
 
-## Independent release gates
+## Separate operational gates
 
-The merged release requires the additive schema chain `9f2a6d4c81b7` →
-`a832e94d6f10` → `b59f16c8a203`. This run does not establish current cloud state.
-Follow [native release/migration controls](deployment-and-migrations.md) with fresh
+Cloud state was not reverified. The merged release's reviewed chain remains
+`9f2a6d4c81b7` → `a832e94d6f10` → `b59f16c8a203`. Follow
+[native release/migration controls](deployment-and-migrations.md), with fresh
 current-state recovery protecting accepted holdings before separately authorized
 migration/deployment. The historical empty pre-import branch is insufficient.
-Income support adds no schema migration and grants no production write authority.
-Provider enrichment/refresh, ledger ownership and investment acceptance retain
-separate approvals. Local production/rehearsal/background flags stay disabled.
-
-Highest-value operational follow-up remains held-listing price/FX enrichment and
-two monitored refresh cycles, followed by reviewed SEC identities and coverage.
+Production writes, provider activation, ledger ownership and model acceptance keep
+their separate gates. Local production/rehearsal/background flags remain disabled.
+Highest-value operational follow-up is held-listing price/FX enrichment and two
+monitored refresh cycles, followed by reviewed SEC identities and coverage.

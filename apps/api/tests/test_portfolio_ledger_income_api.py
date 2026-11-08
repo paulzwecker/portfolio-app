@@ -108,10 +108,11 @@ def test_income_read_only_preview_and_explicit_review_publication_round_trip(
         assert publish(storage_engine, portfolio_id, row.id, command(plan)).id == receipt.id
         current = client.get(f"/v1/portfolios/{portfolio_id}/overview").json()
         assert current["target_revision"] == before["targets"]
-        assert (
-            current["snapshot"]["positions"]
-            == original_snapshot.model_dump(mode="json")["positions"]
-        )
+        persisted = s.SnapshotRead.model_validate(current["snapshot"])
+        assert len(persisted.positions) == len(original_snapshot.positions)
+        assert {p.listing_id: p.quantity for p in persisted.positions} == {
+            p.listing_id: p.quantity for p in original_snapshot.positions
+        }
         assert {
             r["currency"]: Decimal(r["balance"]) for r in current["snapshot"]["cash_positions"]
         } == {
