@@ -497,7 +497,11 @@ def test_review_acknowledgements_require_unique_exact_ids() -> None:
 def test_retained_identity_map_is_refreshed_under_source_locks(storage_engine: Engine) -> None:
     portfolio_id, packet = prepare(storage_engine)
     first = stage(storage_engine, portfolio_id, submit(storage_engine, portfolio_id, packet))
-    listing_id = packet.accounts[0].positions[0].listing_id
+    listing_id = next(
+        item.listing_id
+        for item in first.preview.consumed_listings
+        if item.security_type == "COMMON_STOCK"
+    )
     with Session(storage_engine) as session:
         retained = session.get(Listing, listing_id)
         assert retained and retained.identity_source_ref is None

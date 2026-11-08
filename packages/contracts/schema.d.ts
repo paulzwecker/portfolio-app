@@ -7031,6 +7031,20 @@ export interface components {
             /** Venue */
             venue: string;
         };
+        /** HoldingsAuthorityRead */
+        HoldingsAuthorityRead: {
+            /** Cutover At */
+            cutover_at: string | null;
+            /** Opening Snapshot Id */
+            opening_snapshot_id: string | null;
+            /** Publication Id */
+            publication_id: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "OBSERVED_SNAPSHOT" | "ACCEPTED_LEDGER";
+        };
         /** InvestmentThesisClaimInput */
         InvestmentThesisClaimInput: {
             /** Claim Key */
@@ -9101,6 +9115,7 @@ export interface components {
             fx_data_through?: string | null;
             /** Holdings Age Days */
             holdings_age_days?: number | null;
+            holdings_authority?: components["schemas"]["HoldingsAuthorityRead"] | null;
             /**
              * Holdings Freshness
              * @default NO_DATA

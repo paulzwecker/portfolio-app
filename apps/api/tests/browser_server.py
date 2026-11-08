@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 
 import uvicorn
 from alembic import command
+from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
 from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
@@ -241,6 +242,7 @@ def main(argv: list[str] | None = None) -> None:
             "fx-outage",
             "valued",
             "ledger-review",
+            "ledger-owned",
             "sec-covered",
             "sec-outage",
             "sec-unmapped",
@@ -285,12 +287,15 @@ def main(argv: list[str] | None = None) -> None:
                     engine,
                     Path(directory),
                     "unpriced"
-                    if args.scenario.startswith("sec-") or args.scenario == "ledger-review"
+                    if args.scenario.startswith("sec-")
+                    or args.scenario in {"ledger-review", "ledger-owned"}
                     else cast(PortfolioDataState, args.scenario),
                     settings,
                 )
                 if args.scenario.startswith("sec-"):
                     prepare_sec_data(engine, metadata, args.scenario)
+            if args.scenario == "ledger-owned":
+                prepare_ledger_ownership(engine, metadata)
             metadata["schema"] = schema
             reader = fixture_read_engine(url, schema, settings)
         if args.scenario == "ledger-review":

@@ -3,8 +3,9 @@
 C2.3 implements source-bound opening/ending reconciliation, settled-activity
 projection and durable candidate/review receipts. [The roadmap](../ROADMAP.md) owns delivery status and
 [Portfolio architecture](architecture/portfolio-application.md#transaction-ledger-transition-planned)
-owns cutover/ownership boundaries. Canonical observed snapshots and independent
-strategic targets retain authority.
+owns cutover/ownership boundaries. Candidate review and publication have separate
+authorization. Immutable snapshots retain read-model history; strategic targets
+have independent ownership.
 
 ## Contract and scope
 
@@ -57,7 +58,8 @@ broker allocation and settled-balance basis remain evidence/review requirements.
 ## Read-only API workflow
 
 1. `GET /v1/portfolios/{portfolio_id}/ledger/anchor` returns the current complete
-   observed snapshot, exact listing/security identities and `anchor_sha256`.
+   observed opening snapshot, exact listing/security identities and `anchor_sha256`.
+   After publication this remains the original reviewed opening anchor.
    Snapshot content/provenance and listing identity, currency and identity-source
    reference are hash-bound. Current partial/unavailable observations block preview.
    Future-effective or future-recorded snapshots cannot become the current anchor.
@@ -185,9 +187,67 @@ with `E2E_LEDGER_REVIEW_API=1`, matching loopback `API_BASE_URL`/`BROWSER_API_PO
 and the local web port. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
 Normal fixture shutdown removes its own schema. Screenshots remain ignored.
 
+## Dated ownership and holdings publication
+
+`portfolio-ledger-publication-v1` is locally verified through the API and synthetic
+Portfolio readback. Additive migration `b59f16c8a203` follows `a832e94d6f10` and
+retains publication lineage, reviewed command, plan hash and resulting snapshot hash.
+Production schema/application compatibility, a current-state recovery point and
+separate owner authorization precede migration, deployment or publication.
+
+1. Read `GET /v1/portfolios/{id}/ledger/candidates/{candidate_id}/publication-preview`.
+   This is SQL read-only/repeatable-read. The candidate must be the current accepted
+   revision with fresh, matching opening/ending evidence and exact source/calculation
+   hashes. Review the current snapshot, proposed quantities/currency cash, account
+   scope, original anchor and previous publication. Store the exact plan privately.
+2. Scope is explicitly `WHOLE_PORTFOLIO`. The first effective cutoff is the packet's
+   evidenced closing-statement time. Later publications retain that original cutover
+   and opening, and require strictly later evidenced cutoffs. Existing snapshot
+   uniqueness remains enforced. A same-cutoff correction can be reviewed in candidate
+   history but needs a new closing observation before publication. Source/identity,
+   accepted-base, current snapshot or plan changes require renewed review. Existing
+   future snapshots block publication.
+3. Prepare `LedgerPublicationCreate` with `expected_plan_sha256`, required nullable
+   `expected_previous_publication_id`, the exact returned `confirmation_phrase`
+   entered in `confirmation`, a rationale in `reason`, and explicit true
+   `ownership_transfer_reviewed`, `whole_portfolio_scope_reviewed`,
+   `current_state_recovery_verified` and `holdings_confirmation`. Recovery confirmation
+   records the operator's attestation. It follows independent verification of actual
+   recovery access/retention. Reading this contract grants no production authority.
+4. After separately scoped approval, an authenticated operator may call
+   `POST .../ledger/candidates/{candidate_id}/publish` through the existing API and
+   database-target guard. The browser currently exposes source/history inspection;
+   a publication approval form is pending. Keep production write authorization false
+   during preparation. The server rechecks the plan under shared portfolio/identity
+   locks before atomically inserting one snapshot and one immutable receipt.
+5. Read `GET .../ledger/ownership`, Portfolio overview and the returned receipt.
+   Reconcile every quantity and native cash row, original snapshot, source hashes,
+   previous publication and independent target revision. Publication timestamps are
+   normalized to UTC for stable hash/replay, retaining effective/recorded distinctions.
+   `ALREADY_PUBLISHED` returns the original plan/receipt identity. Exact command replay
+   returns the original receipt; changed commands conflict. Failed transactions leave
+   neither a snapshot nor an ownership receipt. No retry or recovery runs automatically.
+
+After publication, normal observed/manual snapshot writes are blocked. Full workbook
+sync previews report `HOLDINGS_OWNERSHIP_TRANSFERRED`; field-scoped workbook
+reconciliation remains future work. Acquisition and other independent domain review
+paths retain their existing contracts. Portfolio displays ledger ownership and routes
+review to ledger history. An unlinked snapshot cannot silently supersede the ledger
+read model. Earlier snapshots and point-in-time visibility remain available.
+Downgrade fails closed once publication history exists. Rolling back to code that
+lacks this ownership boundary requires a separately reviewed recovery/release plan.
+
+For read-only UI rehearsal use the existing browser server with `--scenario
+ledger-owned --lifetime-seconds 180`, `BROWSER_API_PORT=8016`, and matching loopback
+`API_BASE_URL`. Run `portfolio-ledger-ownership.spec.ts` with
+`E2E_LEDGER_OWNERSHIP_API=1`. Seeding publishes only synthetic records inside the
+verified local test schema before serving; all browser requests then use SQL
+read-only access. Normal shutdown removes that fixture's schema.
+
 ## Remaining acceptance gates
 
-Dated ownership cutover and current-holdings integration remain outstanding.
+The publication approval UI, real account/source scope review and production
+ownership activation remain outstanding.
 Cost lots, gains, TWR/XIRR, dividends, transfers, executed FX and broker imports
 require their documented contracts and evidence. Opening quantities supply an
 inventory boundary. Historical cost and capital flows require separate source evidence.

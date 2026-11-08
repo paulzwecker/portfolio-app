@@ -2676,6 +2676,36 @@ function isCompanyPortfolioContext(v: unknown): v is CompanyPortfolioContext {
 }
 export function isOverview(v: unknown): v is Overview {
   if (!isRecord(v)) return false;
+  if (
+    isSnapshotRead(v.snapshot) &&
+    v.snapshot.source?.startsWith("portfolio-ledger-publication-v1:") &&
+    (!isRecord(v.holdings_authority) ||
+      v.holdings_authority.source !== "ACCEPTED_LEDGER")
+  )
+    return false;
+  if (v.holdings_authority !== undefined && v.holdings_authority !== null) {
+    const owner = v.holdings_authority;
+    if (!isRecord(owner)) return false;
+    if (owner.source === "ACCEPTED_LEDGER") {
+      if (
+        !uuid(owner.publication_id) ||
+        !uuid(owner.opening_snapshot_id) ||
+        !timestamp(owner.cutover_at) ||
+        !isSnapshotRead(v.snapshot) ||
+        v.snapshot.source !==
+          `portfolio-ledger-publication-v1:${owner.publication_id}` ||
+        v.snapshot.actor !== "LOCAL_USER" ||
+        v.snapshot.completeness !== "COMPLETE"
+      )
+        return false;
+    } else if (
+      owner.source !== "OBSERVED_SNAPSHOT" ||
+      owner.publication_id !== null ||
+      owner.opening_snapshot_id !== null ||
+      owner.cutover_at !== null
+    )
+      return false;
+  }
   if (!(
     isPortfolio(v.portfolio) &&
     isSnapshot(v.snapshot) &&

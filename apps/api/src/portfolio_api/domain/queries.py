@@ -53,6 +53,7 @@ from portfolio_api.domain.models import (
     OwnerCashFlowScenarioAssumptions,
     OwnerCashFlowYearAssumption,
     Portfolio,
+    PortfolioLedgerPublication,
     PriceObservation,
     PriceRegimeSnapshot,
     RankingDefinition,
@@ -189,6 +190,20 @@ def overview(
         .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
         .limit(1)
     )
+    authority = session.scalar(
+        select(PortfolioLedgerPublication)
+        .where(
+            PortfolioLedgerPublication.portfolio_id == portfolio_id,
+            PortfolioLedgerPublication.effective_at <= cutoff,
+            PortfolioLedgerPublication.published_at <= cutoff,
+        )
+        .order_by(PortfolioLedgerPublication.sequence.desc())
+        .limit(1)
+    )
+    if authority is not None and (snapshot is None or snapshot.id != authority.holding_snapshot_id):
+        raise services.DomainError(
+            "Current holdings conflict with accepted ledger ownership", status=409
+        )
     revision = session.scalar(
         select(TargetRevision)
         .where(
@@ -454,6 +469,14 @@ def overview(
         )
 
     return s.PortfolioOverview(
+        holdings_authority=s.HoldingsAuthorityRead(
+            source="ACCEPTED_LEDGER" if authority else "OBSERVED_SNAPSHOT",
+            publication_id=authority.id if authority else None,
+            opening_snapshot_id=authority.anchor_snapshot_id if authority else None,
+            cutover_at=authority.cutover_at.astimezone(UTC) if authority else None,
+        )
+        if snapshot
+        else None,
         portfolio=s.PortfolioRead.model_validate(item),
         snapshot=snapshot_view,
         target_revision=target_view,

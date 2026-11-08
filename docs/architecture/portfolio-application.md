@@ -85,7 +85,13 @@ supported activity through a read-only API. Ending-statement/account comparisons
 and the Portfolio private-file review UI are locally verified. Immutable candidate
 packets and explicit accept/reject/correction receipts are locally verified through
 the private API and browser. Saving and decisions require explicit human actions
-and server authorization. The ownership/cutover steps below remain planned. Existing snapshots/targets retain authority during candidate review.
+and server authorization. Dated whole-portfolio publication and ownership guards
+are locally verified through the API, with canonical Portfolio source/readback.
+A separate hash-bound owner command promotes the accepted candidate to an immutable
+snapshot and lineage receipt. Same-cutoff replacement stays blocked by snapshot
+uniqueness. Full workbook apply becomes an ownership conflict after transfer.
+Publication approval UI and production source ownership remain gated. The steps
+below describe the complete transition; remaining accounting coverage is planned.
 
 C2 adds transaction-based accounting to the existing snapshot portfolio. This is
 a planned domain extension, with status and acceptance in `ROADMAP.md`. Reuse

@@ -12,21 +12,36 @@
 
 ## Current ledger increment
 
-The new publication backend passes 46 focused checks (23 publication, 21 receipt
-storage and two workbook-lock cases). `portfolio-ledger-publication-v1` previews
-whole-portfolio effects read-only and requires an exact plan/previous publication,
-typed confirmation and explicit ownership/scope/recovery/holdings acknowledgements.
-Atomic publication appends a canonical snapshot and immutable lineage receipt.
-The original opening remains pinned for later candidate reconstruction. Normal
-snapshot writes are blocked after ownership transfer; workbook previews report
-`HOLDINGS_OWNERSHIP_TRANSFERRED`. Same-date corrections require later source evidence
-before publication, preserving the existing unique snapshot cutoff.
-Migration `b59f16c8a203` follows `a832e94d6f10`, retaining existing data. Downgrade
-fails closed once publications exist. Tests cover native quantities/currency cash,
-current/historical API readback, replay/concurrency, rollback, stale source/base,
-confirmation rejection, append-only lineage and ownership writer rejection.
-Review normalized publication receipt times to UTC for timezone-independent hashes.
-Source presentation/compatibility verification follows. Production remains gated.
+`71dee7e` implements explicit whole-portfolio holdings publication. The backend
+initially passed 46 focused checks (23 publication, 21 storage and two workbook-lock).
+Follow-up verifies 27 publication/provenance checks and existing API/fixture/import
+regressions. A 99-case run exposed one pre-existing random-listing test assumption;
+selecting the common share explicitly fixed it. The affected identity-lock test and
+27 publication cases pass together (28/28). No checks were weakened.
+
+`portfolio-ledger-publication-v1` has a read-only, hash-bound before/after plan,
+exact typed confirmation, previous-publication and ownership/scope/recovery/holdings
+acknowledgements. Atomic publication creates a canonical snapshot and immutable
+receipt. UTC-normalized receipt times retain stable replay across DB timezones.
+The original opening stays pinned for later packets. Manual/observed writes are
+blocked after transfer; workbook previews report `HOLDINGS_OWNERSHIP_TRANSFERRED`.
+Same-cutoff publication needs later source evidence, preserving snapshot uniqueness.
+Migration `b59f16c8a203` follows `a832e94d6f10`. Downgrade fails once history exists.
+
+Portfolio receives explicit, time-scoped ownership metadata, displays the original
+opening/publication and routes ledger-owned holdings to history. Manual editing
+controls are hidden. Contradictory or missing ledger provenance fails closed.
+101 focused web checks and two actual-API desktop/mobile journeys pass; repeated
+screenshots were inspected under ignored `apps/web/test-results`. Browser serving
+is SQL read-only after pre-seeding a synthetic publication in a loopback `_test`
+random schema. Canonical state hashes match and HTTP mutation remains blocked.
+Fixtures shut down normally and remove only their own schemas. Types, focused
+lint/mypy, contracts and documentation checks pass. This is LOCAL_VERIFIED.
+
+Next finish the publication preview/confirmation UI and assess the C2.3 integration
+gate. Real account/source scope, current-state recovery, production migration,
+source-ownership authorization and execution retain owner gates. The current
+recovery branch from M1 predates accepted holdings and cannot protect this transfer.
 
 `cbefcae` adds scoped history/detail/stage/review proxy contracts. The complete
 saved-candidate UI is LOCAL_VERIFIED through 90 focused web checks, 43 API/fixture
@@ -288,11 +303,11 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C2.3 with the dated ownership/cutover contract and isolated read-model
-   integration. Pin the reviewed opening anchor, covered accounts, accepted candidate
-   and cutover date. Preserve canonical snapshots/targets and require current-state
-   recovery plus separate source-ownership/schema/write authorization before
-   activation. Build the candidate path against synthetic fixtures first.
+1. Finish C2.3 publication preview/confirmation UI on the guarded API, including
+   current ownership, exact proposed quantities/cash, source/previous-publication
+   hash binding and explicit recovery/ownership approval. Rehearse both failures and
+   successful synthetic readback. Assess INTEGRATE only at a cohesive milestone gate.
+   Real scope/recovery/schema/write authorization precede production activation.
    Production schema/ownership/import changes remain owner-gated. This is the next
    high-value independent capability while #25 review and data activation wait.
    C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;

@@ -93,6 +93,8 @@ def test_read_only_preview_then_published_snapshot_and_historical_readback(
             and current.target_revision.model_dump(mode="json") == before["targets"]
         )
         assert current.base_market_value is None
+        assert current.holdings_authority and current.holdings_authority.source == "ACCEPTED_LEDGER"
+        assert current.holdings_authority.publication_id == receipt.id
         assert (
             ledger.portfolio_ledger_anchor(session, portfolio_id).snapshot.id
             == row.anchor_snapshot_id
@@ -101,6 +103,10 @@ def test_read_only_preview_then_published_snapshot_and_historical_readback(
             session, portfolio_id, receipt.published_at - timedelta(microseconds=1)
         )
         assert historical.snapshot and historical.snapshot.id == row.anchor_snapshot_id
+        assert (
+            historical.holdings_authority
+            and historical.holdings_authority.source == "OBSERVED_SNAPSHOT"
+        )
         assert publication.ownership(session, portfolio_id).latest_publication == receipt
         assert session.scalar(select(func.count()).select_from(HoldingSnapshot)) == 2
     replay = publish(storage_engine, portfolio_id, row.id, command(plan))
@@ -532,3 +538,42 @@ def test_api_publication_failure_rolls_back_then_exact_retry_reads_canonical_sta
         assert (
             client.post(path, json=command(plan).model_dump(mode="json")).json()["replayed"] is True
         )
+
+
+def test_unlinked_snapshot_cannot_silently_override_ledger_read_model(
+    storage_engine: Engine,
+) -> None:
+    portfolio_id, row = accepted(storage_engine)
+    publish(
+        storage_engine, portfolio_id, row.id, command(preview(storage_engine, portfolio_id, row.id))
+    )
+    with Session(storage_engine) as session, session.begin():
+        session.add(
+            HoldingSnapshot(
+                portfolio_id=portfolio_id,
+                effective_at=row.as_of + timedelta(days=1),
+                actor="IMPORT",
+                reason="Synthetic invalid bypass",
+                completeness="COMPLETE",
+            )
+        )
+    with (
+        Session(storage_engine) as session,
+        pytest.raises(services.DomainError, match="conflict with accepted ledger"),
+    ):
+        queries.overview(session, portfolio_id)
+
+
+@pytest.mark.parametrize("field", ["publication_id", "opening_snapshot_id", "cutover_at"])
+def test_ledger_ownership_metadata_requires_complete_provenance(field: str) -> None:
+    from pydantic import ValidationError
+
+    values = {
+        "source": "ACCEPTED_LEDGER",
+        "publication_id": uuid4(),
+        "opening_snapshot_id": uuid4(),
+        "cutover_at": datetime.now(UTC),
+    }
+    values[field] = None
+    with pytest.raises(ValidationError):
+        s.HoldingsAuthorityRead.model_validate(values)

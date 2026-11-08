@@ -300,7 +300,27 @@ class ValuationGap(Contract):
     reason: str
 
 
+class HoldingsAuthorityRead(Contract):
+    source: Literal["OBSERVED_SNAPSHOT", "ACCEPTED_LEDGER"]
+    publication_id: UUID | None
+    opening_snapshot_id: UUID | None
+    cutover_at: datetime | None
+
+    @model_validator(mode="after")
+    def consistent_source(self) -> Self:
+        values = (self.publication_id, self.opening_snapshot_id, self.cutover_at)
+        if self.source == "ACCEPTED_LEDGER":
+            if any(value is None for value in values):
+                raise ValueError(
+                    "Ledger ownership requires publication, opening and cutover evidence"
+                )
+        elif any(value is not None for value in values):
+            raise ValueError("Observed ownership cannot carry ledger publication metadata")
+        return self
+
+
 class PortfolioOverview(Contract):
+    holdings_authority: HoldingsAuthorityRead | None = None
     portfolio: PortfolioRead
     snapshot: SnapshotRead | None
     target_revision: TargetRead | None

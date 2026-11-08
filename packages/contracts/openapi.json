@@ -16316,6 +16316,63 @@
         "title": "HoldingContext",
         "type": "object"
       },
+      "HoldingsAuthorityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "cutover_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutover At"
+          },
+          "opening_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Snapshot Id"
+          },
+          "publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Id"
+          },
+          "source": {
+            "enum": [
+              "OBSERVED_SNAPSHOT",
+              "ACCEPTED_LEDGER"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "publication_id",
+          "opening_snapshot_id",
+          "cutover_at"
+        ],
+        "title": "HoldingsAuthorityRead",
+        "type": "object"
+      },
       "InvestmentThesisClaimInput": {
         "additionalProperties": false,
         "properties": {
@@ -22472,6 +22529,16 @@
               }
             ],
             "title": "Holdings Age Days"
+          },
+          "holdings_authority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldingsAuthorityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "holdings_freshness": {
             "default": "NO_DATA",
