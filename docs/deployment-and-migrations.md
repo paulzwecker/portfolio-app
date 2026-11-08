@@ -623,6 +623,11 @@ manifest with schema, source identity, timestamps, file hashes and coverage; ver
 archive integrity without publishing portfolio data. Establish retention and secure
 off-device copy with tested access and key recovery. These are requirements for a
 separately reviewed production backup procedure, not claims that one exists here.
+That review must account for every database and required role/grant, extension,
+large object, table and sequence; a single database dump does not itself preserve
+cluster-wide roles. Verify the backup role can read every intended row, including
+row-level security behavior, rather than accepting a partial archive. Preserve the
+exact archive and manifest together and test decryption before relying on a copy.
 
 Separately authorize an isolated restore rehearsal with an exact nonproduction target;
 verify schema and complete table/sequence fingerprints, accepted portfolio counts,
