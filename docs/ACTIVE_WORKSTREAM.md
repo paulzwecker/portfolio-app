@@ -29,15 +29,30 @@ retain their own identity. Source review must catch overlapping statement eviden
   precision, full withholding/zero, native currencies, missing/error values,
   income-only identity binding and tax-before-income overdraft detection.
 - 77 focused web contract/proxy/publication tests pass. API contracts regenerated.
-- Focused backend mypy and frontend typecheck pass.
-- Durable review/publication, rollback and responsive real-API browser evidence
-  remain the next required checks. This is implementation/local evidence only.
+- 73 focused PostgreSQL ledger API/review/publication cases pass on independently
+  verified loopback `_test` infrastructure and disposable schemas. New coverage
+  proves income preview leaves records unchanged, review is explicit, publication
+  changes only the intended snapshot/cash with exact replay, failed publication
+  rolls back flushed records, and income-only identity drift blocks acceptance.
+- Two real-API desktop/mobile income journeys pass through the existing Next.js
+  proxy, including exact 10-place values, evidence, review confirmation and readback.
+  Protected canonical-state hashes remain unchanged. Visual inspection confirms
+  readable wrapping and no horizontal overflow. Fixture shutdown removes its schema.
+- Backend strict mypy passes all 213 source/test files without incremental cache.
+  Web lint/typecheck, generated contract check and documentation checks pass.
+- Independent review preserves v1 hashes/outputs, source/identity locks, explicit
+  paid currency and withholding, and separate acceptance/publication authority.
+  Only synthetic local verification was performed; no real account data was used.
 
 ## Next action
 
-Add synthetic PostgreSQL lifecycle/rollback regressions, complete exact record
-presentation and desktop/mobile real-API review, then record a reviewed BUILD
-checkpoint. Use focused tests. No PR or full-suite integration during this increment.
+This income slice is IMPLEMENTATION_COMPLETE and LOCAL_VERIFIED. Continue the
+ledger milestone with paired, evidenced same-currency internal cash transfers
+between declared accounts. Preserve per-account checks, consolidated conservation,
+source lineage and the existing review/publication gates. Broker imports still
+need a reviewed first format and real private sample; lot/FX/performance policy
+remains separate. Use focused tests and incremental commits. No PR or full-suite
+integration was performed during this BUILD increment.
 
 ## Independent release gates
 
