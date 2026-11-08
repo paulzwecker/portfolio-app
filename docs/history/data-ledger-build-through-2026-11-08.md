@@ -356,3 +356,19 @@ are preserved. Commands are in the
 - Commits `0324ba7` (receipt adapter/tests) and `b799093` (coverage/recovery
   runbook) form this independent integration checkpoint. When integrating PR #24
   and #25, retain its capability roadmap plus this verified C2 outcome.
+
+## C5.2 database classification BUILD evidence
+
+C5.2 found 32 ordinary PostgreSQL casesin 28 functions without integration markers.
+CI's unit job skipped them without TEST_DATABASE_URL, while the PostgreSQL job's
+marker selection omitted them. Explicit markers restore financial-statement,
+consensus/history, source-evidence, scheduler and manual-refresh checks. All 32
+pass on verified loopback PostgreSQL 18.3 using only random disposable schemas.
+Test bodies and financial assertions are preserved. Collection now selects 643 unit
+cases with zero PostgreSQL consumers before the guard increment. The completed
+collection/runtime guard now selects 649 unit and 178 integration cases. Six
+synthetic pytest-subprocess regressions and 71 focused unit checks pass without a
+usable database, plus all 32 classified PostgreSQL cases with the guard active.
+Dynamic requests fail before missing-DB skips. Source-bound tests retain their
+separate privacy/opt-in policy. Types, scoped lint/format, source policy, docs and
+whitespace pass. Combined-baseline and remote CI verification remain for INTEGRATE.

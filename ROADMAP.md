@@ -19,8 +19,8 @@ Owner-requested consolidation now includes PR #25's exact minimal-receipt adapte
 and its unchanged source-binding/reconciliation tests. Its dated read-only coverage
 assessment is preserved in the [integration history](docs/history/data-ledger-build-through-2026-11-08.md#c21-recorded-readiness-evidence--2026-11-07)
 and [ingestion runbook](docs/production-data-ingestion-operations.md). PR #25 remains
-separately reviewable; its commits are included in this candidate. Further CI and
-sensitivity branches will be integrated before the combined release checks.
+separately reviewable; its commits are included in this candidate. The CI-classification branch is now integrated with its collection/runtime
+guards. Sensitivity and authenticated proxy fixtures are next before combined checks.
 
 Integration review corrected the pre-ledger bootstrap path and added all ledger
 history to the recovery inventory. `9048c47` also pins the existing read-only release

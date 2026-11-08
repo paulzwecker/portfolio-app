@@ -273,6 +273,7 @@ def test_sec_provider_bounds_new_history_files_for_resumable_pages(
     assert len(requested) == 2
 
 
+@pytest.mark.integration
 def test_sec_import_is_idempotent_links_amendments_and_respects_as_of(
     postgres_engine: Engine,
 ) -> None:
@@ -349,6 +350,7 @@ def test_sec_import_is_idempotent_links_amendments_and_respects_as_of(
         session.rollback()
 
 
+@pytest.mark.integration
 def test_company_source_reference_is_link_only_and_idempotent(postgres_engine: Engine) -> None:
     value = SourceDocumentCreate(
         provider_id=COMPANY_REFERENCE_PROVIDER_ID,

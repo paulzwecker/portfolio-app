@@ -2,6 +2,7 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
@@ -83,6 +84,7 @@ def test_undated_output_import_is_not_made_recent_by_its_recorded_time() -> None
     assert _recent_imported_output(dated_source_event, cutoff, now)
 
 
+@pytest.mark.integration
 def test_attention_endpoint_is_filtered_and_read_only_for_missing_states(
     postgres_engine: Engine,
 ) -> None:

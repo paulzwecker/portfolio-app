@@ -163,6 +163,7 @@ def test_disabled_worker_stays_alive_until_parent_shutdown(
     assert main(["--interval-seconds", "10"]) == 0
 
 
+@pytest.mark.integration
 def test_repeated_scheduler_checks_respect_next_attempt(postgres_engine: Engine) -> None:
     now_at = datetime.now(UTC)
     settings = Settings(_env_file=None)
@@ -187,6 +188,7 @@ def test_repeated_scheduler_checks_respect_next_attempt(postgres_engine: Engine)
         )
 
 
+@pytest.mark.integration
 def test_interrupted_job_is_marked_and_retried_after_backoff(postgres_engine: Engine) -> None:
     now_at = datetime.now(UTC)
     settings = Settings(_env_file=None)
@@ -221,6 +223,7 @@ def test_interrupted_job_is_marked_and_retried_after_backoff(postgres_engine: En
         )
 
 
+@pytest.mark.integration
 def test_sec_missing_configuration_is_rechecked_as_soon_as_it_is_fixed(
     postgres_engine: Engine,
 ) -> None:
@@ -264,6 +267,7 @@ def test_missing_sec_contact_blocks_without_provider_calls() -> None:
     assert result["failure_code"] == "SEC_USER_AGENT_MISSING"
 
 
+@pytest.mark.integration
 def test_sec_job_requests_only_the_selected_canonical_domain(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -286,6 +290,7 @@ def test_sec_job_requests_only_the_selected_canonical_domain(
     assert calls == [[ExternalDataDomain.SOURCE_DOCUMENTS]]
 
 
+@pytest.mark.integration
 def test_sec_retryable_partial_result_is_retried_before_daily_cadence(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -333,6 +338,7 @@ def test_sec_retryable_partial_result_is_retried_before_daily_cadence(
     assert result["retry_after_seconds"] == int(FAILURE_BACKOFF_INITIAL.total_seconds())
 
 
+@pytest.mark.integration
 def test_sec_job_reuses_same_day_manual_partial_without_fetching_again(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -381,6 +387,7 @@ def test_sec_job_reuses_same_day_manual_partial_without_fetching_again(
     assert result["idempotent_reuse"] is True
 
 
+@pytest.mark.integration
 def test_retry_after_override_is_recorded_for_partial_job(postgres_engine: Engine) -> None:
     now_at = datetime.now(UTC)
     result = _run_one_job(
@@ -399,6 +406,7 @@ def test_retry_after_override_is_recorded_for_partial_job(postgres_engine: Engin
         assert run.next_attempt_at < now_at + timedelta(hours=1)
 
 
+@pytest.mark.integration
 def test_sec_retry_does_not_exceed_two_same_day_replays(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -494,6 +502,7 @@ def test_sheets_polling_can_be_disabled_explicitly() -> None:
     }
 
 
+@pytest.mark.integration
 def test_operation_replay_waits_for_cadence_and_retry_is_bounded(
     postgres_engine: Engine,
 ) -> None:
@@ -536,6 +545,7 @@ def test_operation_replay_waits_for_cadence_and_retry_is_bounded(
     assert call_count == 2
 
 
+@pytest.mark.integration
 def test_concurrent_scheduler_cycle_is_skipped_by_postgres_lock(postgres_engine: Engine) -> None:
     settings = Settings(_env_file=None, recurring_operations_enabled=True)
     with postgres_engine.connect() as connection:

@@ -191,6 +191,7 @@ def test_targeted_yahoo_domain_scope_keeps_fx_backfill_separate() -> None:
         parse_fx_pair("ABC/XYZ")
 
 
+@pytest.mark.integration
 def test_operational_run_status_and_attempt_are_durable_and_append_only(
     postgres_engine: Engine,
 ) -> None:
