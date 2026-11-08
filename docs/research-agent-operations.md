@@ -22,9 +22,12 @@ API response is recorded as delivery. Repeated retrieval of unchanged work reuse
 receipt; completed unchanged work is omitted. Refresh triggers first with
 `POST /v1/research-triggers/refresh` when the Sentinel needs newly detected source events.
 
-The direct work, proposal, status and acknowledgment APIs do not currently require user
-authentication. They are for the trusted local application boundary only; the development API
-binds to loopback and must not be exposed to an external ChatGPT automation. For the three
+The direct work/research/status/acknowledgment APIs use the trusted local boundary
+in development and require the server proxy token outside development. Model revision
+proposal routes instead require their dedicated agent/reviewer credentials, including
+in development. These role credentials are scoped to model proposals. Broader hosted
+agent work/research access needs its own reviewed authorization design. Keep the broad
+proxy credential out of agent prompts and workbook cells. For the three
 off-host automations, an operator manually publishes bounded work from `/model-sync` to the fixed
 `Application Agent Work Feed` tab. `POST
 /v1/google-sheets-agent-operations/{agent_role}/work/publish` accepts only the three role
@@ -100,12 +103,12 @@ turning those failures into successful delivery receipts.
 Data checks follow source publication and the documented ingestion cadence; thesis work is
 triggered by new material evidence; model and allocation reviews use the existing research queue
 and routine review cadence; strategic architecture remains a longer-interval investor review.
-The application does not create, edit or activate ChatGPT schedules. In local development, the
-recurring operations worker refreshes triggers/queue and publishes bounded role-specific work to
-the fixed workbook feed hourly, and polls the explicitly configured proposal/acknowledgment
-inboxes at `GOOGLE_SHEETS_POLL_SECONDS` (hourly by default). External ChatGPT runs still follow
-their existing schedules. Acceptance and queue completion remain explicit reviewer actions. See
-[`recurring-operations.md`](recurring-operations.md) for activation and failure behavior.
+The application does not create, edit or activate ChatGPT schedules. Worker and
+polling behavior is available behind explicit activation flags. Production rollout
+keeps recurring operations disabled and `GOOGLE_SHEETS_POLL_SECONDS=0` until separately
+authorized. External ChatGPT runs follow their own schedules. Delivery, acknowledgment,
+research completion and acceptance retain separate states. See
+[recurring operations](recurring-operations.md) for supported cadence and failure behavior.
 
 Off-host agents use the workbook as transport: read the app-owned work feed and its
 `work_item_json.payload.context`; use Application Portfolio State for the separately published
@@ -115,5 +118,8 @@ inbox. In the currently connected workbook, the separate Thesis Watch Feed tab i
 trigger and context are included in Sentinel work items. Keep application credentials outside the
 workbook and repository. Data Steward findings can be reported as acknowledgments with source URL
 and reason, but canonical factual observations still require a supported provider/import pipeline;
-there is no general agent-authored fact inbox. Direct APIs are only an option after a separately
-approved authenticated gateway is deployed.
+there is no general agent-authored fact inbox. Direct model revision proposal APIs are implemented with dedicated model
+agent/reviewer roles. Other remote APIs use the server proxy boundary. Hosted
+configuration and producer access require separate verification and authorization.
+The workbook transport remains available independently. See
+[model proposal roles](agent-model-revision-proposals.md).

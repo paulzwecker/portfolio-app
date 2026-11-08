@@ -117,6 +117,55 @@ or scheduler is required for this publication envelope.
 
 ## Author and operator instructions
 
+### Read-only file preflight
+
+A frozen `FinancialModelPublicationV1` JSON file from a reviewed publisher can be
+checked before inbox discovery creates operational records. Keep it in private
+storage outside the checkout. The outer publication file hash and its nested
+contract hash are separate integrity checks. Use the exact reviewed file hash.
+
+```powershell
+$store = Join-Path $env:LOCALAPPDATA 'PortfolioResearch\workbook-snapshots'
+$publication = '<private-frozen-publication.json>'
+$publicationHash = '<reviewed-64-character-file-sha256>'
+
+npm run db:preflight-model-publication -- inspect `
+  --publication $publication --publication-sha256 $publicationHash --store $store
+
+npm run db:preflight-model-publication -- preview `
+  --publication $publication --publication-sha256 $publicationHash --store $store `
+  --target-environment production
+```
+
+`inspect` validates the existing publication and nested method contracts offline.
+`SCHEMA_VALID` confirms their structural and mathematical input constraints.
+`preview` requires the configured target environment to match the explicit flag.
+It uses the existing exact Neon identity, TLS, schema and Alembic-head verification
+with SELECT privileges and production-write authorization disabled. Native preview
+queries run in repeatable-read, read-only transactions behind the mutation guard.
+Both commands write only a private append-only report under
+`model-publication-preflight/runs/<run-id>.json`. Terminal output contains a status,
+run ID and publication hash. The report preserves the exact source JSON, target
+identity and native differences. Re-encoding `publication_json` as UTF-8 reproduces
+the reviewed file hash. Local targets carry no Neon identity attribution.
+
+`READY_FOR_REVIEW` establishes canonical compatibility and source/native fair-value
+parity for that frozen file. Reports explicitly record `FROZEN_FILE_ONLY` and
+`acceptance_authorized=false`. Check live source freshness and provenance separately.
+The report is evidence for onboarding review. Existing discovery, current preview
+and explicit acceptance still own the subsequent review workflow.
+Inbox transport consistency and competing captures are checked during discovery.
+The file report explicitly records `inbox_capture_checked=false`.
+
+`MISSING_CANONICAL_MODEL` requires a reviewed first-model seed through the existing
+guarded package path. An existing P-GOOGL captured package remains a distinct
+initial-seed contract. This command accepts the publication envelope only and
+preserves all identity and model-acceptance gates. Native validation conflicts,
+stale bases, evidence errors and parity mismatches block readiness. Target/schema
+verification failures stop before domain preview. It has no apply operation.
+
+### Source publication and review
+
 1. Export the existing portable contract from an accepted canonical model.
 2. Complete candidate assumptions, a new source revision ID, rationale, author and
    canonical evidence references using the existing bound Apps Script input tabs.

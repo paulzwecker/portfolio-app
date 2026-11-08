@@ -1,6 +1,8 @@
 # Portfolio Research Platform
 
-A private application for public-equity research and portfolio management built with Next.js, FastAPI
+Portfolio Research is the first flagship application for Personal Universe. The
+target is a private extensible app store with a shared App Hub, identity, design
+and safe operating conventions. Portfolio Research supports public-equity research and portfolio management with Next.js, FastAPI
 and PostgreSQL. Finance agents maintain models in Google Sheets and explicitly
 publish versioned proposals. The application validates and presents accepted
 models, independent valuation methods, research and portfolio decisions.

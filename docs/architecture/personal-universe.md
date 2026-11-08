@@ -1,10 +1,9 @@
 # Personal Universe — Architecture & Migration Strategy
 
-- **Version:** 1.0 (proposed)
-- **Date:** 2026-10-31
-- **Status:** Architectural direction agreed in principle; implementation is phased and not yet complete
+- **Version:** 1.1
+- **Date:** 2026-11-07
+- **Status:** Owner-confirmed target. Implementation and operational evidence live in `ROADMAP.md`
 - **Audience:** Project owner, AI coding agents, future maintainers
-  **Recommended repository location:** `docs/architecture/personal-universe.md`
 
 > **North star:** A new personal application should primarily require defining its purpose and domain behavior—not rebuilding authentication, design, API conventions, database infrastructure, deployment, or operational safeguards.
 
@@ -14,18 +13,23 @@ Build a **Personal Universe** as a **modular monolith**: one Git repository, one
 
 This is deliberately optimized for **one primary developer, personal use, low concurrency, low recurring costs, and agent-assisted development**. It is not an enterprise multi-tenant SaaS architecture. The system should nevertheless preserve clear contracts so an application can be extracted into its own deployment if future security, reliability, or performance needs justify doing so.
 
+The owner prioritizes a useful Portfolio application, then operational maturity and
+incremental platform extraction. Small shared foundations can emerge earlier from
+real Portfolio needs. This is the default economic footprint. Security, reliability
+and measured total cost may justify a separately reviewed isolation boundary.
+
 **Decision summary**
 
-| Concern              | Initial choice                                       | Important qualification                                                                         |
-| -------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Source control       | One monorepo                                         | Explicit ownership and dependency rules                                                         |
-| Browser experience   | One Next.js application on one Vercel project        | All apps share a release; app routes are modules, not independently deployed Next.js apps       |
-| Backend              | One FastAPI process on one Render web service        | App-specific routers and services; one process is a shared failure/resource boundary            |
-| Database             | One Neon project, initially one PostgreSQL database  | App-owned PostgreSQL schemas for new domains; retain Portfolio's `public` schema initially      |
-| Identity             | One supported login/session system                   | Authorization enforced on every trusted API operation; UI visibility is not a security boundary |
-| Design               | Shared tokens, shell, and reusable components        | Domain-specific interactions remain app-owned                                                   |
-| Application creation | Versioned module template + generator + agent skills | Human approval for migrations, permissions, production changes, and release                     |
-| Release              | One coordinated cloud deployment                     | Regression gates protect every app when any module changes                                      |
+| Concern              | Initial choice                                             | Important qualification                                                                         |
+| -------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Source control       | One monorepo                                               | Explicit ownership and dependency rules                                                         |
+| Browser experience   | One Next.js application on one Vercel project              | All apps share a release; app routes are modules, not independently deployed Next.js apps       |
+| Backend              | One FastAPI process on one Render web service              | App-specific routers and services; one process is a shared failure/resource boundary            |
+| Database             | One Neon project, initially one PostgreSQL database        | App-owned PostgreSQL schemas for new domains; retain Portfolio's `public` schema initially      |
+| Identity             | One supported login/session system                         | Authorization enforced on every trusted API operation; UI visibility is not a security boundary |
+| Design               | Shared tokens, shell, and reusable components              | Domain-specific interactions remain app-owned                                                   |
+| Application creation | Versioned module template + generator + agent skills       | Human approval for migrations, permissions, production changes, and release                     |
+| Release              | Native Render/Vercel deployments with shared compatibility | CI/owner review protect main. Migrations and data operations have separate gates                |
 
 **Cost objective:** Avoid buying separate Neon, Render, or Vercel services solely because a new application is added. This is a deployment design goal, **not a guarantee of a fixed bill**: usage, compute, storage, bandwidth, background work, and provider plan limits can still increase costs.
 
@@ -300,7 +304,7 @@ Given an application ID, title, purpose and initial feature, the generator shoul
 
 The generated app should compile and pass baseline tests **before adding business complexity**. New applications should default to private and disabled/unreleased until reviewed.
 
-**Factory success test:** Create a second small, real application (for example planning/tasks) with at least one complete CRUD workflow, a table, form, KPI card, authenticated API, app-owned schema, audit behavior and browser tests. Confirm it appears in the hub and coexists with Portfolio **without requiring another Neon, Render or Vercel deployment**.
+**Reuse proof:** First establish the module conventions with a second small, real application (for example planning/tasks) with at least one complete CRUD workflow, a table, form, KPI card, authenticated API, app-owned schema, audit behavior and browser tests. Confirm it appears in the hub and coexists with Portfolio **without requiring another Neon, Render or Vercel deployment**.
 
 ## 8. CI, release and architectural enforcement
 
@@ -315,7 +319,7 @@ At minimum, the shared CI pipeline should enforce:
 | Data safety           | Secret scanning, source-data policy, no raw private snapshots in Git/CI artifacts         |
 | UI quality            | Reusable component contract, accessibility checks and representative responsive E2E tests |
 | Shared-runtime safety | Cross-app smoke tests on changes to platform packages or the shared shell/API             |
-| Production safety     | Deployment approvals, explicit migrations, guarded data operations and recovery plan      |
+| Production safety     | Owner-reviewed release, explicit migrations, guarded data operations and recovery plan    |
 
 Avoid treating a green unit suite as evidence that production data has been reconciled. Keep **implementation-complete**, **staging-verified**, and **production-ready** separate statuses.
 
@@ -337,59 +341,23 @@ Avoid treating a green unit suite as evidence that production data has been reco
 - Monitor shared Neon compute/storage and Render/Vercel resource utilization. If one module dominates or threatens other apps, isolate that module instead of forcing strict one-service purity.
 - A single shared database and runtime increase blast radius. Any new app that needs materially stronger isolation should trigger an architecture review.
 
-## 10. Phased implementation roadmap
+## 10. Capability-led sequencing
 
-### Phase 0 — Architecture decision and audit (documentation-only; may proceed in parallel)
+[PRODUCT_VISION.md](../PRODUCT_VISION.md) owns the destination and useful Portfolio
+release outcomes. [ROADMAP.md](../../ROADMAP.md) is the single execution queue and
+capability/evidence inventory. Its C0–C7 milestones replace duplicated phase lists.
 
-Document this target structure, identify reusable Portfolio assets, review security gaps, inspect deployment and database boundaries, and add machine-checkable architectural decisions. Do **not** restructure production as part of documentation.
+Portfolio's reconciled real-data research, valuation and decision workflows come
+first. Operational safeguards mature with every privileged operation. Proven shared
+components and security conventions may improve early. Major platform extraction
+and the App Hub follow useful Portfolio workflows and adequate operational controls.
+A real second app validates module ownership and reuse before a generator automates
+its repeated structure. Preserve the existing Portfolio routes and tables throughout.
 
-**Exit criteria:** Shared architecture is recorded; existing implementation is mapped to future modules; known risks and non-goals are explicit.
-
-### Phase 1 — Stabilize Portfolio as a cloud product (first implementation priority)
-
-1. Complete the reviewed canonical source and identity reconciliation.
-2. Safely bootstrap Neon and verify companies, listings, holdings, cash, targets and scores.
-3. Validate that deployed Render API and Vercel frontend show reconciled real data.
-4. Establish private access controls, repeatable refresh procedures, backup/recovery and operational checks.
-5. Reach a practical Portfolio v1 baseline: key user flows work; advanced model coverage may remain explicitly incomplete.
-6. Record a reproducible release and reliable rollback plan.
-
-**Exit criteria:** Portfolio is useful and recoverable in the cloud without requiring the developer's local computer for normal use. Do not wait for every advanced research feature.
-
-### Phase 2 — Introduce platform boundaries without a big-bang move
-
-1. Define module ownership contracts and the app registry.
-2. Establish root/portal route strategy while preserving Portfolio routes.
-3. Add platform module naming, API composition and cross-module import policies.
-4. Leave existing Portfolio tables, service modules and financial code in place initially.
-5. Confirm that the same deployment paths, migrations and API contracts continue to work.
-
-**Exit criteria:** Architecture is structured and enforceable without destabilizing the production Portfolio baseline.
-
-### Phase 3 — Extract shared UI, auth, API and database foundations
-
-1. Extract a small, proven set of generic Portfolio UI components and design tokens.
-2. Implement the reference/gallery app and shared application shell.
-3. Establish one trustworthy identity/session mechanism and backend authorization enforcement.
-4. Standardize error handling, contracts, safe transaction patterns, audit conventions and schema ownership.
-5. Migrate Portfolio to shared capabilities incrementally, with regression coverage after every extraction.
-
-**Exit criteria:** Portfolio uses the common platform where appropriate, and reusable components are demonstrably independent of Portfolio-specific investment logic.
-
-### Phase 4 — Private App Hub and application factory
-
-1. Build the launcher at `/` from validated registry metadata.
-2. Introduce the application module template and generator.
-3. Add reusable agent skills and CI conformance tests.
-4. Generate a disposable sample app and confirm its routes, API, tests, schema ownership and registry entry.
-
-**Exit criteria:** A new app module can be generated reproducibly without manually copying the Portfolio application or provisioning another cloud stack.
-
-### Phase 5 — Prove the factory with a second real app
-
-Build a small CRUD-oriented application, preferably one that genuinely needs a database and shares UI patterns with Portfolio. Deploy it within the same web/API/database infrastructure, verify real auth/transaction boundaries and cross-app regression behavior, and refine the factory based on actual reuse.
-
-**Exit criteria:** The second application is useful, safely isolated by domain, and cheaper/simpler to create than Portfolio was. Extract only the additional reusable patterns it proves necessary.
+The shared deployment has a compatibility and rollback boundary, implemented through
+[native provider releases](../deployment-and-migrations.md). This architecture does
+not require a custom release orchestrator. Schema changes remain separately reviewed,
+rehearsed and owner-authorized with appropriate recovery protection.
 
 ## 11. Decision gates and change discipline
 
@@ -435,29 +403,3 @@ Before any substantive implementation:
 11. Report what was implemented, what was actually tested, what remains unverified, and the precise next approval gate.
 
 **The app factory is successful only when the second app becomes easier to ship without making Portfolio less reliable.**
-
----
-
-## Suggested AGENTS.md reference
-
-Place the following near the beginning of the repository's root `AGENTS.md` (adjust the path if you store this document elsewhere):
-
-```markdown
-## Personal Universe architecture
-
-This repository is evolving toward a single-deployment, multi-application modular monolith.
-Read `docs/architecture/personal-universe.md` before changes to repository
-structure, shared UI/auth/API libraries, app modules, database ownership,
-deployment, migrations, or application scaffolding.
-
-The migration is phased. Preserve the working Portfolio architecture and its
-financial/domain contracts until each replacement has been tested and approved.
-Do not assume planned platform packages, routes, schemas, or generators already exist.
-Never apply production migrations, imports, or recurring operations merely because
-this architectural document describes them.
-
-Specific Portfolio domain and financial invariants in this AGENTS.md and the
-approved domain-model documents remain authoritative. Where platform plans and
-established Portfolio behavior conflict, preserve current behavior and raise a
-reviewable architecture decision rather than silently changing either.
-```

@@ -2,20 +2,25 @@
 
 ## Status
 
-**Market preview verified on 2026-11-07; production execution remains gated.**
+**Market planning preview verified on 2026-11-07; execution requires separate authorization.**
 The market-data and SEC bootstrap commands use the shared database write-target
-guard. The canonical portfolio baseline is applied and reconciled. No production
-provider requests or database writes were made during this readiness assessment.
-Previews used the local candidate checkout against production read-only; hosted
-services were unchanged.
+guard. The [Nov 7 baseline](production-canonical-baseline.md) records the reconciled
+minimal portfolio and schema `9f2a6d4c81b7`. The dated assessment below used the
+local candidate checkout with read-only production access. Provider coverage and
+current production state require fresh verification before execution.
+
+Earlier R8 references to pending `b16d4f8a2c91` / `c17a0b9d4e62` migrations describe
+the historical development target. They are ancestors of that recorded head.
+Reverify the live target instead of repeating historical migration prerequisites.
 
 Real ingestion remains blocked until all of the following are true:
 
 1. The canonical portfolio bootstrap has been applied and reconciled with status
    `MATCHED` on the exact production database.
-2. The production schema is at the reviewed Alembic head. Read-only verification
-   found `9f2a6d4c81b7`, matching the repository head on 2026-11-07. The older R8
-   and workbook-sync migrations are ancestors of this head. Reverify before a run.
+2. The production schema matches the reviewed repository head and required ingestion
+   constraints. Read-only verification found `9f2a6d4c81b7` on 2026-11-07. Use a
+   fresh read-only preflight for each run. Actual drift requires a separately
+   reviewed migration procedure.
 3. The exact target, direct TLS connection, Neon project/primary branch/endpoint,
    database privileges, production-write authorization and interactive target
    confirmation all pass the existing guard.
@@ -30,9 +35,9 @@ This document is an operating procedure, not authorization. Do not enable
 recurring operations, Sheets polling, FMP, decision recomputation, model changes,
 or portfolio changes as part of data ingestion.
 
-## Current coverage and next approval
+## Recorded coverage and next approval
 
-The read-only production assessment found all 22 held listings matched the
+The 2026-11-07 read-only production assessment found all 22 held listings matched the
 reviewed Yahoo crosswalk, with no unresolved identity or FX mapping. Required
 pairs are DKK/EUR and USD/EUR. A deliberately bounded example window of
 2025-11-07 through 2026-11-06 produces 24 logical provider scopes (22 listings

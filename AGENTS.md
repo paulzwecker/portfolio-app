@@ -1,6 +1,10 @@
 # Portfolio agent entrypoint
 
-Build a useful, auditable investment research application. Follow owner instructions,
+Build Personal Universe, a private extensible app store with a unified App Hub and
+shared identity, design, navigation, API/database conventions and safe operations.
+Portfolio Research is the flagship. Make its real-data investment workflows useful
+before major platform extraction. Prefer one Next.js/Vercel, FastAPI/Render and
+Neon stack where cost, security and reliability support it. Follow owner instructions,
 this file, scoped `AGENTS.md` files and relevant domain contracts in that order.
 Resolve conflicting documents by preserving established financial and production
 behavior, recording the conflict and obtaining a decision where required.
@@ -35,7 +39,12 @@ behavior, recording the conflict and obtaining a decision where required.
 ## Execute and record
 
 Preserve branches, stashes, edits and private artifacts. Continue an applicable open
-feature PR. Commit coherent increments. Verify focused behavior, integration and
+feature PR with unfinished work. Keep completed PRs stable during owner review.
+Choose the highest-value ready capability in `ROADMAP.md`, checking its actual
+data, code and authorization dependencies. Prefer a complete investor workflow over
+another preparation layer. If an owner gate blocks it, advance an independent ready
+capability. Shared foundations may emerge early from demonstrated Portfolio needs.
+Commit coherent increments. Verify focused behavior, integration and
 security, then perform an independent second-pass review. Validate desktop/mobile
 for UI changes. Fix findings before declaring completion.
 
@@ -43,7 +52,9 @@ Update the concise roadmap after each subtask with actual evidence and the next
 step. Put lasting behavior in its canonical reference, commands in runbooks and
 long evidence in dated history. At an integration boundary push the feature branch
 and open or update one cohesive PR. Distinguish implementation/local verification,
-live-source validation, production preview and production application.
+live-source validation, production preview and production application. Feature code,
+fixture tests and historical local coverage establish their own scope. Require
+current target-bound reconciliation and user readback for operational claims.
 
 ## Authorization and privacy
 

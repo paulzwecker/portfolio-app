@@ -31,6 +31,7 @@
     "db:import-model-outputs": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_outputs",
     "db:import-native-models": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_input_migration",
     "db:bootstrap-model-analytics": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_analytics_bootstrap",
+    "db:preflight-model-publication": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_publication_preflight",
     "db:financial-model-package": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.financial_model_package",
     "db:export-dcf-model-package": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.financial_model_package_exporter",
     "db:bootstrap-model-identity": "node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.model_identity_bootstrap",

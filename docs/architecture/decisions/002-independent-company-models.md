@@ -1,6 +1,7 @@
 # Independent models within a company
 
-Status is implemented for isolated verification on the publication feature branch.
+Implemented and locally verified, merged in PR #23. Current rollout evidence and
+owner gates are recorded in [ROADMAP.md](../../../ROADMAP.md).
 
 ## Identity and ownership
 

@@ -1,6 +1,7 @@
 # Explicit financial-model publications
 
-Status is implemented for isolated verification, with rollout pending owner review.
+Implemented and locally verified, merged in PR #23. Current rollout evidence and
+owner gates are recorded in [ROADMAP.md](../../../ROADMAP.md).
 
 ## Context
 
