@@ -184,5 +184,11 @@ The subsequent raw-evidence increment verifies provider/domain and decoded paylo
 SHA-256, flags corrupt gzip and explicitly fails closed when a per-payload 64 MiB
 verification budget is exceeded. Fourteen focused units and 24 PostgreSQL cases pass,
 as do Ruff and strict mypy. These checks establish integrity, not source accuracy.
+The following attention-feed increment prevents later-known corrections/observations
+from changing an earlier price alert and skips corrected days, duplicate day records
+and incompatible provider, symbol, currency or adjustment pairs. Alert time is when
+both inputs were recorded; wording states exchange sessions are unverified. Nine
+focused units and 12 isolated PostgreSQL cases, Ruff and strict mypy pass. No API
+schema or migration is required; alerts can be more conservative with mixed sources.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.

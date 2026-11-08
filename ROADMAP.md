@@ -183,6 +183,10 @@ PostgreSQL cases pass. Next: establish reviewed session-aware coverage evidence.
 The next increment verifies retained raw provider bytes and identity as part of
 reconciliation, with an explicit per-payload work limit. Fourteen unit and 24
 isolated PostgreSQL cases pass; live-source and production coverage remain unverified.
+Price-move attention now uses only information known at evaluation time and rejects
+ambiguous, corrected or incompatible close pairs. Its label no longer asserts
+unverified exchange-session adjacency. Nine focused units and 12 isolated PostgreSQL
+cases pass. Review real-session coverage before enabling complete-history claims.
 
 ## Immediate priorities and gates
 

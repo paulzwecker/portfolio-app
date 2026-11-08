@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
@@ -39,7 +39,7 @@ from portfolio_api.domain.models import (
 PRICE_FRESH_DAYS = 5  # documented current-quote freshness window
 EXPECTED_IRR_MOVE = Decimal("0.05")  # conservative feed threshold, not an investment rule
 CONSENSUS_MOVE = Decimal("0.05")  # relative change; positive same-provider baseline only
-PRICE_MOVE = Decimal("0.10")  # one-session split-adjusted move; operational alert threshold
+PRICE_MOVE = Decimal("0.10")  # adjacent recorded closes; operational alert threshold
 RANK_MOVE = 3  # minimum place movement to avoid routine rerun noise
 
 
@@ -553,8 +553,8 @@ def attention_feed(
             source_reference=document.canonical_url,
         )
 
-    # Price move rule is deliberately simple: one adjacent clean daily session, same listing,
-    # split-adjusted series, at least 10%; corrections and stale gaps are not market moves.
+    # Compare adjacent recorded closes, not assumed exchange sessions. Corrections,
+    # ambiguous same-day observations and stale gaps are not market moves.
     listings = (
         session.execute(
             select(Listing, Security)
@@ -573,6 +573,8 @@ def attention_feed(
                 PriceObservation.price_kind == "DAILY_CLOSE",
                 PriceObservation.market_date >= now - timedelta(days=lookback_days + 5),
                 PriceObservation.market_date <= now,
+                PriceObservation.recorded_at <= now,
+                or_(PriceObservation.observed_at.is_(None), PriceObservation.observed_at <= now),
             )
             .order_by(
                 PriceObservation.listing_id,
@@ -583,30 +585,55 @@ def attention_feed(
         if listings_by_id
         else []
     )
-    price_chains: dict[UUID, list[PriceObservation]] = defaultdict(list)
+    price_chains: dict[UUID, dict[date, list[PriceObservation]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     superseded_prices = set(
         session.scalars(
             select(PriceObservation.supersedes_observation_id).where(
-                PriceObservation.supersedes_observation_id.is_not(None)
+                PriceObservation.supersedes_observation_id.is_not(None),
+                PriceObservation.listing_id.in_(listings_by_id),
+                PriceObservation.market_date <= now,
+                PriceObservation.recorded_at <= now,
+                or_(PriceObservation.observed_at.is_(None), PriceObservation.observed_at <= now),
             )
         ).all()
     )
     for price_observation in price_rows:
-        if (
-            price_observation.id not in superseded_prices
-            and price_observation.supersedes_observation_id is None
-        ):
-            price_chains[price_observation.listing_id].append(price_observation)
-    for listing_id, price_chain in price_chains.items():
+        day = price_observation.market_date.astimezone(UTC).date()
+        price_chains[price_observation.listing_id][day].append(price_observation)
+    for listing_id, dates in price_chains.items():
         listing, security = listings_by_id[listing_id]
         if security.company_id is None:
             continue
         company = issuers.get(security.company_id)
         state = states.get(security.company_id)
-        for prior_price, current_price in zip(price_chain, price_chain[1:], strict=False):
+        days = sorted(dates)
+        for prior_day, current_day in zip(days, days[1:], strict=False):
+            if len(dates[prior_day]) != 1 or len(dates[current_day]) != 1:
+                continue
+            prior_price, current_price = dates[prior_day][0], dates[current_day][0]
+            if any(
+                price.id in superseded_prices or price.supersedes_observation_id is not None
+                for price in (prior_price, current_price)
+            ):
+                continue
             if not _within(current_price.market_date, cutoff, now):
                 continue
             if prior_price.data_quality != "PASS" or current_price.data_quality != "PASS":
+                continue
+            if any(
+                price.observed_at is not None and price.observed_at > price.recorded_at
+                for price in (prior_price, current_price)
+            ):
+                continue
+            if (
+                prior_price.provider != current_price.provider
+                or prior_price.provider_symbol != current_price.provider_symbol
+                or prior_price.currency != current_price.currency
+                or (listing.currency is not None and current_price.currency != listing.currency)
+                or prior_price.adjustment_basis != current_price.adjustment_basis
+            ):
                 continue
             if (
                 prior_price.split_adjusted_close is None
@@ -626,13 +653,14 @@ def attention_feed(
                 lifecycle=state,
                 event_type="PRICE_MOVE",
                 severity="HIGH" if abs(move) >= Decimal("0.20") else "MEDIUM",
-                title=f"{listing.ticker} moved {move:+.1%} in one session",
+                title=f"{listing.ticker} moved {move:+.1%} since the previous recorded close",
                 explanation=(
-                    "Split-adjusted close versus the previous clean session; this "
-                    "threshold is an operational feed rule."
+                    "Split-adjusted close versus the previous unambiguous recorded close; "
+                    "intervening exchange sessions have not been verified. This threshold "
+                    "is an operational feed rule."
                 ),
                 effective_at=current_price.market_date,
-                recorded_at=current_price.recorded_at,
+                recorded_at=max(prior_price.recorded_at, current_price.recorded_at),
                 source_domain="price_observation",
                 source_id=current_price.id,
                 source_reference=current_price.source_ref,
@@ -819,6 +847,7 @@ def attention_feed(
                 PriceObservation.price_kind == "CURRENT_QUOTE",
                 PriceObservation.market_date <= now,
                 PriceObservation.recorded_at <= now,
+                or_(PriceObservation.observed_at.is_(None), PriceObservation.observed_at <= now),
             )
             .order_by(
                 PriceObservation.listing_id,

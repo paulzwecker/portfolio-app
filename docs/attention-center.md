@@ -28,10 +28,15 @@ does not change the feed's read-only behavior; see
   The selected consensus continuity source is used; providers are not blended.
 - New recent filings or issuer documents. A document superseded by a later
   source record is omitted from the current feed.
-- One-session split-adjusted price moves of at least ten percent for one exact
-  listing, compared only across adjacent clean daily observations. Twenty
-  percent or more is high severity. This is a conservative feed threshold, not
-  a new market or investment signal.
+- Split-adjusted moves of at least ten percent between adjacent recorded closes for
+  one exact listing. Both closes must be unambiguous, clean, from the same provider,
+  symbol, currency and adjustment basis, and no more than five calendar days apart.
+  Corrections and conflicting same-day observations do not generate price moves.
+  An observation timestamp after its recorded timestamp is ineligible. The alert's
+  recorded time is the later of its two source records.
+  Exchange-session completeness is not verified, so the feed does not call these
+  one-session moves. Twenty percent or more is high severity. This is an operational
+  threshold, not a new market or investment signal.
 - Portfolio, Watchlist and Research Rank changes when status changes or the
   position moves at least three places within the same ranking-definition
   version.
@@ -53,6 +58,8 @@ identity and results are de-duplicated before stable event-time ordering.
 ## Time and missing data
 
 The feed retains each domain's effective time and recorded time separately.
+Price inputs and superseding corrections are limited to observations recorded and,
+when known, observed by the feed's evaluation time.
 Daily closes and date-only filing dates are marked with date precision; they do
 not claim intraday timestamps. Current data-quality states have no synthetic
 effective or recorded timestamp when none exists; the response-level `as_of`
