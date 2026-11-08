@@ -15,6 +15,13 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                |
 | Integration rule            | Keep completed PRs stable during review. #26 is the cohesive local milestone integration boundary; production gates remain separate   |
 
+Owner-requested consolidation now includes PR #25's exact minimal-receipt adapter
+and its unchanged source-binding/reconciliation tests. Its dated read-only coverage
+assessment is preserved in the [integration history](docs/history/data-ledger-build-through-2026-11-08.md#c21-recorded-readiness-evidence--2026-11-07)
+and [ingestion runbook](docs/production-data-ingestion-operations.md). PR #25 remains
+separately reviewable; its commits are included in this candidate. Further CI and
+sensitivity branches will be integrated before the combined release checks.
+
 Integration review corrected the pre-ledger bootstrap path and added all ledger
 history to the recovery inventory. `9048c47` also pins the existing read-only release
 preflight to the current target and reviewed `9f2a6d4c81b7` → `b59f16c8a203` range.

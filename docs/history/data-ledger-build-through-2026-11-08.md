@@ -323,3 +323,36 @@ strict types, lint, formatting, generated contracts and documentation links curr
 Bounded normal shutdown removes its own schema. Five pre-existing browser schemas
 are preserved. Commands are in the
 [development runbook](../codex-cloud-development.md#portfolio-data-rehearsal).
+
+## C2.1 recorded readiness evidence — 2026-11-07
+
+- Live read-only target/control-plane checks verified the current production
+  identity, `public` schema, head `9f2a6d4c81b7` and unchanged minimal counts.
+  Prices, FX, corporate actions, fundamentals, source documents and models are
+  absent. Private reports retain exact inventory and target evidence.
+- Fixed a confirmed receipt-format incompatibility: provider readiness expected
+  root reconciliation, while minimal Sheets v1 stores it in a linked legacy
+  report. The adapter validates exact versions, hashes, identities and all domain
+  evidence without editing receipts or changing production authorization.
+- The existing production-target read-only market preview changed from
+  `BLOCKED_CANONICAL_IMPORT` to `READY`: 22/22 held mappings, DKK/EUR and USD/EUR,
+  no mapping blockers, zero provider requests and zero database writes. The
+  one-year planning window is 2025-11-07 through 2026-11-06. SEC preview now
+  recognizes the baseline but correctly blocks on zero reviewed CIK mappings.
+- At that assessment recovery was ready, expiring 2026-11-14 09:54 CET, with the empty
+  pre-import state. A separately authorized current-state recovery point is
+  required before future writes. Local TLS required a process-only trusted CA
+  selection, preserving `verify-full`; persistent settings were unchanged.
+- Verification passed: full `npm run check` (169 web tests, 694 API unit tests,
+  two environment-specific skips, strict types, contracts and production build),
+  154 focused tests including 22 isolated PostgreSQL cases, documentation links
+  and Git whitespace checks. The focused suite passed serially after an earlier
+  parallel run encountered a local PostgreSQL connection timeout. An independent
+  security/correctness review approved the adapter and regression coverage.
+- CLI/backend scope; existing frontend tests/build passed. Provider availability,
+  price quality and refreshed browser valuations await separately authorized real
+  ingestion. Next action: CI and owner review of PR #25, then current-state recovery
+  and a bounded execution decision. Production ingestion remains unauthorized.
+- Commits `0324ba7` (receipt adapter/tests) and `b799093` (coverage/recovery
+  runbook) form this independent integration checkpoint. When integrating PR #24
+  and #25, retain its capability roadmap plus this verified C2 outcome.
