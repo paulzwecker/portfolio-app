@@ -10,8 +10,8 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | Consolidated Portfolio release candidate — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                  |
 | Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), based on main `395f842`        |
-| Implementation              | Combined quality/build, 89 managed browser and ten real-API journeys pass; full PostgreSQL/remote CI still running                          |
-| Next ready substantial task | Verify the combined candidate and update PR #26, then owner review and separately authorized recovery/schema/release preflight              |
+| Implementation              | INTEGRATION_VERIFIED code candidate; 307 web / 833 Linux units / 380 Linux PostgreSQL cases and all CI jobs pass                            |
+| Next ready substantial task | Owner review of PR #26, then current-state recovery and separately authorized migration/deployment with exact reviewed commit               |
 | Parallel owner gate         | P-GOOGL assumptions/acceptance, production migrations/deployment, provider activation and ledger source ownership retain separate approvals |
 | Integration rule            | The owner requested latest-work consolidation. Preserve all predecessor commits and evidence; freeze the passing candidate for review       |
 
@@ -24,7 +24,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | C2 daily prices/FX and ledger transition | Implemented/local verification. Real enrichment, refresh activation and source/ownership cutover require separate execution                                                 |
 | C3 SEC facts/filings                     | Implemented/local verification. Reviewed issuer mappings and actual coverage remain operational prerequisites; international and licensed consensus coverage remain partial |
 | C4 actionable decisions                  | Existing engines/UI depend on eligible accepted models, market facts, scores and research evidence                                                                          |
-| C5 operations and delivery               | Guarded workers, recovery preflight, CI classification and authenticated browser fixtures implemented; combined release checks are running                                  |
+| C5 operations and delivery               | Guarded workers, recovery preflight, CI classification and authenticated browser fixtures implemented; combined release checks pass; hosted operational proof remains gated |
 | C6/C7 App Hub and additional apps        | Planned after useful Portfolio workflows and operational safeguards                                                                                                         |
 
 PR #26 now includes the unchanged PR #25 receipt adapter, the preserved CI
@@ -45,8 +45,11 @@ activate ingestion, transfer ownership or accept models. Each retains its own ga
 Combined quality verification passes 307 web and 831 API unit checks with two
 Windows-specific skips. Managed production-browser regression passes 89 cases
 with 29 explicit fixture/live-only gates; ten real FastAPI/PostgreSQL browser
-journeys also pass. The full PostgreSQL sweep and final remote CI remain in
-progress. The handoff records exact scope and review findings.
+journeys also pass. Local PostgreSQL
+passes 376 cases with four privilege-dependent skips. Linux CI passes all 380 and
+833 unit cases. Code `a952d60` passes all three [CI jobs](https://github.com/paulzwecker/portfolio-app/actions/runs/42471476408)
+and Vercel Preview. Require the latest [PR checks](https://github.com/paulzwecker/portfolio-app/pull/26/checks)
+before owner merge. The handoff records exact scope and review findings.
 
 ## How to choose work
 

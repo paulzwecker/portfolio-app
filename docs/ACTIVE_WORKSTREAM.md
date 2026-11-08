@@ -38,7 +38,8 @@ symlink creation and POSIX-only credential modes. Managed production-mode browse
 regression passes 89 cases with 29 explicit fixture/live-only skips. Ten additional
 real FastAPI/PostgreSQL desktop/mobile journeys pass across valued Portfolio,
 ledger preview and SEC data, preserving protected-state hashes. The local full
-PostgreSQL sweep and final remote CI are still in progress.
+PostgreSQL sweep passes 376 cases with four privilege-dependent skips (CREATEDB /
+CREATEROLE). Linux CI passes all 380 PostgreSQL cases and all 833 unit cases.
 
 Conflicts were resolved by retaining the
 ledger ownership validators, SEC endpoints and exact sensitivity model/revision
@@ -49,8 +50,9 @@ Independent contract review preserves every original release API path/schema and
 adds only one sensitivity endpoint and three output schemas. AST review preserves
 130 test function bodies in the ten classification modules. Integration review
 also disables the newly combined real-API opt-ins in managed synthetic mode, with
-five isolation/cleanup checks passing. Require the complete PostgreSQL and remote
-CI gates before review freeze.
+five isolation/cleanup checks passing. Code `a952d60` passes all three
+[GitHub CI jobs](https://github.com/paulzwecker/portfolio-app/actions/runs/42471476408)
+and Vercel Preview. Require the latest PR-head checks before owner review/merge.
 Local PostgreSQL checks use independently verified loopback `_test` infrastructure
 and disposable schemas. Private source packages and diagnostics stay outside Git.
 

@@ -581,3 +581,34 @@ checks and strict mypy pass before the full CI rerun.
 
 Use [the ledger contract](../portfolio-ledger.md), [recurring operations](../recurring-operations.md)
 and [SEC bootstrap](../fundamentals-source-bootstrap.md) for behavior/commands.
+
+## Consolidated release verification — 2026-11-08
+
+Owner-requested consolidation on PR #26 preserves PR #25 (`7d4ce2e`), CI coverage
+(`f72729e`), native sensitivity (`78dcf1b`) and the original data/ledger candidate
+(`2c1b5aa`). Merge commits `afcec83`, `04f19ca`, `8eeefc8` retain all parents.
+
+- `npm run check` passes 307 web and 831 local API unit cases. The two skips concern
+  Windows symlink creation and POSIX credential modes. Strict types cover 211 local
+  backend files. Lint/format, scripts, source policy, contracts and production build
+  pass. Linux CI passes 833 unit cases with zero skips.
+- Full local PostgreSQL selection passes 376 cases with four CREATEDB/CREATEROLE
+  skips. Linux CI passes all 380, including role isolation and backup/restore.
+- Managed production-mode browser regression passes 89 with 29 explicit opt-in gates.
+  Ten additional real API/PostgreSQL desktop/mobile journeys pass across valued
+  Portfolio, ledger preview and SEC coverage with protected-state checks. Both
+  dedicated synthetic API servers exited normally and removed their own schemas.
+- Every original API path and schema definition is preserved, with one read-only
+  sensitivity path and three output schemas added. All 130 test bodies across the
+  ten reclassified modules match the original release candidate.
+- Migrations retain a single head `b59f16c8a203`, following `a832e94d6f10` and
+  `9f2a6d4c81b7`. The two new upgrades create tables/indexes, preserving existing
+  application records. Ownership activation and populated-history downgrade guards
+  remain explicit.
+- Code `a952d60` passes all three [GitHub Actions jobs](https://github.com/paulzwecker/portfolio-app/actions/runs/42471476408)
+  and Vercel Preview. Latest documentation-head checks remain the final review gate.
+- Current production schema, provider freezes, source freshness and recovery were
+  not reverified during consolidation. Fresh current-state recovery, explicit
+  migration/deployment authorization and post-release investor readback remain gates.
+  Automatic ingestion, source ownership and investment acceptance retain separate
+  authorization. No protected production operation was executed.
