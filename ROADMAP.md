@@ -10,8 +10,8 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C5.2 PostgreSQL test coverage — BUILD. [Handoff](docs/testing.md#current-build-checkpoint)                                                                                                                                |
 | Branch / PR                 | `codex/ci-database-test-coverage`, from merged main `395f842`. Local BUILD branch                                                                                                                                         |
-| Implementation              | Thirty-two database-dependent cases reclassified and LOCAL_VERIFIED in isolated PostgreSQL schemas                                                                                                                        |
-| Next ready substantial task | Add fail-fast collection classification checks and prove unit/integration selection without database access                                                                                                               |
+| Implementation              | C5.2 classification and fail-fast guards LOCAL_VERIFIED with focused unit/PostgreSQL checks                                                                                                                               |
+| Next ready substantial task | Integrate after pending owner-reviewed PRs merge; verify combined baseline and full CI at the integration gate                                                                                                            |
 | Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await owner review/merge. Production operations retain separate authorization |
 | Integration rule            | Keep completed PRs stable. Integrate this independent test work with latest main after owner merges; preserve both capability and evidence ledgers                                                                        |
 
@@ -24,8 +24,13 @@ marker selection omitted them. Explicit markers restore financial-statement,
 consensus/history, source-evidence, scheduler and manual-refresh checks. All 32
 pass on verified loopback PostgreSQL 18.3 using only random disposable schemas.
 Test bodies and financial assertions are preserved. Collection now selects 643 unit
-cases with zero PostgreSQL consumers and 178 integration cases. Source-bound tests
-retain their separate privacy/opt-in policy. The preventive collection guard is next.
+cases with zero PostgreSQL consumers before the guard increment. The completed
+collection/runtime guard now selects 649 unit and 178 integration cases. Six
+synthetic pytest-subprocess regressions and 71 focused unit checks pass without a
+usable database, plus all 32 classified PostgreSQL cases with the guard active.
+Dynamic requests fail before missing-DB skips. Source-bound tests retain their
+separate privacy/opt-in policy. Types, scoped lint/format, source policy, docs and
+whitespace pass. Combined-baseline and remote CI verification remain for INTEGRATE.
 
 ## How to choose work
 
