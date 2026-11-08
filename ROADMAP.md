@@ -6,14 +6,16 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                 |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 settled ledger and C5 release-safety integration candidate. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                         |
-| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`; [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)               |
-| Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated |
-| Next ready substantial task | Review combined milestone PR and CI; prepare separately authorized backup and provider activation                                             |
-| Parallel owner gate         | Production deployment unfreeze, release configuration, future migrations and ingestion retain separate approvals                              |
-| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream   |
+| Field                       | Current value                                                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Personal Universe design foundation and Portfolio experience — INTEGRATE. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
+| Branch / PR                 | `codex/personal-universe-design-system` / [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28), based on main `685fa7a`                       |
+| Implementation              | Reference-based shared tokens, appearance selector, showcase and Portfolio holdings search are LOCAL_VERIFIED                                           |
+| Next ready substantial task | Review PR #28 after CI; retain production deployment freezes                                                                                            |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                            |
+| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                                        |
+
+PR #27 is merged into main; deployment freezes and recovery authorization gates remain in effect.
 
 Historical November 8 incident evidence identified a healthy old Render deployment (`395f842`),
 new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail
@@ -54,8 +56,7 @@ owner's retention choices and separately authorized recovery work. Twenty-one fo
 release and local-tool checks, `npm run check`, and three synthetic PostgreSQL
 archive/restore integration cases pass. The focused 79-case ledger integration
 selection and six authenticated desktop/mobile browser checks also passed. The full
-389-case PostgreSQL selection remains uncompleted locally; CI must run it. These
-results do not establish production readiness.
+PostgreSQL CI job passed for PR #27. These results do not establish production readiness.
 
 ## Where we are
 
@@ -76,8 +77,8 @@ preserves each predecessor's scope and checks. All branches, stash and private
 source artifacts are preserved.
 
 **Release prerequisite.** This code requires additive migrations
-`9f2a6d4c81b7` → `a832e94d6f10` → `b59f16c8a203`. Production was last recorded at
-`9f2a6d4c81b7`; its current state must be reverified. Before releasing schema-dependent
+`9f2a6d4c81b7` → `a832e94d6f10` → `b59f16c8a203`. Production was verified at
+`b59f16c8a203` after the authorized recovery; reverify it before future operations. Before releasing schema-dependent
 code, follow the [native-provider freeze, current-state recovery and guarded migration
 procedure](docs/deployment-and-migrations.md). The historical empty pre-import
 recovery branch does not protect accepted holdings. Schema deployment does not

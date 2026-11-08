@@ -1,10 +1,27 @@
 # Active workstream
 
-## C2.3 settled multi-account ledger — BUILD checkpoint complete
+## Personal Universe design system — INTEGRATE
 
-Continue branch `codex/portfolio-ledger-income`, based on main `deda2ce`, the merge
+The independent `codex/personal-universe-design-system` worktree starts at current
+main `685fa7a` after merging [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27)
+which contains the separate ledger/release work. Owner reference screenshots stay untracked
+in the original workspace. The shared token palette, accessible appearance selector,
+interactive component reference and Portfolio holdings search are locally verified.
+The design contract is [here](design/design-system-and-frontend-architecture-11b.md).
+`npm run check` passed (314 web tests, 899 backend units, two skips). Managed browser
+regression passed 91 tests with 35 explicit fixture/live-only skips. Synthetic
+desktop/mobile screenshots were visually reviewed outside Git; appearance, search,
+drawer keyboard handling and 320 px overflow checks pass. The full production
+release and recovery controls remain separate. [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28)
+requires CI and owner review; keep production frozen. No production action.
+
+The following ledger and release notes preserve historical evidence from PR #27.
+
+## Historical C2.3 settled multi-account ledger checkpoint
+
+The prior branch `codex/portfolio-ledger-income` was based on main `deda2ce`, the merge
 of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26). The combined
-candidate is [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27).
+work was merged in [PR #27](https://github.com/paulzwecker/portfolio-app/pull/27).
 Preserve all predecessor branches, stash and private files.
 Income was committed through `0a57454`, cash transfers through `c9f58d7`, and
 security-transfer implementation starts at `35c902e`.
@@ -144,12 +161,10 @@ Exact contracts live in the [ledger reference](portfolio-ledger.md).
 - Independent review preserves identity, evidence, financial/ownership separation
   and production authorization. This is synthetic/local verification only.
 
-## Next action — integration review
+## Historical ledger integration review
 
 The bounded settled-ledger and release-safety scope is IMPLEMENTATION_COMPLETE /
-LOCAL_VERIFIED. Main was fetched and is the branch base; the integrated checks and
-remaining full-CI limitation are recorded above. Review PR #27, require all three
-GitHub jobs and freeze a passing candidate for owner review. Provider activation and durable production recovery remain
+LOCAL_VERIFIED. PR #27 passed its three GitHub jobs and was merged. Provider activation and durable production recovery remain
 separately authorized work. Broker imports, normalized account
 management, lots/gains, FX/in-transit rules and genuine TWR/XIRR remain subsequent
 capabilities with their own source/policy dependencies.

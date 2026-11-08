@@ -26,6 +26,7 @@ For database operations use [write targets](database-write-targets.md) and
 
 - [Product vision](PRODUCT_VISION.md)
 - [Portfolio architecture](architecture/portfolio-application.md)
+- [Shared design system and frontend conventions](design/design-system-and-frontend-architecture-11b.md)
 - [Personal Universe architecture](architecture/personal-universe.md)
 - [Explicit publication decision](architecture/decisions/001-explicit-model-publications.md)
 - [Independent-model decision](architecture/decisions/002-independent-company-models.md)
