@@ -6,21 +6,21 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                         |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C5 read-only migration preflight PASSED; C2.3 settled-ledger BUILD checkpoint preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                         |
-| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                               |
-| Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated         |
-| Next ready substantial task | Owner review of exact schema migration and coordinated deployment plan; fresh preflight must remain within Nov 8 18:19:38 CET recovery window         |
-| Parallel owner gate         | Production migration/deployment, any replacement recovery point, provider activation, model acceptance and ledger ownership retain separate approvals |
-| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream           |
+| Field                       | Current value                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C5 release safety integration; C2.3 settled-ledger milestone preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                  |
+| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                       |
+| Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated |
+| Next ready substantial task | Complete review and integration checks for the combined ledger/release branch; obtain owner review for provider activation                    |
+| Parallel owner gate         | Production deployment unfreeze, release configuration, future migrations and ingestion retain separate approvals                              |
+| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream   |
 
-November 8 incident evidence confirms a healthy old Render deployment (`395f842`),
+Historical November 8 incident evidence identified a healthy old Render deployment (`395f842`),
 new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail
 with 404; canonical portfolio counts remain intact. A fresh populated-state recovery
 point and separate migration/deployment authorization are required. The
 [release runbook](docs/deployment-and-migrations.md) records the exact plan, CI
-sequencing cause and offline release gate. The marker stays at the verified schema;
+sequencing cause and offline release gate. The marker then recorded the old schema;
 the initial investigation made no production/provider change. Focused checks passed 16 deployment,
 55 readiness/preflight and three isolated migration/replay tests, plus docs/privacy.
 
@@ -33,10 +33,18 @@ from a separate clean main worktree at `deda2ced13df8ef0874df2727cca0d050ab6c164
 using the new recovery secret only in process memory. All 95 schema/data fingerprints
 and migration ownership/privileges were reverified; write authorization remains
 disabled. Planned scope adds three tables/two indexes and updates Alembic metadata;
-accepted data stays unchanged. Recovery freshness ends **18:19:38 CET today**, with
-branch expiry November 15 at 14:18:37 CET. Exact evidence stays private. Separate
-owner migration and controlled deployment approvals are next; all freezes remain
-active. The older API may become unready during the coordinated schema/code cutover.
+accepted data stays unchanged. Recovery freshness ended at 18:19:38 CET on November 8,
+with branch expiry November 15 at 14:18:37 CET. Exact evidence stays private. At
+that checkpoint migration and deployment still needed separate owner approval.
+
+**Incident resolution, November 8.** The authorized migration reached `b59f16c8a203`
+and the single authorized Render deployment of `deda2ce` restored health. The owner
+confirmed frontend readback and portfolio reconciliation reported zero differences.
+Production freezes remain active. The release gate uses the verified schema; Vercel
+requires independently enforced GitHub Deployment Checks before safe activation.
+The earlier incident and preflight observations above are historical. The next
+price/FX step is the existing target-bound read-only held-listing preview, followed
+by a separately approved bounded provider scope. No provider request is authorized.
 
 ## Where we are
 

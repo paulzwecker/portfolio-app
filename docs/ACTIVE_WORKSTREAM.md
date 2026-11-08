@@ -8,7 +8,7 @@ for this milestone. Preserve all predecessor branches, stash and private files.
 Income was committed through `0a57454`, cash transfers through `c9f58d7`, and
 security-transfer implementation starts at `35c902e`.
 
-## Current operational priority — read-only migration preflight passed
+## Historical incident investigation and migration preflight
 
 November 8 read-only investigation confirms Render rejected main `deda2ce` and
 continues serving healthy `395f842`; Vercel production already serves `deda2ce`.
@@ -25,7 +25,7 @@ read-only preflight and owner-gated freeze → fresh populated recovery → migr
 LOCAL_VERIFIED with 16 deployment-policy checks, 55 readiness/preflight tests and
 three disposable PostgreSQL migration/replay tests. Docs and privacy checks pass.
 Applied migration history matches all 57 files in the live API commit.
-The marker stays at the verified old head, so `deploy` deliberately fails closed.
+At that checkpoint the marker remained at the old head, so `deploy` failed closed.
 The initial investigation made no provider, recovery, schema or canonical changes.
 Keep this correction on the same milestone branch; no separate minor PR.
 
@@ -50,15 +50,37 @@ quoting error was corrected before that comparison executed. Existing accepted
 counts/receipts and target total remain intact. Expected scope is three empty new
 tables, two indexes and the controlled Alembic version-row update to `b59f16c8a203`.
 
-Next is separate owner approval of that exact migration and the subsequent matching
-API deployment. The old API's strict readiness can fail after schema advances, so
-reserve a coordinated window. Recovery freshness ends **November 8 at 18:19:38 CET**;
-expiry is November 15 at 14:18:37 CET. A replacement needs new authorization after
-the freshness window. Restore remains unexercised; project PITR history is 24 hours.
+At the phase-2 checkpoint, the next action was separate owner approval of the
+migration and matching API deployment. Recovery freshness ended November 8 at 18:19:38 CET;
+expiry is November 15 at 14:18:37 CET. A future migration requires a fresh recovery
+point and separate authorization. Restore remains unexercised; project PITR history is 24 hours.
 All freezes and write/background restrictions remain in place. Private phase-2
 reports retain exact identities and comparisons; the root .env remains unchanged.
 The durable schema hook still needs reviewed integration/installation; preserve
 the independent ledger INTEGRATE checkpoint and one cohesive PR.
+
+## Incident resolution and release safety
+
+The owner authorized one migration and one Render deployment. At 14:11 UTC on
+November 8, production schema `b59f16c8a203`, Render `deda2ce`, health, owner
+frontend readback and all 98 table fingerprints reconciled. Prior incident and
+preflight sections above retain historical evidence. Production freezes remain
+active. No source data or credentials are recorded here.
+
+The local release attestation now reflects the verified schema. CI checks Vercel
+configuration for freeze overrides, and tests exercise the actual ignored-build
+hook. Eighteen focused deployment-policy tests, the documentation checks and three
+source-data policy tests passed. The hook does not wait for main CI and a repository override can bypass the
+project setting. Configure and verify Vercel GitHub Deployment Checks for all three
+CI jobs before any owner-authorized unfreeze. Review the activation sequence and
+limitations in the release runbook. Provider settings and a live failed-check test
+remain owner-gated.
+
+Next price/FX slice is the existing read-only, target-bound market-data preview of
+all held listing crosswalks and required FX pairs using a reviewed date window.
+Keep reports private. Provider requests, run preparation, writes and scheduling
+require separate approval. Resume the ledger integration checkpoint below without
+discarding it.
 
 ## Complete bounded scope
 

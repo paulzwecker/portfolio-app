@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   existsSync,
+  copyFileSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -18,6 +19,7 @@ import {
   evaluateSchema,
   historyFingerprint,
   migrationGraph,
+  validateVercelConfig,
 } from "./schema-gate.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -31,6 +33,21 @@ function migration(revision, parents = "None") {
   };
 }
 const files = [migration("base"), migration("next", '"base"')];
+
+test("repository configuration cannot override the operator's Vercel release gate", () => {
+  assert.doesNotThrow(() => validateVercelConfig({ framework: "nextjs" }));
+  for (const invalid of [
+    null,
+    [],
+    { ignoreCommand: "exit 1" },
+    { ignoreCommand: null },
+    { git: null },
+    { git: "invalid" },
+    { git: { deploymentEnabled: true } },
+  ]) {
+    assert.throws(() => validateVercelConfig(invalid));
+  }
+});
 function attestation(revision = "base", source = files) {
   return {
     ...marker,
@@ -231,5 +248,73 @@ test("documented Vercel shell hook skips production even if Node crashes or the 
       path.basename(temporaryRoot).startsWith("portfolio-schema-gate-"),
     );
     rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("the actual Vercel hook and CI gate agree on missing, pending and promoted schemas", (context) => {
+  const shell =
+    process.platform === "win32"
+      ? path.join(
+          process.env.ProgramFiles ?? "C:/Program Files",
+          "Git/bin/bash.exe",
+        )
+      : "/bin/sh";
+  if (!existsSync(shell)) return context.skip("POSIX shell unavailable");
+  const runbook = readFileSync(
+    new URL("../../docs/deployment-and-migrations.md", import.meta.url),
+    "utf8",
+  );
+  const command = runbook
+    .split(/\r?\n/)
+    .find((line) => line.startsWith('if [ "$VERCEL_ENV" = "preview" ]'));
+  assert.ok(command);
+  const temp = mkdtempSync(path.join(os.tmpdir(), "portfolio-release-gate-"));
+  const scriptDir = path.join(temp, "scripts/deployment");
+  const migrations = path.join(temp, "apps/api/migrations/versions");
+  const web = path.join(temp, "apps/web");
+  try {
+    for (const dir of [scriptDir, migrations, web])
+      mkdirSync(dir, { recursive: true });
+    copyFileSync(
+      new URL("./schema-gate.mjs", import.meta.url),
+      path.join(scriptDir, "schema-gate.mjs"),
+    );
+    for (const file of files)
+      writeFileSync(path.join(migrations, file.name), file.content);
+    const manifest = path.join(scriptDir, "production-schema.json");
+    const config = path.join(web, "vercel.json");
+    writeFileSync(config, JSON.stringify({ framework: "nextjs" }));
+    const ci = (mode) =>
+      spawnSync(
+        process.execPath,
+        [path.join(scriptDir, "schema-gate.mjs"), mode],
+        { cwd: temp },
+      ).status;
+    const hook = (environment) =>
+      spawnSync(shell, ["-c", command], {
+        cwd: web,
+        env: { ...process.env, VERCEL_ENV: environment },
+      }).status;
+    assert.equal(ci("review"), 1);
+    assert.equal(ci("deploy"), 1);
+    assert.equal(hook("production"), 0);
+    assert.equal(hook("preview"), 1);
+    writeFileSync(manifest, JSON.stringify(attestation()));
+    assert.equal(ci("review"), 0);
+    assert.equal(ci("deploy"), 1);
+    assert.equal(hook("production"), 0);
+    writeFileSync(manifest, JSON.stringify(attestation("next")));
+    assert.equal(ci("deploy"), 0);
+    assert.equal(hook("production"), 1);
+    writeFileSync(config, JSON.stringify({ ignoreCommand: "exit 1" }));
+    assert.equal(ci("review"), 1);
+    assert.equal(ci("deploy"), 1);
+    // This simulates the dashboard command itself. Vercel's override precedence
+    // requires the independent provider Deployment Checks described in the runbook.
+    assert.equal(hook("production"), 0);
+  } finally {
+    assert.equal(path.dirname(path.resolve(temp)), path.resolve(os.tmpdir()));
+    assert.ok(path.basename(temp).startsWith("portfolio-release-gate-"));
+    rmSync(temp, { recursive: true, force: true });
   }
 });

@@ -59,6 +59,20 @@ test("GitHub PR and main CI provide the three documented required checks", () =>
   ]) {
     assert.ok(ci.includes(`name: ${jobName}`), `missing CI check ${jobName}`);
   }
+  for (const job of ["quality", "integration", "powershell"]) {
+    const definition = ci.match(
+      new RegExp(
+        `^  ${job}:\\s*\\r?\\n([\\s\\S]*?)(?=^  [a-zA-Z_][\\w-]*:\\s*$|(?![\\s\\S]))`,
+        "m",
+      ),
+    );
+    assert.ok(definition, `missing required CI job ${job}`);
+    assert.doesNotMatch(
+      definition[1],
+      /^    if:/m,
+      `${job} must not be skipped`,
+    );
+  }
   assert.doesNotMatch(
     ci,
     /npm run db:migrate|db:production-preflight|DATABASE_PRODUCTION_WRITES_AUTHORIZED/,

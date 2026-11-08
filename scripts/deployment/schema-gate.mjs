@@ -150,6 +150,30 @@ export function evaluateSchema(files, attestation) {
   };
 }
 
+export function validateVercelConfig(config) {
+  requireCondition(
+    config && typeof config === "object" && !Array.isArray(config),
+    "VERCEL_CONFIG_INVALID",
+  );
+  // A repository-level command overrides the operator's production freeze or gate.
+  requireCondition(
+    !Object.hasOwn(config, "ignoreCommand"),
+    "VERCEL_IGNORE_COMMAND_OVERRIDE",
+  );
+  if (Object.hasOwn(config, "git")) {
+    requireCondition(
+      config.git &&
+        typeof config.git === "object" &&
+        !Array.isArray(config.git),
+      "VERCEL_GIT_CONFIG_INVALID",
+    );
+  }
+  requireCondition(
+    !config.git || !Object.hasOwn(config.git, "deploymentEnabled"),
+    "VERCEL_DEPLOYMENT_OVERRIDE",
+  );
+}
+
 export function commandExitCode(mode, result) {
   if (mode === "review") return result ? 0 : 1;
   if (mode === "deploy")
@@ -176,6 +200,9 @@ function main() {
         path.join(root, "scripts/deployment/production-schema.json"),
         "utf8",
       ),
+    );
+    validateVercelConfig(
+      JSON.parse(readFileSync(path.join(root, "apps/web/vercel.json"), "utf8")),
     );
     const result = evaluateSchema(files, attestation);
     process.stdout.write(`${JSON.stringify(result)}\n`);

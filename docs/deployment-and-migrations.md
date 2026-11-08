@@ -93,6 +93,13 @@ reviewer. See [GitHub's required-review behavior](https://docs.github.com/en/pul
 
 ## November 8 incident and immediate recovery gate
 
+**Resolution.** On November 8 the owner authorized one migration and one Render
+deployment. Production reached `b59f16c8a203`, all accepted portfolio fingerprints
+reconciled, and Render deployment `dep-dbo84g5g1s2s73ef7kcg` became live at
+`deda2ce`. Authenticated frontend and API reads passed. Render Auto-Deploy and
+Blueprint Auto Sync remain off, and Vercel production builds remain frozen.
+The observations below describe the earlier incident and its historical procedure.
+
 Read-only checks at 12:23–12:45 UTC found release skew after
 [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) merged as
 `deda2ced13df8ef0874df2727cca0d050ab6c164`.
@@ -173,8 +180,10 @@ metadata without importing migrations or contacting databases. It validates the
 single-head graph, including historical merges. The owner-reviewed
 [production schema attestation](../scripts/deployment/production-schema.json)
 records exact target, verified revision/time and SHA-256 of applied migration files,
-normalized to LF. Changes to applied history fail closed. The current attestation
-deliberately remains at observed production revision `9f2a6d4c81b7`.
+normalized to LF. Changes to applied history fail closed. The checked-in attestation
+records `b59f16c8a203`, verified on November 8 against the production target and
+the exact migrated main checkout. Reverify production after a restore or unexpected
+drift; the file does not query Neon.
 
 ```sh
 node scripts/deployment/schema-gate.mjs review
@@ -187,6 +196,55 @@ head matches the attestation. Render must retain **After CI Checks Pass**. No
 production credential, migration or cloud request enters CI. The attestation is
 reviewed evidence, not a live monitor; cloud drift or restore requires new
 target-bound verification and a production freeze.
+
+The gate rejects `apps/web/vercel.json` overrides of `ignoreCommand` and
+`git.deploymentEnabled`. Vercel gives a repository `ignoreCommand` precedence over
+the project setting, so review those files and the gate itself in every release PR.
+CI cannot stop a bypassed Vercel build by itself. Require Vercel GitHub Deployment
+Checks on the exact main commit before production aliasing, as described below.
+
+| Decision              | Required evidence                                                                                                                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PR CI green           | Synthetic checks and Preview passed. A pending migration can still be reported.                                                                                   |
+| Safe to merge         | Owner reviewed code, gate/config changes and migration order. A schema-dependent PR requires verified production freezes.                                         |
+| Safe to deploy        | The exact main SHA passed all three CI jobs, the schema attestation matches the verified target, and Vercel's required checks and hook are active.                |
+| Coordinated migration | Fresh populated recovery, read-only target preflight and separate owner migration and deployment authorizations. Keep both providers frozen through verification. |
+
+### Owner activation sequence
+
+1. Keep the current freezes. Review the combined milestone PR, including the gate,
+   attestation and any `vercel.json` changes. Merge requires separate owner action.
+2. Verify the exact merged main SHA passed all three named GitHub CI checks. Confirm
+   Render remains off and Vercel skipped production while PR Preview remains enabled.
+3. In the existing Vercel project's Production Deployment Checks, select GitHub
+   checks `Quality, contracts and build`, `PostgreSQL integration tests`, and
+   `Windows migration command compatibility`. Verify the current account/plan can
+   enforce each check on the same production commit. Pending, missing and failed
+   checks must hold promotion. Vercel can treat neutral or skipped checks as
+   non-blocking, so all three required jobs must run unconditionally. Keep the
+   freeze if settings or enforcement cannot be verified. Avoid duplicate workflow/
+   job names, skipped checks and force-promote.
+4. After the gate is on main, verify the configured checks while the Vercel freeze
+   remains in place. The Custom Ignored Build Step below is a **controlled Vercel
+   unfreeze**. Change it only for a separately authorized test window, with Render
+   still frozen and no unrelated pushes. Confirm the exact value, exposed system
+   variables and absence of repository overrides before any test. This setting is
+   currently **not installed**.
+5. With explicit deployment authorization, verify the provider checks and hook in
+   a controlled release, including missing/failed check behavior and the exact SHA.
+   No such live experiment has been run in this task. If evidence is inconclusive,
+   restore the Vercel production freeze under the owner's configuration authority.
+6. After that evidence and explicit authorization, restore Render Auto-Deploy to
+   **After CI Checks Pass**, then Blueprint Auto Sync if applicable. Verify the
+   actual settings, exact code revisions and authenticated readback. Never force a
+   Vercel promotion or bypass a failed check to complete activation.
+
+Vercel can deploy independently of Render's CI gate. Its Deployment Checks and
+ignore hook cover different failure modes. The hook uses reviewed source files and
+cannot prove live schema state or protect against privileged manual deployment or
+force promotion. Owner review and the migration runbook remain necessary. See
+[Vercel Deployment Checks](https://vercel.com/docs/deployment-checks) and
+[Vercel project configuration](https://vercel.com/docs/project-configuration/vercel-json).
 
 For Vercel, after owner approval and once the script is available on main, replace
 the temporary freeze with this Custom Ignored Build Step, root `apps/web`.
