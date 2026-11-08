@@ -591,3 +591,44 @@ The pre-migration Neon branch is time-limited recovery protection, not a perpetu
 backup or automated rollback. After accepted application data exists, verify the
 restore procedure on isolated infrastructure and make an appropriately retained
 recovery point before every production schema change.
+
+### Durable recovery of populated production
+
+The November 8 populated recovery branch is a **pre-migration** state and expires
+November 15 at 14:18 CET. It protects the accepted portfolio at capture time, not
+subsequent writes or the current schema. Its existence does not prove a restore.
+The observed 24-hour Neon history window is a dated project observation, not a
+durable off-provider backup or a promise of future retention. Check the active plan,
+history, branch expiry and restore permissions before relying on them.
+
+The existing [PostgreSQL migration toolkit](postgresql-migration.md) explicitly
+accepts only a loopback source. It must not be pointed at production through a
+tunnel to evade that guard. No production archive or complete restore rehearsal
+has been verified by this procedure. As a local, non-database prerequisite check:
+
+```powershell
+node scripts/deployment/recovery-tools.mjs --pg-bin "$env:ProgramFiles\PostgreSQL\18\bin"
+```
+
+`TOOLS_AVAILABLE` establishes only that the matching client executables can report
+their PostgreSQL 18 versions; it does not prove encryption, permissions, connectivity,
+archive integrity, backup coverage or restore success.
+
+Before expiration the owner should choose a recovery point objective and retention
+period, confirm Neon plan capabilities/costs, and separately authorize a current
+populated-state recovery point and an independent encrypted off-provider backup.
+Use least-privilege read access, `verify-full`, private storage outside Git/cloud-sync,
+and a reviewed snapshot-consistent PostgreSQL 18 export. Preserve a versioned
+manifest with schema, source identity, timestamps, file hashes and coverage; verify
+archive integrity without publishing portfolio data. Establish retention and secure
+off-device copy with tested access and key recovery. These are requirements for a
+separately reviewed production backup procedure, not claims that one exists here.
+
+Separately authorize an isolated restore rehearsal with an exact nonproduction target;
+verify schema and complete table/sequence fingerprints, accepted portfolio counts,
+receipts and application readback. Record restore duration, residual gaps and the
+recovery point's timestamp privately. Repeat on an owner-defined schedule and after
+material schema changes. A real production restore or any rerouting remains a distinct
+authorization, with writes frozen and post-backup changes reconciled. Keep the expiring
+branch until a replacement is verified; do not assume PITR, branch snapshots or a
+successful hash check alone prove recoverability.

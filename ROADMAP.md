@@ -46,6 +46,15 @@ The earlier incident and preflight observations above are historical. The next
 price/FX step is the existing target-bound read-only held-listing preview, followed
 by a separately approved bounded provider scope. No provider request is authorized.
 
+The current populated recovery branch expires November 15 at 14:18 CET; it is not a
+durable backup. Local PostgreSQL 18 backup/restore clients were version-checked, but
+the existing archive toolkit rejects production sources, and no production archive
+or isolated restore rehearsal has been verified. The release runbook identifies the
+owner's retention choices and separately authorized recovery work. Twenty-one focused
+release and local-tool checks, `npm run check`, and three synthetic PostgreSQL
+archive/restore integration cases pass. The full PostgreSQL selection remains
+uncompleted; these results do not establish production readiness.
+
 ## Where we are
 
 | Outcome                                  | Actual state                                                                                                                                                                |

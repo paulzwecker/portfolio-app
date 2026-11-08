@@ -76,6 +76,20 @@ CI jobs before any owner-authorized unfreeze. Review the activation sequence and
 limitations in the release runbook. Provider settings and a live failed-check test
 remain owner-gated.
 
+The recovery review confirmed the existing full-archive toolkit only accepts a local
+source. PostgreSQL 18 `pg_dump` and `pg_restore` version probes passed locally; this
+does not verify any production backup or restore. The populated Neon branch expires
+November 15 at 14:18 CET and predates the current schema. The release runbook now
+records retention, independently stored backup and isolated restore rehearsal gaps.
+Twenty-one focused release/recovery checks pass. Owner decisions and separate
+authorization are needed before establishing or rehearsing durable protection.
+The comprehensive `npm run check` passed (899 backend units and 311 web tests;
+two backend tests skipped). Three PostgreSQL archive/restore integration cases
+passed separately on a disposable loopback PostgreSQL 18 cluster with required
+test privileges. Both PowerShell wrapper smoke tests passed. A full 389-case
+PostgreSQL integration run was started but not completed; retain the earlier
+79-case ledger evidence below and rerun the full selection at integration.
+
 Next price/FX slice is the existing read-only, target-bound market-data preview of
 all held listing crosswalks and required FX pairs using a reviewed date window.
 Keep reports private. Provider requests, run preparation, writes and scheduling
