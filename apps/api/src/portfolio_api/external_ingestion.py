@@ -16,10 +16,11 @@ import urllib.error
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -60,17 +61,25 @@ from portfolio_api.reported_fundamentals import (
     _load_cik_mappings,
     sync_reported_fundamentals,
 )
+from portfolio_api.sec_refresh_scope import (
+    SEC_SCOPE_VERSION,
+    SecRefreshScopeError,
+    capture_sec_refresh_scope,
+    validate_sec_refresh_scope,
+)
 from portfolio_api.settings import Settings
 from portfolio_api.source_documents import sync_sec_source_documents
 from portfolio_api.yahoo_finance import (
     FX_SYMBOLS,
     YAHOO_PROVIDER_ID,
     YahooFinanceProvider,
+    YahooListingCrosswalk,
     load_yahoo_crosswalk,
     yahoo_mapping_for_listing,
 )
 
 MAX_ATTEMPTS = 3
+CLOUD_RETRY_COOLDOWN = timedelta(minutes=15)
 MAX_RETRY_DELAY_SECONDS = 30.0
 ABANDONED_RUN_AGE = timedelta(hours=4)
 DAILY_DOMAINS = (
@@ -126,6 +135,7 @@ class RunClaim:
     created: bool
     status: str
     request_scope: dict[str, Any]
+    retrying: bool = False
 
 
 def retry_delay_seconds(attempt_number: int, retry_after_seconds: float | None = None) -> float:
@@ -287,6 +297,7 @@ def _scope_for_domain(
     end_date: date,
     lookback_days: int,
     company_ids: set[UUID] | None = None,
+    yahoo_crosswalk: YahooListingCrosswalk | None = None,
 ) -> dict[str, Any]:
     if domain in {
         ExternalDataDomain.FX,
@@ -312,7 +323,7 @@ def _scope_for_domain(
                 }
             if company_ids is None and ("TWD", "EUR") in FX_SYMBOLS:
                 required_fx_pairs.add(("TWD", "EUR"))
-            crosswalk = load_yahoo_crosswalk(CROSSWALK_PATH)
+            crosswalk = yahoo_crosswalk or load_yahoo_crosswalk(CROSSWALK_PATH)
             if base_currency is not None:
                 for listing, security, _company in selected:
                     mapping = yahoo_mapping_for_listing(
@@ -393,7 +404,7 @@ def parse_fx_pair(value: str) -> tuple[str, str]:
 
 def _mark_interrupted_run(session: Session, run: ExternalIngestionRun, at: datetime) -> None:
     started_at = run.last_attempt_started_at or run.started_at
-    if at - started_at < ABANDONED_RUN_AGE:
+    if run.status != "RUNNING" or at - started_at < ABANDONED_RUN_AGE:
         return
     attempt_number = max(run.attempt_count, 1)
     existing = session.scalar(
@@ -426,6 +437,21 @@ def _mark_interrupted_run(session: Session, run: ExternalIngestionRun, at: datet
     session.commit()
 
 
+def cloud_retry_eligible_at(
+    run: ExternalIngestionRun, attempt: ExternalIngestionAttempt | None
+) -> datetime | None:
+    """Return eligibility within the persisted budget, independently of worker activation."""
+    if (
+        run.status not in {"FAILED", "PARTIAL"}
+        or run.attempt_count >= run.max_attempts
+        or run.finished_at is None
+        or attempt is None
+        or not (attempt.retryable or run.failure_code == "WORKER_INTERRUPTED")
+    ):
+        return None
+    return run.finished_at + CLOUD_RETRY_COOLDOWN
+
+
 def _claim_run(
     session: Session,
     provider_id: str,
@@ -435,6 +461,7 @@ def _claim_run(
     run_date: date,
     replay_nonce: UUID | None = None,
     replay_of_run_id: UUID | None = None,
+    retry_failed: bool = False,
 ) -> RunClaim:
     current = datetime.now(UTC)
     run_id = uuid4()
@@ -466,13 +493,35 @@ def _claim_run(
     session.commit()
     if inserted_id is not None:
         return RunClaim(run_id, provider_id, domain, True, "RUNNING", request_scope)
-    existing = session.scalar(
-        select(ExternalIngestionRun).where(ExternalIngestionRun.idempotency_key == key)
-    )
+    existing_query = select(ExternalIngestionRun).where(ExternalIngestionRun.idempotency_key == key)
+    if retry_failed:
+        existing_query = existing_query.with_for_update()
+    existing = session.scalar(existing_query)
     if existing is None:
         raise RuntimeError("Idempotent ingestion run could not be loaded after insert conflict")
     _mark_interrupted_run(session, existing, current)
-    session.refresh(existing)
+    session.refresh(existing, with_for_update=True if retry_failed else None)
+    if retry_failed:
+        attempt = session.scalar(
+            select(ExternalIngestionAttempt)
+            .where(ExternalIngestionAttempt.run_id == existing.id)
+            .order_by(ExternalIngestionAttempt.attempt_number.desc())
+            .limit(1)
+        )
+        eligible_at = cloud_retry_eligible_at(existing, attempt)
+        if eligible_at is not None and current >= eligible_at:
+            existing.status = "RUNNING"
+            existing.last_attempt_started_at = current
+            existing.finished_at = None
+            return RunClaim(
+                existing.id,
+                provider_id,
+                domain,
+                False,
+                "RUNNING",
+                existing.request_scope,
+                retrying=True,
+            )
     return RunClaim(
         existing.id,
         provider_id,
@@ -491,20 +540,25 @@ def _execute_cycle(
     session: Session,
     claims: list[RunClaim],
     operation: Callable[[], dict[ExternalDataDomain, DomainOutcome]],
+    *,
+    single_attempt: bool = False,
 ) -> None:
     if not claims:
         return
-    attempt_number = 0
-    while attempt_number < MAX_ATTEMPTS:
-        attempt_number += 1
+    for _ in range(1 if single_attempt else MAX_ATTEMPTS):
+        attempt_numbers: dict[UUID, int] = {}
         started_at = datetime.now(UTC)
         for claim in claims:
             run = session.get(ExternalIngestionRun, claim.run_id)
             if run is None:
                 raise RuntimeError("Claimed ingestion run was removed")
-            run.attempt_count = attempt_number
+            if run.attempt_count >= run.max_attempts:
+                raise RuntimeError("The persisted provider attempt budget is exhausted")
+            run.attempt_count += 1
+            attempt_numbers[claim.run_id] = run.attempt_count
             run.last_attempt_started_at = started_at
             run.status = "RUNNING"
+            run.finished_at = None
         session.commit()
         try:
             outcomes = operation()
@@ -524,13 +578,15 @@ def _execute_cycle(
                 run.failure_message = outcome.failure_message
                 run.report = _json_object(outcome.report)
                 run.last_successful_at = (
-                    finished_at if outcome.status in {"COMPLETE", "PARTIAL"} else None
+                    finished_at
+                    if outcome.status in {"COMPLETE", "PARTIAL"}
+                    else run.last_successful_at
                 )
                 session.add(
                     ExternalIngestionAttempt(
                         id=uuid4(),
                         run_id=claim.run_id,
-                        attempt_number=attempt_number,
+                        attempt_number=attempt_numbers[claim.run_id],
                         status=("SUCCEEDED" if outcome.status == "COMPLETE" else outcome.status),
                         started_at=started_at,
                         finished_at=finished_at,
@@ -546,7 +602,11 @@ def _execute_cycle(
             session.rollback()
             code, message, retryable, retry_after = _failure_outcome(error)
             finished_at = datetime.now(UTC)
-            will_retry = retryable and attempt_number < MAX_ATTEMPTS
+            will_retry = (
+                not single_attempt
+                and retryable
+                and all(number < MAX_ATTEMPTS for number in attempt_numbers.values())
+            )
             for claim in claims:
                 run = session.get(ExternalIngestionRun, claim.run_id)
                 if run is None:
@@ -565,7 +625,7 @@ def _execute_cycle(
                     ExternalIngestionAttempt(
                         id=uuid4(),
                         run_id=claim.run_id,
-                        attempt_number=attempt_number,
+                        attempt_number=attempt_numbers[claim.run_id],
                         status="FAILED",
                         started_at=started_at,
                         finished_at=finished_at,
@@ -577,7 +637,7 @@ def _execute_cycle(
                 )
             session.commit()
             if will_retry:
-                time.sleep(retry_delay_seconds(attempt_number, retry_after))
+                time.sleep(retry_delay_seconds(max(attempt_numbers.values()), retry_after))
 
 
 def _coverage_outcome(
@@ -623,8 +683,9 @@ def _fundamentals_operation(
     states: dict[UUID, str],
     *,
     mapping_scope: list[dict[str, Any]] | None = None,
+    ordered_company_ids: list[UUID] | None = None,
 ) -> DomainOutcome:
-    ordered_ids = _company_order(states)
+    ordered_ids = ordered_company_ids if ordered_company_ids is not None else _company_order(states)
     mapped = _load_cik_mappings(session, company_ids=ordered_ids)
     if mapping_scope is not None:
         allowed = {
@@ -731,8 +792,10 @@ def _source_documents_operation(
     states: dict[UUID, str],
     *,
     mapping_scope: list[dict[str, Any]] | None = None,
+    ordered_company_ids: list[UUID] | None = None,
+    max_new_history_files: int | None = None,
 ) -> DomainOutcome:
-    ordered_ids = _company_order(states)
+    ordered_ids = ordered_company_ids if ordered_company_ids is not None else _company_order(states)
     mapped = _load_cik_mappings(session, company_ids=ordered_ids)
     if mapping_scope is not None:
         allowed = {
@@ -770,12 +833,17 @@ def _source_documents_operation(
             "NO_VERIFIED_CIK_MAPPINGS",
             "Active companies have no reviewed SEC CIK mapping.",
         )
-    results = asyncio.run(sync_sec_source_documents(session, settings, company_ids=mapped_ids))
+    source_arguments: dict[str, Any] = {"company_ids": mapped_ids}
+    if max_new_history_files is not None:
+        source_arguments["max_new_history_files"] = max_new_history_files
+    results = asyncio.run(sync_sec_source_documents(session, settings, **source_arguments))
     result = results[0] if results else {}
     reconciliation = result.get("reconciliation", {})
     if not isinstance(reconciliation, dict):
         reconciliation = {}
     raw_history_skips = result.get("history_files_skipped_as_unchanged", 0)
+    raw_deferred = result.get("history_files_deferred", 0)
+    deferred = raw_deferred if isinstance(raw_deferred, int) else 0
     document_count = int(
         reconciliation.get("documents_imported", result.get("documents_imported", 0)) or 0
     ) + int(reconciliation.get("documents_reused", 0) or 0)
@@ -788,7 +856,8 @@ def _source_documents_operation(
     missing_filings = raw_missing_filings if isinstance(raw_missing_filings, list) else []
     issues = reconciliation.get("issues", [])
     issue_count = (
-        len(missing_ids)
+        deferred
+        + len(missing_ids)
         + len(missing_filings)
         + unsupported
         + malformed
@@ -803,6 +872,7 @@ def _source_documents_operation(
         "provider_result": result,
         "mapped_companies_without_supported_filings": missing_filings,
         "normalized_document_count": document_count,
+        "history_files_deferred": deferred,
         "history_files_skipped_as_unchanged": (
             raw_history_skips if isinstance(raw_history_skips, int) else 0
         ),
@@ -1098,9 +1168,17 @@ def _yahoo_operation(
     listing_keys: set[tuple[str, str]] | None,
     company_ids: set[UUID] | None,
     fx_pairs: set[tuple[str, str]] | None,
+    frozen_crosswalk: YahooListingCrosswalk | None = None,
+    listing_scope: bool = False,
 ) -> dict[ExternalDataDomain, DomainOutcome]:
-    crosswalk = load_yahoo_crosswalk(crosswalk_path)
+    crosswalk = frozen_crosswalk or load_yahoo_crosswalk(crosswalk_path)
     provider = YahooFinanceProvider(crosswalk)
+    if listing_scope:
+        scope_kind = "listings"
+    elif company_ids is not None:
+        scope_kind = "company"
+    else:
+        scope_kind = "active"
     report = asyncio.run(
         build_provider_import(
             session,
@@ -1109,7 +1187,7 @@ def _yahoo_operation(
             end_date=end_date,
             start_date=start_date,
             lookback_days=lookback_days,
-            scope="company" if company_ids is not None else "active",
+            scope=scope_kind,
             corporate_action_overlap_days=corporate_action_overlap_days,
             listing_keys=listing_keys,
             company_ids=company_ids,
@@ -1136,10 +1214,62 @@ def _run_result(session: Session, claim: RunClaim) -> dict[str, Any]:
         "status": run.status,
         "run_id": str(run.id),
         "attempt_count": run.attempt_count,
-        "idempotent_reuse": not claim.created,
+        "idempotent_reuse": not (claim.created or claim.retrying),
         "failure_code": run.failure_code,
         "report": run.report,
     }
+
+
+def record_cloud_market_preflight(
+    session: Session, report: dict[str, object], checked_at: datetime
+) -> dict[str, Any]:
+    """Persist a blocked scope check in the existing ingestion ledger, without fetching facts."""
+    code = report.get("failure_code")
+    if report.get("phase") != "PREFLIGHT" or not isinstance(code, str):
+        raise ValueError("A preflight diagnostic requires its phase and failure code")
+    claim = _claim_run(
+        session,
+        YAHOO_PROVIDER_ID,
+        ExternalDataDomain.MARKET_DATA,
+        {
+            "scope": "cloud_market_preflight",
+            "checked_at": checked_at.isoformat(),
+            "failure_code": code,
+        },
+        run_date=checked_at.date(),
+    )
+    outcome = DomainOutcome(
+        "BLOCKED",
+        report,
+        code,
+        f"Cloud market preflight blocked ({code}). Inspect the recorded scope diagnostics.",
+    )
+    if claim.created:
+        _execute_cycle(
+            session,
+            [claim],
+            lambda: {ExternalDataDomain.MARKET_DATA: outcome},
+            single_attempt=True,
+        )
+    return _run_result(session, claim)
+
+
+def resolve_cloud_market_preflights(session: Session, checked_at: datetime) -> None:
+    """Retain prior block evidence while recording that a later scope check passed."""
+    blocked = session.scalars(
+        select(ExternalIngestionRun)
+        .where(
+            ExternalIngestionRun.provider_id == YAHOO_PROVIDER_ID,
+            ExternalIngestionRun.request_scope["scope"].as_string() == "cloud_market_preflight",
+            ExternalIngestionRun.status == "BLOCKED",
+            ExternalIngestionRun.created_at <= checked_at,
+            ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
+        )
+        .with_for_update()
+    )
+    for run in blocked:
+        run.report = {**run.report, "preflight_resolved_at": checked_at.isoformat()}
+    session.commit()
 
 
 def run_scheduled(
@@ -1157,15 +1287,91 @@ def run_scheduled(
     request_nonce: UUID | None = None,
     run_date: date | None = None,
     yahoo_crosswalk_path: Any = CROSSWALK_PATH,
+    listing_key_filter: set[tuple[str, str]] | None = None,
+    frozen_yahoo_crosswalk: tuple[YahooListingCrosswalk, str] | None = None,
+    retry_failed: bool = False,
+    sec_research_scope: bool = False,
 ) -> dict[str, Any]:
+    if replay_scope is not None and replay_scope.get("scope") == "cloud_market_preflight":
+        raise ValueError("Cloud preflight diagnostics require a fresh cloud scope check")
+    if replay_scope is not None and "crosswalk_sha256" in replay_scope:
+        if listing_key_filter is not None or fx_pair_filter is not None:
+            raise ValueError("A frozen replay cannot replace its listing or FX scope")
+        raw_crosswalk = Path(yahoo_crosswalk_path).read_bytes()
+        digest = hashlib.sha256(raw_crosswalk).hexdigest()
+        if digest != replay_scope["crosswalk_sha256"]:
+            raise ValueError("The reviewed crosswalk changed since the frozen ingestion run")
+        frozen_yahoo_crosswalk = (YahooListingCrosswalk.model_validate_json(raw_crosswalk), digest)
     end_date = end_date or datetime.now(UTC).date()
     run_date = run_date or datetime.now(UTC).date()
     selected = _selected_domains(domains)
+    if retry_failed and (
+        not selected.issubset(YAHOO_DOMAINS)
+        or frozen_yahoo_crosswalk is None
+        or listing_key_filter is None
+        or fx_pair_filter is None
+        or replay_of_run_id is not None
+        or replay_scope is not None
+        or request_nonce is not None
+    ):
+        raise ValueError("Cloud recovery requires its original frozen Yahoo scope")
     ordered = [domain for domain in DAILY_DOMAINS if domain in selected]
-    states: dict[UUID, str] | None = (
-        _states_from_scope(replay_scope) if replay_scope is not None else None
-    )
+    sec_domains = {ExternalDataDomain.REPORTED_FUNDAMENTALS, ExternalDataDomain.SOURCE_DOCUMENTS}
+    if sec_research_scope and not selected.issubset(sec_domains):
+        raise ValueError("A SEC research scope requires SEC-only domains")
+    frozen_sec_scope: dict[str, Any] | None = None
+    if replay_scope is not None and replay_scope.get("scope") == "sec_issuer_refresh":
+        if (
+            not selected.issubset(sec_domains)
+            or company_ids is not None
+            or request_nonce is not None
+        ):
+            raise ValueError("A frozen SEC replay cannot replace its domains, issuers or request")
+        if replay_of_run_id is not None:
+            original = session.get(ExternalIngestionRun, replay_of_run_id)
+            if (
+                original is None
+                or original.provider_id != SEC_PROVIDER_ID
+                or selected != {ExternalDataDomain(original.domain)}
+                or original.request_scope != replay_scope
+            ):
+                raise ValueError("A SEC replay must retain the recorded domain and scope")
+        frozen_sec_scope = replay_scope
+    elif sec_research_scope:
+        if request_nonce is not None:
+            prior_scopes = list(
+                session.scalars(
+                    select(ExternalIngestionRun.request_scope)
+                    .where(
+                        ExternalIngestionRun.provider_id == SEC_PROVIDER_ID,
+                        ExternalIngestionRun.domain.in_([item.value for item in sec_domains]),
+                        ExternalIngestionRun.request_scope["operational_request_id"].as_string()
+                        == str(request_nonce),
+                        ExternalIngestionRun.request_scope["sec_scope_version"].as_string()
+                        == SEC_SCOPE_VERSION,
+                    )
+                    .limit(2)
+                )
+            )
+            if prior_scopes:
+                if any(item != prior_scopes[0] for item in prior_scopes):
+                    raise ValueError("The manual SEC request has conflicting frozen scopes")
+                frozen_sec_scope = cast(dict[str, Any], prior_scopes[0])
+                run_date = date.fromisoformat(frozen_sec_scope["scope_date"])
+                explicit = frozen_sec_scope["selection"]["kind"] == "explicit-companies"
+                if (company_ids is not None) != explicit or (
+                    company_ids is not None
+                    and set(frozen_sec_scope["company_ids"]) != {str(item) for item in company_ids}
+                ):
+                    raise ValueError("The manual SEC request cannot replace its frozen issuers")
+        if frozen_sec_scope is None:
+            frozen_sec_scope = capture_sec_refresh_scope(
+                session, company_ids=company_ids, run_date=run_date, request_id=request_nonce
+            )
+    state_scope = frozen_sec_scope if frozen_sec_scope is not None else replay_scope
+    states = _states_from_scope(state_scope) if state_scope is not None else None
     claims: dict[ExternalDataDomain, RunClaim] = {}
+    scopes: dict[ExternalDataDomain, dict[str, Any]] = {}
     for domain in ordered:
         if (
             domain
@@ -1177,20 +1383,30 @@ def run_scheduled(
             and states is None
         ):
             states = active_company_states(session)
-        scope = (
-            replay_scope
-            if replay_scope is not None and replay_of_run_id is not None
-            else _scope_for_domain(
+        if domain in sec_domains and frozen_sec_scope is not None:
+            scope = frozen_sec_scope
+        elif replay_scope is not None and replay_of_run_id is not None:
+            scope = replay_scope
+        else:
+            scope = _scope_for_domain(
                 session,
                 domain,
                 start_date=start_date,
                 end_date=end_date,
                 lookback_days=lookback_days,
                 company_ids=company_ids,
+                yahoo_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
             )
-        )
         if domain == ExternalDataDomain.FX and fx_pair_filter is not None:
             scope["required_fx_pairs"] = [list(pair) for pair in sorted(fx_pair_filter)]
+        if domain in YAHOO_MARKET_DOMAINS and listing_key_filter is not None:
+            scope["scope"] = "listings"
+            scope["listing_keys"] = [
+                {"venue": venue, "ticker": ticker} for venue, ticker in sorted(listing_key_filter)
+            ]
+        if domain in YAHOO_DOMAINS and frozen_yahoo_crosswalk is not None:
+            scope["crosswalk_sha256"] = frozen_yahoo_crosswalk[1]
+        scopes[domain] = scope
         claim = _claim_run(
             session,
             PROVIDERS[domain],
@@ -1199,8 +1415,9 @@ def run_scheduled(
             run_date=run_date,
             replay_nonce=request_nonce or replay_of_run_id,
             replay_of_run_id=replay_of_run_id,
+            retry_failed=retry_failed,
         )
-        if claim.created:
+        if claim.created or claim.retrying:
             claims[domain] = claim
 
     # The Yahoo adapter requests price/action and FX facts in one provider cycle,
@@ -1261,9 +1478,11 @@ def run_scheduled(
                 listing_keys=listing_keys,
                 company_ids=scoped_company_ids,
                 fx_pairs=fx_pairs,
+                frozen_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
+                listing_scope=market_scope.get("scope") == "listings",
             )
 
-        _execute_cycle(session, yahoo_claims, yahoo_cycle)
+        _execute_cycle(session, yahoo_claims, yahoo_cycle, single_attempt=retry_failed)
 
     for domain in ordered:
         if domain not in claims or domain in YAHOO_DOMAINS:
@@ -1280,11 +1499,11 @@ def run_scheduled(
             }
         mapping_ids = None
         mapping_scope = None
-        if replay_scope is not None and domain in {
+        if (replay_scope is not None or frozen_sec_scope is not None) and domain in {
             ExternalDataDomain.REPORTED_FUNDAMENTALS,
             ExternalDataDomain.SOURCE_DOCUMENTS,
         }:
-            raw_mapping_scope = replay_scope.get("verified_cik_mappings")
+            raw_mapping_scope = claim.request_scope.get("verified_cik_mappings")
             if isinstance(raw_mapping_scope, list):
                 mapping_scope = [item for item in raw_mapping_scope if isinstance(item, dict)]
         if domain == ExternalDataDomain.CONSENSUS_ESTIMATES and replay_scope is not None:
@@ -1295,14 +1514,42 @@ def run_scheduled(
             state_snapshot: dict[UUID, str] = state_snapshot,
             mapping_ids: list[UUID] | None = mapping_ids,
             mapping_scope: list[dict[str, Any]] | None = mapping_scope,
+            request_scope: dict[str, Any] = claim.request_scope,
         ) -> dict[ExternalDataDomain, DomainOutcome]:
+            ordered_sec_ids = None
+            history_limit = None
+            if (
+                request_scope.get("scope") == "sec_issuer_refresh"
+                or "sec_scope_version" in request_scope
+            ):
+                try:
+                    ordered_sec_ids = validate_sec_refresh_scope(session, request_scope)
+                    history_limit = int(request_scope["max_new_history_files"])
+                except SecRefreshScopeError:
+                    return {
+                        domain: DomainOutcome(
+                            "BLOCKED",
+                            {"status": "BLOCKED", "reason": "SEC_SCOPE_INVALID"},
+                            "SEC_SCOPE_INVALID",
+                            "The frozen SEC scope or reviewed issuer identity changed.",
+                        )
+                    }
             if domain == ExternalDataDomain.REPORTED_FUNDAMENTALS:
                 outcome = _fundamentals_operation(
-                    session, settings, state_snapshot, mapping_scope=mapping_scope
+                    session,
+                    settings,
+                    state_snapshot,
+                    mapping_scope=mapping_scope,
+                    ordered_company_ids=ordered_sec_ids,
                 )
             elif domain == ExternalDataDomain.SOURCE_DOCUMENTS:
                 outcome = _source_documents_operation(
-                    session, settings, state_snapshot, mapping_scope=mapping_scope
+                    session,
+                    settings,
+                    state_snapshot,
+                    mapping_scope=mapping_scope,
+                    ordered_company_ids=ordered_sec_ids,
+                    max_new_history_files=history_limit,
                 )
             else:
                 outcome = _consensus_operation(
@@ -1316,18 +1563,7 @@ def run_scheduled(
     # Include previously completed same-day rows so repeated scheduling is observable and cheap.
     reused_domains = [domain for domain in ordered if domain not in claims]
     for domain in reused_domains:
-        scope = (
-            replay_scope
-            if replay_scope is not None and replay_of_run_id is not None
-            else _scope_for_domain(
-                session,
-                domain,
-                start_date=start_date,
-                end_date=end_date,
-                lookback_days=lookback_days,
-                company_ids=company_ids,
-            )
-        )
+        scope = scopes[domain]
         key = _idempotency_key(
             PROVIDERS[domain], domain, scope, run_date, request_nonce or replay_of_run_id
         )
@@ -1390,8 +1626,15 @@ def status_report(session: Session, *, now_at: datetime | None = None) -> dict[s
             .where(
                 ExternalIngestionRun.provider_id == provider,
                 ExternalIngestionRun.domain == domain.value,
+                ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
             )
-            .order_by(ExternalIngestionRun.created_at.desc())
+            .order_by(
+                func.coalesce(
+                    ExternalIngestionRun.last_attempt_started_at, ExternalIngestionRun.started_at
+                ).desc(),
+                ExternalIngestionRun.created_at.desc(),
+                ExternalIngestionRun.id.desc(),
+            )
             .limit(1)
         )
         last_success = session.scalar(
@@ -1399,7 +1642,6 @@ def status_report(session: Session, *, now_at: datetime | None = None) -> dict[s
             .where(
                 ExternalIngestionRun.provider_id == provider,
                 ExternalIngestionRun.domain == domain.value,
-                ExternalIngestionRun.status.in_(("COMPLETE", "PARTIAL")),
                 ExternalIngestionRun.last_successful_at.is_not(None),
             )
             .order_by(ExternalIngestionRun.last_successful_at.desc())

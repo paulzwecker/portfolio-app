@@ -30,6 +30,7 @@ from portfolio_api.domain.models import (
     ExecutionPaceDecision,
     ExecutionPaceRun,
     ExecutionPaceRunStatus,
+    ExternalIngestionAttempt,
     ExternalIngestionRun,
     FinancialModel,
     FinancialModelOutput,
@@ -52,6 +53,7 @@ from portfolio_api.domain.models import (
     OwnerCashFlowScenarioAssumptions,
     OwnerCashFlowYearAssumption,
     Portfolio,
+    PortfolioLedgerPublication,
     PriceObservation,
     PriceRegimeSnapshot,
     RankingDefinition,
@@ -188,6 +190,20 @@ def overview(
         .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
         .limit(1)
     )
+    authority = session.scalar(
+        select(PortfolioLedgerPublication)
+        .where(
+            PortfolioLedgerPublication.portfolio_id == portfolio_id,
+            PortfolioLedgerPublication.effective_at <= cutoff,
+            PortfolioLedgerPublication.published_at <= cutoff,
+        )
+        .order_by(PortfolioLedgerPublication.sequence.desc())
+        .limit(1)
+    )
+    if authority is not None and (snapshot is None or snapshot.id != authority.holding_snapshot_id):
+        raise services.DomainError(
+            "Current holdings conflict with accepted ledger ownership", status=409
+        )
     revision = session.scalar(
         select(TargetRevision)
         .where(
@@ -453,6 +469,14 @@ def overview(
         )
 
     return s.PortfolioOverview(
+        holdings_authority=s.HoldingsAuthorityRead(
+            source="ACCEPTED_LEDGER" if authority else "OBSERVED_SNAPSHOT",
+            publication_id=authority.id if authority else None,
+            opening_snapshot_id=authority.anchor_snapshot_id if authority else None,
+            cutover_at=authority.cutover_at.astimezone(UTC) if authority else None,
+        )
+        if snapshot
+        else None,
         portfolio=s.PortfolioRead.model_validate(item),
         snapshot=snapshot_view,
         target_revision=target_view,
@@ -598,29 +622,38 @@ def _metric_decimal(value: object) -> Decimal | None:
 def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
     """Expose the latest persisted Yahoo market/FX refresh state."""
 
-    runs = list(
-        session.scalars(
+    from portfolio_api.external_ingestion import cloud_retry_eligible_at
+
+    latest = {
+        domain: session.scalar(
             select(ExternalIngestionRun)
             .where(
                 ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
-                ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
+                ExternalIngestionRun.domain == domain,
+                ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
             )
-            .order_by(ExternalIngestionRun.created_at.desc())
-            .limit(40)
+            .order_by(
+                func.coalesce(
+                    ExternalIngestionRun.last_attempt_started_at, ExternalIngestionRun.started_at
+                ).desc(),
+                ExternalIngestionRun.created_at.desc(),
+                ExternalIngestionRun.id.desc(),
+            )
+            .limit(1)
         )
-    )
-    latest: dict[str, ExternalIngestionRun] = {}
-    for run in runs:
-        latest.setdefault(run.domain, run)
+        for domain in ("MARKET_DATA", "FX", "CORPORATE_ACTIONS")
+    }
     market_run = latest.get("MARKET_DATA")
     fx_run = latest.get("FX")
     selected = [run for run in (market_run, fx_run) if run is not None]
     last_attempt = max(
         (run.last_attempt_started_at or run.started_at for run in selected), default=None
     )
-    last_success = max(
-        (run.last_successful_at for run in selected if run.last_successful_at is not None),
-        default=None,
+    last_success = session.scalar(
+        select(func.max(ExternalIngestionRun.last_successful_at)).where(
+            ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
+            ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
+        )
     )
     if any(run.status == "RUNNING" for run in selected):
         state = "REFRESHING"
@@ -644,6 +677,67 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         None,
     )
     message = failed.failure_message if failed else None
+    attempts: dict[UUID, list[ExternalIngestionAttempt]] = defaultdict(list)
+    for attempt in session.scalars(
+        select(ExternalIngestionAttempt)
+        .where(ExternalIngestionAttempt.run_id.in_([run.id for run in latest.values() if run]))
+        .order_by(ExternalIngestionAttempt.attempt_number)
+    ):
+        attempts[attempt.run_id].append(attempt)
+    runs = []
+    current = now()
+    for run in latest.values():
+        if run is None:
+            continue
+        history = attempts[run.id]
+        eligible_at = (
+            cloud_retry_eligible_at(run, history[-1] if history else None)
+            if "crosswalk_sha256" in run.request_scope
+            and run.idempotency_key.startswith("daily:")
+            and run.replay_of_run_id is None
+            and run.request_scope.get("end_date") == current.astimezone(UTC).date().isoformat()
+            else None
+        )
+        retry_state: s.MarketRetryState = "NONE"
+        if run.status == "RUNNING":
+            retry_state = "RUNNING"
+        elif run.status in {"FAILED", "PARTIAL", "BLOCKED"}:
+            if run.attempt_count >= run.max_attempts:
+                retry_state = "EXHAUSTED"
+            elif eligible_at is None:
+                retry_state = "REVIEW_REQUIRED"
+            else:
+                retry_state = "COOLDOWN" if current < eligible_at else "ELIGIBLE"
+        runs.append(
+            s.MarketRefreshRunRead(
+                run_id=run.id,
+                domain=cast(s.MarketRefreshDomain, run.domain),
+                status=run.status,
+                last_attempt_at=run.last_attempt_started_at or run.started_at,
+                finished_at=run.finished_at,
+                last_successful_at=run.last_successful_at,
+                attempt_count=run.attempt_count,
+                max_attempts=run.max_attempts,
+                retry_state=retry_state,
+                retry_eligible_at=eligible_at,
+                failure_code=run.failure_code,
+                failure_message=run.failure_message,
+                request_scope=run.request_scope,
+                report=run.report,
+                attempts=[
+                    s.MarketRefreshAttemptRead(
+                        attempt_number=attempt.attempt_number,
+                        status=attempt.status,
+                        started_at=attempt.started_at,
+                        finished_at=attempt.finished_at,
+                        retryable=attempt.retryable,
+                        failure_code=attempt.failure_code,
+                        failure_message=attempt.failure_message,
+                    )
+                    for attempt in history
+                ],
+            )
+        )
     return s.MarketRefreshStatusRead(
         state=state,
         last_attempt_at=last_attempt,
@@ -651,6 +745,7 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         market_run_id=market_run.id if market_run else None,
         fx_run_id=fx_run.id if fx_run else None,
         message=message,
+        runs=runs,
     )
 
 

@@ -111,11 +111,23 @@ The reviewed migration chain is linear:
 
 ```text
 6c2eaf0b8147 → b16d4f8a2c91 → c17a0b9d4e62 → 3e5c8a1d7b42 → 9f2a6d4c81b7
+→ a832e94d6f10 → b59f16c8a203
 ```
 
-The revisions add workbook-sync tables, expand two check constraints, and add model
-identity/proposal tables. There is no data backfill. Do not assume a code rollback
-can downgrade the database: downgrades can drop new tables and reject new values.
+The historical revisions add workbook-sync tables, expand two check constraints,
+and add model identity/proposal tables. The two ledger revisions append candidate,
+review and publication tables without changing accepted holdings or targets. All
+three ledger tables belong to the existing portfolio recovery inventory. No source
+ownership transfers during migration. Publication is a separately authorized data
+operation. Once publication history exists, its downgrade fails closed. Code that
+predates the ownership guard cannot safely become a writer after ledger cutover.
+
+The current read-only release preflight is pinned to the existing production
+project `blue-pond-96398788`, primary `br-square-butterfly-bacw0rn5`, direct endpoint
+`ep-floral-cake-bae16liy`, database `neondb`, and migration range
+`9f2a6d4c81b7` → `b59f16c8a203`. These pins are a reviewable release plan. Fresh
+live identity, inventory and recovery verification remain mandatory before owner
+authorization. Earlier target/revision approvals grant no authority for this range.
 
 ## Initial activation on a new, empty Neon database
 
@@ -156,7 +168,7 @@ separate owner decision.
 
    ```powershell
    $env:EXPECTED_CHECKOUT_SHA = '<reviewed 40-character PR commit SHA>'
-   $env:INITIAL_BOOTSTRAP_CONFIRMATION = 'INITIALIZE <project>/<primary-branch>/<endpoint>/<database>/base->9f2a6d4c81b7'
+   $env:INITIAL_BOOTSTRAP_CONFIRMATION = 'INITIALIZE <project>/<primary-branch>/<endpoint>/<database>/base->b59f16c8a203'
    npm run db:production-preflight -- fresh-bootstrap-preflight
    ```
 
@@ -263,11 +275,11 @@ change. They are instructions only; no live setting has been changed here.
 6. **Reverify Neon read-only.** From the exact clean merged checkout, verify the live
    project, primary branch, direct endpoint, `neondb`, TLS `verify-full`, Alembic
    head and complete table/data inventory. Require current head exactly
-   `6c2eaf0b8147` and the reviewed repository head exactly `9f2a6d4c81b7`; any
+   `9f2a6d4c81b7` and the reviewed repository head exactly `b59f16c8a203`; any
    unexpected head, data, identity or migration graph is a stop condition.
 7. **Create a fresh recovery point.** Create a new Neon branch from the just-verified
-   production primary. Do not reuse the historical child branch (last observed at
-   `12a6f0d9c3e1`). Confirm same project/parent, ready endpoint, database/PostgreSQL
+   production primary. Earlier pre-import branches do not protect the accepted
+   M1 holdings. Confirm same project/parent, ready endpoint, database/PostgreSQL
    version, schema head and complete table counts; record creation time and expiry.
    The migration preflight requires the branch to be no more than four hours old and
    to have more than 24 hours before expiry. Keep it through successful application
@@ -286,7 +298,7 @@ change. They are instructions only; no live setting has been changed here.
    ```powershell
    $env:EXPECTED_CHECKOUT_SHA = (git rev-parse HEAD).Trim()
    npm run db:production-preflight -- readonly
-   $env:MIGRATION_CONFIRMATION = "MIGRATE delicate-heart-04560404/br-morning-truth-b96361yh/ep-snowy-term-b9gr75j6/neondb/6c2eaf0b8147->9f2a6d4c81b7"
+   $env:MIGRATION_CONFIRMATION = "MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/ep-floral-cake-bae16liy/neondb/9f2a6d4c81b7->b59f16c8a203"
    npm run db:production-preflight -- migration-preflight
    ```
 
@@ -331,10 +343,11 @@ change. They are instructions only; no live setting has been changed here.
 
 10. **Verify before unfreezing.** Remove temporary write authorization immediately.
     With a read-only URL, run `npm run db:production-preflight -- schema-check` and
-    confirm Alembic `9f2a6d4c81b7` plus no metadata drift. Check the existing Render
-    `/health/ready` and Vercel `/api/health`; both must report current database
-    readiness. If any check fails, leave freezes on and fix forward under review or
-    follow a separately authorized recovery plan.
+    confirm Alembic `b59f16c8a203` plus no metadata drift and unchanged accepted
+    holdings/targets. The older API can report schema outdated until the matching
+    code is deployed, so plan a coordinated operator window. Database verification
+    precedes the native deployments in the next step. If it fails, leave freezes on
+    and fix forward under review or follow a separately authorized recovery plan.
 11. **Remove the freezes.** In Render, manually sync the Blueprint from `main` after
     confirming the exact merged SHA passed all CI checks. Verify the service now has
     Auto-Deploy **After CI Checks Pass**, `/health/ready`, and the existing disabled
@@ -344,7 +357,10 @@ change. They are instructions only; no live setting has been changed here.
     with that exact CI-passing main SHA. In Vercel, restore Ignored Build Step to
     **Automatic**. Verify the native production deployment uses the merged main SHA;
     if Vercel skipped it while frozen, create a deployment from that exact SHA using
-    the Vercel dashboard. Keep Preview deployments enabled.
+    the Vercel dashboard. Keep Preview deployments enabled. Verify the new Render
+    `/health/ready` and authenticated Vercel `/api/health`, matching code revisions
+    and read-only Portfolio/Universe/ledger-anchor readback. A failing readiness
+    check remains a stop condition; keep the prior instance and investigate safely.
 12. **Close out.** Verify both production URLs, source commit, API readiness and
     that write authorization, ingestion, recurring jobs, manual operations, workbook
     sync and Sheets polling remain disabled. Retain the migration/recovery evidence

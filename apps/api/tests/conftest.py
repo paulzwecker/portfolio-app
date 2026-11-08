@@ -13,8 +13,34 @@ from portfolio_api.domain import models  # noqa: F401
 from portfolio_api.migrations import alembic_config
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    unclassified = sorted(
+        {
+            item.nodeid.split("[", 1)[0]
+            for item in items
+            if isinstance(item, pytest.Function)
+            and "postgres_engine" in item.fixturenames
+            and item.get_closest_marker("integration") is None
+            and item.get_closest_marker("source_data") is None
+        }
+    )
+    if unclassified:
+        raise pytest.UsageError(
+            "PostgreSQL tests require @pytest.mark.integration for CI coverage:\n"
+            + "\n".join(unclassified)
+        )
+
+
 @pytest.fixture
-def postgres_engine() -> Iterator[Engine]:
+def postgres_engine(request: pytest.FixtureRequest) -> Iterator[Engine]:
+    if (
+        request.node.get_closest_marker("integration") is None
+        and request.node.get_closest_marker("source_data") is None
+    ):
+        pytest.fail(
+            "PostgreSQL tests require @pytest.mark.integration for CI coverage", pytrace=False
+        )
     raw = os.environ.get("TEST_DATABASE_URL")
     if not raw:
         pytest.skip("Set TEST_DATABASE_URL to a dedicated PostgreSQL database ending _test")

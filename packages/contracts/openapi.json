@@ -3327,6 +3327,114 @@
         "title": "CompanyRead",
         "type": "object"
       },
+      "CompanyRefreshOptionsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "eligible_job_names": {
+            "items": {
+              "enum": [
+                "COMPANY_REFRESH",
+                "SEC_FUNDAMENTALS",
+                "SEC_FILINGS"
+              ],
+              "type": "string"
+            },
+            "title": "Eligible Job Names",
+            "type": "array"
+          },
+          "execution_mode": {
+            "enum": [
+              "WORKER",
+              "OPERATOR",
+              "DISABLED"
+            ],
+            "title": "Execution Mode",
+            "type": "string"
+          },
+          "holding_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Snapshot Id"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lifecycle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Id"
+          },
+          "sec_eligibility_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ACTIVE_LIFECYCLE",
+                  "VERIFIED_HOLDING"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Eligibility Basis"
+          },
+          "sec_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Unavailable Reason"
+          }
+        },
+        "required": [
+          "company_id",
+          "company_name",
+          "lifecycle",
+          "eligible_job_names",
+          "sec_eligibility_basis",
+          "sec_unavailable_reason",
+          "portfolio_id",
+          "holding_snapshot_id",
+          "execution_mode"
+        ],
+        "title": "CompanyRefreshOptionsRead",
+        "type": "object"
+      },
       "CompanyReportedFundamentalsRead": {
         "additionalProperties": false,
         "properties": {
@@ -3493,6 +3601,97 @@
           "history"
         ],
         "title": "CompanyRiskAssessmentsRead",
+        "type": "object"
+      },
+      "CompanySecCoverageRead": {
+        "additionalProperties": false,
+        "properties": {
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cik"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "filings": {
+            "$ref": "#/components/schemas/SecDomainCoverageRead"
+          },
+          "fundamentals": {
+            "$ref": "#/components/schemas/SecDomainCoverageRead"
+          },
+          "identity_evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Evidence Url"
+          },
+          "mapping_status": {
+            "enum": [
+              "MAPPED",
+              "UNMAPPED",
+              "AMBIGUOUS",
+              "INVALID"
+            ],
+            "title": "Mapping Status",
+            "type": "string"
+          },
+          "metrics_missing": {
+            "items": {
+              "$ref": "#/components/schemas/FundamentalMetric"
+            },
+            "title": "Metrics Missing",
+            "type": "array"
+          },
+          "metrics_present": {
+            "items": {
+              "$ref": "#/components/schemas/FundamentalMetric"
+            },
+            "title": "Metrics Present",
+            "type": "array"
+          },
+          "provider_company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Company Name"
+          }
+        },
+        "required": [
+          "company_id",
+          "company_name",
+          "mapping_status",
+          "cik",
+          "provider_company_name",
+          "identity_evidence_url",
+          "fundamentals",
+          "filings",
+          "metrics_present",
+          "metrics_missing"
+        ],
+        "title": "CompanySecCoverageRead",
         "type": "object"
       },
       "CompanySourceDocumentsRead": {
@@ -5567,6 +5766,229 @@
           "tail_ufcf_growth"
         ],
         "title": "DcfScenarioRead",
+        "type": "object"
+      },
+      "DcfSensitivityCellRead": {
+        "additionalProperties": false,
+        "properties": {
+          "base_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Fv"
+          },
+          "bear_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Fv"
+          },
+          "bull_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Fv"
+          },
+          "discount_rate_shift": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Discount Rate Shift",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "INVALID_ASSUMPTIONS"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "terminal_growth_shift": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Terminal Growth Shift",
+            "type": "string"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          },
+          "weighted_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fv"
+          }
+        },
+        "required": [
+          "discount_rate_shift",
+          "terminal_growth_shift",
+          "status",
+          "unavailable_reason",
+          "bear_fv",
+          "base_fv",
+          "bull_fv",
+          "weighted_fv"
+        ],
+        "title": "DcfSensitivityCellRead",
+        "type": "object"
+      },
+      "DcfSensitivityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "calculation_version": {
+            "const": "ufcf-dcf-sensitivity-v1",
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/DcfSensitivityCellRead"
+            },
+            "maxItems": 9,
+            "minItems": 9,
+            "title": "Cells",
+            "type": "array"
+          },
+          "discount_rate_shifts": {
+            "items": {
+              "decimal_places": 18,
+              "max_digits": 38,
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Discount Rate Shifts",
+            "type": "array"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "model_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "revision_number": {
+            "title": "Revision Number",
+            "type": "integer"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/DcfSensitivityScenarioRead"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Scenarios",
+            "type": "array"
+          },
+          "terminal_growth_shifts": {
+            "items": {
+              "decimal_places": 18,
+              "max_digits": 38,
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Terminal Growth Shifts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "calculation_version",
+          "model_id",
+          "revision_id",
+          "revision_number",
+          "methodology_version",
+          "model_currency",
+          "discount_rate_shifts",
+          "terminal_growth_shifts",
+          "scenarios",
+          "cells"
+        ],
+        "title": "DcfSensitivityRead",
+        "type": "object"
+      },
+      "DcfSensitivityScenarioRead": {
+        "additionalProperties": false,
+        "properties": {
+          "probability": {
+            "decimal_places": 18,
+            "ge": 0,
+            "le": 1,
+            "max_digits": 38,
+            "title": "Probability",
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/DcfScenario"
+          },
+          "terminal_growth": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Terminal Growth",
+            "type": "string"
+          },
+          "year5_discount_rate": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Year5 Discount Rate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario",
+          "probability",
+          "year5_discount_rate",
+          "terminal_growth"
+        ],
+        "title": "DcfSensitivityScenarioRead",
         "type": "object"
       },
       "DcfTailGrowthAssumptionInput-Input": {
@@ -16117,6 +16539,63 @@
         "title": "HoldingContext",
         "type": "object"
       },
+      "HoldingsAuthorityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "cutover_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutover At"
+          },
+          "opening_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Snapshot Id"
+          },
+          "publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Id"
+          },
+          "source": {
+            "enum": [
+              "OBSERVED_SNAPSHOT",
+              "ACCEPTED_LEDGER"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "publication_id",
+          "opening_snapshot_id",
+          "cutover_at"
+        ],
+        "title": "HoldingsAuthorityRead",
+        "type": "object"
+      },
       "InvestmentThesisClaimInput": {
         "additionalProperties": false,
         "properties": {
@@ -16976,6 +17455,2040 @@
         "title": "InvestmentThesisStreamRead",
         "type": "object"
       },
+      "LedgerAcceptCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "account_allocation_reviewed": {
+            "const": true,
+            "title": "Account Allocation Reviewed",
+            "type": "boolean"
+          },
+          "acknowledged_changed_activity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Acknowledged Changed Activity Ids",
+            "type": "array"
+          },
+          "acknowledged_removed_activity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Acknowledged Removed Activity Ids",
+            "type": "array"
+          },
+          "decision": {
+            "const": "ACCEPT",
+            "title": "Decision",
+            "type": "string"
+          },
+          "expected_base_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Base Candidate Id"
+          },
+          "expected_input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Input Sha256",
+            "type": "string"
+          },
+          "expected_preview_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Preview Sha256",
+            "type": "string"
+          },
+          "full_replacement_reviewed": {
+            "const": true,
+            "title": "Full Replacement Reviewed",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "settled_balance_basis_reviewed": {
+            "const": true,
+            "title": "Settled Balance Basis Reviewed",
+            "type": "boolean"
+          },
+          "source_evidence_reviewed": {
+            "const": true,
+            "title": "Source Evidence Reviewed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expected_base_candidate_id",
+          "expected_input_sha256",
+          "expected_preview_sha256",
+          "reason",
+          "decision",
+          "source_evidence_reviewed",
+          "account_allocation_reviewed",
+          "settled_balance_basis_reviewed",
+          "full_replacement_reviewed",
+          "acknowledged_removed_activity_ids",
+          "acknowledged_changed_activity_ids"
+        ],
+        "title": "LedgerAcceptCreate",
+        "type": "object"
+      },
+      "LedgerAccountProjectionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashRead"
+            },
+            "title": "Cash",
+            "type": "array"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionRead"
+            },
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerAccountProjectionRead",
+        "type": "object"
+      },
+      "LedgerActivityChangesRead": {
+        "additionalProperties": false,
+        "properties": {
+          "added_activity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Added Activity Ids",
+            "type": "array"
+          },
+          "changed_activity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Changed Activity Ids",
+            "type": "array"
+          },
+          "opening_changed": {
+            "title": "Opening Changed",
+            "type": "boolean"
+          },
+          "removed_activity_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Removed Activity Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "added_activity_ids",
+          "changed_activity_ids",
+          "removed_activity_ids",
+          "opening_changed"
+        ],
+        "title": "LedgerActivityChangesRead",
+        "type": "object"
+      },
+      "LedgerCandidateCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_base_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Base Candidate Id"
+          },
+          "expected_input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Input Sha256",
+            "type": "string"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/PortfolioLedgerPreviewCreate-Input"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "title": "Submission Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "submission_id",
+          "expected_base_candidate_id",
+          "expected_input_sha256",
+          "reason",
+          "proposal"
+        ],
+        "title": "LedgerCandidateCreate",
+        "type": "object"
+      },
+      "LedgerCandidateRead": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "base_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Candidate Id"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/LedgerActivityChangesRead"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Sha256",
+            "type": "string"
+          },
+          "packet": {
+            "$ref": "#/components/schemas/PortfolioLedgerPreviewCreate-Output"
+          },
+          "packet_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Packet Sha256",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/PortfolioLedgerPreviewRead"
+          },
+          "preview_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Preview Sha256",
+            "type": "string"
+          },
+          "preview_status": {
+            "enum": [
+              "BLOCKED",
+              "OPENING_RECONCILED",
+              "ENDING_RECONCILED"
+            ],
+            "title": "Preview Status",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_by": {
+            "const": "LOCAL_USER",
+            "title": "Submitted By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "portfolio_id",
+          "base_candidate_id",
+          "anchor_snapshot_id",
+          "input_sha256",
+          "packet_sha256",
+          "preview_sha256",
+          "status",
+          "preview_status",
+          "as_of",
+          "reason",
+          "submitted_by",
+          "submitted_at",
+          "review",
+          "packet",
+          "preview",
+          "changes"
+        ],
+        "title": "LedgerCandidateRead",
+        "type": "object"
+      },
+      "LedgerCandidateSummaryRead": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "base_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Candidate Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Sha256",
+            "type": "string"
+          },
+          "packet_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Packet Sha256",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "preview_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Preview Sha256",
+            "type": "string"
+          },
+          "preview_status": {
+            "enum": [
+              "BLOCKED",
+              "OPENING_RECONCILED",
+              "ENDING_RECONCILED"
+            ],
+            "title": "Preview Status",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_by": {
+            "const": "LOCAL_USER",
+            "title": "Submitted By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "portfolio_id",
+          "base_candidate_id",
+          "anchor_snapshot_id",
+          "input_sha256",
+          "packet_sha256",
+          "preview_sha256",
+          "status",
+          "preview_status",
+          "as_of",
+          "reason",
+          "submitted_by",
+          "submitted_at",
+          "review"
+        ],
+        "title": "LedgerCandidateSummaryRead",
+        "type": "object"
+      },
+      "LedgerCandidatesRead": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCandidateSummaryRead"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "current_accepted_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Accepted Candidate Id"
+          },
+          "current_revision_number": {
+            "title": "Current Revision Number",
+            "type": "integer"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "current_accepted_candidate_id",
+          "current_revision_number",
+          "candidates"
+        ],
+        "title": "LedgerCandidatesRead",
+        "type": "object"
+      },
+      "LedgerCashActivity-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "DEPOSIT",
+              "WITHDRAWAL",
+              "FEE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "currency",
+          "amount"
+        ],
+        "title": "LedgerCashActivity",
+        "type": "object"
+      },
+      "LedgerCashActivity-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "DEPOSIT",
+              "WITHDRAWAL",
+              "FEE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "currency",
+          "amount"
+        ],
+        "title": "LedgerCashActivity",
+        "type": "object"
+      },
+      "LedgerCashInput-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Balance"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "balance"
+        ],
+        "title": "LedgerCashInput",
+        "type": "object"
+      },
+      "LedgerCashInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "balance": {
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Balance",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "balance"
+        ],
+        "title": "LedgerCashInput",
+        "type": "object"
+      },
+      "LedgerCashRead": {
+        "additionalProperties": false,
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "balance"
+        ],
+        "title": "LedgerCashRead",
+        "type": "object"
+      },
+      "LedgerEndingAccount-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashInput-Input"
+            },
+            "maxItems": 100,
+            "title": "Cash",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionInput-Input"
+            },
+            "maxItems": 1000,
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "evidence",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerEndingAccount",
+        "type": "object"
+      },
+      "LedgerEndingAccount-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashInput-Output"
+            },
+            "maxItems": 100,
+            "title": "Cash",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionInput-Output"
+            },
+            "maxItems": 1000,
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "evidence",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerEndingAccount",
+        "type": "object"
+      },
+      "LedgerEndingReconciliationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "domain": {
+            "enum": [
+              "POSITION",
+              "CASH"
+            ],
+            "title": "Domain",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected"
+          },
+          "status": {
+            "enum": [
+              "MATCH",
+              "MISSING_OBSERVATION",
+              "EXTRA_OBSERVATION",
+              "DIFFERENCE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "domain",
+          "key",
+          "projected",
+          "observed",
+          "difference",
+          "status"
+        ],
+        "title": "LedgerEndingReconciliationRead",
+        "type": "object"
+      },
+      "LedgerEndingStatement-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEndingAccount-Input"
+            },
+            "maxItems": 20,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "effective_at",
+          "accounts"
+        ],
+        "title": "LedgerEndingStatement",
+        "type": "object"
+      },
+      "LedgerEndingStatement-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEndingAccount-Output"
+            },
+            "maxItems": 20,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "effective_at",
+          "accounts"
+        ],
+        "title": "LedgerEndingStatement",
+        "type": "object"
+      },
+      "LedgerEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "source_record_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source Record Id",
+            "type": "string"
+          },
+          "source_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_sha256",
+          "source_record_id"
+        ],
+        "title": "LedgerEvidence",
+        "type": "object"
+      },
+      "LedgerIssueRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "asset_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Key"
+          },
+          "code": {
+            "enum": [
+              "OPENING_MISMATCH",
+              "NEGATIVE_POSITION",
+              "NEGATIVE_CASH",
+              "BALANCE_OUT_OF_RANGE",
+              "ENDING_MISMATCH",
+              "ENDING_ACCOUNT_MISSING"
+            ],
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "activity_id",
+          "account_id",
+          "asset_key"
+        ],
+        "title": "LedgerIssueRead",
+        "type": "object"
+      },
+      "LedgerListingRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "identity_source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Source Ref"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "security_id": {
+            "format": "uuid",
+            "title": "Security Id",
+            "type": "string"
+          },
+          "security_type": {
+            "title": "Security Type",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "security_id",
+          "company_id",
+          "ticker",
+          "venue",
+          "currency",
+          "security_type",
+          "identity_source_ref"
+        ],
+        "title": "LedgerListingRead",
+        "type": "object"
+      },
+      "LedgerOpeningAccount-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "broker_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broker Name"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashInput-Input"
+            },
+            "maxItems": 100,
+            "title": "Cash",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "kind": {
+            "enum": [
+              "BROKERAGE",
+              "UNALLOCATED_OPENING"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionInput-Input"
+            },
+            "maxItems": 1000,
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "name",
+          "kind",
+          "broker_name",
+          "evidence",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerOpeningAccount",
+        "type": "object"
+      },
+      "LedgerOpeningAccount-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "broker_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broker Name"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashInput-Output"
+            },
+            "maxItems": 100,
+            "title": "Cash",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "kind": {
+            "enum": [
+              "BROKERAGE",
+              "UNALLOCATED_OPENING"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionInput-Output"
+            },
+            "maxItems": 1000,
+            "title": "Positions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account_id",
+          "name",
+          "kind",
+          "broker_name",
+          "evidence",
+          "positions",
+          "cash"
+        ],
+        "title": "LedgerOpeningAccount",
+        "type": "object"
+      },
+      "LedgerOwnershipRead": {
+        "additionalProperties": false,
+        "properties": {
+          "latest_publication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerPublicationRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "scope": {
+            "const": "WHOLE_PORTFOLIO",
+            "title": "Scope",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "OBSERVED_SNAPSHOT",
+              "ACCEPTED_LEDGER"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "source",
+          "scope",
+          "latest_publication"
+        ],
+        "title": "LedgerOwnershipRead",
+        "type": "object"
+      },
+      "LedgerPositionInput-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "listing_id",
+          "quantity"
+        ],
+        "title": "LedgerPositionInput",
+        "type": "object"
+      },
+      "LedgerPositionInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "quantity"
+        ],
+        "title": "LedgerPositionInput",
+        "type": "object"
+      },
+      "LedgerPositionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "quantity"
+        ],
+        "title": "LedgerPositionRead",
+        "type": "object"
+      },
+      "LedgerPublicationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "current_state_recovery_verified": {
+            "const": true,
+            "title": "Current State Recovery Verified",
+            "type": "boolean"
+          },
+          "expected_plan_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Plan Sha256",
+            "type": "string"
+          },
+          "expected_previous_publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Previous Publication Id"
+          },
+          "holdings_confirmation": {
+            "const": true,
+            "title": "Holdings Confirmation",
+            "type": "boolean"
+          },
+          "ownership_transfer_reviewed": {
+            "const": true,
+            "title": "Ownership Transfer Reviewed",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "whole_portfolio_scope_reviewed": {
+            "const": true,
+            "title": "Whole Portfolio Scope Reviewed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expected_plan_sha256",
+          "expected_previous_publication_id",
+          "confirmation",
+          "reason",
+          "ownership_transfer_reviewed",
+          "whole_portfolio_scope_reviewed",
+          "current_state_recovery_verified",
+          "holdings_confirmation"
+        ],
+        "title": "LedgerPublicationCreate",
+        "type": "object"
+      },
+      "LedgerPublicationPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "account_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Account Ids",
+            "type": "array"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Candidate Input Sha256",
+            "type": "string"
+          },
+          "candidate_preview_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Candidate Preview Sha256",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashRead"
+            },
+            "title": "Cash",
+            "type": "array"
+          },
+          "confirmation_phrase": {
+            "title": "Confirmation Phrase",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-publication-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "current_snapshot": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          },
+          "current_snapshot_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Current Snapshot Sha256",
+            "type": "string"
+          },
+          "cutover_at": {
+            "format": "date-time",
+            "title": "Cutover At",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "ownership_scope": {
+            "const": "WHOLE_PORTFOLIO",
+            "title": "Ownership Scope",
+            "type": "string"
+          },
+          "plan_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Plan Sha256",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionRead"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "previous_publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Publication Id"
+          },
+          "publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Id"
+          },
+          "review_id": {
+            "format": "uuid",
+            "title": "Review Id",
+            "type": "string"
+          },
+          "review_revision_number": {
+            "title": "Review Revision Number",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "READY",
+              "ALREADY_PUBLISHED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "status",
+          "portfolio_id",
+          "candidate_id",
+          "review_id",
+          "review_revision_number",
+          "anchor_snapshot_id",
+          "anchor_sha256",
+          "candidate_input_sha256",
+          "candidate_preview_sha256",
+          "previous_publication_id",
+          "publication_id",
+          "ownership_scope",
+          "cutover_at",
+          "effective_at",
+          "current_snapshot",
+          "current_snapshot_sha256",
+          "account_ids",
+          "positions",
+          "cash",
+          "plan_sha256",
+          "confirmation_phrase"
+        ],
+        "title": "LedgerPublicationPreviewRead",
+        "type": "object"
+      },
+      "LedgerPublicationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "command": {
+            "$ref": "#/components/schemas/LedgerPublicationCreate"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/LedgerPublicationPreviewRead"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "previous_publication_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Publication Id"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "published_by": {
+            "const": "LOCAL_USER",
+            "title": "Published By",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          },
+          "snapshot_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Snapshot Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "portfolio_id",
+          "candidate_id",
+          "sequence",
+          "previous_publication_id",
+          "published_at",
+          "published_by",
+          "plan",
+          "command",
+          "snapshot",
+          "snapshot_sha256"
+        ],
+        "title": "LedgerPublicationRead",
+        "type": "object"
+      },
+      "LedgerReconciliationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "domain": {
+            "enum": [
+              "POSITION",
+              "CASH"
+            ],
+            "title": "Domain",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed"
+          },
+          "opening": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening"
+          },
+          "status": {
+            "enum": [
+              "MATCH",
+              "MISSING_OPENING",
+              "EXTRA_OPENING",
+              "DIFFERENCE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain",
+          "key",
+          "observed",
+          "opening",
+          "difference",
+          "status"
+        ],
+        "title": "LedgerReconciliationRead",
+        "type": "object"
+      },
+      "LedgerRejectCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "const": "REJECT",
+            "title": "Decision",
+            "type": "string"
+          },
+          "expected_base_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Base Candidate Id"
+          },
+          "expected_input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Input Sha256",
+            "type": "string"
+          },
+          "expected_preview_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Preview Sha256",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_base_candidate_id",
+          "expected_input_sha256",
+          "expected_preview_sha256",
+          "reason",
+          "decision"
+        ],
+        "title": "LedgerRejectCreate",
+        "type": "object"
+      },
+      "LedgerReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "discriminator": {
+              "mapping": {
+                "ACCEPT": "#/components/schemas/LedgerAcceptCreate",
+                "REJECT": "#/components/schemas/LedgerRejectCreate"
+              },
+              "propertyName": "decision"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LedgerAcceptCreate"
+              },
+              {
+                "$ref": "#/components/schemas/LedgerRejectCreate"
+              }
+            ],
+            "title": "Command"
+          },
+          "decision": {
+            "enum": [
+              "ACCEPT",
+              "REJECT"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "format": "date-time",
+            "title": "Reviewed At",
+            "type": "string"
+          },
+          "reviewed_by": {
+            "const": "LOCAL_USER",
+            "title": "Reviewed By",
+            "type": "string"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          }
+        },
+        "required": [
+          "id",
+          "decision",
+          "revision_number",
+          "reviewed_by",
+          "reviewed_at",
+          "command"
+        ],
+        "title": "LedgerReviewRead",
+        "type": "object"
+      },
+      "LedgerTrade-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "fees": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Fees"
+          },
+          "gross_cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Gross Cash"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "settlement_date": {
+            "format": "date",
+            "title": "Settlement Date",
+            "type": "string"
+          },
+          "taxes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Taxes"
+          },
+          "trade_date": {
+            "format": "date",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "quantity",
+          "currency",
+          "gross_cash",
+          "fees",
+          "taxes",
+          "trade_date",
+          "settlement_date"
+        ],
+        "title": "LedgerTrade",
+        "type": "object"
+      },
+      "LedgerTrade-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "fees": {
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Fees",
+            "type": "string"
+          },
+          "gross_cash": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Gross Cash",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "quantity": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Quantity",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "settlement_date": {
+            "format": "date",
+            "title": "Settlement Date",
+            "type": "string"
+          },
+          "taxes": {
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Taxes",
+            "type": "string"
+          },
+          "trade_date": {
+            "format": "date",
+            "title": "Trade Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "quantity",
+          "currency",
+          "gross_cash",
+          "fees",
+          "taxes",
+          "trade_date",
+          "settlement_date"
+        ],
+        "title": "LedgerTrade",
+        "type": "object"
+      },
       "Lifecycle": {
         "enum": [
           "PORTFOLIO",
@@ -17325,6 +19838,208 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "MarketRefreshAttemptRead": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_number": {
+            "title": "Attempt Number",
+            "type": "integer"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "failure_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Message"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_number",
+          "status",
+          "started_at",
+          "finished_at",
+          "retryable",
+          "failure_code",
+          "failure_message"
+        ],
+        "title": "MarketRefreshAttemptRead",
+        "type": "object"
+      },
+      "MarketRefreshRunRead": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_count": {
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/MarketRefreshAttemptRead"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "domain": {
+            "enum": [
+              "MARKET_DATA",
+              "FX",
+              "CORPORATE_ACTIONS"
+            ],
+            "title": "Domain",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "failure_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Message"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "last_attempt_at": {
+            "format": "date-time",
+            "title": "Last Attempt At",
+            "type": "string"
+          },
+          "last_successful_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Successful At"
+          },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "report": {
+            "additionalProperties": true,
+            "title": "Report",
+            "type": "object"
+          },
+          "request_scope": {
+            "additionalProperties": true,
+            "title": "Request Scope",
+            "type": "object"
+          },
+          "retry_eligible_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Eligible At"
+          },
+          "retry_state": {
+            "enum": [
+              "RUNNING",
+              "COOLDOWN",
+              "ELIGIBLE",
+              "EXHAUSTED",
+              "REVIEW_REQUIRED",
+              "NONE"
+            ],
+            "title": "Retry State",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "domain",
+          "status",
+          "last_attempt_at",
+          "finished_at",
+          "last_successful_at",
+          "attempt_count",
+          "max_attempts",
+          "retry_state",
+          "retry_eligible_at",
+          "failure_code",
+          "failure_message",
+          "request_scope",
+          "report",
+          "attempts"
+        ],
+        "title": "MarketRefreshRunRead",
+        "type": "object"
+      },
       "MarketRefreshStatusRead": {
         "additionalProperties": false,
         "properties": {
@@ -17386,6 +20101,13 @@
               }
             ],
             "title": "Message"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/MarketRefreshRunRead"
+            },
+            "title": "Runs",
+            "type": "array"
           },
           "state": {
             "enum": [
@@ -19634,6 +22356,352 @@
         "title": "PortfolioCreate",
         "type": "object"
       },
+      "PortfolioLedgerAnchorRead": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerListingRead"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SnapshotRead"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "snapshot",
+          "listings",
+          "anchor_sha256"
+        ],
+        "title": "PortfolioLedgerAnchorRead",
+        "type": "object"
+      },
+      "PortfolioLedgerPreviewCreate-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerOpeningAccount-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "activity": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "BUY": "#/components/schemas/LedgerTrade-Input",
+                  "DEPOSIT": "#/components/schemas/LedgerCashActivity-Input",
+                  "FEE": "#/components/schemas/LedgerCashActivity-Input",
+                  "SELL": "#/components/schemas/LedgerTrade-Input",
+                  "WITHDRAWAL": "#/components/schemas/LedgerCashActivity-Input"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/LedgerTrade-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerCashActivity-Input"
+                }
+              ]
+            },
+            "maxItems": 1000,
+            "title": "Activity",
+            "type": "array"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-preview-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "ending_statement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerEndingStatement-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contract_version",
+          "anchor_snapshot_id",
+          "anchor_sha256",
+          "as_of",
+          "accounts",
+          "activity"
+        ],
+        "title": "PortfolioLedgerPreviewCreate",
+        "type": "object"
+      },
+      "PortfolioLedgerPreviewCreate-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerOpeningAccount-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "activity": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "BUY": "#/components/schemas/LedgerTrade-Output",
+                  "DEPOSIT": "#/components/schemas/LedgerCashActivity-Output",
+                  "FEE": "#/components/schemas/LedgerCashActivity-Output",
+                  "SELL": "#/components/schemas/LedgerTrade-Output",
+                  "WITHDRAWAL": "#/components/schemas/LedgerCashActivity-Output"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/LedgerTrade-Output"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerCashActivity-Output"
+                }
+              ]
+            },
+            "maxItems": 1000,
+            "title": "Activity",
+            "type": "array"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-preview-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "ending_statement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerEndingStatement-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contract_version",
+          "anchor_snapshot_id",
+          "anchor_sha256",
+          "as_of",
+          "accounts",
+          "activity"
+        ],
+        "title": "PortfolioLedgerPreviewCreate",
+        "type": "object"
+      },
+      "PortfolioLedgerPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerAccountProjectionRead"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "activity_count": {
+            "title": "Activity Count",
+            "type": "integer"
+          },
+          "anchor_recorded_at": {
+            "format": "date-time",
+            "title": "Anchor Recorded At",
+            "type": "string"
+          },
+          "anchor_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Anchor Sha256",
+            "type": "string"
+          },
+          "anchor_snapshot_id": {
+            "format": "uuid",
+            "title": "Anchor Snapshot Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "cash": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCashRead"
+            },
+            "title": "Cash",
+            "type": "array"
+          },
+          "consumed_listings": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerListingRead"
+            },
+            "title": "Consumed Listings",
+            "type": "array"
+          },
+          "contract_version": {
+            "const": "portfolio-ledger-preview-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "ending_reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEndingReconciliationRead"
+            },
+            "title": "Ending Reconciliation",
+            "type": "array"
+          },
+          "ending_statement_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ending Statement At"
+          },
+          "ending_status": {
+            "default": "NOT_PROVIDED",
+            "enum": [
+              "NOT_PROVIDED",
+              "MATCH",
+              "MISMATCH",
+              "NOT_EVALUATED"
+            ],
+            "title": "Ending Status",
+            "type": "string"
+          },
+          "input_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Sha256",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerIssueRead"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "opening_reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerReconciliationRead"
+            },
+            "title": "Opening Reconciliation",
+            "type": "array"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerPositionRead"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "preview_only": {
+            "const": true,
+            "title": "Preview Only",
+            "type": "boolean"
+          },
+          "projection_version": {
+            "const": "settled-booking-v1",
+            "title": "Projection Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OPENING_RECONCILED",
+              "ENDING_RECONCILED",
+              "BLOCKED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "projection_version",
+          "preview_only",
+          "status",
+          "portfolio_id",
+          "anchor_snapshot_id",
+          "anchor_recorded_at",
+          "anchor_sha256",
+          "input_sha256",
+          "as_of",
+          "opening_reconciliation",
+          "accounts",
+          "positions",
+          "cash",
+          "activity_count",
+          "issues"
+        ],
+        "title": "PortfolioLedgerPreviewRead",
+        "type": "object"
+      },
       "PortfolioOverview": {
         "additionalProperties": false,
         "properties": {
@@ -19684,6 +22752,16 @@
               }
             ],
             "title": "Holdings Age Days"
+          },
+          "holdings_authority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldingsAuthorityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "holdings_freshness": {
             "default": "NO_DATA",
@@ -27602,6 +30680,359 @@
         "title": "ScoreHistoryEntry",
         "type": "object"
       },
+      "SecBootstrapCheckpointRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint_id": {
+            "format": "uuid",
+            "title": "Checkpoint Id",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "prepared_at": {
+            "format": "date-time",
+            "title": "Prepared At",
+            "type": "string"
+          },
+          "provider_request_count": {
+            "minimum": 0.0,
+            "title": "Provider Request Count",
+            "type": "integer"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETE",
+              "UNAVAILABLE",
+              "FAILED",
+              "BLOCKED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "checkpoint_id",
+          "status",
+          "prepared_at",
+          "started_at",
+          "finished_at",
+          "failure_code",
+          "retryable",
+          "next_attempt_at",
+          "provider_request_count"
+        ],
+        "title": "SecBootstrapCheckpointRead",
+        "type": "object"
+      },
+      "SecDomainCoverageRead": {
+        "additionalProperties": false,
+        "properties": {
+          "bootstrap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecBootstrapCheckpointRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_check_count": {
+            "minimum": 0.0,
+            "title": "Data Check Count",
+            "type": "integer"
+          },
+          "latest_filed_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Filed At"
+          },
+          "latest_period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Period End"
+          },
+          "latest_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Recorded At"
+          },
+          "latest_retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Retrieved At"
+          },
+          "record_count": {
+            "minimum": 0.0,
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "refresh": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecRefreshRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "record_count",
+          "data_check_count",
+          "latest_period_end",
+          "latest_filed_at",
+          "latest_retrieved_at",
+          "latest_recorded_at",
+          "bootstrap"
+        ],
+        "title": "SecDomainCoverageRead",
+        "type": "object"
+      },
+      "SecRefreshRead": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_count": {
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "attempt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Id"
+          },
+          "batch_status": {
+            "enum": [
+              "RUNNING",
+              "COMPLETE",
+              "PARTIAL",
+              "FAILED",
+              "BLOCKED",
+              "NOT_APPLICABLE"
+            ],
+            "title": "Batch Status",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "issuer_outcome": {
+            "enum": [
+              "REPORTED",
+              "DATA_CHECK",
+              "UNAVAILABLE",
+              "UNMAPPED",
+              "NOT_REPORTED"
+            ],
+            "title": "Issuer Outcome",
+            "type": "string"
+          },
+          "mapped_company_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapped Company Count"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "scope_company_count": {
+            "minimum": 1.0,
+            "title": "Scope Company Count",
+            "type": "integer"
+          },
+          "source_record_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Record Count"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "trigger": {
+            "enum": [
+              "MANUAL",
+              "SCHEDULED",
+              "LEGACY"
+            ],
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempt_id",
+          "request_id",
+          "trigger",
+          "batch_status",
+          "requested_at",
+          "started_at",
+          "finished_at",
+          "attempt_count",
+          "retryable",
+          "failure_code",
+          "scope_company_count",
+          "mapped_company_count",
+          "issuer_outcome",
+          "source_record_count"
+        ],
+        "title": "SecRefreshRead",
+        "type": "object"
+      },
       "SecurityCreate": {
         "additionalProperties": false,
         "properties": {
@@ -32509,6 +35940,49 @@
         ]
       }
     },
+    "/v1/companies/{company_id}/refresh-options": {
+      "get": {
+        "operationId": "get_company_refresh_options_v1_companies__company_id__refresh_options_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyRefreshOptionsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Refresh Options",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/companies/{company_id}/reported-fundamentals": {
       "get": {
         "operationId": "get_company_reported_fundamentals_v1_companies__company_id__reported_fundamentals_get",
@@ -32876,6 +36350,49 @@
           }
         },
         "summary": "Get Score History",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/sec-coverage": {
+      "get": {
+        "operationId": "get_company_sec_coverage_v1_companies__company_id__sec_coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanySecCoverageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Sec Coverage",
         "tags": [
           "Portfolio research"
         ]
@@ -33775,6 +37292,59 @@
           }
         },
         "summary": "Get Financial Model Revision",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/financial-models/{model_id}/sensitivity": {
+      "get": {
+        "operationId": "get_dcf_sensitivity_v1_financial_models__model_id__sensitivity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Base Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DcfSensitivityRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dcf Sensitivity",
         "tags": [
           "Portfolio research"
         ]
@@ -36023,6 +39593,498 @@
           }
         },
         "summary": "Post Snapshot",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/anchor": {
+      "get": {
+        "operationId": "get_ledger_anchor_v1_portfolios__portfolio_id__ledger_anchor_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioLedgerAnchorRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Anchor",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates": {
+      "get": {
+        "operationId": "get_ledger_candidates_v1_portfolios__portfolio_id__ledger_candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerCandidatesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Candidates",
+        "tags": [
+          "Portfolio research"
+        ]
+      },
+      "post": {
+        "operationId": "post_ledger_candidate_v1_portfolios__portfolio_id__ledger_candidates_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerCandidateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerCandidateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ledger Candidate",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}": {
+      "get": {
+        "operationId": "get_ledger_candidate_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerCandidateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Candidate",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publication-preview": {
+      "get": {
+        "operationId": "get_ledger_publication_preview_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publication_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerPublicationPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Publication Preview",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publish": {
+      "post": {
+        "operationId": "post_ledger_publication_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerPublicationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerPublicationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ledger Publication",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/review": {
+      "post": {
+        "operationId": "post_ledger_review_v1_portfolios__portfolio_id__ledger_candidates__candidate_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "ACCEPT": "#/components/schemas/LedgerAcceptCreate",
+                    "REJECT": "#/components/schemas/LedgerRejectCreate"
+                  },
+                  "propertyName": "decision"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/LedgerAcceptCreate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LedgerRejectCreate"
+                  }
+                ],
+                "title": "Value"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerCandidateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ledger Review",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/ownership": {
+      "get": {
+        "operationId": "get_ledger_ownership_v1_portfolios__portfolio_id__ledger_ownership_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerOwnershipRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ledger Ownership",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/ledger/preview": {
+      "post": {
+        "operationId": "post_ledger_preview_v1_portfolios__portfolio_id__ledger_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioLedgerPreviewCreate-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioLedgerPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ledger Preview",
         "tags": [
           "Portfolio research"
         ]

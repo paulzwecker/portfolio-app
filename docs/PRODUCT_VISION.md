@@ -43,6 +43,7 @@ reconciled information in the hosted application.
 | Investor job          | Required outcome                                                                                                                                                     |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Understand ownership  | Exact holdings and currency-specific cash, EUR valuation, current weights, strategic target gaps, concentration and visible freshness/coverage                       |
+| Account for activity  | Purchases, sales, dividends, taxes, fees, deposits/withdrawals and transfers across brokers/accounts, reconciled imports, cost basis and realized/unrealized gains   |
 | Understand a business | Financial statements and fundamentals, original filings, consensus where permitted, thesis claims, evidence, risks, unresolved questions and independent assessments |
 | Challenge valuation   | Method-specific assumptions, scenarios, per-share fair values, appropriate expected returns, sensitivities, evidence and revision comparisons                        |
 | Prioritize action     | Explainable Universe/research comparisons, valid ranking cohorts, allocation context, Execution Pace rationale and actionable in-app alerts                          |
@@ -58,6 +59,16 @@ Each pipeline needs exact identity, units, currencies, fiscal/session dates,
 source rights, provenance, raw observation retention, idempotent refresh,
 reconciliation, freshness and failure visibility.
 
+Refresh must ultimately be automatic within an owner-approved provider scope,
+cadence and request/storage budget, with manual refresh as a recovery/control path.
+Define freshness by market session or issuer publication cadence, retaining last
+success, observation time, gaps, stale data, retries and terminal failures. Prove
+operation across worker restarts and a sleeping cloud service without a local
+workstation. Successful HTTP health alone does not establish data freshness.
+Operations must expose per-domain coverage, queued/running/partial/failed jobs,
+rate-limit/cooldown states and actionable alerts. Activation remains separately
+authorized and cannot accept models, change targets or create portfolio trades.
+
 Prioritize held listings and active Watchlist businesses, then expand the research
 universe. Define and review coverage by issuer, instrument, metric and period.
 SEC coverage alone cannot establish international coverage. An installed consensus
@@ -67,6 +78,34 @@ coverage explicitly and retain it as a gap until the agreed scope is met.
 Sector, geography and business-model exposure require canonical classifications.
 Transaction/cash-flow history must support genuine portfolio performance and
 benchmarking. Current-holdings hypothetical price history has a separate meaning.
+
+## Transaction-based portfolio management
+
+Deliver a personal portfolio accounting workflow comparable in utility to a
+transaction-based tracker such as Parqet, alongside investment research. A typed
+ledger must explain how each holding and native-currency cash balance arose,
+with explicit broker/account, source document/row, trade and settlement dates,
+exact security/listing identity, quantities, prices, fees, taxes and currency legs.
+Support purchases/sales, dividend receipts and withholding, cash deposits and
+withdrawals, security/cash transfers, FX conversions and reviewed corporate actions.
+Broker imports must preview mappings and duplicates, reconcile against statements,
+and preserve audit history through replay, conflicts and linked corrections.
+
+Cost basis and realized/unrealized gains require evidenced acquisition lots and a
+declared, versioned allocation/fee/FX policy. An unknown acquisition cost remains
+unknown. Account and consolidated views must handle internal transfers without
+double-counting capital flows, income or gains. Strategic target revisions retain
+their independent authority regardless of trades or current weights.
+
+Provide TWR and dated money-weighted XIRR for supported, reconciled periods, with
+explicit valuation/flow timing, currency conversion, fee/tax treatment and coverage.
+Realized portfolio performance and forward-looking model IRRs remain distinct.
+The current verified holdings snapshot is the immutable migration anchor. Use
+reviewed opening balances at an explicit cutover, or reconcile genuine broker
+history to it. Never manufacture historical buys, funding, cost basis or inception
+returns. Since-cutover performance can precede complete historical lot coverage
+when its opening/closing valuations and intervening flows are complete. Detailed
+transition boundaries live in the [Portfolio architecture](architecture/portfolio-application.md#transaction-ledger-transition-planned).
 
 ## Hybrid agent and model lifecycle
 

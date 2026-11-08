@@ -33,7 +33,122 @@ only the SEC and Google API hosts it uses to its own `NO_PROXY` variables. Other
 proxy configurations are untouched. This keeps worker routing local to its
 process and avoids changing machine-wide proxy settings.
 
+## Cloud cycle scopes
+
+The one-cycle `python -m portfolio_api.cloud_cron` entrypoint defaults to
+`--scope market-data` for market/FX only. `--scope provider-data` adds due SEC
+facts/filings and separately enabled FMP consensus. It preserves provider cadence,
+locks and run receipts while leaving manual requests, Sheets, research feeds and
+decision jobs outside that cycle. `--scope all-operations` explicitly selects the
+legacy full cycle and requires its separately reviewed source/write authority.
+
+All scopes retain the cloud/recurring enable flags and production target guards.
+The market/FX portion uses a frozen exact-listing/FX scope and reviewed crosswalk
+hash over 90 inclusive calendar dates, capped at 30 listing/pair subjects. A cloud
+invocation performs at most one persisted attempt per domain and four transport
+tries per subject. Retryable failed/partial domains become eligible after 15 minutes,
+up to three attempts for the same daily frozen scope. Successful domains and
+nonretryable/exhausted failures are reused. A restart preserves the attempt budget;
+an abandoned running claim is recorded as interrupted before cooldown/recovery.
+Broader historical backfills use their separately reviewed guarded workflow. Other
+providers retain their own reviewed scope and limits.
+Cloud execution preserves configured proxy routing. Terminal output contains
+operational statuses and exception classes, with detailed results in existing
+private database ledgers. Partial, blocked, failed and malformed outcomes return a
+nonzero process exit, including failed nested jobs. Overlapping cycles preserve
+the active worker's heartbeat.
+
+After schema readiness, cloud scope/source blockers are stored in existing
+`external_ingestion_runs` and append-only attempts under the market lock and
+write-target guard. Operations exposes the failure while retaining the last
+successful data update. A later valid scope records `preflight_resolved_at` on
+those diagnostic reports, leaving their original failures/attempts intact. Resolved
+checks leave the current status selection. Reusing facts never advances data
+freshness. Retry a preflight diagnostic by rerunning the cloud scope check; it
+cannot be replayed as a provider ingestion scope. Status follows the latest attempt,
+including retries of older runs. Database readiness/authorization failures that
+prevent safe diagnostic persistence remain sanitized command failures. The investor
+journey is locally verified through the real importer, PostgreSQL, API, web proxy
+and desktop/mobile browser with synthetic payloads. Hosted activation remains
+pending in [the active C2.2 build](ACTIVE_WORKSTREAM.md). Reproduce the isolated
+rehearsal with [the development runbook](codex-cloud-development.md#portfolio-data-rehearsal).
+
 ## Jobs and cadence
+
+### Held-issuer SEC refresh
+
+With one canonical portfolio, scheduled SEC domains and all-scope manual SEC
+requests select positive positions in its current complete snapshot, then explicit
+Watchlist companies. They reuse the bootstrap's reviewed CIK validation. Multiple
+listings deduplicate to one issuer. Held companies need no lifecycle assignment.
+Unmapped issuers, zero positions and companyless ETF listings remain disclosed in
+the saved selection. Multiple portfolios or an incomplete snapshot block this
+automatic scope. Before any portfolio exists, lifecycle-only scheduling is retained.
+Company-scoped SEC Fundamentals and SEC Filings requests also accept a verified
+positive held issuer without an assigned lifecycle. Admission records the exact
+portfolio and holdings snapshot. An explicit retry rechecks current eligibility;
+an interrupted request retains its frozen provider scope. Other company jobs keep
+their explicit Portfolio/Watchlist lifecycle requirement. Zero positions,
+companyless ETFs, incomplete or unverified snapshots and ambiguous portfolios
+cannot supply this exception. Reviewed CIK/contact and provider guards still apply
+at execution; an unmapped held issuer produces an explicit blocked result.
+
+`GET /v1/companies/{company_id}/refresh-options` reports backend eligibility,
+holding evidence and disabled/operator/worker execution mode without queuing work.
+Company Explorer and company-focused Operations consume this read contract and
+reuse the existing job request/status controls. Queuing still requires the manual
+or recurring flag and the normal database write authorization. Terminal outcomes
+refresh open coverage views, including blocked/failed attempts. UI cooldowns follow
+the returned request timestamp; the server remains authoritative for deduplication.
+
+Each domain's first scheduled run freezes its UTC-day selection and mapping hash
+in `external_ingestion_runs.request_scope`. Later scheduled invocations reuse that
+scope. Manual SEC steps share a frozen selection under their operational request
+ID, including restart across midnight. A newly requested retry has its own request
+ID. Captured identity changes block provider access, while later mapping additions
+remain outside the old scope. Lifecycle changes never rewrite the captured scope
+or assign investment status. Legacy direct ingestion callers retain their scope.
+
+The incremental scope permits at most 30 mapped issuers. Each provider attempt
+fetches at most 30 Company Facts responses or 30 recent submissions responses plus
+five new historical submissions files across the whole batch. Existing sequential
+throttling and up to three transport attempts remain. Scheduled transient failures
+have a 15-minute cooldown and at most two additional runs per UTC day/domain.
+Terminal and exhausted outcomes remain reused even if mappings or holdings change.
+Abandoned claims use the existing interruption ledger. Completed historical raw IDs
+are retained; deferred files keep coverage partial and continue on a later cycle.
+Use the [guarded SEC bootstrap](fundamentals-source-bootstrap.md) for a reviewed
+broader backfill. Its filing-before-facts checkpoints remain independent.
+
+Existing Operations request/attempt histories expose these outcomes. Company
+coverage also shows the latest relevant incremental run, attempt, trigger and
+frozen scope counts beside retained evidence and bootstrap history. The compact
+summary follows the newer bootstrap/refresh activity. Retrieval dates remain
+attached to retained data; execution times describe the operational run.
+
+Issuer outcomes use per-company Company Facts evidence and the
+[versioned filing reconciliation](source-documents.md#issuer-reconciliation-contract).
+Legacy aggregate filing results remain attributable only for a sole mapped
+provider subject. Other legacy batches retain their original attribution limits.
+History-file deferrals live in execution results, with strict per-issuer counts
+reconciled to the exact mapped scope and batch total. They preserve immutable raw
+receipt identity and bounded page continuation.
+Batch COMPLETE/PARTIAL never supplies missing issuer evidence. Integrity conflicts
+with zero accepted rows show DATA_CHECK. A clean empty response remains unavailable.
+Last-attempt retryability is separate from execution eligibility and remaining
+budget, which stay in Operations. Older API responses retain an explicit history
+availability message.
+Synthetic local PostgreSQL tests establish these controls. Reviewed real mappings,
+hosted refresh and production activation still require their separate approvals.
+
+Operations places its summary and market diagnostics before manual controls.
+Portfolio's **Review prices and FX** link opens that panel directly. The existing
+status API includes per-domain frozen scope, attempt history and retry eligibility
+through an additive `market_data.runs` field. The detail drawer keeps original
+failures inspectable. Eligibility follows the worker's persisted budget and cooldown
+for the current daily scope. Manual replays require operator review. An authorized
+worker invocation executes eligible retries. The summary's latest price/FX success
+and each domain's last success retain their separate meanings.
 
 The table lists cadences used when recurring operations are explicitly enabled.
 The default configuration sets `RECURRING_OPERATIONS_ENABLED=false` and does not
@@ -159,8 +274,8 @@ last attempt, last success, next attempt, failures and blockers. Existing
 domain-specific review surfaces.
 
 Manual request records and step outcomes appear on the Operations page. The
-Company Explorer offers only its relevant company-scoped refresh. A successful
-or partial company request signals open frontend data hooks to refetch; provider
+Company Explorer offers only its relevant company-scoped refresh. Terminal
+company outcomes signal open frontend data hooks to refetch; provider
 outages do not erase previously stored observations.
 When `RECURRING_OPERATIONS_ENABLED=false`, Operations displays the disabled
 recurring-worker state. New requests remain disabled unless

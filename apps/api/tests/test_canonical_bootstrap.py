@@ -731,15 +731,16 @@ def test_postgres18_bootstrap_resumes_after_interruption_and_is_idempotent(
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("revision", ["6c2eaf0b8147", "9f2a6d4c81b7"])
 def test_canonical_bootstrap_imports_at_last_recorded_production_schema(
-    postgres_engine: Any, tmp_path: Path
+    postgres_engine: Any, tmp_path: Path, revision: str
 ) -> None:
-    """R7's canonical importer must work at 6c without the later sync/ingestion migrations."""
+    """Retain both reviewed pre-ledger schema contracts without assuming deployment."""
     with postgres_engine.begin() as connection:
         config = alembic_config()
         config.attributes["connection"] = connection
-        command.downgrade(config, "6c2eaf0b8147")
-        assert set(MigrationContext.configure(connection).get_current_heads()) == {"6c2eaf0b8147"}
+        command.downgrade(config, revision)
+        assert set(MigrationContext.configure(connection).get_current_heads()) == {revision}
 
     _store, portfolio, market, plan = _prepared_inputs(tmp_path)
     with Session(postgres_engine) as session, session.begin():

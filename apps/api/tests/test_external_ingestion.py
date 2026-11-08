@@ -13,6 +13,7 @@ from portfolio_api.external_data import ExternalDataDomain, ProviderTransportErr
 from portfolio_api.external_ingestion import (
     DAILY_DOMAINS,
     MAX_RETRY_DELAY_SECONDS,
+    DomainOutcome,
     RunClaim,
     _domain_status_for_yahoo,
     _execute_cycle,
@@ -133,6 +134,7 @@ def test_yahoo_retryable_subject_failure_is_persisted_on_domain_attempt(
     run = SimpleNamespace(
         id=run_id,
         attempt_count=0,
+        max_attempts=3,
         last_attempt_started_at=None,
         status="RUNNING",
         finished_at=None,
@@ -167,6 +169,16 @@ def test_yahoo_retryable_subject_failure_is_persisted_on_domain_attempt(
     assert session.attempts[0].retryable is True
     assert session.attempts[0].failure_code == "PARTIAL_COVERAGE"
 
+    previous_success = run.last_successful_at
+
+    def failed_retry() -> dict[ExternalDataDomain, DomainOutcome]:
+        raise ConnectionError("Synthetic outage after partial progress")
+
+    _execute_cycle(cast(Session, session), [claim], failed_retry, single_attempt=True)
+    assert run.status == "FAILED"
+    assert run.last_successful_at == previous_success
+    assert [attempt.attempt_number for attempt in session.attempts] == [1, 2]
+
 
 def test_targeted_yahoo_domain_scope_keeps_fx_backfill_separate() -> None:
     assert _selected_domains([ExternalDataDomain.FX]) == {ExternalDataDomain.FX}
@@ -179,6 +191,7 @@ def test_targeted_yahoo_domain_scope_keeps_fx_backfill_separate() -> None:
         parse_fx_pair("ABC/XYZ")
 
 
+@pytest.mark.integration
 def test_operational_run_status_and_attempt_are_durable_and_append_only(
     postgres_engine: Engine,
 ) -> None:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader as PageTitle } from "@/components/app/page-header";
 import { PendingOrError } from "@/components/app/empty-state";
 import { useResearch } from "@/hooks/use-research";
@@ -22,6 +23,7 @@ import { CompanyHistoricalAnalysisWorkspace } from "@/components/features/compan
 import { CompanyRefreshAction } from "@/components/features/operations/company-refresh-action";
 export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
   const id = companyId;
+  const search = useSearchParams().toString();
   const [view, setView] = useState<CompanyView>("overview");
   const state = useResearch(`companies/${encodeURIComponent(id)}`, isDetail);
   const marketState = useResearch(
@@ -42,7 +44,7 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
       window.removeEventListener("popstate", syncFromLocation);
       window.removeEventListener("hashchange", syncFromLocation);
     };
-  }, []);
+  }, [id, search]);
 
   useEffect(() => {
     const targetId = window.location.hash.slice(1);
@@ -58,7 +60,7 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
     const url = new URL(window.location.href);
     url.searchParams.set("view", next);
     url.hash = "";
-    window.history.replaceState(window.history.state, "", url);
+    window.history.replaceState(null, "", url);
   };
 
   useEffect(() => {
@@ -89,7 +91,12 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
       <CompanyIdentityHeader
         detail={detail}
         marketState={marketState}
-        actions={<CompanyRefreshAction companyId={detail.company.id} />}
+        actions={
+          <CompanyRefreshAction
+            key={detail.company.id}
+            companyId={detail.company.id}
+          />
+        }
       />
       <CompanyViewTabs value={view} onChange={selectView} />
       <div

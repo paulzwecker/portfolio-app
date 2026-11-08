@@ -14,6 +14,7 @@ import {
 function currentLabel(pathname: string, selected: SelectedCompany | null) {
   if (pathname === "/") return "Overview";
   if (pathname === "/portfolio") return "Portfolio";
+  if (pathname === "/portfolio/ledger") return "Transaction ledger review";
   if (pathname === "/decisions") return "Decisions";
   if (pathname === "/universe") return "Universe";
   if (pathname === "/attention") return "Attention Center";

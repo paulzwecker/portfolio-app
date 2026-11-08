@@ -36,7 +36,9 @@ class NativeCurrentCalculation:
     accepted_output: FinancialModelOutput | None
 
 
-def _dcf_inputs(session: Session, revision: FinancialModelRevision) -> s.DcfCalculationInput:
+def dcf_inputs_for_revision(
+    session: Session, revision: FinancialModelRevision
+) -> s.DcfCalculationInput:
     from portfolio_api.domain import queries
 
     revision_read = queries._financial_model_revision_read(session, revision)
@@ -298,7 +300,7 @@ def current_native_model_calculation(
     try:
         if model.model_type == FinancialModelType.UFCF_DCF_10Y_FADE:
             revision_inputs: s.DcfCalculationInput | s.OwnerCashFlowInput | s.ResidualIncomeInput
-            revision_inputs = _dcf_inputs(session, revision)
+            revision_inputs = dcf_inputs_for_revision(session, revision)
         else:
             revision_read = queries._extended_financial_model_revision_read(session, revision)
             if isinstance(revision_read, s.OwnerCashFlowRevisionRead):

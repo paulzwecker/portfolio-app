@@ -24,6 +24,15 @@ them; they must not overwrite an accepted native revision. Likewise, cached work
 rank positions are imported legacy observations, not replacements for application
 ranking runs.
 
+The future transaction-ledger cutover is an explicit exception to the current
+holdings/cash ownership row, not an automatic authority change. A reviewed dated
+transition must preserve the accepted snapshot and receipts, reconcile ledger
+opening balances and define the covered accounts/time scope. After that authorized
+transition, new workbook holdings/cash for the covered scope are comparison or
+conflict evidence, never an overwrite of ledger-derived positions. Strategic
+targets retain their existing independent ownership and acceptance contract.
+See the [planned ledger boundary](architecture/portfolio-application.md#transaction-ledger-transition-planned).
+
 ## Snapshot and synchronization identity
 
 Every source observation starts with an immutable acquisition manifest containing a

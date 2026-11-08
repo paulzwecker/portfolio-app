@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, Response
 from fastapi.responses import JSONResponse
+from psycopg import Connection as PsycopgConnection
+from psycopg import Error as PsycopgError
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -15,8 +17,15 @@ from sqlalchemy.orm import Session
 from portfolio_api import candidate_pipeline as candidate_research
 from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
+from portfolio_api import portfolio_ledger as ledger
+from portfolio_api import portfolio_ledger_contracts as ledger_contracts
+from portfolio_api import portfolio_ledger_publication as ledger_publication
+from portfolio_api import portfolio_ledger_reviews as ledger_reviews
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
+from portfolio_api.company_sec_coverage import company_sec_coverage
+from portfolio_api.database_write_target import DatabaseWriteTargetError
+from portfolio_api.dcf_sensitivity import model_dcf_sensitivity
 from portfolio_api.decision_evaluation import company_decision_evaluation
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
@@ -55,6 +64,7 @@ from portfolio_api.investment_thesis import (
     thesis_revision_read,
 )
 from portfolio_api.manual_operations import (
+    company_refresh_options,
     create_job_request,
     job_request_read,
     list_job_requests,
@@ -150,6 +160,52 @@ def session_for(request: Request) -> Iterator[Session]:
 
 
 Db = Annotated[Session, Depends(session_for, scope="function")]
+
+
+def ledger_session_for(request: Request) -> Iterator[Session]:
+    engine = cast(Engine | None, request.app.state.database_engine)
+    if engine is None:
+        raise HTTPException(503, "Database is unavailable; configure the local environment")
+    try:
+        with engine.connect().execution_options(isolation_level="REPEATABLE READ") as connection:
+            driver = cast(
+                PsycopgConnection[tuple[object, ...]], connection.connection.driver_connection
+            )
+            previous_read_only = driver.read_only
+            try:
+                # SQLAlchemy's postgresql_readonly reset forces False. Retain the
+                # exact psycopg default (including None) for already read-only pools.
+                driver.read_only = True
+                with connection.begin(), Session(bind=connection, autoflush=False) as session:
+                    yield session
+            finally:
+                if not connection.invalidated:
+                    driver.read_only = previous_read_only
+    except operations.DomainError as error:
+        raise HTTPException(error.status, error.detail) from None
+    except (SQLAlchemyError, PsycopgError):
+        raise HTTPException(503, "Database is unavailable or migrations are required") from None
+
+
+LedgerDb = Annotated[Session, Depends(ledger_session_for, scope="function")]
+
+
+def ledger_write_session_for(request: Request) -> Iterator[Session]:
+    settings = cast(Settings, request.app.state.settings)
+    production = (
+        settings.app_env == "production" or settings.database_target_environment == "production"
+    )
+    if production and not settings.database_production_writes_authorized:
+        raise HTTPException(403, "Production ledger writes require separate owner authorization")
+    try:
+        yield from session_for(request)
+    except DatabaseWriteTargetError:
+        raise HTTPException(
+            403, "Ledger writes are blocked by database target safeguards"
+        ) from None
+
+
+LedgerWriteDb = Annotated[Session, Depends(ledger_write_session_for, scope="function")]
 
 
 def model_proposal_agent_identity(
@@ -850,6 +906,22 @@ def get_recurring_operations_status(request: Request, db: Db) -> s.RecurringOper
     return recurring_operations_status(db, settings)
 
 
+@router.get("/companies/{company_id}/refresh-options", response_model=s.CompanyRefreshOptionsRead)
+def get_company_refresh_options(
+    company_id: UUID, request: Request, db: Db
+) -> s.CompanyRefreshOptionsRead:
+    settings = cast(Settings, request.app.state.settings)
+    mode: Literal["WORKER", "OPERATOR", "DISABLED"] = "DISABLED"
+    if settings.recurring_operations_enabled:
+        mode = "WORKER"
+    elif settings.manual_operations_enabled:
+        mode = "OPERATOR"
+    try:
+        return company_refresh_options(db, company_id, execution_mode=mode)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from None
+
+
 @router.get("/operations/job-requests", response_model=list[s.OperationalJobRequestRead])
 def get_operational_job_requests(
     db: Db,
@@ -1211,6 +1283,11 @@ def get_company_reported_fundamentals(
 ) -> s.CompanyReportedFundamentalsRead:
     _validate_market_cutoffs(as_of, known_at)
     return q.company_reported_fundamentals(db, company_id, period_type, as_of, known_at)
+
+
+@router.get("/companies/{company_id}/sec-coverage", response_model=s.CompanySecCoverageRead)
+def get_company_sec_coverage(company_id: UUID, db: Db) -> s.CompanySecCoverageRead:
+    return company_sec_coverage(db, company_id)
 
 
 @router.get(
@@ -1695,6 +1772,11 @@ def get_financial_model(model_id: UUID, db: Db) -> s.FinancialModelRead:
     return q.financial_model(db, model_id)
 
 
+@router.get("/financial-models/{model_id}/sensitivity", response_model=s.DcfSensitivityRead)
+def get_dcf_sensitivity(model_id: UUID, base_revision_id: UUID, db: Db) -> s.DcfSensitivityRead:
+    return model_dcf_sensitivity(db, model_id, base_revision_id)
+
+
 @router.get(
     "/financial-models/{model_id}/contract",
     response_model=s.FinancialModelContractV1,
@@ -1865,6 +1947,100 @@ def get_snapshots(portfolio_id: UUID, db: Db) -> list[s.SnapshotRead]:
             .order_by(HoldingSnapshot.effective_at.desc())
         )
     ]
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/anchor",
+    response_model=ledger_contracts.PortfolioLedgerAnchorRead,
+)
+def get_ledger_anchor(
+    portfolio_id: UUID, db: LedgerDb
+) -> ledger_contracts.PortfolioLedgerAnchorRead:
+    return ledger.portfolio_ledger_anchor(db, portfolio_id)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/preview",
+    response_model=ledger_contracts.PortfolioLedgerPreviewRead,
+)
+def post_ledger_preview(
+    portfolio_id: UUID, value: ledger_contracts.PortfolioLedgerPreviewCreate, db: LedgerDb
+) -> ledger_contracts.PortfolioLedgerPreviewRead:
+    return ledger.preview_portfolio_ledger(db, portfolio_id, value)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/candidates",
+    response_model=ledger_contracts.LedgerCandidatesRead,
+)
+def get_ledger_candidates(
+    portfolio_id: UUID, db: LedgerDb, limit: int = Query(default=30, ge=1, le=100)
+) -> ledger_contracts.LedgerCandidatesRead:
+    return ledger_reviews.list_candidates(db, portfolio_id, limit)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}",
+    response_model=ledger_contracts.LedgerCandidateRead,
+)
+def get_ledger_candidate(
+    portfolio_id: UUID, candidate_id: UUID, db: LedgerDb
+) -> ledger_contracts.LedgerCandidateRead:
+    return ledger_reviews.candidate_read(db, portfolio_id, candidate_id)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/candidates",
+    response_model=ledger_contracts.LedgerCandidateRead,
+)
+def post_ledger_candidate(
+    portfolio_id: UUID, value: ledger_contracts.LedgerCandidateCreate, db: LedgerWriteDb
+) -> ledger_contracts.LedgerCandidateRead:
+    return ledger_reviews.stage_candidate(db, portfolio_id, value)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/review",
+    response_model=ledger_contracts.LedgerCandidateRead,
+)
+def post_ledger_review(
+    portfolio_id: UUID,
+    candidate_id: UUID,
+    value: ledger_contracts.LedgerReviewCreate,
+    db: LedgerWriteDb,
+) -> ledger_contracts.LedgerCandidateRead:
+    return ledger_reviews.review_candidate(db, portfolio_id, candidate_id, value)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/ownership",
+    response_model=ledger_contracts.LedgerOwnershipRead,
+)
+def get_ledger_ownership(portfolio_id: UUID, db: LedgerDb) -> ledger_contracts.LedgerOwnershipRead:
+    return ledger_publication.ownership(db, portfolio_id)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publication-preview",
+    response_model=ledger_contracts.LedgerPublicationPreviewRead,
+)
+def get_ledger_publication_preview(
+    portfolio_id: UUID, candidate_id: UUID, db: LedgerDb
+) -> ledger_contracts.LedgerPublicationPreviewRead:
+    return ledger_publication.publication_preview(db, portfolio_id, candidate_id)
+
+
+@router.post(
+    "/portfolios/{portfolio_id}/ledger/candidates/{candidate_id}/publish",
+    response_model=ledger_contracts.LedgerPublicationRead,
+)
+def post_ledger_publication(
+    portfolio_id: UUID,
+    candidate_id: UUID,
+    value: ledger_contracts.LedgerPublicationCreate,
+    db: LedgerWriteDb,
+) -> ledger_contracts.LedgerPublicationRead:
+    return ledger_publication.publish(db, portfolio_id, candidate_id, value)
 
 
 @router.post(

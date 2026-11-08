@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -357,6 +358,7 @@ def test_historical_anchor_observed_after_its_reference_cutoff_is_excluded() -> 
     assert signal.periods[0].windows[2].status == "MISSING_REFERENCE"
 
 
+@pytest.mark.integration
 def test_company_query_uses_point_in_time_source_mapping_without_provider_blending(
     postgres_engine: Engine,
 ) -> None:

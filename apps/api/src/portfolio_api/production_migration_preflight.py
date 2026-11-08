@@ -36,12 +36,12 @@ from portfolio_api.domain import models as _models  # noqa: F401 -- register map
 from portfolio_api.migrations import expected_heads
 from portfolio_api.settings import Settings
 
-PROJECT_ID = "delicate-heart-04560404"
-PRIMARY_BRANCH_ID = "br-morning-truth-b96361yh"
-PRIMARY_ENDPOINT_ID = "ep-snowy-term-b9gr75j6"
+PROJECT_ID = "blue-pond-96398788"
+PRIMARY_BRANCH_ID = "br-square-butterfly-bacw0rn5"
+PRIMARY_ENDPOINT_ID = "ep-floral-cake-bae16liy"
 DATABASE_NAME = "neondb"
-PRODUCTION_BASE_REVISION = "6c2eaf0b8147"
-RELEASE_HEAD = "9f2a6d4c81b7"
+PRODUCTION_BASE_REVISION = "9f2a6d4c81b7"
+RELEASE_HEAD = "b59f16c8a203"
 CORE_READ_TABLES = ("companies",)
 MIGRATION_CONFIRMATION_PREFIX = "MIGRATE"
 INITIAL_BOOTSTRAP_CONFIRMATION_PREFIX = "INITIALIZE"

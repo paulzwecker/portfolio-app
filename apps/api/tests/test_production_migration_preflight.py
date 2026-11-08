@@ -364,15 +364,15 @@ def test_unreviewed_heads_fail_closed(current: set[str], repository: set[str]) -
 
 def test_migration_confirmation_binds_exact_target_and_revision_range() -> None:
     assert migration_confirmation(
-        project_id="delicate-heart-04560404",
-        branch_id="br-morning-truth-b96361yh",
-        endpoint_id="ep-snowy-term-b9gr75j6",
+        project_id="blue-pond-96398788",
+        branch_id="br-square-butterfly-bacw0rn5",
+        endpoint_id="ep-floral-cake-bae16liy",
         database="neondb",
         current=PRODUCTION_BASE_REVISION,
         target=RELEASE_HEAD,
     ) == (
-        "MIGRATE delicate-heart-04560404/br-morning-truth-b96361yh/"
-        "ep-snowy-term-b9gr75j6/neondb/6c2eaf0b8147->9f2a6d4c81b7"
+        "MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/"
+        "ep-floral-cake-bae16liy/neondb/9f2a6d4c81b7->b59f16c8a203"
     )
 
 
@@ -402,9 +402,9 @@ def test_migration_preflight_uses_only_readonly_target_guard(
     monkeypatch.setenv(
         "MIGRATION_CONFIRMATION",
         migration_confirmation(
-            project_id="delicate-heart-04560404",
-            branch_id="br-morning-truth-b96361yh",
-            endpoint_id="ep-snowy-term-b9gr75j6",
+            project_id="blue-pond-96398788",
+            branch_id="br-square-butterfly-bacw0rn5",
+            endpoint_id="ep-floral-cake-bae16liy",
             database="neondb",
             current=PRODUCTION_BASE_REVISION,
             target=RELEASE_HEAD,
@@ -472,9 +472,9 @@ def test_migration_preflight_requires_recovery_when_application_data_exists(
     monkeypatch.setenv(
         "MIGRATION_CONFIRMATION",
         migration_confirmation(
-            project_id="delicate-heart-04560404",
-            branch_id="br-morning-truth-b96361yh",
-            endpoint_id="ep-snowy-term-b9gr75j6",
+            project_id="blue-pond-96398788",
+            branch_id="br-square-butterfly-bacw0rn5",
+            endpoint_id="ep-floral-cake-bae16liy",
             database="neondb",
             current=PRODUCTION_BASE_REVISION,
             target=RELEASE_HEAD,
@@ -626,3 +626,27 @@ def test_schema_metadata_drift_error_is_sanitized(
         run_readonly_schema_check()
     assert "private SQL details" not in str(exc.value)
     engine.dispose.assert_called_once()
+
+
+def test_current_release_plan_rejects_retired_target_and_previous_confirmation() -> None:
+    from portfolio_api.production_migration_preflight import validate_read_settings
+
+    current = fresh_settings(
+        database_url=SecretStr(
+            "postgresql+psycopg://reader:synthetic@ep-floral-cake-bae16liy.example.neon.tech/neondb?sslmode=verify-full"
+        ),
+        database_target_database="neondb",
+        neon_project_id="blue-pond-96398788",
+        neon_branch_id="br-square-butterfly-bacw0rn5",
+        neon_endpoint_id="ep-floral-cake-bae16liy",
+    )
+    validate_read_settings(current)
+    retired = current.model_copy(update={"neon_project_id": "delicate-heart-04560404"})
+    with pytest.raises(
+        ProductionMigrationPreflightError, match="verified_neon_production_identity_required"
+    ):
+        validate_read_settings(retired)
+    assert PRODUCTION_BASE_REVISION == "9f2a6d4c81b7"
+    assert RELEASE_HEAD == "b59f16c8a203"
+    with pytest.raises(ProductionMigrationPreflightError, match="requires_new_review"):
+        migration_required({"6c2eaf0b8147"}, {RELEASE_HEAD})

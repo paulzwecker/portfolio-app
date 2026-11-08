@@ -7,6 +7,8 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
+from alembic.runtime.migration import MigrationContext
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -35,6 +37,7 @@ from portfolio_api.domain.models import (
     OwnerCashFlowScenarioAssumptions,
     OwnerCashFlowYearAssumption,
     Portfolio,
+    PortfolioLedgerPublication,
     PriceObservation,
     RankingDefinition,
     RankingDefinitionStatus,
@@ -2016,6 +2019,35 @@ def record_holdings(
     session: Session, portfolio_id: UUID, value: s.SnapshotCreate
 ) -> HoldingSnapshot:
     portfolio(session, portfolio_id, lock=True)
+    require_observed_holdings_authority(session, portfolio_id)
+    return _record_holdings(session, portfolio_id, value)
+
+
+def require_observed_holdings_authority(session: Session, portfolio_id: UUID) -> None:
+    connection = session.connection()
+    if not sa_inspect(connection).has_table(PortfolioLedgerPublication.__tablename__):
+        # These reviewed bootstrap schemas predate ledger ownership. A missing
+        # ownership table at a newer or unknown revision must never grant writes.
+        heads = set(MigrationContext.configure(connection).get_current_heads())
+        if heads in ({"6c2eaf0b8147"}, {"9f2a6d4c81b7"}):
+            return
+        raise DomainError("Holdings source ownership storage could not be verified", status=409)
+    if session.scalar(
+        select(PortfolioLedgerPublication.id)
+        .where(PortfolioLedgerPublication.portfolio_id == portfolio_id)
+        .limit(1)
+    ):
+        raise DomainError(
+            "Ledger-owned holdings require explicit ledger publication. "
+            "Observed snapshot writes are blocked",
+            status=409,
+        )
+
+
+def _record_holdings(
+    session: Session, portfolio_id: UUID, value: s.SnapshotCreate
+) -> HoldingSnapshot:
+    """Insert only after the caller has locked and verified its source authority."""
     for position in value.positions:
         if session.get(Listing, position.listing_id) is None:
             raise DomainError("A held listing was not found", 404)

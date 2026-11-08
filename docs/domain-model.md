@@ -560,6 +560,12 @@ A `portfolios` table should nevertheless exist so later multi-portfolio support 
 
 Brokerage-account modeling is out of scope for Milestone 1.
 
+The agreed product destination now includes transaction accounting, broker/accounts
+and performance in C2. The exclusions here describe the original snapshot
+milestone. Its current runtime has snapshots and quantities, without a transaction
+ledger or cost lots. The planned [ledger transition](architecture/portfolio-application.md#transaction-ledger-transition-planned)
+preserves those observations and requires a reviewed, reconciled ownership cutover.
+
 Short positions are out of scope for Milestone 1.
 
 Cash is in scope architecturally.
@@ -648,6 +654,10 @@ Typical fields:
 - optional cost_basis
 - optional cost_basis_currency
 - source metadata where required
+
+The cost-basis fields above are proposed extensions, absent from the current
+`HoldingPosition` ORM/API contract. Unknown acquisition cost must remain unavailable
+until evidence-backed lot/accounting support is implemented.
 
 Constraints:
 
@@ -1534,7 +1544,8 @@ One logical portfolio initially.
 
 Multi-portfolio schema supported.
 
-Broker accounts out of scope.
+Broker accounts were excluded from the original snapshot milestone. C2 plans
+reviewed account allocation and transaction-ledger support.
 
 ### Holdings
 
@@ -1590,8 +1601,8 @@ The following decisions should be deferred until their corresponding domain is i
 - broader standalone fund and ETF modeling beyond the imported SPYY security
 - security-level versus company-level models in unusual multi-class situations
 - exact cash-target representation if strategic cash needs explicit target rows
-- transaction-ledger support
-- brokerage/account hierarchy
+- transaction-ledger cutover, lot-allocation and performance policies
+- brokerage/account evidence, hierarchy and first supported import format
 - FX provider mappings, precedence and history coverage
 - provider-specific crosswalk, precedence and retention decisions under the
   [external-data architecture](external-data-architecture.md)

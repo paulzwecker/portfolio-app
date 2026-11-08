@@ -52,6 +52,47 @@ integrity only.
 
 ## Operator procedure (Windows PowerShell 5.1 and 7)
 
+### Choose the issuer scope
+
+`preview` and `prepare` accept mutually exclusive `--company-id` and
+`--portfolio-id`. Omitting both retains the existing all-reviewed-mappings scope.
+Use `--portfolio-id` to prioritize positive holdings from that exact portfolio's
+current complete snapshot, then explicitly classified Watchlist companies.
+Multiple listings of one issuer produce one pair of SEC checkpoints. Holding a
+security supplies selection evidence independently of its company's lifecycle.
+
+The private `selection` report pins the portfolio/snapshot IDs, selected companies
+and reasons. Explicit zero positions are listed as exclusions. Companyless ETF
+listings remain separate disclosed coverage gaps. Missing issuer CIKs stay in
+`active_companies_without_reviewed_cik`, including held companies with no lifecycle.
+An unknown portfolio or incomplete current snapshot blocks this scoped path.
+Global mapping ambiguity/invalid evidence continues to fail closed.
+
+Run a read-only inventory after configuring the verified target. Keep the report
+outside Git in the private report directory described below.
+
+```powershell
+npm run db:bootstrap-fundamentals -- preview `
+  --target-environment production `
+  --portfolio-id '<canonical-portfolio-uuid>' `
+  --report '<new-private-preview-report-path>'
+```
+
+`READY` permits preparation of the reviewed mapped subset. Review its disclosed
+unmapped issuers and exclusions before treating coverage as sufficient. Repeat the
+same `--portfolio-id` on the separately authorized `prepare` command. Preparation
+writes a frozen run ledger. `run`/`resume` use its ID and keep that selection across
+later holdings, lifecycle or mapping additions. Actual changes to a captured issuer
+mapping still block provider access. Prepare a new reviewed run to expand coverage.
+
+Filings must finish for each issuer before its Company Facts checkpoint can run.
+Retry cooldowns preserve that dependency. An issuer with unavailable filings may
+continue with explicit evidence gaps. Other eligible issuers can progress while a
+failed issuer waits. Failure/retry history and exact source batches remain in the
+existing checkpoint ledger.
+
+### Run the reviewed checkpoints
+
 Use a private local directory for reports. Do not put SEC contact details, database
 URLs, Neon keys, source payloads, or reports in GitHub, CI, PR attachments, or the
 repository. Development, rehearsal, and explicitly guarded production targets are

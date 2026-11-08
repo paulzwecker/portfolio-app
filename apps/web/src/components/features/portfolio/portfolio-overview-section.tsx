@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { DataFreshnessIndicator } from "@/components/app/data-freshness-indicator";
 import { MetricCard } from "@/components/app/metric-card";
 import { PageSection } from "@/components/app/page-section";
 import { StatusIndicator } from "@/components/app/status-indicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { sortedByWeight } from "@/components/features/portfolio/decision-components";
 import type { Overview } from "@/lib/domain-contracts";
 import { dateTime, statusLabel } from "@/lib/display";
@@ -117,6 +119,11 @@ export function PortfolioOverviewSection({
               observedAt={overview.fx_data_through}
               source="FX data through"
             />
+            <Button asChild variant="outline" size="sm">
+              <Link href="/operations#market-data-refresh">
+                Review prices and FX
+              </Link>
+            </Button>
             <div className="flex flex-wrap items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
               <StatusIndicator
                 status={overview.valuation_status}

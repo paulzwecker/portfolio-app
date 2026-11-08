@@ -71,7 +71,7 @@ Browser tests that need seeded API state use the same test database. Start the
 fixture API in one terminal, then run the web suite in another:
 
 ```sh
-TEST_DATABASE_URL='postgresql+psycopg://portfolio_app:<password>@<host>:5432/portfolio_app_test' \
+TEST_DATABASE_URL='postgresql+psycopg://portfolio_app:<password>@127.0.0.1:5432/portfolio_app_test' \
   npm run test:e2e:api
 
 npm run test:e2e
@@ -80,6 +80,85 @@ npm run test:e2e
 Browser tests are intentionally an operator or release check rather than a
 required cloud-initialization step because they need a running API and a
 Playwright browser installation.
+
+### Portfolio data rehearsal
+
+The browser fixture requires a loopback PostgreSQL `_test` database and verifies
+its live identity before creating a random test-owned schema. Portfolio scenarios
+use synthetic provider payloads through the real importer. FastAPI serves those
+records with PostgreSQL read-only transactions, the existing SQL write guard and
+GET/HEAD access plus one exact read-only ledger-preview POST for the fixture
+portfolio. Every other non-read path remains blocked. The ledger endpoint retains
+its dedicated read-only transaction and the fixture's SQL guard. Operator
+application settings and credentials are isolated.
+
+In a dedicated PowerShell terminal with `TEST_DATABASE_URL` configured securely,
+run the fixture from the repository root. Select `unpriced`, `fx-outage` or `valued`.
+
+```powershell
+$env:BROWSER_API_PORT='8011'
+npm run test:e2e:api -- --scenario valued --lifetime-seconds 120
+```
+
+Run the focused desktop/mobile journey from a second dedicated terminal.
+
+```powershell
+$env:E2E_WEB_PORT='3110'
+$env:BROWSER_API_PORT='8011'
+$env:E2E_REAL_API='1'
+$env:API_BASE_URL='http://127.0.0.1:8011'
+$env:API_ACCESS_TOKEN=''
+$env:APP_ENV='development'
+$env:WEB_ACCESS_USERNAME=''
+$env:WEB_ACCESS_PASSWORD=''
+node scripts/browser.mjs test portfolio-live-data.spec.ts --workers=1
+```
+
+The candidate ledger journey uses the same environment and an `unpriced` fixture.
+Run `node scripts/browser.mjs test portfolio-ledger.spec.ts --workers=1` to verify
+private-file preview, exact ending comparisons, missing zero rows, evidence/focus,
+source identity and canceled requests. Its preview POSTs perform read/compute only.
+Protected-state hashes must match throughout.
+
+The test checks the fixture identity, exact decimal readback, proxy routing,
+Portfolio → Operations investigation and unchanged holdings/targets/table counts.
+It rejects API errors and browser write requests. Screenshots remain in ignored
+`apps/web/test-results`. This test is skipped without `E2E_REAL_API=1`.
+
+Wait for normal fixture shutdown and `Removed the test-owned browser schema.`
+The lifetime defaults to 120 seconds for portfolio scenarios and is capped at 600.
+Forced termination of the Windows wrapper can interrupt cleanup. Existing schemas
+remain untouched. Each scenario needs its own fixture invocation. These checks
+establish local integration using synthetic facts. Hosted provider cycles and
+production activation retain their separate review and authorization gates.
+
+### Company SEC coverage rehearsal
+
+Use the same isolated test database and loopback web/API environment above. Start
+one fixture at a time. The existing bootstrap advisory lock spans test schemas.
+Choose `sec-covered`, `sec-outage`, `sec-unmapped`, `sec-refresh-partial` or
+`sec-refresh-outage`. The incremental scenarios cover differing batch/issuer
+outcomes and transport failures after retained evidence. Their SEC responses are
+synthetic and pass through the existing real ingestion services.
+
+```powershell
+npm run test:e2e:api -- --scenario sec-outage --lifetime-seconds 180
+```
+
+In the second terminal, keep the matching `BROWSER_API_PORT` and `API_BASE_URL`.
+Start the browser check promptly after the API reports readiness.
+
+```powershell
+$env:E2E_SEC_API='1'
+$env:E2E_REAL_API='0'
+node scripts/browser.mjs test company-sec-data.spec.ts --workers=1
+```
+
+This exercises the real scoped SEC importer with synthetic payloads, coverage and
+provenance drawers, historical-cutoff separation, query/tab navigation and focused
+Operations on desktop/mobile. It checks API errors, browser writes and unchanged
+portfolio/table fingerprints. Wait for normal schema cleanup. A timed-out fixture
+requires a fresh invocation before another browser run.
 
 ## Environment variables and database boundaries
 
@@ -160,3 +239,16 @@ strings, API tokens, Sheets credentials and provider keys outside GitHub.
   credentials and source permissions.
 - Render/Vercel deployment and Neon data transfer are not part of cloud
   environment initialization.
+
+### CI PostgreSQL fixture identity
+
+Browser/ledger fixtures require a loopback URL, a disposable `_test` database and
+an independently checked SQL identity before creating a schema. In GitHub Actions,
+Docker publishing can report the PostgreSQL container's own server address. The
+fixture verifies the existing `MIGRATION_PG_TOOLS_CONTAINER` through read-only
+Docker metadata, requiring the running `postgres:18` image, that exact server
+address and the configured loopback-published database port. The existing CI
+workflow selects the container; no additional service or credential is required.
+Missing or mismatched metadata fails closed. Ordinary workstation fixtures retain
+loopback-server verification. Production database-target guards keep their existing
+scope and authorization requirements.

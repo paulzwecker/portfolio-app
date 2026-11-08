@@ -14,6 +14,7 @@ import {
 } from "@/lib/domain-contracts";
 import { dateTime, statusLabel } from "@/lib/display";
 import { FinancialPeriodControls } from "./financial-period-controls";
+import { CompanySecCoveragePanel } from "../company-sec-coverage";
 import {
   FinancialMetricSelector,
   type FinancialSourceKind,
@@ -190,6 +191,7 @@ export function FinancialStatementsWorkspace({
           cutoff={cutoff}
           onCutoff={setCutoff}
         />
+        {!cutoff && <CompanySecCoveragePanel companyId={companyId} />}
         <p className="text-xs leading-4 text-muted-foreground">
           Columns use the reported period end. Fiscal-year and quarter labels
           appear only when the canonical filing evidence supports them; an

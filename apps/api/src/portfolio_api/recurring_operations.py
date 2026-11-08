@@ -35,6 +35,7 @@ from portfolio_api.domain.models import (
     ExternalIngestionRun,
     OperationalJobAttempt,
     OperationalJobRequest,
+    Portfolio,
     PriceObservation,
     RankingDefinition,
     RankingEntry,
@@ -74,6 +75,7 @@ from portfolio_api.research_queue import get_research_queue
 from portfolio_api.research_sheet_sync import run_research_sync_check
 from portfolio_api.research_triggers import refresh_research_triggers
 from portfolio_api.risk_assessments import run_risk_sync_check
+from portfolio_api.sec_refresh_scope import SEC_SCOPE_VERSION, SecRefreshScopeError
 from portfolio_api.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -306,6 +308,7 @@ def _run_one_job(
         if not operation_due(session, job_name, now_at, cadence_seconds, settings):
             return {"status": "NOT_DUE", "job_name": job_name}
     run_id = _begin_operation(engine, job_name, now_at)
+    retry_after_seconds: object = None
     try:
         result = action()
         status = _classified_status(result)
@@ -319,11 +322,14 @@ def _run_one_job(
         if status == "FAILED" and failure_code is None:
             failure_code = "OPERATION_FAILED"
     except Exception as error:  # keep one failed integration from stopping other jobs
-        logger.exception("Recurring job %s failed", job_name)
+        logger.error(
+            "Recurring job failed",
+            extra={"job_name": job_name, "error_type": type(error).__name__},
+        )
         result = {"status": "FAILED", "failure_code": type(error).__name__}
         status = "FAILED"
         failure_code = type(error).__name__
-        failure_message = str(error)
+        failure_message = "Unexpected operation failure. Inspect the recorded failure code."
     _finish_operation(
         engine,
         run_id,
@@ -355,11 +361,24 @@ def _run_sec_domain(
             ),
         }
     with Session(engine) as session:
+        portfolio_scope = session.scalar(select(Portfolio.id).limit(1)) is not None
+        scope_conditions = (
+            [
+                ExternalIngestionRun.request_scope["sec_scope_version"].as_string()
+                == SEC_SCOPE_VERSION,
+                ExternalIngestionRun.request_scope["operational_request_id"].as_string().is_(None),
+                ExternalIngestionRun.request_scope["scope_date"].as_string()
+                == now_utc.date().isoformat(),
+            ]
+            if portfolio_scope
+            else []
+        )
         latest = session.scalar(
             select(ExternalIngestionRun)
             .where(
                 ExternalIngestionRun.provider_id == PROVIDERS[domain],
                 ExternalIngestionRun.domain == domain.value,
+                *scope_conditions,
             )
             .order_by(ExternalIngestionRun.created_at.desc())
             .limit(1)
@@ -367,7 +386,11 @@ def _run_sec_domain(
         replay_of = None
         replay_scope: dict[str, Any] | None = None
         replay_count = 0
-        if latest is not None and latest.created_at.astimezone(UTC).date() == now_utc.date():
+        if latest is not None and (
+            portfolio_scope or latest.created_at.astimezone(UTC).date() == now_utc.date()
+        ):
+            if portfolio_scope:
+                replay_scope = latest.request_scope
             last_attempt = session.scalar(
                 select(ExternalIngestionAttempt)
                 .where(ExternalIngestionAttempt.run_id == latest.id)
@@ -390,12 +413,38 @@ def _run_sec_domain(
                     select(func.count(ExternalIngestionRun.id)).where(
                         ExternalIngestionRun.replay_of_run_id.is_not(None),
                         ExternalIngestionRun.domain == domain.value,
+                        *scope_conditions,
                         ExternalIngestionRun.created_at
                         >= datetime.combine(now_utc.date(), datetime.min.time(), UTC),
                     )
                 )
                 or 0
             )
+            if portfolio_scope and last_attempt is not None and latest.status != "RUNNING":
+                retry_at = (
+                    last_attempt.finished_at or last_attempt.started_at
+                ) + FAILURE_BACKOFF_INITIAL
+                retryable = (
+                    latest.status in {"FAILED", "PARTIAL"}
+                    and last_attempt.retryable
+                    and replay_count < SEC_RETRY_LIMIT_PER_UTC_DAY
+                )
+                if not retryable or retry_at > now_utc:
+                    return {
+                        "status": latest.status,
+                        "report": latest.report,
+                        "external_run_id": str(latest.id),
+                        "idempotent_reuse": True,
+                        **(
+                            {
+                                "retry_after_seconds": max(
+                                    1, int((retry_at - now_utc).total_seconds())
+                                )
+                            }
+                            if retryable
+                            else {}
+                        ),
+                    }
             if (
                 latest.status in {"FAILED", "PARTIAL"}
                 and last_attempt is not None
@@ -404,14 +453,22 @@ def _run_sec_domain(
             ):
                 replay_of = latest.id
                 replay_scope = latest.request_scope
-        report = run_scheduled(
-            session,
-            settings,
-            domains=[domain],
-            run_date=now_utc.date(),
-            replay_of_run_id=replay_of,
-            replay_scope=replay_scope,
-        )
+        try:
+            report = run_scheduled(
+                session,
+                settings,
+                domains=[domain],
+                run_date=now_utc.date(),
+                replay_of_run_id=replay_of,
+                replay_scope=replay_scope,
+                sec_research_scope=True,
+            )
+        except SecRefreshScopeError:
+            return {
+                "status": "BLOCKED",
+                "failure_code": "SEC_SCOPE_INVALID",
+                "failure_message": "Review the canonical portfolio and SEC issuer mappings.",
+            }
         session.commit()
         result: dict[str, object] = {"status": report["status"], "report": report}
         if str(report.get("status", "")).upper() in {"FAILED", "PARTIAL"}:
@@ -420,6 +477,7 @@ def _run_sec_domain(
                 .where(
                     ExternalIngestionRun.provider_id == PROVIDERS[domain],
                     ExternalIngestionRun.domain == domain.value,
+                    *scope_conditions,
                 )
                 .order_by(ExternalIngestionRun.created_at.desc())
                 .limit(1)
@@ -728,6 +786,7 @@ def _run_manual_step(
                 company_ids={request.company_id} if request.company_id else None,
                 request_nonce=request.id,
                 run_date=now_at.date(),
+                sec_research_scope=True,
             )
             session.commit()
         return {"status": report.get("status", "FAILED"), "report": report}
@@ -1083,7 +1142,7 @@ def _record_heartbeat(
     stopped: bool = False,
 ) -> None:
     with Session(engine) as session:
-        state = session.get(RecurringOperationsWorkerState, "primary")
+        state = session.get(RecurringOperationsWorkerState, "primary", with_for_update=True)
         if state is None:
             state = RecurringOperationsWorkerState(
                 worker_key="primary",
@@ -1095,6 +1154,8 @@ def _record_heartbeat(
                 last_error=error,
             )
             session.add(state)
+        elif stopped and state.instance_id != instance_id:
+            return
         else:
             state.instance_id = instance_id
             state.status = status
@@ -1112,6 +1173,7 @@ def run_recurring_cycle(
     engine: Engine | None = None,
     instance_id: UUID | None = None,
     process_started_at: datetime | None = None,
+    provider_only: bool = False,
 ) -> dict[str, object]:
     """Run due jobs once; the scheduler lock prevents duplicate concurrent cycles."""
 
@@ -1148,7 +1210,11 @@ def run_recurring_cycle(
                     started_at=started,
                     now_at=current,
                 )
-                manual = process_manual_job_requests(current_engine, settings, now_at=current)
+                manual = (
+                    None
+                    if provider_only
+                    else process_manual_job_requests(current_engine, settings, now_at=current)
+                )
                 jobs: list[dict[str, object]] = []
                 jobs.append(
                     _run_one_job(
@@ -1188,47 +1254,48 @@ def run_recurring_cycle(
                             lambda: _run_fmp_consensus(current_engine, settings, current),
                         )
                     )
-                if settings.google_sheets_poll_seconds != 0:
+                if not provider_only:
+                    if settings.google_sheets_poll_seconds != 0:
+                        jobs.append(
+                            _run_one_job(
+                                current_engine,
+                                settings,
+                                SHEETS_DISCOVERY,
+                                settings.google_sheets_poll_seconds,
+                                current,
+                                lambda: _run_sheets_discovery(current_engine, settings),
+                            )
+                        )
                     jobs.append(
                         _run_one_job(
                             current_engine,
                             settings,
-                            SHEETS_DISCOVERY,
-                            settings.google_sheets_poll_seconds,
+                            RESEARCH_TRIGGER_SCAN,
+                            JOB_CADENCES_SECONDS[RESEARCH_TRIGGER_SCAN],
                             current,
-                            lambda: _run_sheets_discovery(current_engine, settings),
+                            lambda: _run_trigger_scan(current_engine, current),
                         )
                     )
-                jobs.append(
-                    _run_one_job(
-                        current_engine,
-                        settings,
-                        RESEARCH_TRIGGER_SCAN,
-                        JOB_CADENCES_SECONDS[RESEARCH_TRIGGER_SCAN],
-                        current,
-                        lambda: _run_trigger_scan(current_engine, current),
+                    jobs.append(
+                        _run_one_job(
+                            current_engine,
+                            settings,
+                            AGENT_WORK_FEED,
+                            JOB_CADENCES_SECONDS[AGENT_WORK_FEED],
+                            current,
+                            lambda: _publish_agent_feeds(current_engine, settings, current),
+                        )
                     )
-                )
-                jobs.append(
-                    _run_one_job(
-                        current_engine,
-                        settings,
-                        AGENT_WORK_FEED,
-                        JOB_CADENCES_SECONDS[AGENT_WORK_FEED],
-                        current,
-                        lambda: _publish_agent_feeds(current_engine, settings, current),
+                    jobs.append(
+                        _run_one_job(
+                            current_engine,
+                            settings,
+                            DECISION_RECOMPUTE,
+                            JOB_CADENCES_SECONDS[DECISION_RECOMPUTE],
+                            current,
+                            lambda: _run_decision_recompute(current_engine),
+                        )
                     )
-                )
-                jobs.append(
-                    _run_one_job(
-                        current_engine,
-                        settings,
-                        DECISION_RECOMPUTE,
-                        JOB_CADENCES_SECONDS[DECISION_RECOMPUTE],
-                        current,
-                        lambda: _run_decision_recompute(current_engine),
-                    )
-                )
                 return {
                     "status": "COMPLETE",
                     "at": current.isoformat(),

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,40 @@ export function HoldingsConfirmation({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
+  if (overview.holdings_authority?.source === "ACCEPTED_LEDGER") {
+    return (
+      <Card id={id} className="mb-7 shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">
+            <h3>Ledger-owned holdings</h3>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p>
+            Whole-portfolio ownership transferred at{" "}
+            {overview.holdings_authority.cutover_at
+              ? date(overview.holdings_authority.cutover_at)
+              : "an unavailable date"}
+            . Review settled activity and ending statements before publishing a
+            subsequent snapshot.
+          </p>
+          <p className="break-all text-xs text-muted-foreground">
+            Publication {overview.holdings_authority.publication_id}
+          </p>
+          <p className="break-all text-xs text-muted-foreground">
+            Original opening snapshot{" "}
+            {overview.holdings_authority.opening_snapshot_id}
+          </p>
+          <Link
+            className="inline-flex min-h-10 items-center underline"
+            href="/portfolio/ledger"
+          >
+            Review ledger history
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!snapshot || snapshot.completeness !== "COMPLETE") {
     return (
       <Card className="mb-7 shadow-none">

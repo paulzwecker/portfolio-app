@@ -11,7 +11,8 @@ behavior, recording the conflict and obtaining a decision where required.
 
 ## Read selectively
 
-1. Read `ROADMAP.md` for the execution cursor and inspect Git/worktrees before work.
+1. Read `ROADMAP.md` for the cursor and `docs/ACTIVE_WORKSTREAM.md` for current
+   build context, then inspect Git/worktrees before work.
 2. Use `docs/README.md` to find the applicable contract or runbook.
 3. Read `docs/PRODUCT_VISION.md` for product outcomes and
    `docs/architecture/portfolio-application.md` for Portfolio architecture.
@@ -30,6 +31,9 @@ behavior, recording the conflict and obtaining a decision where required.
   Durability, Quality, Execution and Risk remain independent. Lifecycle is explicit.
 - Missing values remain unavailable. Keep holdings, strategic targets, investment
   interpretation and execution authority separate.
+- Provider refresh and transaction-based portfolio accounting are core outcomes.
+  Preserve verified snapshots during ledger migration. Never infer past trades,
+  acquisition costs or performance from current holdings. See Portfolio architecture.
 - Sheets is the agent modeling workspace. Completed model publications cross a
   versioned contract into review proposals. PostgreSQL owns accepted revisions.
   See `docs/model-publications.md` and `docs/financial-models.md`.
@@ -44,8 +48,10 @@ Choose the highest-value ready capability in `ROADMAP.md`, checking its actual
 data, code and authorization dependencies. Prefer a complete investor workflow over
 another preparation layer. If an owner gate blocks it, advance an independent ready
 capability. Shared foundations may emerge early from demonstrated Portfolio needs.
-Commit coherent increments. Verify focused behavior, integration and
-security, then perform an independent second-pass review. Validate desktop/mobile
+BUILD is the default. Commit coherent increments with focused tests and a concise
+active handoff. Reserve comprehensive tests and one cohesive PR for INTEGRATE at
+a completed major milestone. Freeze passing PRs for owner review. Verify relevant
+behavior, integration and security, then perform an independent second-pass review. Validate desktop/mobile
 for UI changes. Fix findings before declaring completion.
 
 Update the concise roadmap after each subtask with actual evidence and the next

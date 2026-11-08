@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { browserSettings } from "../../scripts/browser-environment.mjs";
 
-const webPort = process.env.E2E_WEB_PORT ?? "3000";
-const useProductionServer = process.env.E2E_USE_PRODUCTION_SERVER === "1";
-const webServerCommand = useProductionServer
+const settings = browserSettings(process.env);
+const webServerCommand = settings.production
   ? "node ../../scripts/web.mjs start"
   : "node ../../scripts/web.mjs dev";
 
@@ -14,7 +14,11 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
-  use: { baseURL: `http://127.0.0.1:${webPort}`, trace: "retain-on-failure" },
+  use: {
+    baseURL: settings.baseURL,
+    httpCredentials: settings.httpCredentials,
+    trace: settings.managed ? "off" : "retain-on-failure",
+  },
   projects: [
     {
       name: "desktop",
@@ -28,10 +32,21 @@ export default defineConfig({
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
   ],
-  webServer: {
-    command: webServerCommand,
-    url: `http://127.0.0.1:${webPort}`,
-    reuseExistingServer: useProductionServer,
-    timeout: 120_000,
-  },
+  webServer: [
+    ...(settings.managed
+      ? [
+          {
+            command: "node e2e/fixtures/sensitivity-api.mjs",
+            url: `${settings.apiURL}/health/live`,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
+    {
+      command: webServerCommand,
+      url: settings.baseURL,
+      reuseExistingServer: settings.reuseExistingServer,
+      timeout: 120_000,
+    },
+  ],
 });

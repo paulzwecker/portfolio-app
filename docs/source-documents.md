@@ -17,6 +17,30 @@ their original SEC form and accession and link to a captured original when the
 same canonical company, base form and reporting period are known. An unlinked
 amendment remains visible with `DATA_CHECK` quality.
 
+## Issuer reconciliation contract
+
+New SEC batches include `reconciliation.issuer_results_version` set to
+`sec-issuer-filings-v1` and an `issuer_results` list with one row per requested
+canonical issuer.
+Each result records response count, supported source rows, imported/reused rows,
+rejections, unsupported/malformed rows, conflicts and amendment/quality checks.
+Counts use strict nonnegative integers and the exact requested issuer/CIK scope.
+Cross-issuer accession conflicts flag every involved issuer. Reused flagged
+documents retain their quality warning.
+
+No response remains unreported. A verified clean empty response is unavailable,
+including when historical filings are retained. Integrity failures are DATA_CHECK.
+One issuer's result is independent of another issuer's flags or the batch status.
+These counts describe the captured response and acceptance, with retained evidence
+dates exposed separately by company coverage.
+
+Raw digests and canonical normalizer identity retain their existing meaning.
+Replaying an older batch preserves its original receipt and attribution limits.
+Malformed/unknown new receipt versions cannot fall back to aggregate success.
+History deferrals belong to execution results; see the
+[worker contract](recurring-operations.md#held-issuer-sec-refresh) for scope,
+budget and continuation semantics.
+
 ## Sources and supported types
 
 The live provider adapter is U.S. SEC EDGAR submissions. It supports 10-K, 10-Q,

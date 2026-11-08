@@ -2,17 +2,21 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from portfolio_api.database import Base
 from portfolio_api.domain.models import (
     ExternalIngestionAttempt,
     ExternalIngestionRun,
+    OperationalJobRequest,
     RecurringOperationRun,
 )
+from portfolio_api.domain.schemas import OperationalJobRequestCreate
 from portfolio_api.external_data import ExternalDataDomain
 from portfolio_api.external_ingestion import PROVIDERS
+from portfolio_api.manual_operations import create_job_request
 from portfolio_api.recurring_operations import (
     FAILURE_BACKOFF_INITIAL,
     LOCK_KEY,
@@ -29,6 +33,83 @@ from portfolio_api.recurring_operations import (
     run_recurring_cycle,
 )
 from portfolio_api.settings import Settings
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("consensus_enabled", [False, True])
+def test_provider_only_cycle_is_durable_and_leaves_unrelated_work_queued(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch, consensus_enabled: bool
+) -> None:
+    at = datetime.now(UTC)
+    settings = Settings(
+        _env_file=None,
+        recurring_operations_enabled=True,
+        manual_operations_enabled=True,
+        google_sheets_poll_seconds=60,
+        fmp_consensus_ingestion_enabled=consensus_enabled,
+    )
+    calls: list[str] = []
+
+    def sec(
+        _engine: Engine, _settings: Settings, domain: ExternalDataDomain, _at: datetime
+    ) -> dict[str, object]:
+        calls.append(domain.value)
+        return {"status": "COMPLETE"}
+
+    def consensus(*_args: object) -> dict[str, object]:
+        calls.append("CONSENSUS")
+        return {"status": "COMPLETE"}
+
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("Provider-only execution reached an unrelated workflow")
+
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_sec_domain", sec)
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_fmp_consensus", consensus)
+    for name in (
+        "process_manual_job_requests",
+        "_run_sheets_discovery",
+        "_run_trigger_scan",
+        "_publish_agent_feeds",
+        "_run_decision_recompute",
+    ):
+        monkeypatch.setattr(f"portfolio_api.recurring_operations.{name}", forbidden)
+    protected = [
+        table
+        for table in Base.metadata.sorted_tables
+        if table.name not in {"recurring_operation_runs", "recurring_operations_worker_state"}
+    ]
+    with Session(postgres_engine) as session, session.begin():
+        request, _duplicate = create_job_request(
+            session,
+            OperationalJobRequestCreate(job_name="SHEETS_DISCOVERY", scope_kind="ACTIVE_UNIVERSE"),
+            now_at=at,
+        )
+        request_id = request.id
+        before = {
+            table.name: session.scalar(select(func.count()).select_from(table))
+            for table in protected
+        }
+
+    first = run_recurring_cycle(settings, engine=postgres_engine, now_at=at, provider_only=True)
+    second = run_recurring_cycle(
+        settings, engine=postgres_engine, now_at=at + timedelta(minutes=1), provider_only=True
+    )
+    assert first["manual_request"] is second["manual_request"] is None
+    assert calls == ["REPORTED_FUNDAMENTALS", "SOURCE_DOCUMENTS"] + (
+        ["CONSENSUS"] if consensus_enabled else []
+    )
+    assert all(job["status"] == "NOT_DUE" for job in cast(list[dict[str, object]], second["jobs"]))
+    with Session(postgres_engine) as session:
+        persisted_request = session.get(OperationalJobRequest, request_id)
+        assert persisted_request is not None and persisted_request.status == "QUEUED"
+        runs = session.scalars(select(RecurringOperationRun)).all()
+        assert len(runs) == (3 if consensus_enabled else 2)
+        assert all(run.status == "SUCCEEDED" for run in runs)
+        after = {
+            table.name: session.scalar(select(func.count()).select_from(table))
+            for table in protected
+        }
+        assert after == before
 
 
 def test_recurring_worker_adds_sec_google_exclusions_only_for_known_local_proxy(
@@ -82,6 +163,7 @@ def test_disabled_worker_stays_alive_until_parent_shutdown(
     assert main(["--interval-seconds", "10"]) == 0
 
 
+@pytest.mark.integration
 def test_repeated_scheduler_checks_respect_next_attempt(postgres_engine: Engine) -> None:
     now_at = datetime.now(UTC)
     settings = Settings(_env_file=None)
@@ -106,6 +188,7 @@ def test_repeated_scheduler_checks_respect_next_attempt(postgres_engine: Engine)
         )
 
 
+@pytest.mark.integration
 def test_interrupted_job_is_marked_and_retried_after_backoff(postgres_engine: Engine) -> None:
     now_at = datetime.now(UTC)
     settings = Settings(_env_file=None)
@@ -140,6 +223,7 @@ def test_interrupted_job_is_marked_and_retried_after_backoff(postgres_engine: En
         )
 
 
+@pytest.mark.integration
 def test_sec_missing_configuration_is_rechecked_as_soon_as_it_is_fixed(
     postgres_engine: Engine,
 ) -> None:
@@ -183,6 +267,7 @@ def test_missing_sec_contact_blocks_without_provider_calls() -> None:
     assert result["failure_code"] == "SEC_USER_AGENT_MISSING"
 
 
+@pytest.mark.integration
 def test_sec_job_requests_only_the_selected_canonical_domain(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -205,6 +290,7 @@ def test_sec_job_requests_only_the_selected_canonical_domain(
     assert calls == [[ExternalDataDomain.SOURCE_DOCUMENTS]]
 
 
+@pytest.mark.integration
 def test_sec_retryable_partial_result_is_retried_before_daily_cadence(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -252,6 +338,7 @@ def test_sec_retryable_partial_result_is_retried_before_daily_cadence(
     assert result["retry_after_seconds"] == int(FAILURE_BACKOFF_INITIAL.total_seconds())
 
 
+@pytest.mark.integration
 def test_sec_job_reuses_same_day_manual_partial_without_fetching_again(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -300,6 +387,7 @@ def test_sec_job_reuses_same_day_manual_partial_without_fetching_again(
     assert result["idempotent_reuse"] is True
 
 
+@pytest.mark.integration
 def test_retry_after_override_is_recorded_for_partial_job(postgres_engine: Engine) -> None:
     now_at = datetime.now(UTC)
     result = _run_one_job(
@@ -318,6 +406,7 @@ def test_retry_after_override_is_recorded_for_partial_job(postgres_engine: Engin
         assert run.next_attempt_at < now_at + timedelta(hours=1)
 
 
+@pytest.mark.integration
 def test_sec_retry_does_not_exceed_two_same_day_replays(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -413,6 +502,7 @@ def test_sheets_polling_can_be_disabled_explicitly() -> None:
     }
 
 
+@pytest.mark.integration
 def test_operation_replay_waits_for_cadence_and_retry_is_bounded(
     postgres_engine: Engine,
 ) -> None:
@@ -455,6 +545,7 @@ def test_operation_replay_waits_for_cadence_and_retry_is_bounded(
     assert call_count == 2
 
 
+@pytest.mark.integration
 def test_concurrent_scheduler_cycle_is_skipped_by_postgres_lock(postgres_engine: Engine) -> None:
     settings = Settings(_env_file=None, recurring_operations_enabled=True)
     with postgres_engine.connect() as connection:

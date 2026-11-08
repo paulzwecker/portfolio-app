@@ -200,9 +200,15 @@ export function PortfolioAllocationSection({
         </ChartContainer>
 
         <div className="space-y-4">
-          <Card className="shadow-none">
+          <Card
+            className="shadow-none"
+            role="region"
+            aria-labelledby="strategic-gaps-title"
+          >
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Largest strategic gaps</CardTitle>
+              <CardTitle id="strategic-gaps-title" className="text-sm">
+                Largest strategic gaps
+              </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Positive target-minus-current gap means below target; no target
                 is inferred.

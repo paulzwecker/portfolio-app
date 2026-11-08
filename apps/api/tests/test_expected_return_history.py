@@ -2,6 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -27,6 +28,7 @@ def stamp(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+@pytest.mark.integration
 def test_history_composes_as_of_sources_without_merging_or_lookahead(
     postgres_engine: Engine,
 ) -> None:

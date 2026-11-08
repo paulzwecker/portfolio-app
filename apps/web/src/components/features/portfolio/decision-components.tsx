@@ -209,25 +209,36 @@ export function GapRow({ row }: { row: CompanyPortfolioContext }) {
         ? ArrowUpRight
         : ArrowDownRight;
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-2.5 hover:bg-secondary/40 sm:grid-cols-[minmax(0,1.2fr)_auto_auto_auto]">
+    <div className="min-w-0 space-y-1 rounded-md px-2 py-2.5 hover:bg-secondary/40">
       <Link
         href={`/company/${row.company.id}`}
-        className="min-w-0 truncate text-sm font-medium hover:text-primary"
+        className="block break-words text-sm font-medium hover:text-primary"
       >
         {row.company.name}
       </Link>
-      <span className="text-right text-xs tabular-nums text-muted-foreground">
-        {ratio(row.current_weight, readable(row.allocation_status))} →{" "}
-        {ratio(row.target_weight, "No target")}
-      </span>
-      <span
-        className={`flex items-center justify-end gap-1 text-sm font-semibold tabular-nums ${isUnder ? "text-amber-800 dark:text-amber-300" : ""}`}
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1"
+        title={`Exact current weight ${row.current_weight ?? "unavailable"}. Target ${row.target_weight ?? "unavailable"}. Gap ${gap ?? "unavailable"}.`}
       >
-        <Icon aria-hidden="true" className="size-3.5" /> {ratio(gap)}
-      </span>
-      <span className="col-span-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground sm:col-span-1">
-        {gapMeaning(gap)}
-      </span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          Current{" "}
+          {formatPercent(
+            row.current_weight,
+            2,
+            readable(row.allocation_status),
+          )}
+          {" · "}Target {formatPercent(row.target_weight, 2, "No target")}
+        </span>
+        <span
+          className={`flex items-center gap-1 text-sm font-semibold tabular-nums ${isUnder ? "text-warning" : ""}`}
+        >
+          <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+          Gap {formatPercent(gap, 2, "Unavailable").replace("%", " pp")}
+        </span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          {gapMeaning(gap)}
+        </span>
+      </div>
     </div>
   );
 }

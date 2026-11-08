@@ -300,7 +300,27 @@ class ValuationGap(Contract):
     reason: str
 
 
+class HoldingsAuthorityRead(Contract):
+    source: Literal["OBSERVED_SNAPSHOT", "ACCEPTED_LEDGER"]
+    publication_id: UUID | None
+    opening_snapshot_id: UUID | None
+    cutover_at: datetime | None
+
+    @model_validator(mode="after")
+    def consistent_source(self) -> Self:
+        values = (self.publication_id, self.opening_snapshot_id, self.cutover_at)
+        if self.source == "ACCEPTED_LEDGER":
+            if any(value is None for value in values):
+                raise ValueError(
+                    "Ledger ownership requires publication, opening and cutover evidence"
+                )
+        elif any(value is not None for value in values):
+            raise ValueError("Observed ownership cannot carry ledger publication metadata")
+        return self
+
+
 class PortfolioOverview(Contract):
+    holdings_authority: HoldingsAuthorityRead | None = None
     portfolio: PortfolioRead
     snapshot: SnapshotRead | None
     target_revision: TargetRead | None
@@ -819,6 +839,40 @@ class PriceHistoryAnalyticsRead(Contract):
     correction_state: str | None
 
 
+MarketRetryState = Literal[
+    "RUNNING", "COOLDOWN", "ELIGIBLE", "EXHAUSTED", "REVIEW_REQUIRED", "NONE"
+]
+MarketRefreshDomain = Literal["MARKET_DATA", "FX", "CORPORATE_ACTIONS"]
+
+
+class MarketRefreshAttemptRead(Contract):
+    attempt_number: int
+    status: str
+    started_at: datetime
+    finished_at: datetime
+    retryable: bool
+    failure_code: str | None
+    failure_message: str | None
+
+
+class MarketRefreshRunRead(Contract):
+    run_id: UUID
+    domain: MarketRefreshDomain
+    status: str
+    last_attempt_at: datetime
+    finished_at: datetime | None
+    last_successful_at: datetime | None
+    attempt_count: int
+    max_attempts: int
+    retry_state: MarketRetryState
+    retry_eligible_at: datetime | None
+    failure_code: str | None
+    failure_message: str | None
+    request_scope: dict[str, object]
+    report: dict[str, object]
+    attempts: list[MarketRefreshAttemptRead]
+
+
 class MarketRefreshStatusRead(Contract):
     state: Literal["AVAILABLE", "STALE", "REFRESHING", "PARTIAL", "UNAVAILABLE"]
     last_attempt_at: datetime | None
@@ -826,6 +880,7 @@ class MarketRefreshStatusRead(Contract):
     market_run_id: UUID | None
     fx_run_id: UUID | None
     message: str | None
+    runs: list[MarketRefreshRunRead] = Field(default_factory=list)
 
 
 RecurringOperationJobName = Literal[
@@ -907,6 +962,21 @@ class OperationalJobRequestCreate(Contract):
         if (self.scope_kind == "COMPANY") != (self.company_id is not None):
             raise ValueError("A company ID is required only for company-scoped requests.")
         return self
+
+
+CompanyRefreshJobName = Literal["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS"]
+
+
+class CompanyRefreshOptionsRead(Contract):
+    company_id: UUID
+    company_name: str
+    lifecycle: Lifecycle | None
+    eligible_job_names: list[CompanyRefreshJobName]
+    sec_eligibility_basis: Literal["ACTIVE_LIFECYCLE", "VERIFIED_HOLDING"] | None
+    sec_unavailable_reason: str | None
+    portfolio_id: UUID | None
+    holding_snapshot_id: UUID | None
+    execution_mode: Literal["WORKER", "OPERATOR", "DISABLED"]
 
 
 class OperationalJobAttemptRead(Contract):
@@ -1056,6 +1126,61 @@ class CompanyReportedFundamentalsRead(Contract):
     as_of: date | None
     known_at: datetime | None
     latest_observed_at: datetime | None
+
+
+class SecBootstrapCheckpointRead(Contract):
+    run_id: UUID
+    checkpoint_id: UUID
+    status: Literal["PENDING", "RUNNING", "COMPLETE", "UNAVAILABLE", "FAILED", "BLOCKED"]
+    prepared_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    failure_code: str | None
+    retryable: bool
+    next_attempt_at: datetime | None
+    provider_request_count: Annotated[int, Field(ge=0)]
+
+
+class SecRefreshRead(Contract):
+    run_id: UUID
+    attempt_id: UUID | None
+    request_id: UUID | None
+    trigger: Literal["MANUAL", "SCHEDULED", "LEGACY"]
+    batch_status: Literal["RUNNING", "COMPLETE", "PARTIAL", "FAILED", "BLOCKED", "NOT_APPLICABLE"]
+    requested_at: datetime
+    started_at: datetime
+    finished_at: datetime | None
+    attempt_count: Annotated[int, Field(ge=0, le=3)]
+    retryable: bool
+    failure_code: str | None
+    scope_company_count: Annotated[int, Field(ge=1)]
+    mapped_company_count: Annotated[int, Field(ge=0)] | None
+    issuer_outcome: Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"]
+    source_record_count: Annotated[int, Field(ge=0)] | None
+
+
+class SecDomainCoverageRead(Contract):
+    record_count: Annotated[int, Field(ge=0)]
+    data_check_count: Annotated[int, Field(ge=0)]
+    latest_period_end: date | None
+    latest_filed_at: date | None
+    latest_retrieved_at: datetime | None
+    latest_recorded_at: datetime | None
+    bootstrap: SecBootstrapCheckpointRead | None
+    refresh: SecRefreshRead | None = None
+
+
+class CompanySecCoverageRead(Contract):
+    company_id: UUID
+    company_name: str
+    mapping_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS", "INVALID"]
+    cik: str | None
+    provider_company_name: str | None
+    identity_evidence_url: str | None
+    fundamentals: SecDomainCoverageRead
+    filings: SecDomainCoverageRead
+    metrics_present: list[FundamentalMetric]
+    metrics_missing: list[FundamentalMetric]
 
 
 class ConsensusEstimateObservationRead(Contract):
@@ -3342,6 +3467,37 @@ class FinancialModelCalculationPreviewRead(Contract):
     model_currency: Currency
     outputs: FinancialModelCalculationOutputsRead
     projections: list[DcfProjectionCalculationPreviewRead] = Field(min_length=30, max_length=30)
+
+
+class DcfSensitivityCellRead(Contract):
+    discount_rate_shift: ModelNumber
+    terminal_growth_shift: ModelNumber
+    status: Literal["AVAILABLE", "INVALID_ASSUMPTIONS"]
+    unavailable_reason: str | None
+    bear_fv: ModelNumber | None
+    base_fv: ModelNumber | None
+    bull_fv: ModelNumber | None
+    weighted_fv: ModelNumber | None
+
+
+class DcfSensitivityScenarioRead(Contract):
+    scenario: DcfScenario
+    probability: Probability
+    year5_discount_rate: ModelNumber
+    terminal_growth: ModelNumber
+
+
+class DcfSensitivityRead(Contract):
+    calculation_version: Literal["ufcf-dcf-sensitivity-v1"]
+    model_id: UUID
+    revision_id: UUID
+    revision_number: int
+    methodology_version: str
+    model_currency: Currency
+    discount_rate_shifts: list[ModelNumber] = Field(min_length=3, max_length=3)
+    terminal_growth_shifts: list[ModelNumber] = Field(min_length=3, max_length=3)
+    scenarios: list[DcfSensitivityScenarioRead] = Field(min_length=3, max_length=3)
+    cells: list[DcfSensitivityCellRead] = Field(min_length=9, max_length=9)
 
 
 class FinancialModelEvidenceReference(Contract):

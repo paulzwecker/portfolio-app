@@ -42,6 +42,7 @@ def _company_in_state(session: Session, state: str = "PORTFOLIO") -> Company:
     return company
 
 
+@pytest.mark.integration
 def test_requests_are_scoped_deduplicated_and_company_lifecycle_is_checked(
     postgres_engine: Engine,
 ) -> None:
@@ -87,6 +88,7 @@ def test_requests_are_scoped_deduplicated_and_company_lifecycle_is_checked(
             )
 
 
+@pytest.mark.integration
 def test_refresh_all_records_dependency_steps_and_never_recomputes_decisions(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -141,6 +143,7 @@ def test_refresh_all_records_dependency_steps_and_never_recomputes_decisions(
     )
 
 
+@pytest.mark.integration
 def test_one_shot_request_does_not_claim_another_queued_job(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -184,6 +187,7 @@ def test_one_shot_request_does_not_claim_another_queued_job(
         assert second_request is not None and second_request.status == "SUCCEEDED"
 
 
+@pytest.mark.integration
 def test_partial_refresh_all_retains_step_errors_and_can_be_retried(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -218,6 +222,7 @@ def test_partial_refresh_all_retains_step_errors_and_can_be_retried(
         assert retried.status == "QUEUED"
 
 
+@pytest.mark.integration
 def test_company_scoped_request_api_is_local_domain_contract(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -260,6 +265,7 @@ def test_company_scoped_request_api_is_local_domain_contract(
         assert invalid.status_code == 422
 
 
+@pytest.mark.integration
 def test_api_rejects_refresh_when_background_worker_is_disabled(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -281,6 +287,7 @@ def test_api_rejects_refresh_when_background_worker_is_disabled(
     assert "Manual operations are disabled" in response.json()["detail"]
 
 
+@pytest.mark.integration
 def test_second_worker_cannot_claim_a_request_while_first_is_processing(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:

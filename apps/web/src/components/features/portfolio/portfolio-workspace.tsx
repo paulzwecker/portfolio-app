@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { AttentionCenter } from "@/components/attention-center";
 import { PendingOrError } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
@@ -197,7 +198,9 @@ export function PortfolioWorkspace({ id }: { id: string }) {
   ].filter((item): item is string => item !== null);
   const decisionRunsBlockedReason =
     view.holdings_freshness !== "FRESH"
-      ? "Confirm positions and cash to refresh the holdings baseline first."
+      ? view.holdings_authority?.source === "ACCEPTED_LEDGER"
+        ? "Review settled activity and publish a reconciled ledger snapshot first."
+        : "Confirm positions and cash to refresh the holdings baseline first."
       : view.valuation_status !== "VALUED"
         ? "Complete current price and FX valuation inputs first."
         : undefined;
@@ -224,10 +227,16 @@ export function PortfolioWorkspace({ id }: { id: string }) {
         }
         actions={
           <a
-            href="#holdings-confirmation"
+            href={
+              view.holdings_authority?.source === "ACCEPTED_LEDGER"
+                ? "/portfolio/ledger"
+                : "#holdings-confirmation"
+            }
             className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Confirm holdings
+            {view.holdings_authority?.source === "ACCEPTED_LEDGER"
+              ? "Review ledger"
+              : "Confirm holdings"}
           </a>
         }
       />
@@ -260,6 +269,12 @@ export function PortfolioWorkspace({ id }: { id: string }) {
         >
           Performance
         </a>
+        <Link
+          className="rounded-md px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          href="/portfolio/ledger"
+        >
+          Ledger review
+        </Link>
       </nav>
 
       <PortfolioOverviewSection overview={view} rows={rows} />

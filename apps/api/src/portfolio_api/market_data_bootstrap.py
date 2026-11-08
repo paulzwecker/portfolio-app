@@ -74,6 +74,7 @@ from portfolio_api.yahoo_finance import (
     YahooListingCrosswalk,
     YahooListingMapping,
     yahoo_mapping_for_listing,
+    yahoo_mapping_matches_identity,
 )
 
 BOOTSTRAP_VERSION = "historical-market-bootstrap-v1"
@@ -218,14 +219,11 @@ def _mapping_matches_canonical_identity(
     security: Security,
     company: Company | None,
 ) -> bool:
-    return bool(
-        mapping.verification_status == "VERIFIED"
-        and (mapping.canonical_listing_id is None or mapping.canonical_listing_id == listing.id)
-        and (mapping.canonical_security_id is None or mapping.canonical_security_id == security.id)
-        and (
-            mapping.canonical_company_id is None
-            or (company is not None and mapping.canonical_company_id == company.id)
-        )
+    return yahoo_mapping_matches_identity(
+        mapping,
+        listing_id=listing.id,
+        security_id=security.id,
+        company_id=company.id if company else None,
     )
 
 
