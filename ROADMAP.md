@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2/C3.1/C2.3 local release candidate - INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                            |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities`, from main `395f842` (PR #24 merged)                                                                     |
-| Implementation              | LOCAL_VERIFIED workflows. Full quality/build and browser checks pass; final CI/owner review and hosted activation remain pending                    |
-| Next ready substantial task | Complete milestone PR/CI, then freeze for owner review. Preserve #25 as a separate owner merge dependency                                           |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                              |
-| Integration rule            | Keep completed PR #25 stable during review. Retain this local audit for the next cohesive implementation checkpoint; no minor documentation-only PR |
+| Field                       | Current value                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2/C3.1/C2.3 local release candidate - INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                              |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), from main `395f842`      |
+| Implementation              | LOCAL_VERIFIED workflows. Full quality/build and browser checks pass; PR checks govern integration. Hosted activation remains pending |
+| Next ready substantial task | Owner review of #25/#26 after CI. Integrate #25 after owner merge, then prepare the gated C2.2 operational slice                      |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                |
+| Integration rule            | Keep completed PRs stable during review. #26 is the cohesive local milestone integration boundary; production gates remain separate   |
 
 Integration review corrected the pre-ledger bootstrap path and added all ledger
 history to the recovery inventory. `9048c47` also pins the existing read-only release

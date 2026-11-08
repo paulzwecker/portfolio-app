@@ -6,8 +6,9 @@
 - Completed PR #25 remains frozen for owner review. Its receipt adapter is required
   before real provider previews on the minimal production baseline. Integrate after
   owner merge, preserving this branch's capability roadmap.
-- The completed local implementation is ready for comprehensive verification and
-  one cohesive PR. Hosted coverage and ownership activation remain owner-gated.
+- [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) is the cohesive local
+  implementation integration boundary. Require all checks, then freeze it for owner
+  review. Hosted coverage and ownership activation remain owner-gated.
 
 ## User workflows delivered locally
 
@@ -55,10 +56,11 @@ Detailed increment results are in the
 
 ## Release and next action
 
-1. Open the cohesive milestone PR and require all GitHub quality/PostgreSQL/
-   Windows checks plus Vercel Preview. Freeze passing implementation for owner
-   review. The full local quality/build and current browser checks are complete;
-   Linux CI supplies privileged restore/role coverage and the final full DB rerun.
+1. Require PR #26's GitHub quality/PostgreSQL/Windows checks and Vercel Preview.
+   Keep passing implementation frozen during owner review; avoid new feature work
+   on this completed PR. The full local quality/build and browser checks are
+   complete. Linux CI supplies the final full DB rerun and privileged role/restore
+   coverage. Current check results remain visible on the PR.
 2. Owner reviews/merges #25 first. Integrate its receipt fix after merge, resolve
    roadmap conflicts semantically and reverify the milestone PR before owner merge.
 3. Before merging schema-dependent code, independently verify native deployment
