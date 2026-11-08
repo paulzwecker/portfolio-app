@@ -285,6 +285,14 @@ def project_ledger(
                 raise services.DomainError(
                     "Only settled trades within the source booking date are supported", status=422
                 )
+        if isinstance(item, c.LedgerCashTransfer) and (
+            item.destination.account_id not in accounts
+            or accounts[item.destination.account_id].kind != "BROKERAGE"
+        ):
+            raise services.DomainError(
+                "Internal cash transfers need a declared evidenced destination brokerage account",
+                status=422,
+            )
 
     ordered_accounts = sorted(value.accounts, key=lambda a: str(a.account_id))
     activity = sorted(value.activity, key=lambda a: (a.effective_at, a.sequence))
@@ -342,6 +350,12 @@ def project_ledger(
                         )
                 elif isinstance(item, c.LedgerDividend):
                     amount = item.gross_cash - item.fees - item.taxes
+                elif isinstance(item, c.LedgerCashTransfer):
+                    destination = cash[item.destination.account_id]
+                    destination[item.currency] = (
+                        destination.get(item.currency, Decimal(0)) + item.destination.amount
+                    )
+                    amount = -item.amount
                 else:
                     amount = item.amount if item.kind == "DEPOSIT" else -item.amount
                 account_cash[item.currency] = account_cash.get(item.currency, Decimal(0)) + amount

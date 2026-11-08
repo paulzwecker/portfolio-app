@@ -78,6 +78,7 @@ function ledgerFileMetadata(
       accountNames[account.account_id.toLowerCase()] = account.name;
   }
   const evidence: LedgerReviewFile["evidence"] = [];
+  const activity = Array.isArray(value.activity) ? value.activity : [];
   const ending =
     isRecord(value.ending_statement) &&
     Array.isArray(value.ending_statement.accounts)
@@ -86,7 +87,13 @@ function ledgerFileMetadata(
   for (const [role, records] of [
     ["Opening", value.accounts],
     ["Ending", ending],
-    ["Activity", Array.isArray(value.activity) ? value.activity : []],
+    ["Activity", activity],
+    [
+      "Transfer receipt",
+      activity
+        .filter((record) => isRecord(record) && record.kind === "CASH_TRANSFER")
+        .map((record) => record.destination),
+    ],
   ] as const) {
     for (const record of records) {
       if (

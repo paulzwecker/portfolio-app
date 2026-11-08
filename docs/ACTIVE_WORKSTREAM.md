@@ -1,10 +1,10 @@
 # Active workstream
 
-## C2.3 observed dividends and tax activity — BUILD
+## C2.3 income and paired internal cash transfers — BUILD
 
 Branch `codex/portfolio-ledger-income` starts from main `deda2ce`, the verified
 merge of [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26).
-No open PR was present at this run's start. Predecessor branches, stash and private
+No open PR was present at either BUILD run's start. Predecessor branches, stash and private
 artifacts are preserved. The consolidated release's verification remains in
 [dated history](history/data-ledger-build-through-2026-11-08.md) and PR #26.
 
@@ -44,15 +44,32 @@ retain their own identity. Source review must catch overlapping statement eviden
   paid currency and withholding, and separate acceptance/publication authority.
   Only synthetic local verification was performed; no real account data was used.
 
+## Paired-transfer increment
+
+Additive v2 CASH_TRANSFER records carry a source debit and an independently
+identified destination receipt. Matching settled instant, currency and exact
+amount are required across two declared brokerage accounts. Both evidence keys
+join duplicate detection, hash-bound replay and saved review. Consolidated cash
+and security quantities remain unchanged by the transfer itself. Distinct-time
+settlement, cross-currency and outside-portfolio movement require later contracts.
+
+- 113 focused ledger units pass, covering conservation, precision, overdrafts,
+  source reuse, incomplete/mismatched legs and account-level ending differences.
+- The pre-transfer v2 income hash and every output field match implementation
+  `0a57454`. Existing v1 hash regression remains passing.
+- 78 focused web contract/proxy/publication tests pass; generated contracts are
+  updated. Source inspection preserves original financial text and both leg keys.
+- Isolated PostgreSQL lifecycle/corrections and desktop/mobile evidence are next.
+
 ## Next action
 
-This income slice is IMPLEMENTATION_COMPLETE and LOCAL_VERIFIED. Continue the
-ledger milestone with paired, evidenced same-currency internal cash transfers
-between declared accounts. Preserve per-account checks, consolidated conservation,
-source lineage and the existing review/publication gates. Broker imports still
-need a reviewed first format and real private sample; lot/FX/performance policy
-remains separate. Use focused tests and incremental commits. No PR or full-suite
-integration was performed during this BUILD increment.
+Complete paired-transfer staging/review/publication, rollback and correction
+regressions on independently verified loopback `_test` schemas. Verify the actual
+review screen at desktop/mobile sizes with the existing restricted API fixture.
+Keep the same milestone branch and commit verified increments. Broker onboarding
+still requires a reviewed first format/private sample. Production execution and
+lot/FX/performance policy remain separate. Reserve PR/full-suite work for the
+larger ledger integration checkpoint.
 
 ## Independent release gates
 

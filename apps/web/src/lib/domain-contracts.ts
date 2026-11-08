@@ -6587,27 +6587,39 @@ export function isLedgerCandidate(value: unknown): value is LedgerCandidate {
         evidence(row.evidence) &&
         string(row.currency) &&
         /^[A-Z]{3}$/.test(row.currency as string) &&
-        (row.kind === "DIVIDEND"
-          ? packet.contract_version === "portfolio-ledger-preview-v2" &&
+        ((row.kind === "DIVIDEND" &&
+          packet.contract_version === "portfolio-ledger-preview-v2" &&
+          uuid(row.listing_id) &&
+          preview.consumed_listings.some(
+            (listing) => listing.listing_id === row.listing_id,
+          ) &&
+          decimal(row.gross_cash) &&
+          decimal(row.fees) &&
+          decimal(row.taxes)) ||
+          (row.kind === "CASH_TRANSFER" &&
+            packet.contract_version === "portfolio-ledger-preview-v2" &&
+            decimal(row.amount) &&
+            isRecord(row.destination) &&
+            uuid(row.destination.account_id) &&
+            row.destination.account_id !== row.account_id &&
+            row.destination.currency === row.currency &&
+            decimal(row.destination.amount) &&
+            timestamp(row.destination.effective_at) &&
+            Date.parse(row.destination.effective_at as string) ===
+              Date.parse(row.effective_at as string) &&
+            evidence(row.destination.evidence)) ||
+          (["BUY", "SELL"].includes(row.kind as string) &&
             uuid(row.listing_id) &&
-            preview.consumed_listings.some(
-              (listing) => listing.listing_id === row.listing_id,
-            ) &&
+            decimal(row.quantity) &&
             decimal(row.gross_cash) &&
             decimal(row.fees) &&
-            decimal(row.taxes)
-          : ["BUY", "SELL"].includes(row.kind as string)
-            ? uuid(row.listing_id) &&
-              decimal(row.quantity) &&
-              decimal(row.gross_cash) &&
-              decimal(row.fees) &&
-              decimal(row.taxes) &&
-              string(row.trade_date) &&
-              string(row.settlement_date)
-            : (["DEPOSIT", "WITHDRAWAL", "FEE"].includes(row.kind as string) ||
-                (packet.contract_version === "portfolio-ledger-preview-v2" &&
-                  row.kind === "TAX")) &&
-              decimal(row.amount)),
+            decimal(row.taxes) &&
+            string(row.trade_date) &&
+            string(row.settlement_date)) ||
+          ((["DEPOSIT", "WITHDRAWAL", "FEE"].includes(row.kind as string) ||
+            (packet.contract_version === "portfolio-ledger-preview-v2" &&
+              row.kind === "TAX")) &&
+            decimal(row.amount))),
     )
   )
     return false;
@@ -6634,6 +6646,13 @@ export function isLedgerCandidate(value: unknown): value is LedgerCandidate {
     activityIds.size !== activities.length ||
     accountIds.size !== accounts.length ||
     activities.some((item) => !accountIds.has(item.account_id)) ||
+    activities.some(
+      (item) =>
+        item.kind === "CASH_TRANSFER" &&
+        !accountIds.has(
+          (item.destination as Record<string, unknown>).account_id,
+        ),
+    ) ||
     [...changes.added_activity_ids, ...changes.changed_activity_ids].some(
       (id) => !activityIds.has(id),
     ) ||

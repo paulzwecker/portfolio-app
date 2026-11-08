@@ -7672,6 +7672,68 @@ export interface components {
             /** Currency */
             currency: string;
         };
+        /** LedgerCashTransfer */
+        "LedgerCashTransfer-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: number | string;
+            /** Currency */
+            currency: string;
+            destination: components["schemas"]["LedgerTransferReceipt-Input"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "CASH_TRANSFER";
+            /** Sequence */
+            sequence: number;
+        };
+        /** LedgerCashTransfer */
+        "LedgerCashTransfer-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            destination: components["schemas"]["LedgerTransferReceipt-Output"];
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "CASH_TRANSFER";
+            /** Sequence */
+            sequence: number;
+        };
         /**
          * LedgerDividend
          * @description Observed account cash in one settlement currency, independently of quote currency.
@@ -8275,6 +8337,42 @@ export interface components {
              * Format: date
              */
             trade_date: string;
+        };
+        /** LedgerTransferReceipt */
+        "LedgerTransferReceipt-Input": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: number | string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
+        };
+        /** LedgerTransferReceipt */
+        "LedgerTransferReceipt-Output": {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            evidence: components["schemas"]["LedgerEvidence"];
         };
         /**
          * Lifecycle
@@ -9152,7 +9250,7 @@ export interface components {
             /** Accounts */
             accounts: components["schemas"]["LedgerOpeningAccount-Input"][];
             /** Activity */
-            activity: (components["schemas"]["LedgerTrade-Input"] | components["schemas"]["LedgerCashActivity-Input"] | components["schemas"]["LedgerDividend-Input"])[];
+            activity: (components["schemas"]["LedgerTrade-Input"] | components["schemas"]["LedgerCashActivity-Input"] | components["schemas"]["LedgerDividend-Input"] | components["schemas"]["LedgerCashTransfer-Input"])[];
             /** Anchor Sha256 */
             anchor_sha256: string;
             /**
@@ -9177,7 +9275,7 @@ export interface components {
             /** Accounts */
             accounts: components["schemas"]["LedgerOpeningAccount-Output"][];
             /** Activity */
-            activity: (components["schemas"]["LedgerTrade-Output"] | components["schemas"]["LedgerCashActivity-Output"] | components["schemas"]["LedgerDividend-Output"])[];
+            activity: (components["schemas"]["LedgerTrade-Output"] | components["schemas"]["LedgerCashActivity-Output"] | components["schemas"]["LedgerDividend-Output"] | components["schemas"]["LedgerCashTransfer-Output"])[];
             /** Anchor Sha256 */
             anchor_sha256: string;
             /**

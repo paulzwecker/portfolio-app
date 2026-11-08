@@ -96,6 +96,76 @@ it("validates source-bound dividend and tax records only in explicit v2 packets"
   row.preview.activity_count = 1;
   expect(isLedgerCandidate(row)).toBe(false);
 });
+
+it("validates paired internal transfers and retains both evidence records", () => {
+  const row = fixture();
+  const destination = "88888888-8888-4888-8888-888888888888";
+  row.packet.contract_version = "portfolio-ledger-preview-v2";
+  row.preview.contract_version = "portfolio-ledger-preview-v2";
+  row.preview.projection_version = "settled-booking-v2";
+  row.packet.accounts.push({
+    ...structuredClone(row.packet.accounts[0]),
+    account_id: destination,
+    name: "Synthetic recipient",
+    evidence: {
+      source_sha256: "b".repeat(64),
+      source_record_id: "recipient-opening",
+    },
+    positions: [],
+    cash: [{ currency: "USD", balance: "0" }],
+  });
+  row.packet.activity = [
+    {
+      id: candidateId,
+      account_id: row.packet.accounts[0].account_id,
+      kind: "CASH_TRANSFER",
+      sequence: 1,
+      effective_at: row.as_of,
+      currency: "USD",
+      amount: "12.3400000000",
+      evidence: { source_sha256: "a".repeat(64), source_record_id: "debit" },
+      destination: {
+        account_id: destination,
+        currency: "USD",
+        amount: "12.34",
+        effective_at: row.as_of,
+        evidence: {
+          source_sha256: "b".repeat(64),
+          source_record_id: "receipt",
+        },
+      },
+    },
+  ];
+  row.preview.activity_count = 1;
+  expect(isLedgerCandidate(row)).toBe(true);
+  const text = JSON.stringify(row.packet);
+  const file = inspectLedgerFile(text, "paired-transfer.json");
+  expect(file.text).toBe(text);
+  expect(file.evidence.find((e) => e.role === "Transfer receipt")).toEqual({
+    role: "Transfer receipt",
+    accountId: destination,
+    reference: "receipt",
+    sha256: "b".repeat(64),
+  });
+  for (const replacement of [
+    { account_id: candidateId },
+    { amount: 12.34 },
+    { effective_at: "2026-01-03T00:00:00Z" },
+    { currency: "EUR" },
+    { evidence: null },
+  ]) {
+    const invalid = structuredClone(row);
+    Object.assign(
+      (invalid.packet.activity[0] as { destination: object }).destination,
+      replacement,
+    );
+    expect(isLedgerCandidate(invalid)).toBe(false);
+  }
+  row.packet.contract_version = "portfolio-ledger-preview-v1";
+  row.preview.contract_version = "portfolio-ledger-preview-v1";
+  row.preview.projection_version = "settled-booking-v1";
+  expect(isLedgerCandidate(row)).toBe(false);
+});
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");

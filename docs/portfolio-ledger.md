@@ -15,9 +15,34 @@ opening accounts/balances and up to 1,000 activity records. It permits 20 accoun
 `settled-booking-v1` supports BUY, SELL, DEPOSIT, WITHDRAWAL and FEE.
 
 `portfolio-ledger-preview-v2` explicitly opts into `settled-booking-v2`, adding
-DIVIDEND and TAX. Existing v1 packets, projections and receipt hashes retain
-their original meaning. A v1 packet cannot contain either new kind. Both versions
+DIVIDEND, TAX and paired CASH_TRANSFER records. Existing v1/v2 packets, projections and receipt hashes retain
+their original meaning. A v1 packet cannot contain these new kinds. Both versions
 use the same review/publication workflow and existing migrated receipt tables.
+
+### Paired internal cash transfers
+
+A v2 CASH_TRANSFER is one ordered activity containing a source debit and a
+required `destination` receipt. Both legs explicitly declare account, currency,
+positive amount, timezone-aware settled booking instant and source document/record
+evidence. The legs must have equal amounts/currency and the same absolute booking
+instant, with distinct source keys. Both accounts must be declared evidenced
+brokerage accounts inside the same portfolio, and they must differ.
+
+Replay debits the source and credits the recipient at that single sequence,
+preserving consolidated native-currency cash and all security quantities. Source
+overdrafts block the packet, even when later activity repairs the closing balance.
+Account-level ending observations must reconcile independently of portfolio totals.
+The receipt evidence participates in duplicate-source checks, immutable input
+hashes, saved records and correction acknowledgements. A reviewed correction
+replaces the complete paired activity under its existing activity ID.
+
+This scope requires two matched, already-settled observations. Different booking
+instants require an explicit future in-transit accounting contract. Cross-currency
+movement, outside-portfolio accounts and security transfers remain unsupported.
+Fees/taxes require separate evidenced rows. Do not also enter the matched legs as
+external DEPOSIT/WITHDRAWAL rows; exact source-key reuse is rejected, and original
+statement review must catch differently keyed duplicates. Internal movement grants
+no income, external capital-flow, performance or ownership inference.
 
 ### Observed income and taxes
 

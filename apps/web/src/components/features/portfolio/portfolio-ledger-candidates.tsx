@@ -505,7 +505,29 @@ function LedgerCandidateDetail({
                 {item.kind} · {dateTime(item.effective_at)}
               </p>
               <p className="break-all font-mono text-xs">{item.id}</p>
-              {item.kind === "DIVIDEND" ? (
+              {item.kind === "CASH_TRANSFER" ? (
+                <div className="mt-1 space-y-1 break-words">
+                  <p>
+                    Internal transfer · {file.accountNames[item.account_id]} →{" "}
+                    {file.accountNames[item.destination.account_id]}
+                  </p>
+                  <p>
+                    Debit {item.amount} {item.currency}
+                  </p>
+                  <p>
+                    Receipt {item.destination.amount}{" "}
+                    {item.destination.currency} ·{" "}
+                    {dateTime(item.destination.effective_at)}
+                  </p>
+                  <p>
+                    Receipt source record{" "}
+                    {item.destination.evidence.source_record_id}
+                  </p>
+                  <p className="break-all font-mono text-xs">
+                    {item.destination.evidence.source_sha256}
+                  </p>
+                </div>
+              ) : item.kind === "DIVIDEND" ? (
                 <p className="mt-1 break-words">
                   Listing {item.listing_id} · Gross receipt {item.gross_cash}{" "}
                   {item.currency} · Fees {item.fees} · Withholding {item.taxes}

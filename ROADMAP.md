@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 observed dividends and tax activity — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                         |
+| Active checkpoint           | C2.3 paired internal cash transfers — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                              |
 | Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                        |
-| Implementation              | Income slice IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED through review, publication, rollback and desktop/mobile readback                        |
-| Next ready substantial task | Continue C2.3 with evidenced paired same-currency account transfers, preserving consolidated balances and approval gates                       |
+| Implementation              | Income slice LOCAL_VERIFIED; paired-transfer projection and web contracts pass focused checks; lifecycle/browser tests in progress             |
+| Next ready substantial task | Verify paired transfers through saved review/publication, corrections, rollback and desktop/mobile readback                                    |
 | Parallel owner gate         | Current-state recovery, production migrations/deployment, provider activation, model acceptance and ledger ownership retain separate approvals |
 | Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream    |
 

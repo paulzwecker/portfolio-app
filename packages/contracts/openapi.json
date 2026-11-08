@@ -18155,6 +18155,140 @@
         "title": "LedgerCashRead",
         "type": "object"
       },
+      "LedgerCashTransfer-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/LedgerTransferReceipt-Input"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "CASH_TRANSFER",
+            "title": "Kind",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "currency",
+          "amount",
+          "destination"
+        ],
+        "title": "LedgerCashTransfer",
+        "type": "object"
+      },
+      "LedgerCashTransfer-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/LedgerTransferReceipt-Output"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "CASH_TRANSFER",
+            "title": "Kind",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "currency",
+          "amount",
+          "destination"
+        ],
+        "title": "LedgerCashTransfer",
+        "type": "object"
+      },
       "LedgerDividend-Input": {
         "additionalProperties": false,
         "description": "Observed account cash in one settlement currency, independently of quote currency.",
@@ -19677,6 +19811,94 @@
           "settlement_date"
         ],
         "title": "LedgerTrade",
+        "type": "object"
+      },
+      "LedgerTransferReceipt-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          }
+        },
+        "required": [
+          "account_id",
+          "currency",
+          "amount",
+          "effective_at",
+          "evidence"
+        ],
+        "title": "LedgerTransferReceipt",
+        "type": "object"
+      },
+      "LedgerTransferReceipt-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          }
+        },
+        "required": [
+          "account_id",
+          "currency",
+          "amount",
+          "effective_at",
+          "evidence"
+        ],
+        "title": "LedgerTransferReceipt",
         "type": "object"
       },
       "Lifecycle": {
@@ -22596,6 +22818,7 @@
               "discriminator": {
                 "mapping": {
                   "BUY": "#/components/schemas/LedgerTrade-Input",
+                  "CASH_TRANSFER": "#/components/schemas/LedgerCashTransfer-Input",
                   "DEPOSIT": "#/components/schemas/LedgerCashActivity-Input",
                   "DIVIDEND": "#/components/schemas/LedgerDividend-Input",
                   "FEE": "#/components/schemas/LedgerCashActivity-Input",
@@ -22614,6 +22837,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/LedgerDividend-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerCashTransfer-Input"
                 }
               ]
             },
@@ -22683,6 +22909,7 @@
               "discriminator": {
                 "mapping": {
                   "BUY": "#/components/schemas/LedgerTrade-Output",
+                  "CASH_TRANSFER": "#/components/schemas/LedgerCashTransfer-Output",
                   "DEPOSIT": "#/components/schemas/LedgerCashActivity-Output",
                   "DIVIDEND": "#/components/schemas/LedgerDividend-Output",
                   "FEE": "#/components/schemas/LedgerCashActivity-Output",
@@ -22701,6 +22928,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/LedgerDividend-Output"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerCashTransfer-Output"
                 }
               ]
             },
