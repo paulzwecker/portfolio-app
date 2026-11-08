@@ -6,16 +6,41 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                           |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Personal Universe design foundation and Portfolio experience — INTEGRATE. [Design contract](docs/design/design-system-and-frontend-architecture-11b.md) |
-| Branch / PR                 | `codex/personal-universe-design-system` / [PR #28](https://github.com/paulzwecker/portfolio-app/pull/28), based on main `685fa7a`                       |
-| Implementation              | Reference-based shared tokens, appearance selector, showcase and Portfolio holdings search are LOCAL_VERIFIED                                           |
-| Next ready substantial task | Review PR #28 after CI; retain production deployment freezes                                                                                            |
-| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                                            |
-| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                                        |
+| Field                       | Current value                                                                                                                          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2 historical market-data reliability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                              |
+| Branch / PR                 | `codex/market-history-coverage`, based on current main `aef3572`; [draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29) |
+| Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                                           |
+| Next ready substantial task | Confirm Vercel release controls and Blueprint sync, review draft #29, then authorize a bounded held-listing enrichment plan            |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                           |
+| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                       |
 
-PR #27 is merged into main; deployment freezes and recovery authorization gates remain in effect.
+The historical market-data reliability engineering checkpoint is IMPLEMENTATION_COMPLETE
+and LOCAL_VERIFIED. Company Explorer and Operations expose source conflicts, returned-row
+search, published schedule evidence, receipt diagnostics and bounded checkpoint
+reconciliation. Prior BUILD evidence remains in the
+[historical handoff](docs/history/market-history-build-through-2026-11-08.md).
+Current verification and release gates are tracked in the
+[active handoff](docs/ACTIVE_WORKSTREAM.md). C2.2 remains operationally partial until
+separately authorized live enrichment and monitored refresh acceptance.
+`npm run check`, 112 relevant PostgreSQL cases across selection/rerun and the managed
+browser suite passed. Browser evidence is 95 passed and 35 explicit skips. Independent
+review tightened alert evidence and added HTTP authentication/read-only coverage.
+
+Fresh November 8 read-only verification passes for the exact Neon target at
+`b59f16c8a203`, all 98 tables and mapped metadata without drift. Accepted portfolio
+counts and the 100% target total match the baseline. The earlier connection failure
+is resolved using the documented process-local CA bundle. Render is live at
+`aef3572`, uses `checksPass`, has healthy readiness and disabled write/background
+controls. Effective main rules enforce PRs and all three strict CI checks.
+Classification is CONFIGURATION_REQUIRED pending current Vercel release-control
+evidence and Blueprint sync confirmation. The read-only market preview resolves
+22/22 holdings and two FX pairs across 24 planned scopes. Enrichment execution
+retains the owner-reviewed window, budget and recovery prerequisites.
+
+Historical release evidence follows. PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
+Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and
+Blueprint sync remain disabled; retain all separate production activation and recovery gates.
 
 Historical November 8 incident evidence identified a healthy old Render deployment (`395f842`),
 new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail
@@ -170,6 +195,43 @@ references through the linked ledgers. They do not create a second execution que
 | C2.4 Broker imports and accounting — MISSING                          | C2.3 and reviewed lot/fee/tax/FX policy. One real broker format first. Preview → map → deduplicate → accept → statement reconciliation, with rollback/replay/conflict tests. Purchases/sales, dividends/withholding, fees/taxes, cash/security transfers and FX need provenance. Cross-account moves carry evidenced basis; unknown basis produces unavailable gains. Re-import must preserve positions and targets                                                                                                                                                                                                                                                                                                    |
 | C2.5 Genuine performance — MISSING                                    | C2.3 complete flows plus C2.2 dated valuations/FX and verified action handling. Prove TWR and dated XIRR against independent fixtures, including same-day flows, transfers, retained/withdrawn dividends, fees/taxes, FX, zero opening value, missing valuations and absent/ambiguous IRR roots. Since-cutover coverage may precede full lot history. Hosted return drill-down must reproduce inputs and clearly label coverage, timing and net/gross methodology                                                                                                                                                                                                                                                      |
 | C5.1 Provider-only cloud operation — CROSS-CUTTING                    | C2.2/C3 need explicit cadence, source scope, request/storage limits, least privilege, current recovery and separately approved scheduling. Reuse existing durable jobs/locks/backoff and one-cycle entrypoint. Prove sleeping-runtime/restart recovery, overlap prevention, partial failures, data freshness and alerts. Broad worker activation must not silently enable Sheets writes, model/research acceptance, target changes or unrelated decision jobs                                                                                                                                                                                                                                                          |
+
+**C2.2 independent BUILD:** `codex/market-history-coverage` adds explicit
+normalized-batch date-span evidence to historical price/FX receipts. It does not
+infer missing trading sessions or change provider/run status. One returned quote or
+a completed checkpoint does not establish window completeness. Synthetic unit and
+isolated PostgreSQL verification are recorded in the active handoff. This work is
+independent of the design PR; production ingestion and release remain owner-gated.
+Read-only reconciliation now rejects missing completed-batch provenance and rows
+outside the frozen subject, time window or historical price scope. This verifies
+receipt integrity, not expected-session completeness; 13 focused unit and 21 isolated
+PostgreSQL cases pass. Next: establish reviewed session-aware coverage evidence.
+The next increment verifies retained raw provider bytes and identity as part of
+reconciliation, with an explicit per-payload work limit. Fourteen unit and 24
+isolated PostgreSQL cases pass; live-source and production coverage remain unverified.
+Price-move attention now uses only information known at evaluation time and rejects
+ambiguous, corrected or incompatible close pairs. Its label no longer asserts
+unverified exchange-session adjacency. Nine focused units and 12 isolated PostgreSQL
+cases pass. Review real-session coverage before enabling complete-history claims.
+Company historical analytics now expose their observed date span and explicitly state
+that exchange-session coverage is unassessed, including for older API responses.
+Synthetic API/DB, web and responsive browser checks are recorded in the handoff;
+no trading calendar or production coverage is inferred.
+History analytics and charts now fail closed on duplicate dates or incompatible
+provider, symbol or currency streams; source rows remain inspectable. Focused local
+checks pass, including responsive conflict-state coverage. Session completeness,
+source adjustment consistency and live ingestion remain unverified.
+The conflict state now identifies the selected source streams, their date spans and
+duplicate dates, allowing review even when the relevant rows are outside the recent
+observation list. This is local evidence, not a provider reconciliation approval.
+The inspection view now searches all returned observations independently of the
+chart range, displaying exact close text, source symbol and adjustment basis in
+responsive table/cards. It does not assert that the selected history includes every
+provider observation or every market session.
+Price and FX provider normalization warnings now persist into run reports and make
+affected refreshes partial. Operations explains the warnings; legacy receipts with
+unrecorded warning evidence remain explicitly unknown. This is locally verified,
+not live provider coverage or approval to ingest.
 
 ## Immediate priorities and gates
 

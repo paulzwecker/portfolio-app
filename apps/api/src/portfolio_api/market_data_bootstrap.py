@@ -9,19 +9,22 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import gzip
 import hashlib
+import io
 import json
 import os
 import sys
 import time
+import zlib
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -82,6 +85,8 @@ MAX_HISTORY_DAYS = 3650
 MAX_CHECKPOINTS_PER_INVOCATION = 10
 DEFAULT_CHECKPOINTS_PER_INVOCATION = 5
 MAX_CHECKPOINT_ATTEMPTS = 3
+MAX_RAW_PAYLOAD_VERIFY_BYTES = 64 * 1024 * 1024
+RAW_PAYLOAD_VERIFY_CHUNK_BYTES = 64 * 1024
 MIN_PROVIDER_REQUEST_INTERVAL_SECONDS = 1.0
 LOCK_NAMESPACE = 1296319029  # ASCII-like namespace for the market bootstrap runner.
 LOCK_KEY = 1112759376
@@ -725,9 +730,42 @@ def _quarantine_temporal_plan(plan: dict[str, Any], issues: list[dict[str, str]]
     plan["batch"]["reconciliation"] = plan["report"]
 
 
+def _history_window_evidence(
+    checkpoint: MarketDataBootstrapCheckpoint, plan: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Describe returned dates without claiming completeness or guessing market sessions."""
+    dates: set[date] | None = None
+    if plan is not None:
+        if checkpoint.subject_kind == "LISTING":
+            dates = {
+                row["market_date"].date()
+                for row in plan["prices"]
+                if row["price_kind"] == "DAILY_CLOSE"
+            }
+        else:
+            current_refs = set(plan["report"].get("current_quote_source_refs", []))
+            dates = {
+                row["effective_at"].date()
+                for row in plan["fx"]
+                if row["source_ref"] not in current_refs
+            }
+    ordered = sorted(dates) if dates is not None else []
+    spacing = [(later - earlier).days for earlier, later in zip(ordered, ordered[1:], strict=False)]
+    return {
+        "coverage_assessment": "NOT_ASSESSED",
+        "assessment_reason": "EXPECTED_SESSIONS_NOT_EVALUATED",
+        "observation_dates_known": dates is not None,
+        "distinct_observed_dates": len(ordered) if dates is not None else None,
+        "first_observed_date": ordered[0].isoformat() if ordered else None,
+        "last_observed_date": ordered[-1].isoformat() if ordered else None,
+        "maximum_calendar_spacing_days": max(spacing) if spacing else None,
+    }
+
+
 def _coverage_for_plan(
     checkpoint: MarketDataBootstrapCheckpoint, plan: dict[str, Any] | None
 ) -> dict[str, Any]:
+    window_evidence = _history_window_evidence(checkpoint, plan)
     if plan is None:
         return {
             "price_status": "UNAVAILABLE" if checkpoint.subject_kind == "LISTING" else None,
@@ -741,12 +779,12 @@ def _coverage_for_plan(
             "earliest_effective_date": None,
             "latest_effective_date": None,
             "normalization_warnings": [],
+            "history_window_evidence": window_evidence,
         }
     provider_report = plan["report"]
     if checkpoint.subject_kind == "LISTING":
         item: dict[str, Any] = next(iter(provider_report.get("mapped_listings", [])), {})
         daily_rows = int(provider_report.get("daily_price_rows", 0) or 0)
-        current_quote_rows = int(provider_report.get("current_quote_rows", 0) or 0)
         current_quote_rows = int(provider_report.get("current_quote_rows", 0) or 0)
         action_rows = int(provider_report.get("corporate_action_rows", 0) or 0)
         price_status = "AVAILABLE" if daily_rows else "UNAVAILABLE"
@@ -760,9 +798,10 @@ def _coverage_for_plan(
             "provider_current_quote_rows_skipped": int(
                 provider_report.get("provider_current_quote_rows_skipped", 0) or 0
             ),
-            "earliest_effective_date": item.get("earliest_history_date"),
-            "latest_effective_date": item.get("latest_history_date"),
+            "earliest_effective_date": item.get("earliest_history_date") if daily_rows else None,
+            "latest_effective_date": item.get("latest_history_date") if daily_rows else None,
             "normalization_warnings": provider_report.get("normalization_warnings", []),
+            "history_window_evidence": window_evidence,
         }
     pairs = provider_report.get("accepted_pairs", [])
     pair = pairs[0] if pairs else {}
@@ -780,9 +819,10 @@ def _coverage_for_plan(
         ),
         "daily_fx_observation_rows": int(pair.get("daily_observation_rows", 0) or 0),
         "current_fx_quote_rows": int(pair.get("current_quote_rows", 0) or 0),
-        "earliest_effective_date": pair.get("earliest_effective_at"),
-        "latest_effective_date": pair.get("latest_effective_at"),
+        "earliest_effective_date": pair.get("earliest_effective_at") if fx_rows else None,
+        "latest_effective_date": pair.get("latest_effective_at") if fx_rows else None,
         "normalization_warnings": provider_report.get("normalization_warnings", []),
+        "history_window_evidence": window_evidence,
     }
 
 
@@ -963,6 +1003,8 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
     blocked_count = 0
     pending_count = 0
     retryable_count = 0
+    warning_count = 0
+    warning_evidence_unrecorded = 0
     for checkpoint in checkpoints:
         statuses[checkpoint.status] += 1
         details: dict[str, Any] = (
@@ -970,6 +1012,26 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         )
         coverage_value = details.get("coverage")
         coverage: dict[str, Any] = dict(coverage_value) if isinstance(coverage_value, dict) else {}
+        warnings_value = coverage.get("normalization_warnings")
+        warnings = warnings_value if isinstance(warnings_value, list) else []
+        warnings_captured = coverage.get("normalization_warnings_captured") is True and isinstance(
+            warnings_value, list
+        )
+        coverage["normalization_warnings_captured"] = warnings_captured
+        warning_count += len(warnings)
+        if checkpoint.status in {"COMPLETE", "UNAVAILABLE"} and not warnings_captured:
+            warning_evidence_unrecorded += 1
+        evidence = coverage.get("history_window_evidence")
+        if not isinstance(evidence, dict) or evidence.get("coverage_assessment") != "NOT_ASSESSED":
+            coverage["history_window_evidence"] = {
+                "coverage_assessment": "NOT_ASSESSED",
+                "assessment_reason": "EVIDENCE_NOT_RECORDED",
+                "observation_dates_known": False,
+                "distinct_observed_dates": None,
+                "first_observed_date": None,
+                "last_observed_date": None,
+                "maximum_calendar_spacing_days": None,
+            }
         canonical_counts_value = coverage.get("canonical_counts")
         canonical_counts: dict[str, Any] = (
             dict(canonical_counts_value) if isinstance(canonical_counts_value, dict) else {}
@@ -1048,6 +1110,9 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
                     "current_quote_rows": int(coverage.get("current_fx_quote_rows", 0) or 0),
                     "earliest_effective_date": coverage.get("earliest_effective_date"),
                     "latest_effective_date": coverage.get("latest_effective_date"),
+                    "normalization_warnings": warnings,
+                    "normalization_warnings_captured": warnings_captured,
+                    "history_window_evidence": coverage["history_window_evidence"],
                     "batch_id": str(checkpoint.batch_id) if checkpoint.batch_id else None,
                     "pair": pair,
                 }
@@ -1086,11 +1151,18 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         else "FAILED"
         if terminal_failure and not pending_count
         else "PARTIAL"
-        if not complete or unavailable_count or failed_count or blocked_count or unverified_actions
+        if not complete
+        or unavailable_count
+        or failed_count
+        or blocked_count
+        or unverified_actions
+        or warning_count
         else "COMPLETE"
     )
     return {
         "status": status,
+        "history_window_coverage": "NOT_ASSESSED",
+        "status_scope": "CHECKPOINT_EXECUTION_NOT_EXPECTED_SESSION_COVERAGE",
         "run_id": str(run.id),
         "input_digest": run.input_digest,
         "provider_id": run.provider_id,
@@ -1110,6 +1182,8 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         "blocked_checkpoints": blocked_count,
         "unavailable_coverages": unavailable_count,
         "unverified_corporate_actions": unverified_actions,
+        "normalization_warning_count": warning_count,
+        "warning_evidence_unrecorded_checkpoints": warning_evidence_unrecorded,
         "canonical_totals": totals,
         "company_coverage": sorted(
             company_rows.values(), key=lambda item: str(item["company_name"])
@@ -1312,6 +1386,9 @@ def _process_checkpoint(
             }
             coverage["canonical_fingerprint"] = None
         coverage["normalization_warnings"] = normalizer_report.get("normalization_warnings", [])
+        coverage["normalization_warnings_captured"] = (
+            normalizer_report.get("normalization_warnings_captured") is True
+        )
         coverage["raw_response_count"] = len(plan["records"])
         coverage["source_payload_hashes"] = [record.payload_sha256 for record in plan["records"]]
         coverage["source_records"] = [
@@ -1430,7 +1507,8 @@ def execute_market_data_bootstrap(
             return run.report
         if run.status in {"COMPLETE", "FAILED", "BLOCKED"}:
             report = _run_report(session, run)
-            report["status"] = run.status
+            if run.status != "COMPLETE":
+                report["status"] = run.status
             return report
         _recover_interrupted_checkpoints(session, run.id)
         processed = 0
@@ -1455,6 +1533,174 @@ def execute_market_data_bootstrap(
         run.report = report
         session.commit()
         return report
+
+
+def _raw_payload_issue(
+    payload: bytes,
+    encoding: str,
+    expected_hash: str,
+    *,
+    max_bytes: int | None = None,
+) -> str | None:
+    """Verify one retained payload with bounded input and decompression work."""
+    max_bytes = MAX_RAW_PAYLOAD_VERIFY_BYTES if max_bytes is None else max_bytes
+    if len(payload) > max_bytes:
+        return "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+    if encoding not in {"gzip", "identity"}:
+        return "SOURCE_PAYLOAD_ENCODING_INVALID"
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with (
+            gzip.GzipFile(fileobj=io.BytesIO(payload))
+            if encoding == "gzip"
+            else io.BytesIO(payload)
+        ) as stream:
+            while chunk := stream.read(RAW_PAYLOAD_VERIFY_CHUNK_BYTES):
+                size += len(chunk)
+                if size > max_bytes:
+                    return "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
+                digest.update(chunk)
+    except (OSError, EOFError, zlib.error):
+        return "SOURCE_PAYLOAD_INVALID"
+    return None if digest.hexdigest() == expected_hash else "SOURCE_PAYLOAD_HASH_MISMATCH"
+
+
+def _batch_scope_issues(
+    session: Session,
+    checkpoint: MarketDataBootstrapCheckpoint,
+    batch_id: UUID,
+    counts: dict[str, int],
+) -> list[str]:
+    """Check persisted rows against frozen subject/window; never infer missing sessions."""
+    start = datetime.combine(checkpoint.start_date, datetime.min.time(), tzinfo=UTC)
+    end = datetime.combine(checkpoint.end_date + timedelta(days=1), datetime.min.time(), tzinfo=UTC)
+    issues: set[str] = set()
+    if checkpoint.subject_kind == "LISTING":
+        if checkpoint.listing_id is None:
+            return ["CHECKPOINT_IDENTITY_MISSING"]
+        if counts["fx_observations"]:
+            issues.add("UNEXPECTED_DOMAIN_ROWS")
+        price = session.execute(
+            select(
+                func.count().filter(PriceObservation.listing_id != checkpoint.listing_id),
+                func.count().filter(PriceObservation.price_kind != "DAILY_CLOSE"),
+                func.count().filter(
+                    or_(PriceObservation.market_date < start, PriceObservation.market_date >= end)
+                ),
+                func.count().filter(
+                    PriceObservation.observed_at.is_not(None),
+                    PriceObservation.observed_at > PriceObservation.recorded_at,
+                ),
+            ).where(PriceObservation.batch_id == batch_id)
+        ).one()
+        actions = session.execute(
+            select(
+                func.count().filter(CorporateAction.listing_id != checkpoint.listing_id),
+                func.count().filter(
+                    or_(
+                        CorporateAction.effective_date < start,
+                        CorporateAction.effective_date >= end,
+                    )
+                ),
+            ).where(CorporateAction.batch_id == batch_id)
+        ).one()
+        if price[0] or actions[0]:
+            issues.add("CHECKPOINT_SUBJECT_MISMATCH")
+        if price[1]:
+            issues.add("UNEXPECTED_PRICE_KIND")
+        if price[2]:
+            issues.add("PRICE_OUTSIDE_REQUESTED_WINDOW")
+        if price[3]:
+            issues.add("OBSERVATION_AFTER_RETRIEVAL")
+        if actions[1]:
+            issues.add("ACTION_OUTSIDE_REQUESTED_WINDOW")
+    elif checkpoint.subject_kind == "FX_PAIR":
+        if not checkpoint.base_currency or not checkpoint.quote_currency:
+            return ["CHECKPOINT_IDENTITY_MISSING"]
+        if counts["price_observations"] or counts["corporate_actions"]:
+            issues.add("UNEXPECTED_DOMAIN_ROWS")
+        fx = session.execute(
+            select(
+                func.count().filter(
+                    or_(
+                        FxObservation.base_currency != checkpoint.base_currency,
+                        FxObservation.quote_currency != checkpoint.quote_currency,
+                    )
+                ),
+                func.count().filter(
+                    or_(FxObservation.effective_at < start, FxObservation.effective_at >= end)
+                ),
+                func.count().filter(
+                    FxObservation.observed_at.is_not(None),
+                    FxObservation.observed_at > FxObservation.recorded_at,
+                ),
+            ).where(FxObservation.batch_id == batch_id)
+        ).one()
+        if fx[0]:
+            issues.add("CHECKPOINT_SUBJECT_MISMATCH")
+        if fx[1]:
+            issues.add("FX_OUTSIDE_REQUESTED_WINDOW")
+        if fx[2]:
+            issues.add("OBSERVATION_AFTER_RETRIEVAL")
+    else:
+        issues.add("CHECKPOINT_IDENTITY_MISSING")
+    return sorted(issues)
+
+
+def _raw_batch_issues(
+    session: Session,
+    run: MarketDataBootstrapRun,
+    checkpoint: MarketDataBootstrapCheckpoint,
+    batch: MarketDataBatch,
+    *,
+    max_bytes: int | None = None,
+) -> list[str]:
+    """Check retained provider bytes and provenance without returning their contents."""
+    max_bytes = MAX_RAW_PAYLOAD_VERIFY_BYTES if max_bytes is None else max_bytes
+    issues: set[str] = set()
+    if (
+        batch.source_kind != "PROVIDER_RESPONSE"
+        or batch.provider_id != run.provider_id
+        or batch.provider_schema_version != run.provider_schema_version
+    ):
+        issues.add("BATCH_PROVIDER_MISMATCH")
+    domain = (
+        ExternalDataDomain.MARKET_DATA.value
+        if checkpoint.subject_kind == "LISTING"
+        else ExternalDataDomain.FX.value
+    )
+    metadata = session.execute(
+        select(
+            ExternalRawPayload.id,
+            ExternalRawPayload.provider_id,
+            ExternalRawPayload.domain,
+            ExternalRawPayload.content_encoding,
+            ExternalRawPayload.payload_sha256,
+            func.octet_length(ExternalRawPayload.payload_bytes),
+        )
+        .where(ExternalRawPayload.batch_id == batch.id)
+        .execution_options(yield_per=20)
+    )
+    for row in metadata:
+        raw_id, provider, raw_domain, encoding, expected_hash, length = cast(
+            tuple[UUID, str, str, str, str, int], row
+        )
+        if provider != run.provider_id or raw_domain != domain:
+            issues.add("SOURCE_PAYLOAD_PROVENANCE_MISMATCH")
+        if length > max_bytes:
+            issues.add("SOURCE_PAYLOAD_VERIFICATION_LIMIT")
+            continue
+        payload = session.scalar(
+            select(ExternalRawPayload.payload_bytes).where(ExternalRawPayload.id == raw_id)
+        )
+        if payload is None:
+            issues.add("SOURCE_PAYLOAD_MISSING")
+            continue
+        issue = _raw_payload_issue(payload, encoding, expected_hash, max_bytes=max_bytes)
+        if issue:
+            issues.add(issue)
+    return sorted(issues)
 
 
 def reconcile_market_data_bootstrap(
@@ -1485,6 +1731,10 @@ def reconcile_market_data_bootstrap(
         )
         expected_value = checkpoint_coverage.get("canonical_counts")
         expected: dict[str, Any] = dict(expected_value) if isinstance(expected_value, dict) else {}
+        if checkpoint.batch_id is None and checkpoint.status == "COMPLETE":
+            differences.append(
+                {"subject_key": checkpoint.subject_key, "code": "BATCH_REFERENCE_MISSING"}
+            )
         if checkpoint.batch_id is not None:
             batch = session.get(MarketDataBatch, checkpoint.batch_id)
             if batch is None:
@@ -1496,6 +1746,10 @@ def reconcile_market_data_bootstrap(
             else:
                 actual = _canonical_batch_counts(session, batch.id)
                 actual_fingerprint = _canonical_batch_fingerprint(session, batch.id)
+                if checkpoint.status == "COMPLETE" and actual["raw_payloads"] == 0:
+                    differences.append(
+                        {"subject_key": checkpoint.subject_key, "code": "SOURCE_PAYLOAD_MISSING"}
+                    )
                 if actual != expected:
                     differences.append(
                         {
@@ -1511,23 +1765,14 @@ def reconcile_market_data_bootstrap(
                             "code": "CANONICAL_FINGERPRINT_MISMATCH",
                         }
                     )
-                if checkpoint.subject_kind == "LISTING":
-                    temporal_bad = session.scalar(
-                        select(func.count())
-                        .select_from(PriceObservation)
-                        .where(
-                            PriceObservation.batch_id == batch.id,
-                            PriceObservation.observed_at.is_not(None),
-                            PriceObservation.observed_at > PriceObservation.recorded_at,
-                        )
-                    )
-                    if temporal_bad:
-                        differences.append(
-                            {
-                                "subject_key": checkpoint.subject_key,
-                                "code": "OBSERVATION_AFTER_RETRIEVAL",
-                            }
-                        )
+                differences.extend(
+                    {"subject_key": checkpoint.subject_key, "code": code}
+                    for code in _batch_scope_issues(session, checkpoint, batch.id, actual)
+                )
+                differences.extend(
+                    {"subject_key": checkpoint.subject_key, "code": code}
+                    for code in _raw_batch_issues(session, run, checkpoint, batch)
+                )
         checkpoint_reports.append(
             {
                 "subject_kind": checkpoint.subject_kind,

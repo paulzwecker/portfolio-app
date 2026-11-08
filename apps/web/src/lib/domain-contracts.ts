@@ -320,6 +320,10 @@ export type PriceHistoryAnalytics =
   components["schemas"]["PriceHistoryAnalyticsRead"];
 export type MarketRefreshStatus =
   components["schemas"]["MarketRefreshStatusRead"];
+export type HistoricalBootstrapReview =
+  components["schemas"]["HistoricalBootstrapReviewRead"];
+export type HistoricalBootstrapReconciliation =
+  components["schemas"]["HistoricalBootstrapReconciliationRead"];
 export type MarketRefreshRun = components["schemas"]["MarketRefreshRunRead"];
 export type RecurringOperationJob =
   components["schemas"]["RecurringOperationJobRead"];
@@ -893,6 +897,191 @@ function isPriceRegime(v: unknown): v is PriceRegime {
     string(v.source_ref)
   );
 }
+function isScheduledSessionReview(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    ["NYSE", "NASDAQ", "XETRA"].includes(v.venue as string) &&
+    string(v.schedule_id) &&
+    string(v.source_sha256) &&
+    /^[a-f0-9]{64}$/.test(v.source_sha256) &&
+    (v.schedule_fingerprint === undefined ||
+      v.schedule_fingerprint === null ||
+      (string(v.schedule_fingerprint) &&
+        /^[a-f0-9]{64}$/.test(v.schedule_fingerprint))) &&
+    ((v.venue === "NYSE" &&
+      v.source_url ===
+        "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf") ||
+      (v.venue === "NASDAQ" &&
+        v.source_url === "https://nasdaqtrader.com/Trader.aspx?id=Calendar") ||
+      (v.venue === "XETRA" &&
+        v.source_url ===
+          "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf")) &&
+    (v.source_as_of === null || dateOnly(v.source_as_of)) &&
+    timestamp(v.source_observed_at) &&
+    dateOnly(v.start_date) &&
+    dateOnly(v.end_date) &&
+    typeof v.full_selected_span_covered === "boolean" &&
+    Number.isInteger(v.scheduled_count) &&
+    (v.scheduled_count as number) >= 0 &&
+    array(v.absent_scheduled_dates, dateOnly) &&
+    array(v.selected_unscheduled_dates, dateOnly)
+  );
+}
+
+export function isHistoricalBootstrapReview(
+  v: unknown,
+): v is HistoricalBootstrapReview {
+  if (
+    !isRecord(v) ||
+    !(v.run_id === null || uuid(v.run_id)) ||
+    !(v.run_status === null || string(v.run_status)) ||
+    !(v.prepared_at === null || timestamp(v.prepared_at)) ||
+    !(v.requested_start === null || dateOnly(v.requested_start)) ||
+    !(v.requested_end === null || dateOnly(v.requested_end)) ||
+    !timestamp(v.checked_at) ||
+    !Number.isInteger(v.listing_count) ||
+    (v.listing_count as number) < 0 ||
+    !Number.isInteger(v.fx_checkpoint_count) ||
+    (v.fx_checkpoint_count as number) < 0 ||
+    !Number.isInteger(v.offset) ||
+    (v.offset as number) < 0 ||
+    (v.offset as number) > 10000 ||
+    !Number.isInteger(v.omitted_listing_count) ||
+    (v.omitted_listing_count as number) < 0 ||
+    !Array.isArray(v.listings) ||
+    !array(
+      v.listings,
+      (row) =>
+        isRecord(row) &&
+        uuid(row.checkpoint_id) &&
+        string(row.subject_key) &&
+        string(row.checkpoint_status) &&
+        [
+          "AVAILABLE",
+          "CHECKPOINT_NOT_COMPLETE",
+          "CHECKPOINT_UNAVAILABLE",
+          "CHECKPOINT_FAILED",
+          "CHECKPOINT_BLOCKED",
+          "IDENTITY_CHANGED",
+          "LISTING_CURRENCY_UNAVAILABLE",
+          "BATCH_UNVERIFIED",
+          "NO_DAILY_CLOSES",
+          "NO_SCHEDULE",
+          "DATE_LIMIT_EXCEEDED",
+        ].includes(row.reason as string) &&
+        (row.reason === "AVAILABLE"
+          ? isScheduledSessionReview(row.scheduled_session_review)
+          : row.scheduled_session_review === null) &&
+        (row.requested_window_review === undefined ||
+          row.requested_window_review === null ||
+          (row.reason === "AVAILABLE" &&
+            isScheduledSessionReview(row.requested_window_review) &&
+            isRecord(row.requested_window_review) &&
+            isRecord(row.scheduled_session_review) &&
+            row.requested_window_review.venue ===
+              row.scheduled_session_review.venue &&
+            row.requested_window_review.source_sha256 ===
+              row.scheduled_session_review.source_sha256 &&
+            row.requested_window_review.schedule_id ===
+              row.scheduled_session_review.schedule_id &&
+            row.requested_window_review.schedule_fingerprint ===
+              row.scheduled_session_review.schedule_fingerprint)) &&
+        (row.checkpoint_diagnostics === undefined ||
+          row.checkpoint_diagnostics === null ||
+          (isRecord(row.checkpoint_diagnostics) &&
+            ["NO_PROVIDER_DATA", "OTHER", "NONE"].includes(
+              row.checkpoint_diagnostics.failure_kind as string,
+            ) &&
+            typeof row.checkpoint_diagnostics.retryable === "boolean" &&
+            [
+              row.checkpoint_diagnostics.raw_response_count,
+              row.checkpoint_diagnostics.normalized_daily_rows,
+              row.checkpoint_diagnostics.provider_failure_count,
+              row.checkpoint_diagnostics.normalization_rejection_count,
+              row.checkpoint_diagnostics.normalization_warning_count,
+            ].every(
+              (count) =>
+                count === null ||
+                (Number.isInteger(count) &&
+                  (count as number) >= 0 &&
+                  (count as number) <= 1000000),
+            ))),
+    )
+  )
+    return false;
+  if (v.run_id === null) {
+    return (
+      v.run_status === null &&
+      v.prepared_at === null &&
+      v.requested_start === null &&
+      v.requested_end === null &&
+      v.listing_count === 0 &&
+      v.fx_checkpoint_count === 0 &&
+      v.offset === 0 &&
+      v.omitted_listing_count === 0 &&
+      v.listings.length === 0
+    );
+  }
+  return (
+    v.run_status !== null &&
+    v.prepared_at !== null &&
+    typeof v.requested_start === "string" &&
+    typeof v.requested_end === "string" &&
+    v.requested_start <= v.requested_end &&
+    ((v.offset as number) === 0 ||
+      (v.offset as number) < (v.listing_count as number)) &&
+    (v.listing_count as number) ===
+      (v.offset as number) +
+        v.listings.length +
+        (v.omitted_listing_count as number) &&
+    v.listings.length <= 30
+  );
+}
+
+export function isHistoricalBootstrapReconciliation(
+  v: unknown,
+): v is HistoricalBootstrapReconciliation {
+  const allowed = [
+    "BATCH_REFERENCE_MISSING",
+    "BATCH_MISSING",
+    "BATCH_DIGEST_MISMATCH",
+    "BATCH_PROVIDER_MISMATCH",
+    "SOURCE_PAYLOAD_MISSING",
+    "SOURCE_PAYLOAD_PROVENANCE_MISMATCH",
+    "SOURCE_PAYLOAD_VERIFICATION_LIMIT",
+    "SOURCE_PAYLOAD_ENCODING_INVALID",
+    "SOURCE_PAYLOAD_INVALID",
+    "SOURCE_PAYLOAD_HASH_MISMATCH",
+    "CHECKPOINT_IDENTITY_MISSING",
+    "UNEXPECTED_DOMAIN_ROWS",
+    "CHECKPOINT_SUBJECT_MISMATCH",
+    "UNEXPECTED_PRICE_KIND",
+    "PRICE_OUTSIDE_REQUESTED_WINDOW",
+    "OBSERVATION_AFTER_RETRIEVAL",
+    "ACTION_OUTSIDE_REQUESTED_WINDOW",
+    "CANONICAL_ROW_COUNT_MISMATCH",
+    "CANONICAL_FINGERPRINT_MISMATCH",
+  ];
+  return (
+    isRecord(v) &&
+    uuid(v.run_id) &&
+    uuid(v.checkpoint_id) &&
+    timestamp(v.checked_at) &&
+    [
+      "MATCHED",
+      "MISMATCH",
+      "NOT_RECORDED",
+      "INCOMPLETE",
+      "LIMIT_EXCEEDED",
+    ].includes(v.status as string) &&
+    Array.isArray(v.issue_codes) &&
+    array(v.issue_codes, (item) => string(item) && allowed.includes(item)) &&
+    (v.status === "MISMATCH"
+      ? v.issue_codes.length > 0
+      : v.issue_codes.length === 0)
+  );
+}
+
 function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
   return (
     isRecord(v) &&
@@ -900,6 +1089,53 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
     string(v.methodology_version) &&
     Number.isInteger(v.observation_count) &&
     (v.as_of === null || timestamp(v.as_of)) &&
+    (v.session_coverage === undefined ||
+      v.session_coverage === "NOT_ASSESSED") &&
+    (v.scheduled_session_review === undefined ||
+      v.scheduled_session_review === null ||
+      isScheduledSessionReview(v.scheduled_session_review)) &&
+    (v.distinct_market_dates === undefined ||
+      v.distinct_market_dates === null ||
+      (Number.isInteger(v.distinct_market_dates) &&
+        (v.distinct_market_dates as number) >= 0)) &&
+    (v.first_market_date === undefined ||
+      v.first_market_date === null ||
+      dateOnly(v.first_market_date)) &&
+    (v.max_calendar_gap_days === undefined ||
+      v.max_calendar_gap_days === null ||
+      (Number.isInteger(v.max_calendar_gap_days) &&
+        (v.max_calendar_gap_days as number) >= 0)) &&
+    (v.input_issues === undefined ||
+      array(v.input_issues, (issue) =>
+        [
+          "DUPLICATE_MARKET_DATE",
+          "MULTIPLE_SOURCE_STREAMS",
+          "LISTING_CURRENCY_MISMATCH",
+          "LISTING_CURRENCY_UNVERIFIED",
+          "ADJUSTMENT_BASIS_MISMATCH",
+          "ADJUSTMENT_BASIS_UNVERIFIED",
+        ].includes(issue as string),
+      )) &&
+    (v.source_streams === undefined ||
+      array(
+        v.source_streams,
+        (stream) =>
+          isRecord(stream) &&
+          string(stream.provider) &&
+          string(stream.provider_symbol) &&
+          string(stream.currency) &&
+          (stream.adjustment_basis === undefined ||
+            stream.adjustment_basis === null ||
+            string(stream.adjustment_basis)) &&
+          Number.isInteger(stream.observation_count) &&
+          (stream.observation_count as number) > 0 &&
+          dateOnly(stream.first_market_date) &&
+          dateOnly(stream.last_market_date) &&
+          (stream.first_market_date as string) <=
+            (stream.last_market_date as string),
+      )) &&
+    (v.duplicate_market_dates === undefined ||
+      array(v.duplicate_market_dates, dateOnly)) &&
     [
       "daily_return",
       "dma_20",

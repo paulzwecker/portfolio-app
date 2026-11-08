@@ -1036,6 +1036,12 @@ def _domain_status_for_yahoo(
     fx_failures = report.get("fx_fetch_failures", [])
     market_rejected = sum(len(batch.get("rejected_subjects", [])) for batch in market_batches)
     fx_rejected = sum(len(batch.get("rejected_pairs", [])) for batch in fx_batches)
+    market_warnings = [
+        warning for batch in market_batches for warning in batch.get("normalization_warnings", [])
+    ]
+    fx_warnings = [
+        warning for batch in fx_batches for warning in batch.get("normalization_warnings", [])
+    ]
     persisted_totals = persisted.get("persistence", {}).get("inserted_totals", {})
 
     relevant_failures = fx_failures if domain == ExternalDataDomain.FX else market_failures
@@ -1048,7 +1054,11 @@ def _domain_status_for_yahoo(
         targeted = int(report.get("selected_listing_count", 0) or 0)
         mapped = int(report.get("verified_listing_mapping_count", 0) or 0)
         issue_count = (
-            len(unresolved) + len(active_without_listing) + len(market_failures) + market_rejected
+            len(unresolved)
+            + len(active_without_listing)
+            + len(market_failures)
+            + market_rejected
+            + len(market_warnings)
         )
         accepted = market_accepted
         detail = {
@@ -1060,6 +1070,7 @@ def _domain_status_for_yahoo(
             "active_companies_without_listing": active_without_listing,
             "provider_fetch_failures": market_failures,
             "normalization_rejections": market_rejected,
+            "normalization_warnings": market_warnings,
             "price_observations_inserted": persisted_totals.get("price_observations", 0),
         }
         no_mapping_code = "NO_VERIFIED_LISTING_MAPPINGS"
@@ -1094,7 +1105,7 @@ def _domain_status_for_yahoo(
         not_due = report.get("fx_pairs_not_due", [])
         unmapped = report.get("unmapped_fx_pairs", [])
         mapped = max(0, len(required) - len(unmapped))
-        issue_count = len(unmapped) + len(fx_failures) + fx_rejected
+        issue_count = len(unmapped) + len(fx_failures) + fx_rejected + len(fx_warnings)
         accepted = fx_accepted + len(not_due)
         targeted = len(required)
         detail = {
@@ -1105,6 +1116,7 @@ def _domain_status_for_yahoo(
             "fx_observation_rows_received": fx_rows,
             "provider_fetch_failures": fx_failures,
             "normalization_rejections": fx_rejected,
+            "normalization_warnings": fx_warnings,
             "fx_observations_inserted": persisted_totals.get("fx_observations", 0),
         }
         no_mapping_code = "NO_SUPPORTED_FX_PAIRS"

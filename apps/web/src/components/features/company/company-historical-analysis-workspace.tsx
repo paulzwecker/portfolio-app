@@ -18,8 +18,13 @@ import { DetailDrawer } from "@/components/app/detail-drawer";
 import { EmptyState, PendingOrError } from "@/components/app/empty-state";
 import { MetricCard } from "@/components/app/metric-card";
 import { PageSection } from "@/components/app/page-section";
+import {
+  ResponsiveDataTable,
+  type ResponsiveColumn,
+} from "@/components/app/responsive-data-table";
 import { SourceReference } from "@/components/app/source-reference";
 import { StatusIndicator } from "@/components/app/status-indicator";
+import { TableSearch } from "@/components/app/table-search";
 import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyEstimateMomentum,
@@ -36,6 +41,7 @@ import {
   type CompanyExecutionPace,
   type ExpectedReturnHistoryPoint,
   type ListingMarketData,
+  type PriceHistoryAnalytics,
   type RankingHistoryEntry,
   type ExecutionPaceHistoryEntry,
 } from "@/lib/domain-contracts";
@@ -320,13 +326,20 @@ function chartBounds(values: number[]) {
   return { low: min - padding, high: max + padding };
 }
 
-function PriceHistoryChart({
+export function PriceHistoryChart({
   market,
   observations,
 }: {
   market: ListingMarketData;
   observations: ListingMarketData["history"];
 }) {
+  if ((market.analytics.input_issues?.length ?? 0) > 0)
+    return (
+      <EmptyState
+        title="Price series needs review"
+        description="The analytics window contains incompatible or ambiguous inputs. Inspect returned observations below; other source records may exist."
+      />
+    );
   const values = observations
     .map((item) => item.split_adjusted_close)
     .filter((value): value is string => value !== null)
@@ -444,6 +457,286 @@ function PriceHistoryChart({
   );
 }
 
+export function HistoryCoverageNotice({
+  analytics,
+}: {
+  analytics: PriceHistoryAnalytics;
+}) {
+  const issueLabels: Record<
+    NonNullable<PriceHistoryAnalytics["input_issues"]>[number],
+    string
+  > = {
+    DUPLICATE_MARKET_DATE: "duplicate market dates",
+    MULTIPLE_SOURCE_STREAMS: "different provider, symbol or currency",
+    LISTING_CURRENCY_MISMATCH: "price currency differs from listing currency",
+    LISTING_CURRENCY_UNVERIFIED: "listing currency is unavailable",
+    ADJUSTMENT_BASIS_MISMATCH: "price adjustment descriptions differ",
+    ADJUSTMENT_BASIS_UNVERIFIED: "price adjustment description is unavailable",
+  };
+  const schedule = analytics.scheduled_session_review;
+  return (
+    <>
+      <p className="leading-5 text-muted-foreground">
+        {(analytics.input_issues?.length ?? 0) > 0 && (
+          <>
+            Analytics and chart are unavailable:{" "}
+            {analytics.input_issues
+              ?.map((issue) => issueLabels[issue])
+              .join("; ")}
+            . Inspect returned observations below; other source records may
+            exist.{" "}
+          </>
+        )}
+        Exchange-session coverage has not been assessed; these metrics use
+        recorded closes and may span missing sessions. Calendar gaps include
+        weekends and holidays.
+        {analytics.distinct_market_dates != null && (
+          <>
+            {" "}
+            {analytics.distinct_market_dates} distinct market dates
+            {analytics.first_market_date
+              ? ` since ${dateOnly(analytics.first_market_date)}`
+              : ""}
+            {analytics.max_calendar_gap_days != null
+              ? `; largest calendar gap ${analytics.max_calendar_gap_days} days`
+              : ""}
+            .
+          </>
+        )}
+      </p>
+      {schedule && (
+        <details className="mt-2 rounded-md border bg-muted/30 px-3 py-2">
+          <summary className="cursor-pointer font-medium">
+            Review scheduled {schedule.venue} dates ·{" "}
+            {schedule.absent_scheduled_dates.length} without selected closes
+          </summary>
+          <div className="mt-2 space-y-2 text-muted-foreground">
+            <p>
+              Published schedule for {dateOnly(schedule.start_date)} –{" "}
+              {dateOnly(schedule.end_date)};
+              {schedule.full_selected_span_covered
+                ? " covers the selected date span."
+                : " covers only part of the selected date span."}{" "}
+              This compares selected calculation inputs, not all source history.{" "}
+              Unscheduled closures, security halts and provider conventions are
+              not verified; an absent close is a review candidate, not a
+              confirmed missing trade.
+            </p>
+            <p>
+              {schedule.scheduled_count} scheduled dates. Calendar as-of date:{" "}
+              {schedule.source_as_of
+                ? dateOnly(schedule.source_as_of)
+                : "not stated"}
+              ; observed {dateOnly(schedule.source_observed_at)}.{" "}
+              <a
+                className="underline"
+                href={schedule.source_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Published {schedule.venue} calendar
+              </a>{" "}
+              The current link may differ from the captured source.
+            </p>
+            <p className="break-all">
+              Schedule version: {schedule.schedule_id}
+            </p>
+            <p className="break-all">
+              Source SHA-256: {schedule.source_sha256}
+            </p>
+            {schedule.schedule_fingerprint && (
+              <p className="break-all">
+                Schedule SHA-256: {schedule.schedule_fingerprint}
+              </p>
+            )}
+            {schedule.absent_scheduled_dates.length > 0 && (
+              <p className="break-words">
+                Scheduled dates without selected closes:{" "}
+                {schedule.absent_scheduled_dates
+                  .map((day) => dateOnly(day))
+                  .join(", ")}
+              </p>
+            )}
+            {schedule.selected_unscheduled_dates.length > 0 && (
+              <p className="break-words">
+                Selected closes on dates outside this schedule:{" "}
+                {schedule.selected_unscheduled_dates
+                  .map((day) => dateOnly(day))
+                  .join(", ")}
+              </p>
+            )}
+          </div>
+        </details>
+      )}
+    </>
+  );
+}
+
+export function HistorySourceReview({
+  analytics,
+}: {
+  analytics: PriceHistoryAnalytics;
+}) {
+  const streams = analytics.source_streams ?? [];
+  const duplicates = analytics.duplicate_market_dates ?? [];
+  if (
+    !analytics.input_issues?.length ||
+    (!streams.length && !duplicates.length)
+  )
+    return null;
+  return (
+    <details className="rounded-md border bg-muted/30 px-3 py-2">
+      <summary className="cursor-pointer font-medium">
+        Review conflicting history inputs
+      </summary>
+      <div className="mt-2 space-y-2 text-muted-foreground">
+        <p>
+          Selected calculation inputs only; other provider records may exist.
+        </p>
+        {streams.length > 0 && (
+          <ul
+            className="max-h-60 space-y-2 overflow-y-auto"
+            aria-label="Price source streams"
+          >
+            {streams.map((stream) => (
+              <li
+                key={JSON.stringify([
+                  stream.provider,
+                  stream.provider_symbol,
+                  stream.currency,
+                  stream.adjustment_basis,
+                ])}
+                className="break-words"
+              >
+                <span className="font-medium text-foreground">
+                  {stream.provider} · {stream.provider_symbol} ·{" "}
+                  {stream.currency}
+                </span>
+                <br />
+                Adjustment: {stream.adjustment_basis || "Unavailable"}
+                <br />
+                {stream.observation_count} recorded closes ·{" "}
+                {dateOnly(stream.first_market_date)} –{" "}
+                {dateOnly(stream.last_market_date)}
+              </li>
+            ))}
+          </ul>
+        )}
+        {duplicates.length > 0 && (
+          <p className="break-words">
+            Duplicate market dates:{" "}
+            {duplicates.map((day) => dateOnly(day)).join(", ")}
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
+export function filterPriceObservations(
+  observations: ListingMarketData["history"],
+  search: string,
+): ListingMarketData["history"] {
+  const query = search.trim().toLowerCase();
+  if (!query) return observations;
+  return observations.filter((item) =>
+    [
+      item.market_date.slice(0, 10),
+      item.provider,
+      item.provider_symbol,
+      item.currency,
+      item.data_quality,
+    ].some((value) => value.toLowerCase().includes(query)),
+  );
+}
+
+export function PriceObservationReview({
+  observations,
+}: {
+  observations: ListingMarketData["history"];
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = filterPriceObservations(observations, search);
+  const columns: ResponsiveColumn<ListingMarketData["history"][number]>[] = [
+    {
+      id: "date",
+      header: "Market date",
+      render: (item) => marketDate(item.market_date),
+    },
+    {
+      id: "close",
+      header: "Exact split-adjusted close",
+      className: "tabular-nums",
+      render: (item) =>
+        item.split_adjusted_close === null
+          ? "Unavailable"
+          : `${item.split_adjusted_close} ${item.currency}`,
+    },
+    {
+      id: "observed",
+      header: "Observed",
+      render: (item) => dateTime(item.observed_at),
+    },
+    {
+      id: "recorded",
+      header: "Recorded",
+      render: (item) => dateTime(item.recorded_at),
+    },
+    {
+      id: "source",
+      header: "Source / quality",
+      render: (item) => (
+        <>
+          <SourceReference
+            label={item.provider}
+            reference={item.data_quality}
+            href={item.source_ref.startsWith("http") ? item.source_ref : null}
+          />
+          <p className="text-muted-foreground">{item.provider_symbol}</p>
+        </>
+      ),
+    },
+    {
+      id: "basis",
+      header: "Adjustment basis",
+      render: (item) => item.adjustment_basis,
+    },
+  ];
+  return (
+    <details className="rounded-lg border">
+      <summary className="cursor-pointer px-3 py-2 text-xs font-medium">
+        Inspect price observations ({observations.length})
+      </summary>
+      <div className="space-y-3 border-t p-3">
+        <p className="text-xs text-muted-foreground">
+          All returned observations for this listing, independent of the chart
+          range. This selected history may omit other provider records.
+        </p>
+        <TableSearch
+          label="Find a price observation"
+          placeholder="Date (YYYY-MM-DD), provider, symbol, currency or quality"
+          value={search}
+          onChange={setSearch}
+          resultCount={filtered.length}
+          totalCount={observations.length}
+        />
+        {filtered.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No matching price observations.
+          </p>
+        ) : (
+          <ResponsiveDataTable
+            caption="Price observations"
+            columns={columns}
+            rows={filtered}
+            getRowKey={(item) => item.id}
+          />
+        )}
+      </div>
+    </details>
+  );
+}
+
 function MarketHistory({
   marketState,
   range,
@@ -503,14 +796,14 @@ function MarketHistory({
         )}
       </div>
       {selected && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,.75fr)]">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,.75fr)]">
           <ChartContainer
             title={`${selected.listing.ticker} price history`}
             description={`${observations.length} observations in the selected range · exact listing · split-adjusted close`}
             source={
               <StatusIndicator
                 status={selected.availability}
-                label={`${statusLabel(selected.availability)} · ${statusLabel(selected.freshness)}`}
+                label={`Market: ${statusLabel(selected.availability)} · Quote: ${statusLabel(selected.freshness)}`}
               />
             }
           >
@@ -541,9 +834,14 @@ function MarketHistory({
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Trend</span>
+                <span className="text-muted-foreground">Source trend</span>
                 <StatusIndicator status={selected.price_regime?.trend_state} />
               </div>
+              {selected.price_regime && (
+                <p className="text-muted-foreground">
+                  Source regime as of {dateTime(selected.price_regime.as_of)}
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-2 border-t pt-3">
                 {[
                   ["20DMA", selected.analytics.dma_20],
@@ -588,60 +886,19 @@ function MarketHistory({
               <p className="border-t pt-3 leading-5 text-muted-foreground">
                 {selected.analytics.status === "AVAILABLE"
                   ? `Analytics as of ${dateTime(selected.analytics.as_of)} · ${selected.analytics.methodology_version}`
-                  : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations are retained.`}
+                  : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations were examined.`}
               </p>
+              <HistoryCoverageNotice analytics={selected.analytics} />
+              <HistorySourceReview analytics={selected.analytics} />
             </CardContent>
           </Card>
         </div>
       )}
       {selected && (
-        <details className="rounded-lg border">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-medium">
-            Inspect price observations ({observations.length})
-          </summary>
-          <div className="overflow-x-auto border-t">
-            <table className="w-full min-w-[640px] text-left text-xs">
-              <thead>
-                <tr className="text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">Market session</th>
-                  <th className="px-3 py-2 font-medium">Close</th>
-                  <th className="px-3 py-2 font-medium">Observed</th>
-                  <th className="px-3 py-2 font-medium">Recorded</th>
-                  <th className="px-3 py-2 font-medium">Source / quality</th>
-                </tr>
-              </thead>
-              <tbody>
-                {observations.slice(0, 60).map((item) => (
-                  <tr key={item.id} className="border-t">
-                    <td className="px-3 py-2">
-                      {marketDate(item.market_date)}
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">
-                      {formatCurrency(item.split_adjusted_close, item.currency)}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {dateTime(item.observed_at)}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {dateTime(item.recorded_at)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <SourceReference
-                        label={item.provider}
-                        reference={item.data_quality}
-                        href={
-                          item.source_ref.startsWith("http")
-                            ? item.source_ref
-                            : null
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
+        <PriceObservationReview
+          key={selected.listing.id}
+          observations={selected.history}
+        />
       )}
     </div>
   );

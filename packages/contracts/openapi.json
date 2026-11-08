@@ -16337,6 +16337,318 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HistoricalBootstrapCheckpointDiagnosticsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "failure_kind": {
+            "enum": [
+              "NO_PROVIDER_DATA",
+              "OTHER",
+              "NONE"
+            ],
+            "title": "Failure Kind",
+            "type": "string"
+          },
+          "normalization_rejection_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalization Rejection Count"
+          },
+          "normalization_warning_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalization Warning Count"
+          },
+          "normalized_daily_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Daily Rows"
+          },
+          "provider_failure_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Failure Count"
+          },
+          "raw_response_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Response Count"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "failure_kind",
+          "raw_response_count",
+          "normalized_daily_rows",
+          "provider_failure_count",
+          "normalization_rejection_count",
+          "normalization_warning_count",
+          "retryable"
+        ],
+        "title": "HistoricalBootstrapCheckpointDiagnosticsRead",
+        "type": "object"
+      },
+      "HistoricalBootstrapListingReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checkpoint_diagnostics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoricalBootstrapCheckpointDiagnosticsRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checkpoint_id": {
+            "format": "uuid",
+            "title": "Checkpoint Id",
+            "type": "string"
+          },
+          "checkpoint_status": {
+            "title": "Checkpoint Status",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "AVAILABLE",
+              "CHECKPOINT_NOT_COMPLETE",
+              "CHECKPOINT_UNAVAILABLE",
+              "CHECKPOINT_FAILED",
+              "CHECKPOINT_BLOCKED",
+              "IDENTITY_CHANGED",
+              "LISTING_CURRENCY_UNAVAILABLE",
+              "BATCH_UNVERIFIED",
+              "NO_DAILY_CLOSES",
+              "NO_SCHEDULE",
+              "DATE_LIMIT_EXCEEDED"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_window_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledSessionReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scheduled_session_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledSessionReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_key": {
+            "title": "Subject Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkpoint_id",
+          "subject_key",
+          "checkpoint_status",
+          "reason",
+          "scheduled_session_review"
+        ],
+        "title": "HistoricalBootstrapListingReviewRead",
+        "type": "object"
+      },
+      "HistoricalBootstrapReconciliationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "checkpoint_id": {
+            "format": "uuid",
+            "title": "Checkpoint Id",
+            "type": "string"
+          },
+          "issue_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issue Codes",
+            "type": "array"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "MATCHED",
+              "MISMATCH",
+              "NOT_RECORDED",
+              "INCOMPLETE",
+              "LIMIT_EXCEEDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "checkpoint_id",
+          "checked_at",
+          "status",
+          "issue_codes"
+        ],
+        "title": "HistoricalBootstrapReconciliationRead",
+        "type": "object"
+      },
+      "HistoricalBootstrapReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "fx_checkpoint_count": {
+            "title": "Fx Checkpoint Count",
+            "type": "integer"
+          },
+          "listing_count": {
+            "title": "Listing Count",
+            "type": "integer"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalBootstrapListingReviewRead"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "omitted_listing_count": {
+            "title": "Omitted Listing Count",
+            "type": "integer"
+          },
+          "prepared_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepared At"
+          },
+          "requested_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested End"
+          },
+          "requested_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Start"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Status"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "prepared_at",
+          "requested_start",
+          "requested_end",
+          "checked_at",
+          "listing_count",
+          "fx_checkpoint_count",
+          "offset",
+          "omitted_listing_count",
+          "listings"
+        ],
+        "title": "HistoricalBootstrapReviewRead",
+        "type": "object"
+      },
       "HoldingContext": {
         "additionalProperties": false,
         "properties": {
@@ -24542,7 +24854,7 @@
       },
       "PriceHistoryAnalyticsRead": {
         "additionalProperties": false,
-        "description": "Query-layer analytics over exact canonical daily observations.",
+        "description": "Price metrics and descriptive coverage over canonical daily observations.",
         "properties": {
           "as_of": {
             "anyOf": [
@@ -24577,6 +24889,17 @@
               }
             ],
             "title": "Daily Return"
+          },
+          "distinct_market_dates": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distinct Market Dates"
           },
           "dma_20": {
             "anyOf": [
@@ -24622,6 +24945,26 @@
             ],
             "title": "Drawdown 52W"
           },
+          "duplicate_market_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Duplicate Market Dates",
+            "type": "array"
+          },
+          "first_market_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Market Date"
+          },
           "high_52w": {
             "anyOf": [
               {
@@ -24632,6 +24975,32 @@
               }
             ],
             "title": "High 52W"
+          },
+          "input_issues": {
+            "items": {
+              "enum": [
+                "DUPLICATE_MARKET_DATE",
+                "MULTIPLE_SOURCE_STREAMS",
+                "LISTING_CURRENCY_MISMATCH",
+                "LISTING_CURRENCY_UNVERIFIED",
+                "ADJUSTMENT_BASIS_MISMATCH",
+                "ADJUSTMENT_BASIS_UNVERIFIED"
+              ],
+              "type": "string"
+            },
+            "title": "Input Issues",
+            "type": "array"
+          },
+          "max_calendar_gap_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Calendar Gap Days"
           },
           "methodology_version": {
             "title": "Methodology Version",
@@ -24685,6 +25054,29 @@
             ],
             "title": "Realized Vol 20D"
           },
+          "scheduled_session_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledSessionReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "session_coverage": {
+            "const": "NOT_ASSESSED",
+            "default": "NOT_ASSESSED",
+            "title": "Session Coverage",
+            "type": "string"
+          },
+          "source_streams": {
+            "items": {
+              "$ref": "#/components/schemas/PriceHistorySourceStreamRead"
+            },
+            "title": "Source Streams",
+            "type": "array"
+          },
           "status": {
             "enum": [
               "AVAILABLE",
@@ -24725,6 +25117,58 @@
           "correction_state"
         ],
         "title": "PriceHistoryAnalyticsRead",
+        "type": "object"
+      },
+      "PriceHistorySourceStreamRead": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustment_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment Basis"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "first_market_date": {
+            "format": "date",
+            "title": "First Market Date",
+            "type": "string"
+          },
+          "last_market_date": {
+            "format": "date",
+            "title": "Last Market Date",
+            "type": "string"
+          },
+          "observation_count": {
+            "title": "Observation Count",
+            "type": "integer"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_symbol": {
+            "title": "Provider Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "provider_symbol",
+          "currency",
+          "observation_count",
+          "first_market_date",
+          "last_market_date"
+        ],
+        "title": "PriceHistorySourceStreamRead",
         "type": "object"
       },
       "PriceObservationRead": {
@@ -31049,6 +31493,110 @@
           "value"
         ],
         "title": "ScenarioForecastPointRead",
+        "type": "object"
+      },
+      "ScheduledSessionReviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "absent_scheduled_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Absent Scheduled Dates",
+            "type": "array"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "full_selected_span_covered": {
+            "title": "Full Selected Span Covered",
+            "type": "boolean"
+          },
+          "schedule_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Fingerprint"
+          },
+          "schedule_id": {
+            "title": "Schedule Id",
+            "type": "string"
+          },
+          "scheduled_count": {
+            "title": "Scheduled Count",
+            "type": "integer"
+          },
+          "selected_unscheduled_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Selected Unscheduled Dates",
+            "type": "array"
+          },
+          "source_as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source As Of"
+          },
+          "source_observed_at": {
+            "format": "date-time",
+            "title": "Source Observed At",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "venue": {
+            "enum": [
+              "NYSE",
+              "NASDAQ",
+              "XETRA"
+            ],
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "venue",
+          "schedule_id",
+          "source_url",
+          "source_sha256",
+          "source_as_of",
+          "source_observed_at",
+          "start_date",
+          "end_date",
+          "full_selected_span_covered",
+          "scheduled_count",
+          "absent_scheduled_dates",
+          "selected_unscheduled_dates"
+        ],
+        "title": "ScheduledSessionReviewRead",
         "type": "object"
       },
       "ScoreAssessmentCreate": {
@@ -39537,6 +40085,121 @@
           }
         },
         "summary": "Get Listing Market Data",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/market-data/historical-bootstrap": {
+      "get": {
+        "operationId": "get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalBootstrapReviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Historical Bootstrap Review",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/market-data/historical-bootstrap/{run_id}/checkpoints/{checkpoint_id}/reconciliation": {
+      "get": {
+        "operationId": "get_historical_checkpoint_reconciliation_v1_market_data_historical_bootstrap__run_id__checkpoints__checkpoint_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "checkpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Checkpoint Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalBootstrapReconciliationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Historical Checkpoint Reconciliation",
         "tags": [
           "Portfolio research"
         ]

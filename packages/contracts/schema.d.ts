@@ -1568,6 +1568,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/market-data/historical-bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Historical Bootstrap Review */
+        get: operations["get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/market-data/historical-bootstrap/{run_id}/checkpoints/{checkpoint_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Historical Checkpoint Reconciliation */
+        get: operations["get_historical_checkpoint_reconciliation_v1_market_data_historical_bootstrap__run_id__checkpoints__checkpoint_id__reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/market-data/status": {
         parameters: {
             query?: never;
@@ -7053,6 +7087,99 @@ export interface components {
              */
             status: "ok" | "error";
         };
+        /** HistoricalBootstrapCheckpointDiagnosticsRead */
+        HistoricalBootstrapCheckpointDiagnosticsRead: {
+            /**
+             * Failure Kind
+             * @enum {string}
+             */
+            failure_kind: "NO_PROVIDER_DATA" | "OTHER" | "NONE";
+            /** Normalization Rejection Count */
+            normalization_rejection_count: number | null;
+            /** Normalization Warning Count */
+            normalization_warning_count: number | null;
+            /** Normalized Daily Rows */
+            normalized_daily_rows: number | null;
+            /** Provider Failure Count */
+            provider_failure_count: number | null;
+            /** Raw Response Count */
+            raw_response_count: number | null;
+            /** Retryable */
+            retryable: boolean;
+        };
+        /** HistoricalBootstrapListingReviewRead */
+        HistoricalBootstrapListingReviewRead: {
+            checkpoint_diagnostics?: components["schemas"]["HistoricalBootstrapCheckpointDiagnosticsRead"] | null;
+            /**
+             * Checkpoint Id
+             * Format: uuid
+             */
+            checkpoint_id: string;
+            /** Checkpoint Status */
+            checkpoint_status: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "AVAILABLE" | "CHECKPOINT_NOT_COMPLETE" | "CHECKPOINT_UNAVAILABLE" | "CHECKPOINT_FAILED" | "CHECKPOINT_BLOCKED" | "IDENTITY_CHANGED" | "LISTING_CURRENCY_UNAVAILABLE" | "BATCH_UNVERIFIED" | "NO_DAILY_CLOSES" | "NO_SCHEDULE" | "DATE_LIMIT_EXCEEDED";
+            requested_window_review?: components["schemas"]["ScheduledSessionReviewRead"] | null;
+            scheduled_session_review: components["schemas"]["ScheduledSessionReviewRead"] | null;
+            /** Subject Key */
+            subject_key: string;
+        };
+        /** HistoricalBootstrapReconciliationRead */
+        HistoricalBootstrapReconciliationRead: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /**
+             * Checkpoint Id
+             * Format: uuid
+             */
+            checkpoint_id: string;
+            /** Issue Codes */
+            issue_codes: string[];
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MATCHED" | "MISMATCH" | "NOT_RECORDED" | "INCOMPLETE" | "LIMIT_EXCEEDED";
+        };
+        /** HistoricalBootstrapReviewRead */
+        HistoricalBootstrapReviewRead: {
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Fx Checkpoint Count */
+            fx_checkpoint_count: number;
+            /** Listing Count */
+            listing_count: number;
+            /** Listings */
+            listings: components["schemas"]["HistoricalBootstrapListingReviewRead"][];
+            /** Offset */
+            offset: number;
+            /** Omitted Listing Count */
+            omitted_listing_count: number;
+            /** Prepared At */
+            prepared_at: string | null;
+            /** Requested End */
+            requested_end: string | null;
+            /** Requested Start */
+            requested_start: string | null;
+            /** Run Id */
+            run_id: string | null;
+            /** Run Status */
+            run_status: string | null;
+        };
         /** HoldingContext */
         HoldingContext: {
             /** Base Market Value */
@@ -9775,7 +9902,7 @@ export interface components {
         };
         /**
          * PriceHistoryAnalyticsRead
-         * @description Query-layer analytics over exact canonical daily observations.
+         * @description Price metrics and descriptive coverage over canonical daily observations.
          */
         PriceHistoryAnalyticsRead: {
             /** As Of */
@@ -9784,6 +9911,8 @@ export interface components {
             correction_state: string | null;
             /** Daily Return */
             daily_return: string | null;
+            /** Distinct Market Dates */
+            distinct_market_dates?: number | null;
             /** Dma 20 */
             dma_20: string | null;
             /** Dma 200 */
@@ -9792,8 +9921,16 @@ export interface components {
             dma_50: string | null;
             /** Drawdown 52W */
             drawdown_52w: string | null;
+            /** Duplicate Market Dates */
+            duplicate_market_dates?: string[];
+            /** First Market Date */
+            first_market_date?: string | null;
             /** High 52W */
             high_52w: string | null;
+            /** Input Issues */
+            input_issues?: ("DUPLICATE_MARKET_DATE" | "MULTIPLE_SOURCE_STREAMS" | "LISTING_CURRENCY_MISMATCH" | "LISTING_CURRENCY_UNVERIFIED" | "ADJUSTMENT_BASIS_MISMATCH" | "ADJUSTMENT_BASIS_UNVERIFIED")[];
+            /** Max Calendar Gap Days */
+            max_calendar_gap_days?: number | null;
             /** Methodology Version */
             methodology_version: string;
             /** Observation Count */
@@ -9806,6 +9943,15 @@ export interface components {
             price_return_6m: string | null;
             /** Realized Vol 20D */
             realized_vol_20d: string | null;
+            scheduled_session_review?: components["schemas"]["ScheduledSessionReviewRead"] | null;
+            /**
+             * Session Coverage
+             * @default NOT_ASSESSED
+             * @constant
+             */
+            session_coverage: "NOT_ASSESSED";
+            /** Source Streams */
+            source_streams?: components["schemas"]["PriceHistorySourceStreamRead"][];
             /**
              * Status
              * @enum {string}
@@ -9813,6 +9959,29 @@ export interface components {
             status: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
             /** Trend State */
             trend_state: string | null;
+        };
+        /** PriceHistorySourceStreamRead */
+        PriceHistorySourceStreamRead: {
+            /** Adjustment Basis */
+            adjustment_basis?: string | null;
+            /** Currency */
+            currency: string;
+            /**
+             * First Market Date
+             * Format: date
+             */
+            first_market_date: string;
+            /**
+             * Last Market Date
+             * Format: date
+             */
+            last_market_date: string;
+            /** Observation Count */
+            observation_count: number;
+            /** Provider */
+            provider: string;
+            /** Provider Symbol */
+            provider_symbol: string;
         };
         /** PriceObservationRead */
         PriceObservationRead: {
@@ -11845,6 +12014,47 @@ export interface components {
             scenario: string;
             /** Value */
             value: string | null;
+        };
+        /** ScheduledSessionReviewRead */
+        ScheduledSessionReviewRead: {
+            /** Absent Scheduled Dates */
+            absent_scheduled_dates: string[];
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Full Selected Span Covered */
+            full_selected_span_covered: boolean;
+            /** Schedule Fingerprint */
+            schedule_fingerprint?: string | null;
+            /** Schedule Id */
+            schedule_id: string;
+            /** Scheduled Count */
+            scheduled_count: number;
+            /** Selected Unscheduled Dates */
+            selected_unscheduled_dates: string[];
+            /** Source As Of */
+            source_as_of: string | null;
+            /**
+             * Source Observed At
+             * Format: date-time
+             */
+            source_observed_at: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Venue
+             * @enum {string}
+             */
+            venue: "NYSE" | "NASDAQ" | "XETRA";
         };
         /** ScoreAssessmentCreate */
         ScoreAssessmentCreate: {
@@ -15824,6 +16034,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListingMarketData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get: {
+        parameters: {
+            query?: {
+                run_id?: string | null;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoricalBootstrapReviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_historical_checkpoint_reconciliation_v1_market_data_historical_bootstrap__run_id__checkpoints__checkpoint_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                checkpoint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoricalBootstrapReconciliationRead"];
                 };
             };
             /** @description Validation Error */

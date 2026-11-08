@@ -241,6 +241,10 @@ def test_fresh_canonical_trend_replaces_stale_legacy_regime_input() -> None:
     assert selected.quality == "PASS"
     assert selected.freshness == "FRESH"
     assert selected.note is not None
+    conflicted = analytics.model_copy(update={"input_issues": ["MULTIPLE_SOURCE_STREAMS"]})
+    rejected = _price_regime_input(stale_regime, conflicted, current_as_of)
+    assert rejected.raw == stale_regime.regime
+    assert rejected.freshness == "STALE"
 
 
 def test_stale_canonical_trend_does_not_make_execution_regime_available() -> None:

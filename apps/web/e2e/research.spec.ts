@@ -1536,6 +1536,19 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       last_market_update: observedAt,
     },
   ];
+  const conflictHistory = Array.from({ length: 75 }, (_, index) => {
+    const earlier = index === 74;
+    return {
+      ...quote,
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      market_date: new Date(Date.UTC(2026, 9, 4 - index * 2)).toISOString(),
+      provider: earlier ? "Alternate provider" : quote.provider,
+      provider_symbol: earlier ? "EXPL.A" : quote.provider_symbol,
+      split_adjusted_close: earlier
+        ? "41.1234567890"
+        : quote.split_adjusted_close,
+    };
+  });
   const revenueObservation = {
     id: "23232323-2323-4323-8323-232323232323",
     company_id: id,
@@ -2744,6 +2757,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
   };
 
   let marketDataRequestCount = 0;
+  let incompatibleHistory = false;
   await page.route(/\/api\/research\//, (route) => {
     const pathname = new URL(route.request().url()).pathname.replace(
       "/api/research/",
@@ -2775,7 +2789,88 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       return route.fulfill({ json: migrationStatus });
     if (pathname === `companies/${id}/market-data`) {
       marketDataRequestCount += 1;
-      return route.fulfill({ json: marketData });
+      return route.fulfill({
+        json: incompatibleHistory
+          ? marketData.map((market) => ({
+              ...market,
+              listing: { ...market.listing, venue: "XETR" },
+              availability: "PARTIAL",
+              history: conflictHistory,
+              analytics: {
+                ...market.analytics,
+                status: "UNAVAILABLE",
+                observation_count: conflictHistory.length,
+                input_issues: [
+                  "MULTIPLE_SOURCE_STREAMS",
+                  "ADJUSTMENT_BASIS_MISMATCH",
+                ],
+                scheduled_session_review: {
+                  venue: "XETRA",
+                  schedule_id: "XETRA-2026-observed-2026-11-08-v1",
+                  source_url:
+                    "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf",
+                  source_as_of: null,
+                  source_observed_at: "2026-11-08T18:42:31.412425Z",
+                  source_sha256:
+                    "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
+                  schedule_fingerprint:
+                    "89d25110d0c7a4ae07c049a7fe7d840a1a0ea027df3edc005ea96ec7759377da",
+                  start_date: "2026-10-01",
+                  end_date: "2026-10-04",
+                  full_selected_span_covered: false,
+                  scheduled_count: 2,
+                  absent_scheduled_dates: ["2026-10-02"],
+                  selected_unscheduled_dates: ["2026-10-04"],
+                },
+                source_streams: [
+                  {
+                    provider: "Alternate provider",
+                    provider_symbol: "EXPL.A",
+                    currency: "USD",
+                    adjustment_basis: "Alternate adjustment basis",
+                    observation_count: 1,
+                    first_market_date: conflictHistory[74].market_date.slice(
+                      0,
+                      10,
+                    ),
+                    last_market_date: conflictHistory[74].market_date.slice(
+                      0,
+                      10,
+                    ),
+                  },
+                  {
+                    provider: "Fixture market source",
+                    provider_symbol: "NASDAQ:EXPL",
+                    currency: "USD",
+                    adjustment_basis: "Split adjusted",
+                    observation_count: 74,
+                    first_market_date: conflictHistory[73].market_date.slice(
+                      0,
+                      10,
+                    ),
+                    last_market_date: conflictHistory[0].market_date.slice(
+                      0,
+                      10,
+                    ),
+                  },
+                ],
+                duplicate_market_dates: [],
+                daily_return: null,
+                dma_20: null,
+                dma_50: null,
+                dma_200: null,
+                high_52w: null,
+                drawdown_52w: null,
+                price_return_1m: null,
+                price_return_3m: null,
+                price_return_6m: null,
+                realized_vol_20d: null,
+                trend_state: null,
+                correction_state: null,
+              },
+            }))
+          : marketData,
+      });
     }
     if (pathname === "market-data/status")
       return route.fulfill({
@@ -3222,6 +3317,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
     ).toBeVisible();
+    await expect(
+      page.getByText(/Exchange-session coverage has not been assessed/),
+    ).toBeVisible();
     await expect(page.getByLabel("Historical date range")).toBeVisible();
     await page.getByRole("button", { name: "All available" }).click();
     await expect(
@@ -3383,7 +3481,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByRole("heading", { name: "Market history" }),
     ).toBeVisible();
-    await expect(page.getByText("AVAILABLE · FRESH")).toBeVisible();
+    await expect(
+      page.getByText("Market: AVAILABLE · Quote: FRESH"),
+    ).toBeVisible();
     await expect(page.getByText("200DMA")).toBeVisible();
     await expect(
       page.getByRole("img", {
@@ -3396,6 +3496,65 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
   }
+  incompatibleHistory = true;
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`/company/${id}`);
+    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await expect(page.getByText("Price series needs review")).toBeVisible();
+    await expect(
+      page.getByText("Market: PARTIAL · Quote: FRESH"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/different provider, symbol or currency/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/price adjustment descriptions differ/),
+    ).toBeVisible();
+    await page.getByText(/Review scheduled XETRA dates/).click();
+    await expect(page.getByText(/not a confirmed missing trade/)).toBeVisible();
+    await expect(page.getByText(/Schedule SHA-256/)).toBeVisible();
+    await expect(page.getByText(/Schedule version: XETRA-2026/)).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
+    ).toHaveCount(0);
+    await page.getByText("Review conflicting history inputs").click();
+    await expect(page.getByLabel("Price source streams")).toContainText(
+      "Alternate provider",
+    );
+    await expect(page.getByLabel("Price source streams")).toContainText(
+      "EXPL.A",
+    );
+    await expect(page.getByLabel("Price source streams")).toContainText(
+      "Alternate adjustment basis",
+    );
+    await page.getByRole("button", { name: "90 days" }).click();
+    await expect(
+      page.getByText(/46 observations in the selected range/),
+    ).toBeVisible();
+    await page.getByText(/Inspect price observations/).click();
+    await expect(page.getByText("75 of 75 rows shown")).toBeVisible();
+    await page.getByLabel("Find a price observation").fill("EXPL.A");
+    await expect(page.getByText("1 of 75 rows shown")).toBeVisible();
+    const inspection =
+      width === 390
+        ? page.getByLabel("Price observations, mobile view")
+        : page.getByRole("table", { name: "Price observations" });
+    await expect(inspection.getByText("41.1234567890 USD")).toBeVisible();
+    await expect(inspection.getByText("Alternate provider")).toBeVisible();
+    await page.getByLabel("Find a price observation").fill("no-match");
+    await expect(
+      page.getByText("No matching price observations."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(page.getByText("75 of 75 rows shown")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  incompatibleHistory = false;
   consensusEstimateRead = {
     company_id: id,
     continuity_status: "NO_MAPPING",

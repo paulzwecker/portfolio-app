@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -13,7 +14,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import func, select, update
+from pydantic import AnyHttpUrl
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -29,6 +31,7 @@ from portfolio_api.domain.models import (
     HoldingSnapshot,
     LifecycleEvent,
     Listing,
+    MarketDataBatch,
     MarketDataBootstrapCheckpoint,
     MarketDataBootstrapRun,
     Portfolio,
@@ -43,6 +46,8 @@ from portfolio_api.external_data import (
 )
 from portfolio_api.market_data_bootstrap import (
     MarketDataBootstrapError,
+    _canonical_batch_counts,
+    _canonical_batch_fingerprint,
     _next_checkpoint,
     _parser,
     _temporal_issues,
@@ -307,13 +312,21 @@ class SyntheticProvider:
         else:
             source_record_id = f"FX:{subject.base_currency}/{subject.quote_currency}"
             payload = _empty_payload(query.domain) if self.mode == "empty" else _fx_payload()
+        if (
+            self.mode == "missing_listing_close" and subject.kind == CanonicalSubjectKind.LISTING
+        ) or (
+            self.mode == "missing_fx_close" and subject.kind == CanonicalSubjectKind.CURRENCY_PAIR
+        ):
+            broken = json.loads(payload)
+            broken["chart"]["result"][0]["indicators"]["quote"][0]["close"][1] = None
+            payload = json.dumps(broken, separators=(",", ":")).encode()
         return [
             RawProviderRecord(
                 domain=query.domain,
                 provider_id="YAHOO_FINANCE",
                 provider_schema_version="yahoo-chart-v8",
                 source_record_id=source_record_id,
-                source_url="https://synthetic.example.invalid/chart",
+                source_url=AnyHttpUrl("https://synthetic.example.invalid/chart"),
                 media_type="application/json",
                 retrieved_at=RETRIEVED_AT,
                 payload=payload,
@@ -444,11 +457,23 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     }
     assert final["listing_coverage"][0]["currency"] == "USD"
     assert final["listing_coverage"][0]["price_status"] == "AVAILABLE"
+    assert final["history_window_coverage"] == "NOT_ASSESSED"
+    assert final["status_scope"] == "CHECKPOINT_EXECUTION_NOT_EXPECTED_SESSION_COVERAGE"
+    listing_evidence = final["listing_coverage"][0]["history_window_evidence"]
+    assert listing_evidence["distinct_observed_dates"] == 2
+    assert listing_evidence["first_observed_date"] == "2026-10-02"
+    assert listing_evidence["last_observed_date"] == "2026-10-05"
+    assert listing_evidence["maximum_calendar_spacing_days"] == 3
     assert final["listing_coverage"][0]["provider_mapping"]["provider_exchange_code"] == "NMS"
     assert final["listing_coverage"][0]["provider_mapping"]["provider_instrument_type"] == "EQUITY"
     assert final["listing_coverage"][0]["provider_current_quote_rows_skipped"] == 1
     assert final["fx_coverage"][0]["pair"] == "USD/EUR"
     assert final["fx_coverage"][0]["current_quote_rows"] == 0
+    assert final["normalization_warning_count"] == 0
+    assert final["warning_evidence_unrecorded_checkpoints"] == 0
+    fx_evidence = final["fx_coverage"][0]["history_window_evidence"]
+    assert fx_evidence["distinct_observed_dates"] == 2
+    assert fx_evidence["last_observed_date"] == "2026-10-05"
 
     with Session(postgres_engine) as session:
         prices = list(session.scalars(select(PriceObservation)))
@@ -471,6 +496,56 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
             session, run_id, target_environment="development"
         )
         assert reconciliation["reconciliation"]["status"] == "MATCHED"
+        from portfolio_api.historical_bootstrap_review import reconcile_historical_checkpoint
+
+        listing_checkpoint = session.scalar(
+            select(MarketDataBootstrapCheckpoint).where(
+                MarketDataBootstrapCheckpoint.run_id == run_id,
+                MarketDataBootstrapCheckpoint.subject_kind == "LISTING",
+            )
+        )
+        assert listing_checkpoint is not None
+        scoped = reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id)
+        assert scoped.status == "MATCHED" and scoped.issue_codes == []
+        assert set(scoped.model_dump()) == {
+            "run_id",
+            "checkpoint_id",
+            "checked_at",
+            "status",
+            "issue_codes",
+        }
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr("portfolio_api.historical_bootstrap_review.MAX_RECONCILIATION_ROWS", 0)
+            assert (
+                reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id).status
+                == "LIMIT_EXCEEDED"
+            )
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(
+                "portfolio_api.historical_bootstrap_review.MAX_RECONCILIATION_PAYLOAD_BYTES", 1
+            )
+            assert (
+                reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id).status
+                == "LIMIT_EXCEEDED"
+            )
+        with session.begin_nested() as savepoint:
+            receipt = dict(listing_checkpoint.report)
+            coverage_value = receipt["coverage"]
+            assert isinstance(coverage_value, dict)
+            coverage = dict(coverage_value)
+            coverage["canonical_fingerprint"] = None
+            receipt["coverage"] = coverage
+            listing_checkpoint.report = receipt
+            session.flush()
+            assert (
+                reconcile_historical_checkpoint(session, run_id, listing_checkpoint.id).status
+                == "NOT_RECORDED"
+            )
+            savepoint.rollback()
+        with pytest.raises(LookupError):
+            reconcile_historical_checkpoint(session, uuid4(), listing_checkpoint.id)
+        assert reconciliation["listing_coverage"][0]["history_window_evidence"] == listing_evidence
+        assert reconciliation["fx_coverage"][0]["history_window_evidence"] == fx_evidence
 
     count_before = len(provider.calls)
     replay = execute_market_data_bootstrap(
@@ -485,6 +560,8 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
     )
     assert len(provider.calls) == count_before
     assert replay["canonical_totals"] == final["canonical_totals"]
+    assert replay["listing_coverage"][0]["history_window_evidence"] == listing_evidence
+    assert replay["fx_coverage"][0]["history_window_evidence"] == fx_evidence
 
     with Session(postgres_engine) as session, session.begin():
         checkpoint = session.scalar(
@@ -513,6 +590,257 @@ def test_postgres18_market_bootstrap_resumes_and_is_idempotent(
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
+    ("mode", "coverage_key", "warning_code"),
+    [
+        ("missing_listing_close", "listing_coverage", "PRICE_ROWS_WITHOUT_CLOSE"),
+        ("missing_fx_close", "fx_coverage", "FX_ROWS_WITHOUT_CLOSE"),
+    ],
+)
+def test_missing_provider_close_is_retained_and_reported_without_zero_or_retry(
+    postgres_engine: Engine, mode: str, coverage_key: str, warning_code: str
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        company, security, listing = _seed_canonical_scope(session)
+        crosswalk, digest = _crosswalk(_mapping(company.id, security.id, listing.id))
+        run_id = _prepare(session, crosswalk, digest).id
+    provider = SyntheticProvider(mode=mode)
+    report = execute_market_data_bootstrap(
+        postgres_engine,
+        run_id,
+        target_environment="development",
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        provider=provider,
+        max_checkpoints=10,
+        min_request_interval_seconds=0,
+    )
+    assert report["status"] == "PARTIAL"
+    assert report["normalization_warning_count"] == 1
+    assert report["warning_evidence_unrecorded_checkpoints"] == 0
+    assert report[coverage_key][0]["normalization_warnings_captured"] is True
+    assert report[coverage_key][0]["normalization_warnings"][0]["code"] == warning_code
+    assert report["history_window_coverage"] == "NOT_ASSESSED"
+    assert len(provider.calls) == 2
+    repeated = execute_market_data_bootstrap(
+        postgres_engine,
+        run_id,
+        target_environment="development",
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        provider=provider,
+        max_checkpoints=10,
+        min_request_interval_seconds=0,
+    )
+    assert repeated["status"] == "PARTIAL"
+    assert repeated["normalization_warning_count"] == 1
+    assert len(provider.calls) == 2
+    # An older run may have persisted COMPLETE before warnings affected status.
+    with Session(postgres_engine) as session, session.begin():
+        old_run = session.get(MarketDataBootstrapRun, run_id)
+        assert old_run is not None
+        old_run.status = "COMPLETE"
+    reevaluated = execute_market_data_bootstrap(
+        postgres_engine,
+        run_id,
+        target_environment="development",
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        provider=provider,
+        max_checkpoints=10,
+        min_request_interval_seconds=0,
+    )
+    assert reevaluated["status"] == "PARTIAL"
+    assert len(provider.calls) == 2
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        reconciliation = reconcile_market_data_bootstrap(
+            session, run_id, target_environment="development"
+        )
+        assert reconciliation["reconciliation"]["status"] == "MATCHED"
+        assert reconciliation["normalization_warning_count"] == 1
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(PriceObservation)
+                .where(PriceObservation.split_adjusted_close <= 0)
+            )
+            == 0
+        )
+        assert (
+            session.scalar(
+                select(func.count()).select_from(FxObservation).where(FxObservation.rate <= 0)
+            )
+            == 0
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("case", "subject_kind", "expected_code"),
+    [
+        ("missing_batch", "LISTING", "BATCH_REFERENCE_MISSING"),
+        ("missing_raw", "LISTING", "SOURCE_PAYLOAD_MISSING"),
+        ("raw_corrupt", "LISTING", "SOURCE_PAYLOAD_HASH_MISMATCH"),
+        ("raw_provenance", "LISTING", "SOURCE_PAYLOAD_PROVENANCE_MISMATCH"),
+        ("batch_provider", "LISTING", "BATCH_PROVIDER_MISMATCH"),
+        ("current_quote", "LISTING", "UNEXPECTED_PRICE_KIND"),
+        ("price_outside", "LISTING", "PRICE_OUTSIDE_REQUESTED_WINDOW"),
+        ("price_wrong_listing", "LISTING", "CHECKPOINT_SUBJECT_MISMATCH"),
+        ("action_outside", "LISTING", "ACTION_OUTSIDE_REQUESTED_WINDOW"),
+        ("action_wrong_listing", "LISTING", "CHECKPOINT_SUBJECT_MISMATCH"),
+        ("unexpected_fx", "LISTING", "UNEXPECTED_DOMAIN_ROWS"),
+        ("fx_outside", "FX_PAIR", "FX_OUTSIDE_REQUESTED_WINDOW"),
+        ("fx_wrong_pair", "FX_PAIR", "CHECKPOINT_SUBJECT_MISMATCH"),
+        ("fx_future_observation", "FX_PAIR", "OBSERVATION_AFTER_RETRIEVAL"),
+    ],
+)
+def test_reconciliation_rejects_missing_or_out_of_scope_persisted_evidence(
+    postgres_engine: Engine, case: str, subject_kind: str, expected_code: str
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        company, security, listing = _seed_canonical_scope(session)
+        crosswalk, digest = _crosswalk(_mapping(company.id, security.id, listing.id))
+        run_id = _prepare(session, crosswalk, digest).id
+    execute_market_data_bootstrap(
+        postgres_engine,
+        run_id,
+        target_environment="development",
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        provider=SyntheticProvider(),
+        max_checkpoints=10,
+        min_request_interval_seconds=0,
+    )
+    # Corrupt only this disposable fixture. Update receipt hashes too, proving the
+    # independent scope validation catches more than a fingerprint mismatch.
+    with Session(postgres_engine) as session, session.begin():
+        checkpoint = session.scalar(
+            select(MarketDataBootstrapCheckpoint).where(
+                MarketDataBootstrapCheckpoint.run_id == run_id,
+                MarketDataBootstrapCheckpoint.subject_kind == subject_kind,
+            )
+        )
+        assert checkpoint is not None and checkpoint.batch_id is not None
+        checkpoint_id = checkpoint.id
+        batch_id = checkpoint.batch_id
+        if case == "missing_batch":
+            checkpoint.batch_id = None
+        else:
+            if case == "missing_raw":
+                session.execute(
+                    delete(ExternalRawPayload).where(ExternalRawPayload.batch_id == batch_id)
+                )
+            if case == "raw_corrupt":
+                session.execute(
+                    update(ExternalRawPayload)
+                    .where(ExternalRawPayload.batch_id == batch_id)
+                    .values(payload_bytes=gzip.compress(b"changed source bytes"))
+                )
+            if case == "raw_provenance":
+                session.execute(
+                    update(ExternalRawPayload)
+                    .where(ExternalRawPayload.batch_id == batch_id)
+                    .values(domain="FX")
+                )
+            if case == "batch_provider":
+                session.execute(
+                    update(MarketDataBatch)
+                    .where(MarketDataBatch.id == batch_id)
+                    .values(provider_id="OTHER_PROVIDER")
+                )
+            if case in {"price_wrong_listing", "action_wrong_listing"}:
+                original = session.get(Listing, checkpoint.listing_id)
+                assert original is not None
+                alternate = Listing(
+                    id=uuid4(),
+                    security_id=original.security_id,
+                    venue="NYSE",
+                    ticker="SYNTH-ALT",
+                    currency="USD",
+                )
+                session.add(alternate)
+                session.flush()
+                model = PriceObservation if case == "price_wrong_listing" else CorporateAction
+                session.execute(
+                    update(model).where(model.batch_id == batch_id).values(listing_id=alternate.id)
+                )
+            if case == "current_quote":
+                session.execute(
+                    update(PriceObservation)
+                    .where(PriceObservation.batch_id == batch_id)
+                    .values(price_kind="CURRENT_QUOTE")
+                )
+            elif case == "price_outside":
+                session.execute(
+                    update(PriceObservation)
+                    .where(PriceObservation.batch_id == batch_id)
+                    .values(market_date=datetime(2026, 9, 30, tzinfo=UTC))
+                )
+            elif case == "action_outside":
+                session.execute(
+                    update(CorporateAction)
+                    .where(CorporateAction.batch_id == batch_id)
+                    .values(effective_date=datetime(2026, 10, 6, tzinfo=UTC))
+                )
+            elif case == "fx_outside":
+                session.execute(
+                    update(FxObservation)
+                    .where(FxObservation.batch_id == batch_id)
+                    .values(effective_at=datetime(2026, 10, 6, tzinfo=UTC))
+                )
+            elif case == "fx_wrong_pair":
+                session.execute(
+                    update(FxObservation)
+                    .where(FxObservation.batch_id == batch_id)
+                    .values(base_currency="EUR", quote_currency="USD")
+                )
+            elif case == "fx_future_observation":
+                session.execute(
+                    update(FxObservation)
+                    .where(FxObservation.batch_id == batch_id)
+                    .values(observed_at=datetime(2026, 10, 7, tzinfo=UTC))
+                )
+            elif case == "unexpected_fx":
+                session.add(
+                    FxObservation(
+                        id=uuid4(),
+                        base_currency="USD",
+                        quote_currency="EUR",
+                        rate=Decimal("0.9"),
+                        data_quality="PASS",
+                        effective_at=datetime(2026, 10, 2, tzinfo=UTC),
+                        recorded_at=RETRIEVED_AT,
+                        batch_id=batch_id,
+                        source_ref=f"synthetic-extra-{uuid4()}",
+                        provider="SYNTHETIC",
+                        source="synthetic",
+                        actor="SYSTEM",
+                        reason="fixture",
+                    )
+                )
+                session.flush()
+            checkpoint_report = dict(checkpoint.report)
+            coverage_value = checkpoint_report["coverage"]
+            assert isinstance(coverage_value, dict)
+            coverage = dict(coverage_value)
+            coverage["canonical_counts"] = _canonical_batch_counts(session, batch_id)
+            coverage["canonical_fingerprint"] = _canonical_batch_fingerprint(session, batch_id)
+            checkpoint_report["coverage"] = coverage
+            checkpoint.report = checkpoint_report
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        report = reconcile_market_data_bootstrap(session, run_id, target_environment="development")
+        assert report["reconciliation"]["status"] == "MISMATCH"
+        assert expected_code in {issue["code"] for issue in report["reconciliation"]["differences"]}
+        if subject_kind == "LISTING":
+            from portfolio_api.historical_bootstrap_review import reconcile_historical_checkpoint
+
+            scoped = reconcile_historical_checkpoint(session, run_id, checkpoint_id)
+            assert scoped.status == "MISMATCH" and expected_code in scoped.issue_codes
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
     "mode,expected_status",
     [("empty", "UNAVAILABLE"), ("transport_failure", "FAILED")],
 )
@@ -521,6 +849,8 @@ def test_provider_gaps_are_distinguished_from_ingestion_failures(
     mode: str,
     expected_status: str,
 ) -> None:
+    from portfolio_api.historical_bootstrap_review import latest_historical_bootstrap_review
+
     with Session(postgres_engine) as session, session.begin():
         company, security, listing = _seed_canonical_scope(session)
         crosswalk, digest = _crosswalk(_mapping(company.id, security.id, listing.id))
@@ -553,6 +883,19 @@ def test_provider_gaps_are_distinguished_from_ingestion_failures(
             assert not checkpoint.retryable
             assert checkpoint.failure_code == "NO_PROVIDER_DATA"
         assert result["failed_checkpoints"] == (1 if expected_status == "FAILED" else 0)
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        review = latest_historical_bootstrap_review(session, run_id=run_id)
+        row = review.listings[0]
+        assert row.reason == (
+            "CHECKPOINT_FAILED" if mode == "transport_failure" else "CHECKPOINT_UNAVAILABLE"
+        )
+        assert row.checkpoint_diagnostics is not None
+        assert row.checkpoint_diagnostics.failure_kind == (
+            "OTHER" if mode == "transport_failure" else "NO_PROVIDER_DATA"
+        )
+        assert row.checkpoint_diagnostics.retryable == (mode == "transport_failure")
+        assert row.scheduled_session_review is None and row.requested_window_review is None
 
 
 @pytest.mark.integration

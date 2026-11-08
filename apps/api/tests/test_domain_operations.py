@@ -599,7 +599,8 @@ def test_price_history_analytics_use_canonical_closes_without_lookahead(
                 currency=listing.currency,
                 provider="YAHOO_FINANCE",
                 provider_symbol=listing.ticker,
-                adjustment_basis="Corrected split-adjusted price; dividend excluded",
+                # Numeric correction retains the same economic adjustment basis.
+                adjustment_basis="Split-adjusted price; dividend excluded",
                 data_quality="PASS",
                 source_ref="test-price-series:correction",
                 supersedes_observation_id=latest.id,
@@ -637,6 +638,10 @@ def test_price_history_analytics_use_canonical_closes_without_lookahead(
         assert known_before.price_regime is None
         assert known_before.analytics.status == "AVAILABLE"
         assert known_before.analytics.observation_count == 252
+        assert known_before.analytics.session_coverage == "NOT_ASSESSED"
+        assert known_before.analytics.distinct_market_dates == 252
+        assert known_before.analytics.first_market_date == first_session.date()
+        assert known_before.analytics.max_calendar_gap_days == 1
         assert known_before.analytics.dma_50 == Decimal("227.5")
         assert known_before.analytics.dma_200 == Decimal("152.5")
         assert known_before.analytics.daily_return == Decimal(str(252 / 251 - 1))

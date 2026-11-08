@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -111,6 +111,31 @@ def test_company_ingestion_scope_uses_explicit_lifecycle_only(
         portfolio_id: "PORTFOLIO",
         watchlist_id: "WATCHLIST",
     }
+
+
+@pytest.mark.parametrize(
+    ("domain", "batch_key", "warning_code"),
+    [
+        (ExternalDataDomain.MARKET_DATA, "market_data_batches", "PRICE_ROWS_WITHOUT_CLOSE"),
+        (ExternalDataDomain.FX, "fx_batches", "FX_ROWS_WITHOUT_CLOSE"),
+    ],
+)
+def test_yahoo_provider_warnings_produce_partial_quality_report(
+    domain: ExternalDataDomain, batch_key: str, warning_code: str
+) -> None:
+    warning = {"source_record_id": "synthetic", "code": warning_code, "message": "Skipped a row."}
+    report: dict[str, Any] = {
+        "selected_listing_count": 1,
+        "verified_listing_mapping_count": 1,
+        "required_fx_pairs": [["USD", "EUR"]],
+        "market_data_batches": [{"accepted_subjects": 1, "daily_price_rows": 1}],
+        "fx_batches": [{"accepted_pairs": [{"pair": "USD/EUR"}], "fx_observation_rows": 1}],
+    }
+    report[batch_key][0]["normalization_warnings"] = [warning]
+    outcome = _domain_status_for_yahoo(domain, report, {"persistence": {"inserted_totals": {}}})
+    assert outcome.status == "PARTIAL"
+    assert outcome.retryable is False
+    assert outcome.report["domain_report"]["normalization_warnings"] == [warning]
 
 
 def test_yahoo_retryable_subject_failure_is_persisted_on_domain_attempt(

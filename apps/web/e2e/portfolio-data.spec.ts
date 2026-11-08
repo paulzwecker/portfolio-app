@@ -257,6 +257,227 @@ test("Portfolio data investigation reaches Operations without writes", async ({
   expect(writes).toEqual([]);
 });
 
+test("Historical bootstrap schedule evidence is reviewable without writes", async ({
+  page,
+}, testInfo) => {
+  const { writes } = await installRoutes(page, operationsFixture());
+  await page.route(
+    "**/api/research/market-data/historical-bootstrap*",
+    (route) =>
+      route.fulfill({
+        json: {
+          run_id: "11111111-1111-4111-8111-111111111111",
+          run_status: "COMPLETE",
+          prepared_at: "2026-11-08T20:00:00Z",
+          requested_start: "2025-01-01",
+          requested_end: "2026-12-31",
+          checked_at: "2026-11-09T00:00:00Z",
+          listing_count: 31,
+          fx_checkpoint_count: 1,
+          offset:
+            new URL(route.request().url()).searchParams.get("offset") === "30"
+              ? 30
+              : 0,
+          omitted_listing_count:
+            new URL(route.request().url()).searchParams.get("offset") === "30"
+              ? 0
+              : 1,
+          listings:
+            new URL(route.request().url()).searchParams.get("offset") === "30"
+              ? [
+                  {
+                    checkpoint_id: "22222222-2222-4222-8222-222222222222",
+                    subject_key: "NYSE:LAST",
+                    checkpoint_status: "UNAVAILABLE",
+                    reason: "CHECKPOINT_UNAVAILABLE",
+                    scheduled_session_review: null,
+                    checkpoint_diagnostics: {
+                      failure_kind: "NO_PROVIDER_DATA",
+                      raw_response_count: 1,
+                      normalized_daily_rows: 0,
+                      provider_failure_count: 0,
+                      normalization_rejection_count: 1,
+                      normalization_warning_count: null,
+                      retryable: false,
+                    },
+                  },
+                ]
+              : [
+                  {
+                    checkpoint_id: "22222222-2222-4222-8222-222222222222",
+                    subject_key: "NYSE:SYNTH",
+                    checkpoint_status: "COMPLETE",
+                    reason: "AVAILABLE",
+                    scheduled_session_review: {
+                      venue: "NYSE",
+                      schedule_id: "synthetic",
+                      source_url:
+                        "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+                      source_sha256: "a".repeat(64),
+                      schedule_fingerprint: "b".repeat(64),
+                      source_as_of: null,
+                      source_observed_at: "2026-11-08T18:37:45Z",
+                      start_date: "2026-07-02",
+                      end_date: "2026-07-07",
+                      full_selected_span_covered: true,
+                      scheduled_count: 3,
+                      absent_scheduled_dates: ["2026-07-06"],
+                      selected_unscheduled_dates: [],
+                    },
+                    requested_window_review: {
+                      venue: "NYSE",
+                      schedule_id: "synthetic",
+                      source_url:
+                        "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+                      source_sha256: "a".repeat(64),
+                      schedule_fingerprint: "b".repeat(64),
+                      source_as_of: null,
+                      source_observed_at: "2026-11-08T18:37:45Z",
+                      start_date: "2026-07-01",
+                      end_date: "2026-07-10",
+                      full_selected_span_covered: true,
+                      scheduled_count: 7,
+                      absent_scheduled_dates: [
+                        "2026-07-01",
+                        "2026-07-06",
+                        "2026-07-08",
+                      ],
+                      selected_unscheduled_dates: [],
+                    },
+                  },
+                  ...Array.from({ length: 29 }, (_, i) => ({
+                    checkpoint_id: "22222222-2222-4222-8222-222222222222",
+                    subject_key: `NYSE:TEST${i}`,
+                    checkpoint_status: "PENDING",
+                    reason: "CHECKPOINT_NOT_COMPLETE",
+                    scheduled_session_review: null,
+                  })),
+                ],
+        },
+      }),
+  );
+  await page.route(
+    "**/api/research/market-data/historical-bootstrap/*/checkpoints/*/reconciliation",
+    (route) =>
+      route.fulfill({
+        json: {
+          run_id: "11111111-1111-4111-8111-111111111111",
+          checkpoint_id: "22222222-2222-4222-8222-222222222222",
+          checked_at: "2026-11-09T00:00:00Z",
+          status: "MISMATCH",
+          issue_codes: ["SOURCE_PAYLOAD_HASH_MISMATCH"],
+        },
+      }),
+  );
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto("/operations");
+    const panel = page
+      .locator("div")
+      .filter({
+        has: page.getByText("Historical bootstrap review", { exact: true }),
+      })
+      .filter({ hasText: "Run:" })
+      .last();
+    await expect(panel).toContainText("FX sessions remain unassessed");
+    await panel.getByText("NYSE:SYNTH", { exact: false }).click();
+    await panel.getByRole("button", { name: "Check stored batch" }).click();
+    await expect(
+      panel.getByText("SOURCE_PAYLOAD_HASH_MISMATCH", { exact: false }),
+    ).toBeVisible();
+    await expect(panel).toContainText("not confirmed missing trades");
+    await panel.getByText("Requested-window schedule review").click();
+    await expect(
+      panel.getByText("3 scheduled dates without eligible closes", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText("Dates outside this window remain unassessed.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(panel).toContainText("1 additional listings follow this page");
+    await expect(
+      page.getByRole("link", { name: "Skip to content" }),
+    ).not.toBeInViewport();
+    await panel
+      .getByText("Historical bootstrap review", { exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath(`historical-batch-review-${width}.png`),
+      scale: "css",
+    });
+    await panel.getByRole("button", { name: "Next listings" }).click();
+    await expect(panel).toContainText("NYSE:LAST");
+    await expect(panel).toContainText("Showing 31–31 of 31");
+    await panel.getByText("NYSE:LAST", { exact: false }).click();
+    await expect(
+      panel.getByText("Provider reported no observations."),
+    ).toBeVisible();
+    await expect(
+      panel.getByText("Normalization warnings: Not recorded", { exact: false }),
+    ).toBeVisible();
+    await panel.getByRole("button", { name: "Previous listings" }).click();
+    await expect(panel).toContainText("NYSE:SYNTH");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  expect(writes).toEqual([]);
+});
+
+test("Provider quality warnings are reviewable without writes", async ({
+  page,
+}) => {
+  const operations = operationsFixture();
+  const fx = operations.market_data.runs?.find((run) => run.domain === "FX");
+  if (!fx) throw new Error("FX fixture missing");
+  fx.status = "PARTIAL";
+  fx.failure_code = "PARTIAL_COVERAGE";
+  fx.failure_message = "1 provider, identity, or quality checks remain for FX.";
+  fx.retry_state = "REVIEW_REQUIRED";
+  fx.retry_eligible_at = null;
+  fx.attempts[0].status = "PARTIAL";
+  fx.attempts[0].retryable = false;
+  fx.attempts[0].failure_code = "PARTIAL_COVERAGE";
+  fx.attempts[0].failure_message = fx.failure_message;
+  operations.market_data.message = fx.failure_message;
+  fx.report = {
+    domain_report: {
+      normalization_warnings: [{ code: "FX_ROWS_WITHOUT_CLOSE" }],
+    },
+  };
+  const { writes } = await installRoutes(page, operations);
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto("/operations#market-data-refresh");
+    await page.getByRole("button", { name: "Inspect FX refresh" }).click();
+    const drawer = page.getByRole("dialog", { name: "FX refresh details" });
+    const warning = drawer.getByRole("region", {
+      name: "Provider quality warnings",
+    });
+    await expect(warning).toContainText(
+      "Some returned FX rows lacked a usable timestamp or positive close",
+    );
+    await expect(warning).toContainText(
+      "do not establish expected-session coverage",
+    );
+    await expect(
+      drawer.getByText("A fresh scope check or operator review is required."),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+  }
+  expect(writes).toEqual([]);
+});
+
 test("Preflight blockers expose their scope and preserve last data success", async ({
   page,
 }, testInfo) => {
