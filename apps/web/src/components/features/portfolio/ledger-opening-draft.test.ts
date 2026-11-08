@@ -4,6 +4,7 @@ import { ledgerAnchor, ledgerAccountId } from "../../../../e2e/fixtures/ledger";
 import {
   buildOpeningReview,
   hashOpeningStatement,
+  restoreOpeningReview,
   statementFileLimit,
   type OpeningAccountDraft,
 } from "./ledger-opening-draft";
@@ -27,6 +28,46 @@ function account(): OpeningAccountDraft {
     cash: [{ id: "cash", currency: "USD", balance: "100.0000000000" }],
   };
 }
+
+it("restores a downloaded opening exactly, including high precision, zeros and stable account identity", () => {
+  const draft = account();
+  draft.positions[0].quantity = "9007199254740993.1234567890";
+  draft.cash.push({ id: "zero", currency: "EUR", balance: "0" });
+  const text = buildOpeningReview(ledgerAnchor, [draft], true).text;
+  const restored = restoreOpeningReview(ledgerAnchor, text);
+  expect(restored[0].id).toBe(draft.id);
+  expect(restored[0].positions[0].quantity).toBe(draft.positions[0].quantity);
+  expect(restored[0].cash[1].balance).toBe("0");
+  expect(buildOpeningReview(ledgerAnchor, restored, true).text).toBe(text);
+});
+
+it("rejects altered, stale, lossy and non-opening packets during restoration", () => {
+  const text = buildOpeningReview(ledgerAnchor, [account()], true).text;
+  const packet = JSON.parse(text);
+  const withActivity = { ...packet, activity: [{ kind: "DEPOSIT" }] };
+  const withEnding = { ...packet, ending_statement: { accounts: [] } };
+  const unknown = { ...packet, extra: "evidence" };
+  const numeric = JSON.parse(text);
+  numeric.accounts[0].positions[0].quantity = 9007199254740992;
+  for (const value of [
+    "{bad",
+    text + " ",
+    JSON.stringify(withActivity),
+    JSON.stringify(withEnding),
+    JSON.stringify(unknown),
+    JSON.stringify(numeric),
+  ]) {
+    expect(() => restoreOpeningReview(ledgerAnchor, value)).toThrow(
+      /unchanged opening review/,
+    );
+  }
+  expect(() =>
+    restoreOpeningReview(
+      { ...ledgerAnchor, anchor_sha256: "f".repeat(64) },
+      text,
+    ),
+  ).toThrow(/current anchor/);
+});
 
 it("binds exact source text and a companyless ETF to the current opening anchor", () => {
   const draft = account();

@@ -27,6 +27,15 @@ PR #29. Both offline schema-gate modes match `b59f16c8a203` with no pending rang
 The new API regression checks v2 at the exact anchor boundary with zero
 activity, deterministic replay and unchanged canonical state.
 
+The latest BUILD restores the form's unchanged downloaded opening packet for the
+current anchor, preserving account IDs and exact decimal text. It rejects packets
+containing activity, ending statements or additional fields, and asks for the
+date acknowledgement again. A pending older document hash cannot overwrite a newer
+hash after restoration. Continue with guided activity and ending observations.
+Verification passed 98 focused web tests and ten managed desktop/mobile browser
+cases using synthetic data. Typecheck, production build, focused lint and docs
+checks passed. The mobile light-theme layout was visually inspected.
+
 ## Next increment and release boundaries
 
 Add guided settled-activity and ending-statement entry to complete the existing

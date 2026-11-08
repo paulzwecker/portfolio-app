@@ -183,6 +183,10 @@ explicit zeros. The opening uses v2 at the anchor instant with empty activity an
 an absent ending statement. Native validation owns financial constraints and
 comparisons. Acquisition basis remains unavailable. Clearing the draft removes
 its in-memory accounts and cancels outstanding statement hash results.
+An unchanged opening review JSON downloaded from this form can replace the draft
+for the same anchor. Restoration preserves account IDs, exact amounts and evidence,
+and requires the source-date confirmation again. Packets with activity, ending
+statements, changed anchors or other fields use the existing file review workflow.
 
 For activity and ending observations, prepare the typed ledger JSON and choose it
 using the file control. Files stay in

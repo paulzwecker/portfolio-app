@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { PortfolioLedgerAnchor } from "@/lib/domain-contracts";
 import { dateTime } from "@/lib/display";
-import type { LedgerReviewFile } from "./portfolio-ledger-data";
+import {
+  ledgerFileLimit,
+  type LedgerReviewFile,
+} from "./portfolio-ledger-data";
 import {
   buildOpeningReview,
   hashOpeningStatement,
+  restoreOpeningReview,
   type OpeningAccountDraft,
 } from "./ledger-opening-draft";
 
@@ -29,12 +33,46 @@ export function LedgerOpeningBuilder({
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hashes = useRef(new Map<string, number>());
-  useEffect(() => () => hashes.current.clear(), []);
+  const hashVersion = useRef(0);
+  const restoreVersion = useRef(0);
+  useEffect(
+    () => () => {
+      hashes.current.clear();
+      restoreVersion.current += 1;
+    },
+    [],
+  );
 
   const changed = () => {
+    restoreVersion.current += 1;
     onChange();
     setConfirmed(false);
     setError(null);
+  };
+  const restore = async (file: File | undefined) => {
+    const version = ++restoreVersion.current;
+    if (!file) return;
+    onChange();
+    setError(null);
+    try {
+      if (file.size > ledgerFileLimit)
+        throw new Error("Choose an opening review JSON smaller than 1 MB.");
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(
+        await file.arrayBuffer(),
+      );
+      const restored = restoreOpeningReview(anchor, text);
+      if (version !== restoreVersion.current) return;
+      hashes.current.clear();
+      changed();
+      setAccounts(restored);
+    } catch (failure) {
+      if (version === restoreVersion.current)
+        setError(
+          failure instanceof Error && failure.name !== "TypeError"
+            ? failure.message
+            : "Choose a valid UTF-8 opening review JSON.",
+        );
+    }
   };
   const update = (id: string, patch: Partial<OpeningAccountDraft>) => {
     changed();
@@ -45,7 +83,7 @@ export function LedgerOpeningBuilder({
     );
   };
   const hashStatement = async (id: string, file: File | undefined) => {
-    const version = (hashes.current.get(id) ?? 0) + 1;
+    const version = ++hashVersion.current;
     hashes.current.set(id, version);
     update(id, { sourceSha256: "", hashing: Boolean(file) });
     if (!file) return;
@@ -75,6 +113,24 @@ export function LedgerOpeningBuilder({
         {dateTime(anchor.snapshot.effective_at)}. Quantities and cash are
         reconciled by the application API. Acquisition basis remains unavailable
         in this opening contract.
+      </p>
+      <label className="mt-3 block text-sm">
+        Replace draft from downloaded opening review JSON
+        <input
+          type="file"
+          accept=".json,application/json"
+          className={fieldClass}
+          disabled={disabled}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            void restore(file);
+          }}
+        />
+      </label>
+      <p className="mt-1 text-xs text-muted-foreground">
+        The downloaded opening packet restores accounts and balances in this
+        page. Confirm its source date again before review.
       </p>
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer">
@@ -205,10 +261,7 @@ export function LedgerOpeningBuilder({
                   value={account.sourceSha256}
                   maxLength={64}
                   onChange={(event) => {
-                    hashes.current.set(
-                      account.id,
-                      (hashes.current.get(account.id) ?? 0) + 1,
-                    );
+                    hashes.current.set(account.id, ++hashVersion.current);
                     update(account.id, {
                       sourceSha256: event.target.value,
                       hashing: false,

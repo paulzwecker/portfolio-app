@@ -242,6 +242,28 @@ test("guided opening balances reconcile, download and replay exact private input
   await expect(
     page.getByLabel("Ledger review result", { exact: true }),
   ).toHaveCount(0);
+  await page
+    .getByLabel("Replace draft from downloaded opening review JSON", {
+      exact: true,
+    })
+    .setInputFiles(downloadedPath);
+  await expect(
+    page.getByLabel("Position 1 quantity", { exact: true }),
+  ).toHaveValue("2.5000000000");
+  await expect(page.getByLabel("Cash 2 balance", { exact: true })).toHaveValue(
+    "0",
+  );
+  await expect(
+    page.getByLabel(acknowledgement, { exact: true }),
+  ).not.toBeChecked();
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[2].text).toBe(calls[0].text);
   expect(errors).toEqual([]);
 });
 
@@ -332,4 +354,131 @@ test("late statement hashing cannot replace a manually reviewed source hash", as
   await expect(
     page.getByText("Hashing private statement…", { exact: true }),
   ).toHaveCount(0);
+});
+
+test("a rejected replacement keeps the draft but clears its previous review", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Replace draft from downloaded opening review JSON", {
+      exact: true,
+    })
+    .setInputFiles({
+      name: "invalid.json",
+      mimeType: "application/json",
+      buffer: Buffer.from('{"activity":[1]}'),
+    });
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "unchanged opening review JSON",
+  );
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("Position 1 quantity", { exact: true }),
+  ).toHaveValue("2.5000000000");
+  expect(calls).toHaveLength(1);
+});
+
+test("restoring the same account cannot reuse an earlier pending hash", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  const saved = calls[0].text;
+  await page.evaluate(() => {
+    const original = crypto.subtle.digest.bind(crypto.subtle);
+    const state = window as Window & {
+      releaseHash?: (() => void)[];
+      finishedHashes?: number;
+    };
+    state.releaseHash = [];
+    state.finishedHashes = 0;
+    crypto.subtle.digest = async (...args) => {
+      await new Promise<void>((resolve) => state.releaseHash!.push(resolve));
+      const digest = await original(...args);
+      state.finishedHashes! += 1;
+      return digest;
+    };
+  });
+  const statement = page.getByLabel("Hash a private statement file", {
+    exact: true,
+  });
+  await statement.setInputFiles({
+    name: "old.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("old"),
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { releaseHash?: (() => void)[] }).releaseHash
+            ?.length,
+      ),
+    )
+    .toBe(1);
+  await page
+    .getByLabel("Replace draft from downloaded opening review JSON", {
+      exact: true,
+    })
+    .setInputFiles({
+      name: "opening.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(saved),
+    });
+  await expect(
+    page.getByLabel("Source document SHA-256", { exact: true }),
+  ).toHaveValue("b".repeat(64));
+  const newBytes = Buffer.from("new statement");
+  await statement.setInputFiles({
+    name: "new.txt",
+    mimeType: "text/plain",
+    buffer: newBytes,
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { releaseHash?: (() => void)[] }).releaseHash
+            ?.length,
+      ),
+    )
+    .toBe(2);
+  await page.evaluate(() =>
+    (window as Window & { releaseHash?: (() => void)[] }).releaseHash![0](),
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as Window & { finishedHashes?: number }).finishedHashes,
+      ),
+    )
+    .toBe(1);
+  await expect(
+    page.getByLabel("Source document SHA-256", { exact: true }),
+  ).toHaveValue("");
+  await expect(
+    page.getByText("Hashing private statement…", { exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() =>
+    (window as Window & { releaseHash?: (() => void)[] }).releaseHash![1](),
+  );
+  await expect(
+    page.getByLabel("Source document SHA-256", { exact: true }),
+  ).toHaveValue(createHash("sha256").update(newBytes).digest("hex"));
 });

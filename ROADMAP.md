@@ -15,6 +15,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals        |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work    |
 
+The current BUILD adds restoration of a previously downloaded opening packet into
+the guided form. Restoration preserves account IDs, exact decimal text and evidence,
+requires fresh date confirmation, and rejects packets whose data cannot be retained
+by this form. A failed replacement clears the previous review and retains the draft.
+Focused verification passed 98 web tests, ten desktop/mobile browser cases, the
+production build, typecheck, lint and documentation checks. Continue with guided
+settled activity and ending statements.
+
 Opening-balance onboarding `18f1f15` lets the investor enter evidenced accounts,
 exact listing quantities and currency cash, review native reconciliation and
 download/replay the same private packet. Edits invalidate earlier results and reset

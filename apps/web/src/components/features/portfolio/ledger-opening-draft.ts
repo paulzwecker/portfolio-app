@@ -1,4 +1,4 @@
-import type { PortfolioLedgerAnchor } from "@/lib/domain-contracts";
+import { isRecord, type PortfolioLedgerAnchor } from "@/lib/domain-contracts";
 import {
   inspectLedgerFile,
   type LedgerReviewFile,
@@ -31,6 +31,92 @@ export async function hashOpeningStatement(file: File): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+}
+
+/** Restore only a complete, unchanged opening packet produced by this form. */
+export function restoreOpeningReview(
+  anchor: PortfolioLedgerAnchor,
+  text: string,
+): OpeningAccountDraft[] {
+  const invalid =
+    "Choose an unchanged opening review JSON downloaded from this form for the current anchor.";
+  let packet: unknown;
+  try {
+    packet = JSON.parse(text);
+  } catch {
+    throw new Error(invalid);
+  }
+  if (
+    !isRecord(packet) ||
+    !Array.isArray(packet.accounts) ||
+    packet.accounts.length > 20
+  )
+    throw new Error(invalid);
+  const accounts: OpeningAccountDraft[] = packet.accounts.map(
+    (value: unknown) => {
+      if (
+        !isRecord(value) ||
+        !isRecord(value.evidence) ||
+        typeof value.account_id !== "string" ||
+        typeof value.name !== "string" ||
+        (value.kind !== "BROKERAGE" && value.kind !== "UNALLOCATED_OPENING") ||
+        !(
+          typeof value.broker_name === "string" || value.broker_name === null
+        ) ||
+        typeof value.evidence.source_sha256 !== "string" ||
+        typeof value.evidence.source_record_id !== "string" ||
+        !Array.isArray(value.positions) ||
+        !Array.isArray(value.cash) ||
+        value.positions.length > 1000 ||
+        value.cash.length > 100
+      )
+        throw new Error(invalid);
+      const positions = value.positions.map((row: unknown) => {
+        if (
+          !isRecord(row) ||
+          typeof row.listing_id !== "string" ||
+          typeof row.quantity !== "string"
+        )
+          throw new Error(invalid);
+        return {
+          id: crypto.randomUUID(),
+          listingId: row.listing_id,
+          quantity: row.quantity,
+        };
+      });
+      const cash = value.cash.map((row: unknown) => {
+        if (
+          !isRecord(row) ||
+          typeof row.currency !== "string" ||
+          typeof row.balance !== "string"
+        )
+          throw new Error(invalid);
+        return {
+          id: crypto.randomUUID(),
+          currency: row.currency,
+          balance: row.balance,
+        };
+      });
+      return {
+        id: value.account_id,
+        name: value.name,
+        kind: value.kind,
+        brokerName: value.broker_name ?? "",
+        sourceSha256: value.evidence.source_sha256,
+        sourceRecordId: value.evidence.source_record_id,
+        hashing: false,
+        positions,
+        cash,
+      };
+    },
+  );
+  try {
+    if (buildOpeningReview(anchor, accounts, true).text !== text)
+      throw new Error(invalid);
+  } catch {
+    throw new Error(invalid);
+  }
+  return accounts;
 }
 
 export function buildOpeningReview(
