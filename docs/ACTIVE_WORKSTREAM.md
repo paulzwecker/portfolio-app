@@ -1,90 +1,42 @@
 # Active workstream
 
-## Historical market-data reliability integration
+## C2.3 guided ledger onboarding — BUILD
 
-Branch `codex/market-history-coverage` includes current `origin/main` at
-`aef35724120d63d608d6ffdc6f10f88d41eff27f`. The working checkpoint before integration
-was `f28b1e2`. Repository visibility is public. Preserve predecessor worktrees,
-the owner edits and private evidence. [Draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)
-contains the cohesive checkpoint. Implementation review commit is `9bf466c`.
+Branch `codex/ledger-opening-onboarding` contains implementation `18f1f15` and
+merge `813651e` from updated main `e070406` ([merged PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)).
+The owner edits, predecessor branches/worktrees and private source artifacts remain
+preserved. No new PR has been opened for this BUILD increment.
 
-This engineering checkpoint delivers an investor investigation workflow through
-Company Explorer and Operations. It includes source-stream/adjustment conflicts,
-searchable returned observations, bounded schedule review, provider diagnostics,
-run-pinned pagination and explicitly requested checkpoint reconciliation.
+At `/portfolio/ledger`, the opening builder collects explicit evidenced accounts,
+exact listing quantities and native-currency cash. A statement can be SHA-256
+hashed locally or identified by an existing hash/reference. Drafts remain in page
+memory. Submission reuses the authenticated read-only preview and its anchor/hash
+checks. The source-date acknowledgement resets after edits. Download/re-upload
+preserves exact financial text and account IDs. Separate saved-candidate decisions
+retain their existing server authorization.
 
-## Integration acceptance
+The opening workflow is LOCAL_VERIFIED with 96 focused web checks, 67 native ledger
+unit tests, 13 isolated PostgreSQL/API cases and six managed desktop/mobile browser
+checks. Synthetic light/dark screenshots were visually reviewed. Typecheck,
+production build and focused lint pass. All selections passed again after merging
+PR #29. Both offline schema-gate modes match `b59f16c8a203` with no pending range.
+The new API regression checks v2 at the exact anchor boundary with zero
+activity, deterministic replay and unchanged canonical state.
 
-- Verify ordinary entry points, API authentication and PostgreSQL read-only behavior.
-- Run repository checks, relevant PostgreSQL integration tests and desktop/mobile
-  browser coverage. Inspect synthetic screenshots and fix review findings.
-- Confirm migration files and model metadata stay compatible with the production
-  schema contract. Record fresh live evidence separately from the recorded marker.
-- Publish one cohesive PR after local acceptance. Owner review controls merging.
+## Next increment and release boundaries
 
-The engineering checkpoint is IMPLEMENTATION_COMPLETE and LOCAL_VERIFIED.
-`npm run check` passed with 333 web tests, 929 backend units and two skips.
-Relevant PostgreSQL integration covered 112 cases across the initial selection
-and a focused rerun after fixture corrections. The full managed browser run passed
-95 cases with 35 explicit fixture/live-only skips. The affected Operations journey
-passed again at desktop/mobile widths. Synthetic screenshots were visually reviewed.
+Add guided settled-activity and ending-statement entry to complete the existing
+candidate review journey. Reuse the versioned ledger contract, server calculations,
+immutable review packets and explicit decisions. Preserve the observed holdings,
+strategic targets and unavailable acquisition basis. A reviewed first broker format,
+lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.
 
-The second-pass review added alert checks for known adjustment labels and listing
-currency, plus HTTP authentication/read-only transaction coverage. It corrected
-fixture URL/receipt typing, auth-mode configuration and a numeric-correction fixture
-to retain its economic adjustment basis. Mypy passes all 223 source/test files.
+This increment adds no schema or provider configuration. Its milestone remains
+BUILD. Review current hosted release controls at INTEGRATE before classifying
+merge/deployment readiness. Price/FX enrichment, recovery operations, production
+ledger cutover, model acceptance and provider activation require their own scope
+and authorization. No production/provider operation ran in this BUILD.
 
-## Release assessment
-
-Current classification is **CONFIGURATION_REQUIRED** pending current Vercel
-release-control evidence and Blueprint sync confirmation. The earlier Neon
-connection failure is resolved by the runbook's process-local certifi CA bundle.
-On November 8 at 19:49 UTC the existing read-only target guard verified the exact
-production project, branch, endpoint and `neondb.public` with TLS `verify-full`.
-Live Alembic is `b59f16c8a203`, all 98 tables are present and mapped metadata has
-no drift. Both offline schema-gate modes pass with an empty pending range.
-
-Accepted counts remain 209 companies, 23 securities, 23 listings, one portfolio,
-one snapshot, 22 positions, two cash rows, one accepted target revision and 16
-allocations totaling 100%. Source and canonical bootstrap receipts each count one.
-Prices, FX and native model revisions each count zero. Private evidence remains
-under `%LOCALAPPDATA%/PortfolioResearch/private-reports`.
-
-Fresh Render read-only inspection found the intended `portfolio-api` service on
-`main`, live deployment `dep-dbobrqbl550s7399afg0` at `aef3572`, and Auto-Deploy
-enabled with `checksPass`. Render uses the expected Neon target, TLS verification
-and `/health/ready`. Both health routes return 200. Authenticated API reads return
-209 Universe companies, one portfolio and a ledger anchor with its snapshot.
-All inspected write, ingestion and background flags are disabled. GitHub effective
-main rules require PRs, conversation resolution and the three strict CI checks.
-Vercel CLI/frontend credentials were unavailable. The requested dashboard evidence
-is its production commit/plan, required checks, exact ignore command and Blueprint sync.
-
-Follow the existing [deployment runbook](deployment-and-migrations.md). Hosted
-setting changes, live provider activation, recovery operations and model acceptance
-retain separate owner approvals. C2.2's hosted ingestion and two monitored refresh cycles
-remain outstanding operational acceptance criteria.
-
-## Next action
-
-Draft #29 awaits owner review and the remaining release-control evidence. The code
-head `1587ce0` passed all three GitHub jobs and Vercel Preview in CI run 113.
-Documentation updates retain focused checks and require latest-head CI readback.
-Additional venue schedules
-require reviewed source evidence. Detailed earlier evidence and production recovery
-history remain in the [historical handoff](history/market-history-build-through-2026-11-08.md).
-
-## Bounded enrichment planning
-
-The existing production read-only preview is READY for all 22 held listings and
-the two required FX pairs, DKK/EUR and USD/EUR. It reuses the earlier diagnostic
-window November 7, 2025 through November 6, 2026 for comparison. The plan has 24
-logical provider scopes and zero unresolved mappings. It made zero provider
-requests and database writes. The immutable private report hash is
-`1cd4ddf9815e068343ab67c4baeca2e18d5c6bbeecede1e132d38576fa3ebdf5`.
-Owner review must establish the actual first-run window, provider/retry budget and
-current-state recovery before separately authorizing execution.
-
-Canonical behavior lives in [market data](market-data.md),
-[historical bootstrap](historical-market-data-bootstrap.md),
-[attention](attention-center.md) and the [roadmap](../ROADMAP.md).
+[Ledger behavior](portfolio-ledger.md) owns this contract and workflow.
+[The roadmap](../ROADMAP.md) owns priority. The previous market integration and
+live-read evidence are preserved in the [dated handoff](history/market-history-build-through-2026-11-08.md).

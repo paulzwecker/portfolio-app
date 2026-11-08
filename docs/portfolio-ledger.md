@@ -168,8 +168,24 @@ the connection to the pool. Existing API authentication and database guards appl
 
 ## Portfolio review screen
 
-Open Portfolio → Ledger review (`/portfolio/ledger`). Download the private anchor,
-prepare the typed ledger JSON and choose it using the file control. Files stay in
+Open Portfolio → Ledger review (`/portfolio/ledger`). The guided opening review
+collects explicit brokerage or unallocated opening accounts with source evidence,
+exact listing quantities and native-currency cash. It starts with empty fields.
+Reference holdings can be inspected while account allocation remains an evidenced
+user declaration. Confirm the source balances use the displayed anchor date.
+Edits reset that acknowledgement and invalidate the prior result.
+
+Hash a nonempty statement up to 10 MiB locally with browser SHA-256, or enter an
+existing document hash and source-record reference. Statement bytes remain local.
+Reconciliation sends entered balances and evidence through the existing read-only
+preview, bound to the verified snapshot/hash. Amounts retain decimal text and
+explicit zeros. The opening uses v2 at the anchor instant with empty activity and
+an absent ending statement. Native validation owns financial constraints and
+comparisons. Acquisition basis remains unavailable. Clearing the draft removes
+its in-memory accounts and cancels outstanding statement hash results.
+
+For activity and ending observations, prepare the typed ledger JSON and choose it
+using the file control. Files stay in
 page memory until explicit validation. The browser forwards the original financial
 text to the API, with a 1 MB UTF-8 limit and existing authentication/origin controls.
 UUID display metadata is normalized separately. Clearing/changing files cancels
@@ -177,7 +193,9 @@ pending requests and removes previous results.
 
 The screen distinguishes opening/ending matches, blocked activity and missing
 observations. Filter by comparison, account and differences, inspect exact native
-values and source/hash evidence, or download the private report. Missing rows retain
+values and source/hash evidence, or download the private report and exact review
+JSON. The review JSON preserves its decimal text and stable account IDs for replay
+and later evidenced additions. Missing rows retain
 their explicit state beside zero balances. Account differences remain visible even
 when portfolio totals match. A successful review remains a candidate result.
 
