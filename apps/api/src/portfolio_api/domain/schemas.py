@@ -819,12 +819,16 @@ class PriceRegimeRead(Contract):
 
 
 class PriceHistoryAnalyticsRead(Contract):
-    """Query-layer analytics over exact canonical daily observations."""
+    """Price metrics and descriptive coverage over canonical daily observations."""
 
     status: Literal["AVAILABLE", "PARTIAL", "UNAVAILABLE"]
     methodology_version: str
     observation_count: int
     as_of: datetime | None
+    session_coverage: Literal["NOT_ASSESSED"] = "NOT_ASSESSED"
+    distinct_market_dates: int | None = None
+    first_market_date: date | None = None
+    max_calendar_gap_days: int | None = None
     daily_return: FixedDecimal | None
     dma_20: FixedDecimal | None
     dma_50: FixedDecimal | None

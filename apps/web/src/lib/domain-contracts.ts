@@ -900,6 +900,19 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
     string(v.methodology_version) &&
     Number.isInteger(v.observation_count) &&
     (v.as_of === null || timestamp(v.as_of)) &&
+    (v.session_coverage === undefined ||
+      v.session_coverage === "NOT_ASSESSED") &&
+    (v.distinct_market_dates === undefined ||
+      v.distinct_market_dates === null ||
+      (Number.isInteger(v.distinct_market_dates) &&
+        (v.distinct_market_dates as number) >= 0)) &&
+    (v.first_market_date === undefined ||
+      v.first_market_date === null ||
+      dateOnly(v.first_market_date)) &&
+    (v.max_calendar_gap_days === undefined ||
+      v.max_calendar_gap_days === null ||
+      (Number.isInteger(v.max_calendar_gap_days) &&
+        (v.max_calendar_gap_days as number) >= 0)) &&
     [
       "daily_return",
       "dma_20",

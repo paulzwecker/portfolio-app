@@ -3,13 +3,24 @@
 import gzip
 import hashlib
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any, cast
 from uuid import uuid4
 
+import pytest
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from test_market_data_bootstrap import _seed_canonical_scope
 
 import portfolio_api.market_data_bootstrap as bootstrap
-from portfolio_api.domain.models import MarketDataBootstrapCheckpoint, MarketDataBootstrapRun
+from portfolio_api.domain import queries
+from portfolio_api.domain.models import (
+    Listing,
+    MarketDataBootstrapCheckpoint,
+    MarketDataBootstrapRun,
+    PriceObservation,
+)
 from portfolio_api.market_data_bootstrap import (
     _coverage_for_plan,
     _history_window_evidence,
@@ -39,6 +50,66 @@ def test_raw_payload_verification_handles_integrity_and_limits(monkeypatch: Any)
     assert _raw_payload_issue(gzip.compress(b"x" * 65), "gzip", expected) == (
         "SOURCE_PAYLOAD_VERIFICATION_LIMIT"
     )
+
+
+@pytest.mark.integration
+def test_listing_coverage_describes_sparse_dates_without_claiming_sessions(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        _, _, listing = _seed_canonical_scope(session)
+        listing_id = listing.id
+        for index, market_at in enumerate(
+            [
+                datetime(2024, 1, 1, tzinfo=UTC),
+                datetime(2025, 1, 1, tzinfo=UTC),
+                datetime(2025, 1, 1, 1, tzinfo=UTC),
+            ]
+        ):
+            session.add(
+                PriceObservation(
+                    listing_id=listing.id,
+                    price_kind="DAILY_CLOSE",
+                    market_date=market_at,
+                    recorded_at=datetime(2025, 1, 2, tzinfo=UTC),
+                    split_adjusted_close=Decimal("100") + index,
+                    currency="USD",
+                    provider="SYNTHETIC",
+                    provider_symbol="SYNTH",
+                    adjustment_basis="Synthetic split-adjusted close",
+                    data_quality="PASS",
+                    source_ref=f"coverage-fixture-{index}-{uuid4()}",
+                )
+            )
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        fetched_listing = session.get(Listing, listing_id)
+        assert fetched_listing is not None
+        result = queries.listing_market_data(
+            session, fetched_listing, known_at=datetime(2025, 1, 3, tzinfo=UTC)
+        )
+        assert result.analytics.observation_count == 3
+        assert result.analytics.distinct_market_dates == 2
+        assert result.analytics.first_market_date == date(2024, 1, 1)
+        assert result.analytics.max_calendar_gap_days == 366
+        assert result.analytics.session_coverage == "NOT_ASSESSED"
+        one_date = queries.listing_market_data(
+            session,
+            fetched_listing,
+            market_as_of=date(2024, 1, 1),
+            known_at=datetime(2025, 1, 3, tzinfo=UTC),
+        )
+        assert one_date.analytics.distinct_market_dates == 1
+        assert one_date.analytics.max_calendar_gap_days is None
+        no_dates = queries.listing_market_data(
+            session,
+            fetched_listing,
+            market_as_of=date(2023, 12, 31),
+            known_at=datetime(2025, 1, 3, tzinfo=UTC),
+        )
+        assert no_dates.analytics.distinct_market_dates == 0
+        assert no_dates.analytics.first_market_date is None
+        assert no_dates.analytics.max_calendar_gap_days is None
 
 
 def stamp(day: int) -> datetime:

@@ -190,5 +190,13 @@ and incompatible provider, symbol, currency or adjustment pairs. Alert time is w
 both inputs were recorded; wording states exchange sessions are unverified. Nine
 focused units and 12 isolated PostgreSQL cases, Ruff and strict mypy pass. No API
 schema or migration is required; alerts can be more conservative with mixed sources.
+Company Explorer now exposes the distinct market dates, first date and maximum
+calendar spacing of its analytics inputs. Coverage remains `NOT_ASSESSED`; the UI
+explains that holidays and weekends are included and missing sessions are possible.
+The additive API fields tolerate older responses, and an empty set remains distinct
+from absent evidence. Focused checks pass: 56 web cases, nine Python cases including
+two isolated PostgreSQL cases, generated contracts and strict types; the synthetic
+browser journey checks the notice and overflow at 390 and 1440 pixels. No migration
+is needed. This is LOCAL_VERIFIED, not live coverage or calendar validation.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.

@@ -637,6 +637,10 @@ def test_price_history_analytics_use_canonical_closes_without_lookahead(
         assert known_before.price_regime is None
         assert known_before.analytics.status == "AVAILABLE"
         assert known_before.analytics.observation_count == 252
+        assert known_before.analytics.session_coverage == "NOT_ASSESSED"
+        assert known_before.analytics.distinct_market_dates == 252
+        assert known_before.analytics.first_market_date == first_session.date()
+        assert known_before.analytics.max_calendar_gap_days == 1
         assert known_before.analytics.dma_50 == Decimal("227.5")
         assert known_before.analytics.dma_200 == Decimal("152.5")
         assert known_before.analytics.daily_return == Decimal(str(252 / 251 - 1))

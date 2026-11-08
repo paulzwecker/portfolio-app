@@ -155,11 +155,15 @@ and as-of date.
 
 The Company market view computes these measures directly from the latest clean,
 exact-listing canonical daily observations; it does not depend on a legacy
-`PriceRegimeSnapshot`. A 50- or 200-session average and the 20-session volatility
+`PriceRegimeSnapshot`. A 50- or 200-observation average and the 20-return volatility
 are exposed as soon as their individual windows exist. The aggregate analytics
-state is `AVAILABLE` only with 252 eligible sessions, `PARTIAL` for shorter
-non-empty history, and `UNAVAILABLE` without clean history. The 52-week high and
-drawdown remain null until all 252 sessions exist. Price charts use the requested
+state is `AVAILABLE` with at least 252 eligible observations, `PARTIAL` with 2–251,
+and `UNAVAILABLE` with fewer than two. These states describe calculation inputs,
+not verified exchange-session completeness. The 52-week high and drawdown use the
+last 252 observations and remain null until that many observations exist. The API
+reports distinct market dates, earliest date and maximum calendar spacing for the
+calculation inputs; weekends and holidays are included and no missing session count
+is inferred. Older API responses may omit this date-span evidence. Price charts use the requested
 recent observations while analytics retain enough history for the full window.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because

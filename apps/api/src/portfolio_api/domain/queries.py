@@ -807,6 +807,11 @@ def listing_market_data(
     closes = [row.split_adjusted_close for row in ordered_analytics]
     values = calculate_price_history_metrics([value for value in closes if value is not None])
     observation_count = len(closes)
+    market_dates = sorted({row.market_date.astimezone(UTC).date() for row in ordered_analytics})
+    calendar_gaps = [
+        (later - earlier).days
+        for earlier, later in zip(market_dates, market_dates[1:], strict=False)
+    ]
     analytics_status = "UNAVAILABLE"
     if observation_count >= 252:
         analytics_status = "AVAILABLE"
@@ -817,6 +822,10 @@ def listing_market_data(
         methodology_version="split-adjusted-price-history-v1",
         observation_count=observation_count,
         as_of=ordered_analytics[-1].market_date if ordered_analytics else None,
+        session_coverage="NOT_ASSESSED",
+        distinct_market_dates=len(market_dates),
+        first_market_date=market_dates[0] if market_dates else None,
+        max_calendar_gap_days=max(calendar_gaps, default=None),
         daily_return=_metric_decimal(values["daily_return"]),
         dma_20=_metric_decimal(values["dma_20"]),
         dma_50=_metric_decimal(values["dma_50"]),

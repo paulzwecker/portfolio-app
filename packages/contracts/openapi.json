@@ -24542,7 +24542,7 @@
       },
       "PriceHistoryAnalyticsRead": {
         "additionalProperties": false,
-        "description": "Query-layer analytics over exact canonical daily observations.",
+        "description": "Price metrics and descriptive coverage over canonical daily observations.",
         "properties": {
           "as_of": {
             "anyOf": [
@@ -24577,6 +24577,17 @@
               }
             ],
             "title": "Daily Return"
+          },
+          "distinct_market_dates": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distinct Market Dates"
           },
           "dma_20": {
             "anyOf": [
@@ -24622,6 +24633,18 @@
             ],
             "title": "Drawdown 52W"
           },
+          "first_market_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Market Date"
+          },
           "high_52w": {
             "anyOf": [
               {
@@ -24632,6 +24655,17 @@
               }
             ],
             "title": "High 52W"
+          },
+          "max_calendar_gap_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Calendar Gap Days"
           },
           "methodology_version": {
             "title": "Methodology Version",
@@ -24684,6 +24718,12 @@
               }
             ],
             "title": "Realized Vol 20D"
+          },
+          "session_coverage": {
+            "const": "NOT_ASSESSED",
+            "default": "NOT_ASSESSED",
+            "title": "Session Coverage",
+            "type": "string"
           },
           "status": {
             "enum": [

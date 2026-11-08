@@ -1627,6 +1627,68 @@ describe("domain display integrity", () => {
       }),
     ).toBe(false);
   });
+  it("accepts additive history evidence but rejects fabricated session coverage", () => {
+    const analytics = {
+      status: "UNAVAILABLE",
+      methodology_version: "split-adjusted-price-history-v1",
+      observation_count: 0,
+      as_of: null,
+      daily_return: null,
+      dma_20: null,
+      dma_50: null,
+      dma_200: null,
+      high_52w: null,
+      drawdown_52w: null,
+      price_return_1m: null,
+      price_return_3m: null,
+      price_return_6m: null,
+      realized_vol_20d: null,
+      trend_state: null,
+      correction_state: null,
+    };
+    const market = {
+      listing: {
+        id,
+        security_id: id,
+        ticker: "EXAMPLE",
+        venue: "NYSE",
+        currency: "USD",
+        is_demo: false,
+      },
+      latest: null,
+      freshness: "NO_DATA",
+      availability: "UNAVAILABLE",
+      age_days: null,
+      price_regime: null,
+      analytics,
+      last_market_update: null,
+      history: [],
+    };
+    expect(isListingMarketData(market)).toBe(true);
+    const withEvidence = {
+      ...market,
+      analytics: {
+        ...analytics,
+        session_coverage: "NOT_ASSESSED",
+        distinct_market_dates: 0,
+        first_market_date: null,
+        max_calendar_gap_days: null,
+      },
+    };
+    expect(isListingMarketData(withEvidence)).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: { ...withEvidence.analytics, session_coverage: "COMPLETE" },
+      }),
+    ).toBe(false);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: { ...withEvidence.analytics, distinct_market_dates: -1 },
+      }),
+    ).toBe(false);
+  });
   it("preserves separate explicit ranking states without inventing a rank", () => {
     expect(isCompanyRankings(companyRankings)).toBe(true);
     expect(

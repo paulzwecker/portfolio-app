@@ -3222,6 +3222,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
     ).toBeVisible();
+    await expect(
+      page.getByText(/Exchange-session coverage has not been assessed/),
+    ).toBeVisible();
     await expect(page.getByLabel("Historical date range")).toBeVisible();
     await page.getByRole("button", { name: "All available" }).click();
     await expect(

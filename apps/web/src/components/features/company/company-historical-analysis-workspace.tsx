@@ -36,6 +36,7 @@ import {
   type CompanyExecutionPace,
   type ExpectedReturnHistoryPoint,
   type ListingMarketData,
+  type PriceHistoryAnalytics,
   type RankingHistoryEntry,
   type ExecutionPaceHistoryEntry,
 } from "@/lib/domain-contracts";
@@ -444,6 +445,33 @@ function PriceHistoryChart({
   );
 }
 
+export function HistoryCoverageNotice({
+  analytics,
+}: {
+  analytics: PriceHistoryAnalytics;
+}) {
+  return (
+    <p className="leading-5 text-muted-foreground">
+      Exchange-session coverage has not been assessed; these metrics use
+      recorded closes and may span missing sessions. Calendar gaps include
+      weekends and holidays.
+      {analytics.distinct_market_dates != null && (
+        <>
+          {" "}
+          {analytics.distinct_market_dates} distinct market dates
+          {analytics.first_market_date
+            ? ` since ${dateOnly(analytics.first_market_date)}`
+            : ""}
+          {analytics.max_calendar_gap_days != null
+            ? `; largest calendar gap ${analytics.max_calendar_gap_days} days`
+            : ""}
+          .
+        </>
+      )}
+    </p>
+  );
+}
+
 function MarketHistory({
   marketState,
   range,
@@ -588,8 +616,9 @@ function MarketHistory({
               <p className="border-t pt-3 leading-5 text-muted-foreground">
                 {selected.analytics.status === "AVAILABLE"
                   ? `Analytics as of ${dateTime(selected.analytics.as_of)} · ${selected.analytics.methodology_version}`
-                  : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations are retained.`}
+                  : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations were used.`}
               </p>
+              <HistoryCoverageNotice analytics={selected.analytics} />
             </CardContent>
           </Card>
         </div>

@@ -9775,7 +9775,7 @@ export interface components {
         };
         /**
          * PriceHistoryAnalyticsRead
-         * @description Query-layer analytics over exact canonical daily observations.
+         * @description Price metrics and descriptive coverage over canonical daily observations.
          */
         PriceHistoryAnalyticsRead: {
             /** As Of */
@@ -9784,6 +9784,8 @@ export interface components {
             correction_state: string | null;
             /** Daily Return */
             daily_return: string | null;
+            /** Distinct Market Dates */
+            distinct_market_dates?: number | null;
             /** Dma 20 */
             dma_20: string | null;
             /** Dma 200 */
@@ -9792,8 +9794,12 @@ export interface components {
             dma_50: string | null;
             /** Drawdown 52W */
             drawdown_52w: string | null;
+            /** First Market Date */
+            first_market_date?: string | null;
             /** High 52W */
             high_52w: string | null;
+            /** Max Calendar Gap Days */
+            max_calendar_gap_days?: number | null;
             /** Methodology Version */
             methodology_version: string;
             /** Observation Count */
@@ -9806,6 +9812,12 @@ export interface components {
             price_return_6m: string | null;
             /** Realized Vol 20D */
             realized_vol_20d: string | null;
+            /**
+             * Session Coverage
+             * @default NOT_ASSESSED
+             * @constant
+             */
+            session_coverage: "NOT_ASSESSED";
             /**
              * Status
              * @enum {string}
