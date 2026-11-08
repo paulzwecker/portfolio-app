@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C1.3 authenticated proxy-path verification — BUILD. [Handoff](docs/financial-models.md#current-build-checkpoint)                                                                                          |
 | Branch / PR                 | `codex/native-dcf-sensitivity`, from merged main `395f842`. Local BUILD branch                                                                                                                            |
 | Implementation              | C1.3 complete proxy path LOCAL_VERIFIED with authenticated production-mode desktop/mobile fixtures                                                                                                        |
-| Next ready substantial task | Finish final focused verification/review, then preserve the complete slice for integration after pending owner reviews                                                                                    |
+| Next ready substantial task | Owner review/merge PRs #25/#26; integrate this completed slice and CI classification against updated main at one reviewed milestone gate                                                                  |
 | Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await review/merge. C1 investment acceptance remains separate |
 | Integration rule            | Keep completed PRs stable. Reconcile this independent slice and the preserved CI correction with latest main at the integration gate                                                                      |
 
@@ -26,30 +26,26 @@ Vercel Preview. PRs #25/#26 remain open and stable for owner review. Their actua
 merge state was rechecked before resuming this independent branch.
 
 Normal-entrypoint review found three missing sensitivity proxy pieces: allowlist,
-base-revision query forwarding and response validation. Browser request mocks had
-hidden the defect. The targeted correction validates the exact model/revision,
-rejects missing/ambiguous base IDs and preserves sanitized conflicts, authentication,
-HTTPS and the separate server token. Sixty-six focused proxy/access/presentation
-checks pass. Twenty-four desktop/mobile production-mode checks now pass, including
-real Next.js auth → HTTPS source → validated sensitivity → UI. Negative cases
-cover anonymous/incorrect access, missing/stale revision, malformed output, denied
-writes, server-token separation, untrusted CA and wrong hostname. Five Node isolation
-checks and the TLS fixture unit test pass. Final focused regression/review is next.
+base-revision query forwarding and response validation. Earlier mocked browser
+requests hid that defect. Commit `32eb94f` fixes the exact model/revision read path,
+rejects missing/ambiguous base IDs, preserves sanitized conflicts and denied writes,
+and retains HTTPS plus separate web/API credentials.
 
-C1.3's API calculates nine hypothetical fair-value combinations with the existing
-UFCF engine and accepted inputs. It requires an exact current revision, preserves
-probabilities/operating inputs/tail assumptions, and exposes invalid combinations
-as unavailable. Nineteen focused backend checks pass, including an API test under
-PostgreSQL read-only enforcement on verified loopback PostgreSQL 18.3. Accepted
-model readback is unchanged. Twelve focused web checks and sixteen desktop/mobile
-browser cases pass, including ten sensitivity cases and six existing model-selection,
-proposal-review and contract-import regressions. Sensitivity checks cover scenario switching, unavailable combinations,
-stale/mismatched revisions, transient retry, deferred fetch and GET-only requests.
-Desktop/mobile screenshots were visually reviewed. Browser review identified and
-corrected hidden 409 conflicts with a scoped reload instruction. Strict backend
-typing (180 files), frontend typing, scoped lint, generated contracts, source
-policy, docs links and whitespace pass. This is a local BUILD checkpoint. Combined
-integration, production build/full CI and hosted model readback remain unverified.
+Commit `17ca4c1` adds an authenticated production-mode fixture on the existing
+browser driver. Twenty-four desktop/mobile checks pass, including real Next.js
+auth → HTTPS source → validated sensitivity → UI. Negative cases cover anonymous/
+incorrect access, stale revision, malformed output, denied writes, server-token
+separation, untrusted CA and wrong hostname. Two default development-mode browser
+regressions also pass. Actual proxy screenshots were visually inspected.
+
+Final focused verification passes 68 web checks, 20 backend checks (including
+read-only PostgreSQL and fixture TLS), five Node isolation/cleanup checks, deployment
+and source-policy checks, generated contracts, scoped lint/format and docs links.
+The ordinary production build and frontend types pass; changed Python files pass
+strict typing. Independent review tightened child-only write-authorization controls
+and temporary-file cleanup. Synthetic fixtures establish local behavior. Full
+combined-baseline/remote CI and hosted model readback remain unverified. Production
+model acceptance retains its owner gate. Keep completed PRs stable for review.
 
 ## How to choose work
 

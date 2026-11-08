@@ -20,6 +20,12 @@ test("managed browser execution replaces inherited targets and credentials witho
     E2E_LIVE_API: "1",
     E2E_ALLOW_WRITES: "1",
     DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true",
+    DATABASE_LOCAL_TEST_WRITES_AUTHORIZED: "true",
+    DATABASE_LOCAL_WRITES_AUTHORIZED: "true",
+    DATABASE_REHEARSAL_WRITES_AUTHORIZED: "true",
+    CLOUD_INGESTION_ENABLED: "true",
+    RECURRING_OPERATIONS_ENABLED: "true",
+    MANUAL_OPERATIONS_ENABLED: "true",
     NODE_TLS_REJECT_UNAUTHORIZED: "0",
   };
   const saved = { ...original };
@@ -42,6 +48,9 @@ test("managed browser execution replaces inherited targets and credentials witho
   );
   for (const name of [
     "DATABASE_PRODUCTION_WRITES_AUTHORIZED",
+    "DATABASE_LOCAL_TEST_WRITES_AUTHORIZED",
+    "DATABASE_LOCAL_WRITES_AUTHORIZED",
+    "DATABASE_REHEARSAL_WRITES_AUTHORIZED",
     "CLOUD_INGESTION_ENABLED",
     "RECURRING_OPERATIONS_ENABLED",
     "MANUAL_OPERATIONS_ENABLED",

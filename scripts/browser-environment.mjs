@@ -37,6 +37,11 @@ export function managedBrowserEnvironment(inherited, directory) {
     DATABASE_URL:
       "postgresql+psycopg://fixture:fixture@127.0.0.1:1/fixture_test",
     TEST_DATABASE_URL: "",
+    DATABASE_TARGET_ENVIRONMENT: "development",
+    DATABASE_TARGET_DATABASE: "fixture_test",
+    DATABASE_LOCAL_TEST_WRITES_AUTHORIZED: "false",
+    DATABASE_LOCAL_WRITES_AUTHORIZED: "false",
+    DATABASE_REHEARSAL_WRITES_AUTHORIZED: "false",
     DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false",
     CLOUD_INGESTION_ENABLED: "false",
     RECURRING_OPERATIONS_ENABLED: "false",

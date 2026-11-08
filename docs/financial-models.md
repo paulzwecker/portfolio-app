@@ -312,37 +312,24 @@ combinations. A changed accepted revision requires reloading the company.
 
 ### Current BUILD checkpoint
 
-`codex/native-dcf-sensitivity` is independent of frozen PRs #25/#26 and the
-completed `codex/ci-database-test-coverage` correction. The API passes 19 focused
-backend checks including a transaction-enforced read-only PostgreSQL integration
-case, exact native-engine reconciliation, deterministic replay, explicit tail,
-invalid cells and stale revision rejection. The complete user-facing slice is
-LOCAL_VERIFIED with 12 focused web checks and 16 desktop/mobile browser cases
-(10 sensitivity and six existing model/proposal/contract regressions).
-Scenario switching, deferred GET-only fetching, invalid cells, stale/mismatched
-revision reload and transient retry pass. Both responsive screenshots were reviewed.
-Strict backend/frontend typing, scoped lint/format, generated contracts, source
-policy, docs links and whitespace pass. An optional caller-owned conflict message
-in the shared fetch hook makes revision conflicts actionable while preserving
-its existing default behavior. The panel keeps hypothetical fair values separate
-from the existing acceptance workflow.
+`codex/native-dcf-sensitivity` is LOCAL_VERIFIED and independent of frozen PRs
+#25/#26 and the preserved CI-classification branch. Review found that the original
+mocked browser tests missed the Next.js proxy boundary. Commit `32eb94f` adds the
+allowlist, exact revision forwarding and response identity/shape validation.
 
-A subsequent normal-entrypoint review found missing Next.js proxy routing, query
-forwarding and payload validation. The correction passes 66 focused proxy/access/
-presentation checks, including exact model/revision binding, rejected writes,
-HTTPS and server-token isolation. Earlier page-request mocks did not exercise that
-server boundary. Authenticated production-mode proxy verification now passes
-24 desktop/mobile cases, including two real proxy UI journeys. A loopback-only
-HTTPS fixture retains certificate/hostname verification, independent web/API tokens
-and rejected writes. Five Node isolation checks and the certificate fixture unit
-case pass. The [managed browser command](testing.md#managed-authenticated-production-browser-fixtures)
-reproduces this without operator credentials or a database.
+Commit `17ca4c1` proves the real production-mode auth/proxy/UI path with synthetic
+HTTPS data. Twenty-four desktop/mobile checks pass, including two actual proxy UI
+journeys and negative auth, revision, response and TLS cases. Two default-mode
+browser regressions also pass. Final checks pass 68 web, 20 backend and five Node
+isolation/cleanup cases, scoped types/lint, contracts, docs and production build.
+Actual proxy desktop/mobile screenshots were inspected. The
+[managed browser command](testing.md#managed-authenticated-production-browser-fixtures)
+uses child-only credentials, a trusted ephemeral CA and a loopback read-only source.
 
-PR #25's base repair is complete and passing at `7d4ce2e`. PRs #25/#26 remain stable
-for owner review. Next finish focused regression/review, then
-integrate the completed slices after owner merges, preserving each ledger. Remote
-CI for this slice and real hosted model readback remain unverified. Production
-model acceptance remains owner-gated.
+PR #25's repair is passing at `7d4ce2e`; PRs #25/#26 await owner review. Next integrate
+completed slices after owner merges, preserving each capability/evidence ledger.
+Full combined CI and hosted model readback remain unverified. Production model
+acceptance remains owner-gated.
 
 ## Google Sheets interoperability
 
