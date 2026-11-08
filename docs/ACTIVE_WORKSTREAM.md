@@ -88,7 +88,9 @@ two backend tests skipped). Three PostgreSQL archive/restore integration cases
 passed separately on a disposable loopback PostgreSQL 18 cluster with required
 test privileges. Both PowerShell wrapper smoke tests passed. A full 389-case
 PostgreSQL integration run was started but not completed; retain the earlier
-79-case ledger evidence below and rerun the full selection at integration.
+79-case ledger evidence below and require the complete selection in CI. The 79-case
+ledger selection was independently rerun and passed; six managed authenticated
+desktop/mobile browser checks passed against local synthetic services.
 
 Next price/FX slice is the existing read-only, target-bound market-data preview of
 all held listing crosswalks and required FX pairs using a reviewed date window.
@@ -141,14 +143,14 @@ Exact contracts live in the [ledger reference](portfolio-ledger.md).
 - Independent review preserves identity, evidence, financial/ownership separation
   and production authorization. This is synthetic/local verification only.
 
-## Next action — INTEGRATE
+## Next action — integration review
 
-The bounded settled-ledger BUILD scope is IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED.
-Safely fetch/reconcile latest main, run `npm run check`, the full applicable isolated
-PostgreSQL selection and combined responsive/authenticated browser regressions.
-Inspect final contracts, compatibility and privacy, fix findings, then push this
-branch and open ONE cohesive PR for income/tax and paired account transfers.
-Freeze the passing candidate for owner review. Broker imports, normalized account
+The bounded settled-ledger and release-safety scope is IMPLEMENTATION_COMPLETE /
+LOCAL_VERIFIED. Main was fetched and is the branch base; the integrated checks and
+remaining full-CI limitation are recorded above. Review the combined branch and
+open ONE cohesive PR; require all three GitHub jobs and freeze a passing candidate
+for owner review. Provider activation and durable production recovery remain
+separately authorized work. Broker imports, normalized account
 management, lots/gains, FX/in-transit rules and genuine TWR/XIRR remain subsequent
 capabilities with their own source/policy dependencies.
 

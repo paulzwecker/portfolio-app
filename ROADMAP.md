@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                 |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C5 release safety integration; C2.3 settled-ledger milestone preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                  |
+| Active checkpoint           | C2.3 settled ledger and C5 release-safety integration candidate. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                         |
 | Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                       |
 | Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated |
-| Next ready substantial task | Complete review and integration checks for the combined ledger/release branch; obtain owner review for provider activation                    |
+| Next ready substantial task | Review combined milestone PR and CI; prepare separately authorized backup and provider activation                                             |
 | Parallel owner gate         | Production deployment unfreeze, release configuration, future migrations and ingestion retain separate approvals                              |
 | Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream   |
 
@@ -52,8 +52,10 @@ the existing archive toolkit rejects production sources, and no production archi
 or isolated restore rehearsal has been verified. The release runbook identifies the
 owner's retention choices and separately authorized recovery work. Twenty-one focused
 release and local-tool checks, `npm run check`, and three synthetic PostgreSQL
-archive/restore integration cases pass. The full PostgreSQL selection remains
-uncompleted; these results do not establish production readiness.
+archive/restore integration cases pass. The focused 79-case ledger integration
+selection and six authenticated desktop/mobile browser checks also passed. The full
+389-case PostgreSQL selection remains uncompleted locally; CI must run it. These
+results do not establish production readiness.
 
 ## Where we are
 
