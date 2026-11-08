@@ -9794,6 +9794,8 @@ export interface components {
             dma_50: string | null;
             /** Drawdown 52W */
             drawdown_52w: string | null;
+            /** Duplicate Market Dates */
+            duplicate_market_dates?: string[];
             /** First Market Date */
             first_market_date?: string | null;
             /** High 52W */
@@ -9820,6 +9822,8 @@ export interface components {
              * @constant
              */
             session_coverage: "NOT_ASSESSED";
+            /** Source Streams */
+            source_streams?: components["schemas"]["PriceHistorySourceStreamRead"][];
             /**
              * Status
              * @enum {string}
@@ -9827,6 +9831,27 @@ export interface components {
             status: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
             /** Trend State */
             trend_state: string | null;
+        };
+        /** PriceHistorySourceStreamRead */
+        PriceHistorySourceStreamRead: {
+            /** Currency */
+            currency: string;
+            /**
+             * First Market Date
+             * Format: date
+             */
+            first_market_date: string;
+            /**
+             * Last Market Date
+             * Format: date
+             */
+            last_market_date: string;
+            /** Observation Count */
+            observation_count: number;
+            /** Provider */
+            provider: string;
+            /** Provider Symbol */
+            provider_symbol: string;
         };
         /** PriceObservationRead */
         PriceObservationRead: {

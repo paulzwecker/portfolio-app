@@ -6,6 +6,7 @@ import type {
 } from "@/lib/domain-contracts";
 import {
   HistoryCoverageNotice,
+  HistorySourceReview,
   PriceHistoryChart,
 } from "./company-historical-analysis-workspace";
 
@@ -58,5 +59,50 @@ describe("historical market coverage notice", () => {
     );
     expect(chart).toContain("Price series needs review");
     expect(chart).not.toContain('role="img"');
+  });
+
+  it("discloses the source streams and duplicate dates without inventing prices", () => {
+    const analytics = {
+      input_issues: ["MULTIPLE_SOURCE_STREAMS", "DUPLICATE_MARKET_DATE"],
+      source_streams: [
+        {
+          provider: "Example",
+          provider_symbol: "EXM.X",
+          currency: "EUR",
+          observation_count: 2,
+          first_market_date: "2026-01-01",
+          last_market_date: "2026-01-03",
+        },
+        {
+          provider: "Other",
+          provider_symbol: "EXM",
+          currency: "EUR",
+          observation_count: 1,
+          first_market_date: "2026-01-03",
+          last_market_date: "2026-01-03",
+        },
+      ],
+      duplicate_market_dates: ["2026-01-03"],
+    } as PriceHistoryAnalytics;
+    const html = renderToStaticMarkup(
+      <HistorySourceReview analytics={analytics} />,
+    );
+    expect(html).toContain("Review conflicting history inputs");
+    expect(html).toContain("Example");
+    expect(html).toContain("EXM.X");
+    expect(html).toContain("2 recorded closes");
+    expect(html).toContain("Duplicate market dates");
+    expect(html).toContain("other provider records may exist");
+    expect(
+      renderToStaticMarkup(
+        <HistorySourceReview
+          analytics={
+            {
+              input_issues: ["MULTIPLE_SOURCE_STREAMS"],
+            } as PriceHistoryAnalytics
+          }
+        />,
+      ),
+    ).toBe("");
   });
 });

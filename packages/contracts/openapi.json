@@ -24633,6 +24633,14 @@
             ],
             "title": "Drawdown 52W"
           },
+          "duplicate_market_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Duplicate Market Dates",
+            "type": "array"
+          },
           "first_market_date": {
             "anyOf": [
               {
@@ -24738,6 +24746,13 @@
             "title": "Session Coverage",
             "type": "string"
           },
+          "source_streams": {
+            "items": {
+              "$ref": "#/components/schemas/PriceHistorySourceStreamRead"
+            },
+            "title": "Source Streams",
+            "type": "array"
+          },
           "status": {
             "enum": [
               "AVAILABLE",
@@ -24778,6 +24793,47 @@
           "correction_state"
         ],
         "title": "PriceHistoryAnalyticsRead",
+        "type": "object"
+      },
+      "PriceHistorySourceStreamRead": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "first_market_date": {
+            "format": "date",
+            "title": "First Market Date",
+            "type": "string"
+          },
+          "last_market_date": {
+            "format": "date",
+            "title": "Last Market Date",
+            "type": "string"
+          },
+          "observation_count": {
+            "title": "Observation Count",
+            "type": "integer"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_symbol": {
+            "title": "Provider Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "provider_symbol",
+          "currency",
+          "observation_count",
+          "first_market_date",
+          "last_market_date"
+        ],
+        "title": "PriceHistorySourceStreamRead",
         "type": "object"
       },
       "PriceObservationRead": {

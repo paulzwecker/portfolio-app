@@ -168,7 +168,10 @@ recent observations while analytics retain enough history for the full window.
 Analytics and the connected chart are unavailable when the selected inputs contain
 duplicate market dates, differing provider/symbol/currency streams, a currency that
 conflicts with the listing, or an unverified listing currency. The API reports the
-specific `input_issues`; recent observations remain inspectable in the UI, while the
+specific `input_issues`, affected duplicate dates and provider/symbol/currency
+stream spans from the selected calculation inputs. The Company view exposes these
+in a review disclosure; other provider records may exist. Recent observations
+remain inspectable in the UI, while the
 full calculation window can be requested through the market-data API. This
 conservative check does not certify consistent corporate-action adjustments or prove
 that all sessions are present. Old API responses without the field remain compatible.

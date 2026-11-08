@@ -196,6 +196,9 @@ History analytics and charts now fail closed on duplicate dates or incompatible
 provider, symbol or currency streams; source rows remain inspectable. Focused local
 checks pass, including responsive conflict-state coverage. Session completeness,
 source adjustment consistency and live ingestion remain unverified.
+The conflict state now identifies the selected source streams, their date spans and
+duplicate dates, allowing review even when the relevant rows are outside the recent
+observation list. This is local evidence, not a provider reconciliation approval.
 
 ## Immediate priorities and gates
 

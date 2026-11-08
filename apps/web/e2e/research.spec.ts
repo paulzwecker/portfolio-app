@@ -2780,10 +2780,40 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         json: incompatibleHistory
           ? marketData.map((market) => ({
               ...market,
+              availability: "PARTIAL",
+              history: market.history.map((observation, index) =>
+                index === 1
+                  ? {
+                      ...observation,
+                      provider: "Alternate provider",
+                      provider_symbol: "EXPL.A",
+                    }
+                  : observation,
+              ),
               analytics: {
                 ...market.analytics,
                 status: "UNAVAILABLE",
+                observation_count: 2,
                 input_issues: ["MULTIPLE_SOURCE_STREAMS"],
+                source_streams: [
+                  {
+                    provider: "Alternate provider",
+                    provider_symbol: "EXPL.A",
+                    currency: "USD",
+                    observation_count: 1,
+                    first_market_date: "2026-10-03",
+                    last_market_date: "2026-10-03",
+                  },
+                  {
+                    provider: "Fixture market source",
+                    provider_symbol: "NASDAQ:EXPL",
+                    currency: "USD",
+                    observation_count: 1,
+                    first_market_date: "2026-10-04",
+                    last_market_date: "2026-10-04",
+                  },
+                ],
+                duplicate_market_dates: [],
                 daily_return: null,
                 dma_20: null,
                 dma_50: null,
@@ -3410,7 +3440,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByRole("heading", { name: "Market history" }),
     ).toBeVisible();
-    await expect(page.getByText("AVAILABLE · FRESH")).toBeVisible();
+    await expect(
+      page.getByText("Market: AVAILABLE · Quote: FRESH"),
+    ).toBeVisible();
     await expect(page.getByText("200DMA")).toBeVisible();
     await expect(
       page.getByRole("img", {
@@ -3430,11 +3462,21 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await page.getByRole("tab", { name: "Historical Analysis" }).click();
     await expect(page.getByText("Price series needs review")).toBeVisible();
     await expect(
+      page.getByText("Market: PARTIAL · Quote: FRESH"),
+    ).toBeVisible();
+    await expect(
       page.getByText(/different provider, symbol or currency/),
     ).toBeVisible();
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
     ).toHaveCount(0);
+    await page.getByText("Review conflicting history inputs").click();
+    await expect(page.getByLabel("Price source streams")).toContainText(
+      "Alternate provider",
+    );
+    await expect(page.getByLabel("Price source streams")).toContainText(
+      "EXPL.A",
+    );
     await page.getByText(/Inspect price observations/).click();
     await expect(
       page.getByRole("cell", { name: /Fixture market source/ }).first(),

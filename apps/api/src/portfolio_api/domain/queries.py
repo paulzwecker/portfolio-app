@@ -1,6 +1,6 @@
 """Read views combine stored observations; no prices, FX or invented allocation weights."""
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, cast
@@ -818,6 +818,27 @@ def listing_market_data(
         row.currency != listing.currency for row in ordered_analytics
     ):
         input_issues.append("LISTING_CURRENCY_MISMATCH")
+    source_streams: list[s.PriceHistorySourceStreamRead] = []
+    duplicate_market_dates: list[date] = []
+    if input_issues:
+        dates_by_stream: dict[tuple[str, str, str], list[date]] = defaultdict(list)
+        for row in ordered_analytics:
+            dates_by_stream[(row.provider, row.provider_symbol, row.currency)].append(
+                row.market_date.astimezone(UTC).date()
+            )
+        source_streams = [
+            s.PriceHistorySourceStreamRead(
+                provider=provider,
+                provider_symbol=symbol,
+                currency=currency,
+                observation_count=len(dates),
+                first_market_date=min(dates),
+                last_market_date=max(dates),
+            )
+            for (provider, symbol, currency), dates in sorted(dates_by_stream.items())
+        ]
+        date_counts = Counter(row.market_date.astimezone(UTC).date() for row in ordered_analytics)
+        duplicate_market_dates = sorted(day for day, count in date_counts.items() if count > 1)
     values = calculate_price_history_metrics(
         [value for value in closes if value is not None] if not input_issues else []
     )
@@ -840,6 +861,8 @@ def listing_market_data(
         first_market_date=market_dates[0] if market_dates else None,
         max_calendar_gap_days=max(calendar_gaps, default=None),
         input_issues=input_issues,
+        source_streams=source_streams,
+        duplicate_market_dates=duplicate_market_dates,
         daily_return=_metric_decimal(values["daily_return"]),
         dma_20=_metric_decimal(values["dma_20"]),
         dma_50=_metric_decimal(values["dma_50"]),

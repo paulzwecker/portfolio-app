@@ -94,6 +94,9 @@ def test_listing_coverage_describes_sparse_dates_without_claiming_sessions(
         assert result.analytics.max_calendar_gap_days == 366
         assert result.analytics.session_coverage == "NOT_ASSESSED"
         assert result.analytics.input_issues == ["DUPLICATE_MARKET_DATE"]
+        assert result.analytics.duplicate_market_dates == [date(2025, 1, 1)]
+        assert len(result.analytics.source_streams) == 1
+        assert result.analytics.source_streams[0].observation_count == 3
         assert result.analytics.status == "UNAVAILABLE"
         assert result.analytics.daily_return is None
         one_date = queries.listing_market_data(
@@ -113,6 +116,7 @@ def test_listing_coverage_describes_sparse_dates_without_claiming_sessions(
         assert no_dates.analytics.distinct_market_dates == 0
         assert no_dates.analytics.first_market_date is None
         assert no_dates.analytics.max_calendar_gap_days is None
+        assert no_dates.analytics.source_streams == []
 
 
 @pytest.mark.integration
@@ -139,7 +143,7 @@ def test_listing_analytics_reject_incompatible_price_streams(
                     listing_id=listing_id,
                     price_kind="DAILY_CLOSE",
                     market_date=datetime(2026, 10, index + 2, tzinfo=UTC),
-                    recorded_at=datetime(2026, 10, 4, tzinfo=UTC),
+                    recorded_at=datetime(2026, 10, 4 + index, tzinfo=UTC),
                     split_adjusted_close=Decimal("100") + index * 30,
                     currency="EUR" if index == 1 and mode == "currency" else "USD",
                     provider="OTHER" if index == 1 and mode == "provider" else "SYNTHETIC",
@@ -154,13 +158,22 @@ def test_listing_analytics_reject_incompatible_price_streams(
         fetched_listing = session.get(Listing, listing_id)
         assert fetched_listing is not None
         result = queries.listing_market_data(
-            session, fetched_listing, known_at=datetime(2026, 10, 5, tzinfo=UTC)
+            session, fetched_listing, known_at=datetime(2026, 10, 6, tzinfo=UTC)
         )
         assert expected_issue in result.analytics.input_issues
         assert result.analytics.status == "UNAVAILABLE"
         assert result.analytics.daily_return is None
         assert result.analytics.trend_state is None
         assert len(result.history) == 2
+        assert sum(stream.observation_count for stream in result.analytics.source_streams) == 2
+        assert result.analytics.duplicate_market_dates == []
+        if mode in {"provider", "symbol"}:
+            assert len(result.analytics.source_streams) == 2
+            earlier = queries.listing_market_data(
+                session, fetched_listing, known_at=datetime(2026, 10, 4, 12, tzinfo=UTC)
+            )
+            assert earlier.analytics.input_issues == []
+            assert earlier.analytics.source_streams == []
 
 
 def stamp(day: int) -> datetime:

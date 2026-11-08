@@ -826,6 +826,15 @@ PriceHistoryInputIssue = Literal[
 ]
 
 
+class PriceHistorySourceStreamRead(Contract):
+    provider: str
+    provider_symbol: str
+    currency: str
+    observation_count: int
+    first_market_date: date
+    last_market_date: date
+
+
 class PriceHistoryAnalyticsRead(Contract):
     """Price metrics and descriptive coverage over canonical daily observations."""
 
@@ -838,6 +847,8 @@ class PriceHistoryAnalyticsRead(Contract):
     first_market_date: date | None = None
     max_calendar_gap_days: int | None = None
     input_issues: list[PriceHistoryInputIssue] = Field(default_factory=list)
+    source_streams: list[PriceHistorySourceStreamRead] = Field(default_factory=list)
+    duplicate_market_dates: list[date] = Field(default_factory=list)
     daily_return: FixedDecimal | None
     dma_20: FixedDecimal | None
     dma_50: FixedDecimal | None

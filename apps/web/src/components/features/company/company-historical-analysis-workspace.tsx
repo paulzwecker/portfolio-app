@@ -498,6 +498,64 @@ export function HistoryCoverageNotice({
   );
 }
 
+export function HistorySourceReview({
+  analytics,
+}: {
+  analytics: PriceHistoryAnalytics;
+}) {
+  const streams = analytics.source_streams ?? [];
+  const duplicates = analytics.duplicate_market_dates ?? [];
+  if (
+    !analytics.input_issues?.length ||
+    (!streams.length && !duplicates.length)
+  )
+    return null;
+  return (
+    <details className="rounded-md border bg-muted/30 px-3 py-2">
+      <summary className="cursor-pointer font-medium">
+        Review conflicting history inputs
+      </summary>
+      <div className="mt-2 space-y-2 text-muted-foreground">
+        <p>
+          Selected calculation inputs only; other provider records may exist.
+        </p>
+        {streams.length > 0 && (
+          <ul
+            className="max-h-60 space-y-2 overflow-y-auto"
+            aria-label="Price source streams"
+          >
+            {streams.map((stream) => (
+              <li
+                key={JSON.stringify([
+                  stream.provider,
+                  stream.provider_symbol,
+                  stream.currency,
+                ])}
+                className="break-words"
+              >
+                <span className="font-medium text-foreground">
+                  {stream.provider} · {stream.provider_symbol} ·{" "}
+                  {stream.currency}
+                </span>
+                <br />
+                {stream.observation_count} recorded closes ·{" "}
+                {dateOnly(stream.first_market_date)} –{" "}
+                {dateOnly(stream.last_market_date)}
+              </li>
+            ))}
+          </ul>
+        )}
+        {duplicates.length > 0 && (
+          <p className="break-words">
+            Duplicate market dates:{" "}
+            {duplicates.map((day) => dateOnly(day)).join(", ")}
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function MarketHistory({
   marketState,
   range,
@@ -557,14 +615,14 @@ function MarketHistory({
         )}
       </div>
       {selected && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,.75fr)]">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,.75fr)]">
           <ChartContainer
             title={`${selected.listing.ticker} price history`}
             description={`${observations.length} observations in the selected range · exact listing · split-adjusted close`}
             source={
               <StatusIndicator
                 status={selected.availability}
-                label={`${statusLabel(selected.availability)} · ${statusLabel(selected.freshness)}`}
+                label={`Market: ${statusLabel(selected.availability)} · Quote: ${statusLabel(selected.freshness)}`}
               />
             }
           >
@@ -595,9 +653,14 @@ function MarketHistory({
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Trend</span>
+                <span className="text-muted-foreground">Source trend</span>
                 <StatusIndicator status={selected.price_regime?.trend_state} />
               </div>
+              {selected.price_regime && (
+                <p className="text-muted-foreground">
+                  Source regime as of {dateTime(selected.price_regime.as_of)}
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-2 border-t pt-3">
                 {[
                   ["20DMA", selected.analytics.dma_20],
@@ -645,6 +708,7 @@ function MarketHistory({
                   : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations were examined.`}
               </p>
               <HistoryCoverageNotice analytics={selected.analytics} />
+              <HistorySourceReview analytics={selected.analytics} />
             </CardContent>
           </Card>
         </div>

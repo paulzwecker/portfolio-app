@@ -922,6 +922,23 @@ function isPriceHistoryAnalytics(v: unknown): v is PriceHistoryAnalytics {
           "LISTING_CURRENCY_UNVERIFIED",
         ].includes(issue as string),
       )) &&
+    (v.source_streams === undefined ||
+      array(
+        v.source_streams,
+        (stream) =>
+          isRecord(stream) &&
+          string(stream.provider) &&
+          string(stream.provider_symbol) &&
+          string(stream.currency) &&
+          Number.isInteger(stream.observation_count) &&
+          (stream.observation_count as number) > 0 &&
+          dateOnly(stream.first_market_date) &&
+          dateOnly(stream.last_market_date) &&
+          (stream.first_market_date as string) <=
+            (stream.last_market_date as string),
+      )) &&
+    (v.duplicate_market_dates === undefined ||
+      array(v.duplicate_market_dates, dateOnly)) &&
     [
       "daily_return",
       "dma_20",

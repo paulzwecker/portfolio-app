@@ -222,5 +222,14 @@ Thirteen focused Python cases (six isolated PostgreSQL), 57 web cases, strict ty
 contract generation and responsive browser checks pass for clean and conflicting
 states at 390 and 1440 px. The Execution Pace fallback independently refuses
 conflicted analytics; its 23 focused unit cases pass. No schema migration is introduced.
+The latest increment adds a Company Explorer review disclosure for conflicting
+provider/symbol/currency streams and duplicate dates from the actual calculation
+window, including sources outside the recent table. Selected-input scope is explicit;
+other provider observations are not represented. Thirteen focused Python cases
+(six isolated PostgreSQL), 58 web cases, types and generated contracts pass. A
+synthetic browser journey validates the disclosure at 390 and 1440 px.
+Synthetic desktop/mobile screenshots were visually reviewed; the chart panel now
+distinguishes market status from quote freshness and labels the independently sourced
+regime date. No private source values or screenshots were committed.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.
