@@ -19,6 +19,95 @@ export type EndingAccountDraft = {
 
 const amount = /^(?:0|[1-9]\d{0,17})(?:\.\d{1,10})?$/;
 
+export type EndingSession = {
+  file: LedgerReviewFile;
+  opening: OpeningAccountDraft[];
+  accounts: EndingAccountDraft[];
+};
+
+/** Preserve every source field by accepting only a packet reproducible by this form. */
+export function restoreEndingReview(
+  anchor: PortfolioLedgerAnchor,
+  text: string,
+): EndingSession {
+  const invalid =
+    "This review cannot be edited in the ending form. Use the private file workflow for its full contents.";
+  let packet: unknown;
+  try {
+    packet = JSON.parse(text);
+  } catch {
+    throw new Error(invalid);
+  }
+  if (
+    !isRecord(packet) ||
+    !isRecord(packet.ending_statement) ||
+    !Array.isArray(packet.ending_statement.accounts) ||
+    packet.ending_statement.accounts.length > 20
+  )
+    throw new Error(invalid);
+  const accounts: EndingAccountDraft[] = packet.ending_statement.accounts.map(
+    (value: unknown) => {
+      if (
+        !isRecord(value) ||
+        !isRecord(value.evidence) ||
+        typeof value.account_id !== "string" ||
+        typeof value.evidence.source_sha256 !== "string" ||
+        typeof value.evidence.source_record_id !== "string" ||
+        !Array.isArray(value.positions) ||
+        !Array.isArray(value.cash) ||
+        value.positions.length > 1000 ||
+        value.cash.length > 100
+      )
+        throw new Error(invalid);
+      const positions = value.positions.map((row: unknown) => {
+        if (
+          !isRecord(row) ||
+          typeof row.listing_id !== "string" ||
+          typeof row.quantity !== "string"
+        )
+          throw new Error(invalid);
+        return {
+          id: crypto.randomUUID(),
+          listingId: row.listing_id,
+          quantity: row.quantity,
+        };
+      });
+      const cash = value.cash.map((row: unknown) => {
+        if (
+          !isRecord(row) ||
+          typeof row.currency !== "string" ||
+          typeof row.balance !== "string"
+        )
+          throw new Error(invalid);
+        return {
+          id: crypto.randomUUID(),
+          currency: row.currency,
+          balance: row.balance,
+        };
+      });
+      return {
+        accountId: value.account_id,
+        sourceSha256: value.evidence.source_sha256,
+        sourceRecordId: value.evidence.source_record_id,
+        positions,
+        cash,
+      };
+    },
+  );
+  try {
+    const file = inspectLedgerFile(
+      JSON.stringify({ ...packet, ending_statement: null }),
+      "review-before-ending.json",
+    );
+    const opening = endingOpeningAccounts(anchor, file);
+    if (buildEndingReview(anchor, file, accounts, true).text !== text)
+      throw new Error(invalid);
+    return { file, opening, accounts };
+  } catch {
+    throw new Error(invalid);
+  }
+}
+
 /** Only guided packets that can be reproduced in full can be extended here. */
 export function endingOpeningAccounts(
   anchor: PortfolioLedgerAnchor,

@@ -18,6 +18,7 @@ export function LedgerEndingBuilder({
   anchor,
   base,
   opening,
+  initialAccounts,
   disabled,
   onChange,
   onReview,
@@ -26,19 +27,22 @@ export function LedgerEndingBuilder({
   anchor: PortfolioLedgerAnchor;
   base: LedgerReviewFile;
   opening: OpeningAccountDraft[];
+  initialAccounts?: EndingAccountDraft[];
   disabled: boolean;
   onChange: () => void;
   onReview: (file: LedgerReviewFile) => Promise<void>;
   onClose: () => void;
 }) {
-  const [accounts, setAccounts] = useState<EndingAccountDraft[]>(() =>
-    opening.map((account) => ({
-      accountId: account.id,
-      sourceSha256: "",
-      sourceRecordId: "",
-      positions: [],
-      cash: [],
-    })),
+  const [accounts, setAccounts] = useState<EndingAccountDraft[]>(
+    () =>
+      initialAccounts ??
+      opening.map((account) => ({
+        accountId: account.id,
+        sourceSha256: "",
+        sourceRecordId: "",
+        positions: [],
+        cash: [],
+      })),
   );
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,9 +64,11 @@ export function LedgerEndingBuilder({
       <p className="text-sm text-muted-foreground">
         Enter observed ending balances for every account at{" "}
         {dateTime(base.asOf)}. Each account requires statement evidence,
-        including accounts with no balances. Amounts start empty and must come
-        from the statements. The API compares them with the candidate
-        projection.
+        including accounts with no balances.{" "}
+        {initialAccounts
+          ? "Review the restored amounts against the statements."
+          : "Amounts start empty and must come from the statements."}{" "}
+        The API compares them with the candidate projection.
       </p>
       <form
         className="space-y-4"
@@ -88,7 +94,9 @@ export function LedgerEndingBuilder({
               className="min-w-0 space-y-4 rounded-lg border p-4"
             >
               <legend className="px-1 text-sm font-semibold">
-                Ending account {index + 1} · {opening[index].name}
+                Ending account {index + 1} ·{" "}
+                {opening.find((item) => item.id === account.accountId)?.name ??
+                  account.accountId}
               </legend>
               <p className="break-all text-xs text-muted-foreground">
                 Account ID {account.accountId}

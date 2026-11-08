@@ -10,16 +10,23 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.3 guided ledger onboarding — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                      |
 | Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; PR #29 merged; no new BUILD PR              |
-| Implementation              | Guided opening, resumable cash and independent ending reconciliation LOCAL_VERIFIED                              |
-| Next ready substantial task | Guided trade/dividend entry and restoration of ending observations                                               |
+| Implementation              | Guided opening, resumable cash and resumable ending reconciliation LOCAL_VERIFIED                                |
+| Next ready substantial task | Guided trade and dividend entry with exact source evidence                                                       |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
 
-The latest BUILD adds independently evidenced ending observations to reviewed
+The latest BUILD restores a revalidated guided ending packet for editing, including
+ending-only mismatches. It preserves the original source on discard, retains exact
+amounts and evidence, and requires renewed cutoff confirmation. Unsupported or
+lossy packets remain in the file workflow. Guided trade and dividend entry remains.
+Focused verification passed 123 web tests and 32 synthetic desktop/mobile browser
+cases, plus build, typecheck, lint and documentation checks.
+
+The prior BUILD adds independently evidenced ending observations to reviewed
 opening and supported cash packets. Each account starts with empty ending rows,
 explicit zeroes remain distinct from missing observations, and the existing API
 owns reconciliation. Discarding the ending draft returns the prior packet for
-revalidation. Trade/dividend entry and guided restoration of ending fields remain.
+revalidation. At that checkpoint trade/dividend entry and guided restoration remained.
 The preview also checks cutoff and ending timestamps at full fractional precision.
 Focused verification passed 120 web tests, 15 isolated PostgreSQL/API cases and
 28 synthetic desktop/mobile browser cases, plus build, typecheck and lint.

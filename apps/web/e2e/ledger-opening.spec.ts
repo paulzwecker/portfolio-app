@@ -727,6 +727,71 @@ test("independent ending observations reconcile and edits invalidate the result"
       .filter({ visible: true })
       .first(),
   ).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const savedPath = await (await downloadEvent).path();
+  if (!savedPath) throw new Error("Synthetic ending review download missing");
+  expect(await readFile(savedPath, "utf8")).toBe(calls[2].text);
+  await page
+    .getByRole("button", { name: "Discard ending statement", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(savedPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(page.getByText("Review blocked", { exact: true })).toBeVisible();
+  expect(calls[3].text).toBe(calls[2].text);
+  await page
+    .getByRole("button", {
+      name: "Edit supported ending statement",
+      exact: true,
+    })
+    .click();
+  await expect(confirmed).not.toBeChecked();
+  await expect(
+    page.getByLabel("Ending position 1 quantity", { exact: true }),
+  ).toHaveValue("2.5000000000");
+  await expect(
+    page.getByLabel("Ending cash 1 balance", { exact: true }),
+  ).toHaveValue("100.0000000000");
+  await expect(
+    page.getByLabel("Ending cash 2 balance", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("Statement record reference", { exact: true }),
+  ).toHaveValue("ending-observation");
+  await page
+    .getByRole("heading", { name: "Ending statement", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("ending-restored.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Discard ending statement", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(page.getByText("Review blocked", { exact: true })).toBeVisible();
+  expect(calls[4].text).toBe(calls[2].text);
+  await page
+    .getByRole("button", {
+      name: "Edit supported ending statement",
+      exact: true,
+    })
+    .click();
   await page
     .getByRole("button", { name: "Add ending cash", exact: true })
     .click();
@@ -753,11 +818,76 @@ test("independent ending observations reconcile and edits invalidate the result"
   await page
     .getByRole("button", { name: "Validate and reconcile", exact: true })
     .click();
+  await expect(page.getByText("Review blocked", { exact: true })).toBeVisible();
+  expect(calls[6].text).toBe(calls[2].text);
+  expect(calls.map((call) => call.path)).toEqual(Array(7).fill(previewPath));
+});
+
+test("a reconciled ending packet can be reloaded and edited without changing its evidence", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
   await expect(
     page.getByText("Opening balances reconciled", { exact: true }),
   ).toBeVisible();
-  expect(calls[4].text).toBe(calls[0].text);
-  expect(calls.map((call) => call.path)).toEqual(Array(5).fill(previewPath));
+  const packet = JSON.parse(calls[0].text);
+  packet.ending_statement = {
+    effective_at: packet.as_of,
+    accounts: [
+      {
+        account_id: packet.accounts[0].account_id,
+        evidence: { source_sha256: "d".repeat(64), source_record_id: "ending" },
+        positions: [
+          {
+            listing_id: ledgerAnchor.listings[0].listing_id,
+            quantity: "2.5000000000",
+          },
+        ],
+        cash: [
+          { currency: "USD", balance: "100.0000000000" },
+          { currency: "EUR", balance: "0" },
+        ],
+      },
+    ],
+  };
+  const text = JSON.stringify(packet);
+  await page.getByLabel("Ledger review JSON", { exact: true }).setInputFiles({
+    name: "ending.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(text),
+  });
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Edit supported ending statement",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByLabel("Ending cash 2 balance", { exact: true }),
+  ).toHaveValue("0");
+  const confirmed = page.getByLabel(
+    "I confirm these ending observations are effective at the review cutoff.",
+    { exact: true },
+  );
+  await expect(confirmed).not.toBeChecked();
+  await confirmed.check();
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(
+    page.getByText("Ending statement reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[2].text).toBe(text);
 });
 
 test("a reviewed cash draft can transition to ending observations without losing activity", async ({
@@ -956,6 +1086,54 @@ for (const mismatch of ["account", "activity", "duplicate account"] as const) {
     ).toHaveCount(0);
   });
 }
+
+test("activity failures cannot be treated as ending-only differences", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.route(`**${previewPath}`, async (route) => {
+    const packet = JSON.parse(route.request().postData() ?? "{}");
+    const report = ledgerReport();
+    report.contract_version = "portfolio-ledger-preview-v2";
+    report.projection_version = "settled-booking-v2";
+    report.as_of = packet.as_of;
+    report.status = "BLOCKED";
+    report.ending_status = "MISMATCH";
+    report.ending_statement_at = packet.as_of;
+    report.accounts[0].account_id = packet.accounts[0].account_id;
+    report.ending_reconciliation = report.ending_reconciliation.map((row) => ({
+      ...row,
+      account_id: row.account_id ? packet.accounts[0].account_id : null,
+    }));
+    report.issues = [
+      {
+        code: "NEGATIVE_CASH",
+        activity_id: null,
+        account_id: null,
+        asset_key: "USD",
+      },
+      {
+        code: "ENDING_MISMATCH",
+        activity_id: null,
+        account_id: null,
+        asset_key: "EUR",
+      },
+    ];
+    expect(isPortfolioLedgerPreview(report)).toBe(true);
+    await route.fulfill({ json: report });
+  });
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(page.getByText("Review blocked", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Edit supported ending statement",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
 
 test("unsupported reviewed activity stays available in its original file", async ({
   page,

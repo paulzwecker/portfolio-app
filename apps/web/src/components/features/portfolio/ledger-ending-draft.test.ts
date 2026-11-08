@@ -1,4 +1,6 @@
 import { expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { ledgerAnchor, ledgerAccountId } from "../../../../e2e/fixtures/ledger";
 import {
   buildOpeningReview,
@@ -11,8 +13,10 @@ import {
 import {
   buildEndingReview,
   endingOpeningAccounts,
+  restoreEndingReview,
   type EndingAccountDraft,
 } from "./ledger-ending-draft";
+import { LedgerEndingBuilder } from "./ledger-ending-builder";
 
 const opening: OpeningAccountDraft = {
   id: ledgerAccountId,
@@ -70,6 +74,120 @@ function ending(): EndingAccountDraft {
     ],
   };
 }
+
+it("restores ending evidence, exact zero and high precision without changing the packet", () => {
+  const draft = ending();
+  const original = buildEndingReview(ledgerAnchor, cashBase, [draft], true);
+  const restored = restoreEndingReview(ledgerAnchor, original.text);
+  expect(restored.file.text).toBe(cashBase.text);
+  expect(restored.opening[0].id).toBe(ledgerAccountId);
+  expect(restored.accounts[0]).toMatchObject({
+    accountId: ledgerAccountId,
+    sourceSha256: draft.sourceSha256,
+    sourceRecordId: draft.sourceRecordId,
+    positions: [
+      {
+        listingId: draft.positions[0].listingId,
+        quantity: "9007199254740993.1234567890",
+      },
+    ],
+    cash: [
+      { currency: "USD", balance: "101.2500000000" },
+      { currency: "EUR", balance: "0" },
+    ],
+  });
+  expect(
+    buildEndingReview(ledgerAnchor, restored.file, restored.accounts, true)
+      .text,
+  ).toBe(original.text);
+});
+
+it("fails closed for stale, lossy, incomplete or unsupported ending packets", () => {
+  const text = buildEndingReview(ledgerAnchor, cashBase, [ending()], true).text;
+  type Packet = {
+    ending_statement: {
+      effective_at: string;
+      accounts: {
+        evidence: { source_sha256: string };
+        positions: { quantity: string | number; extra?: string }[];
+        cash: { currency: string; balance: string | number }[];
+      }[];
+    };
+    activity: { kind: string }[];
+  };
+  const altered = (change: (value: Packet) => void) => {
+    const value = JSON.parse(text) as Packet;
+    change(value);
+    return JSON.stringify(value);
+  };
+  for (const value of [
+    "{bad",
+    text + " ",
+    altered((v) => {
+      v.ending_statement.accounts[0].positions[0].quantity = 9007199254740992;
+    }),
+    altered((v) => {
+      v.ending_statement.accounts[0].positions[0].extra = "source detail";
+    }),
+    altered((v) => {
+      v.ending_statement.accounts[0].cash[0].balance = 0;
+    }),
+    altered((v) => {
+      v.ending_statement.accounts = [];
+    }),
+    altered((v) => {
+      v.ending_statement.effective_at = "2026-01-31T23:59:58+01:00";
+    }),
+    altered((v) => {
+      v.activity[0].kind = "DIVIDEND";
+    }),
+  ])
+    expect(() => restoreEndingReview(ledgerAnchor, value)).toThrow(
+      /cannot be edited/,
+    );
+  expect(() =>
+    restoreEndingReview(
+      { ...ledgerAnchor, anchor_sha256: "f".repeat(64) },
+      text,
+    ),
+  ).toThrow(/cannot be edited/);
+});
+
+it("labels reordered ending accounts by identity", () => {
+  const other = {
+    ...opening,
+    id: "77777777-7777-4777-8777-777777777777",
+    name: "Second account",
+    sourceRecordId: "other-opening",
+  };
+  const multi = buildOpeningReview(ledgerAnchor, [opening, other], true);
+  const second = {
+    ...ending(),
+    accountId: other.id,
+    sourceRecordId: "other-ending",
+  };
+  const text = buildEndingReview(
+    ledgerAnchor,
+    multi,
+    [second, ending()],
+    true,
+  ).text;
+  const restored = restoreEndingReview(ledgerAnchor, text);
+  const markup = renderToStaticMarkup(
+    createElement(LedgerEndingBuilder, {
+      anchor: ledgerAnchor,
+      base: restored.file,
+      opening: restored.opening,
+      initialAccounts: restored.accounts,
+      disabled: false,
+      onChange: () => {},
+      onReview: async () => {},
+      onClose: () => {},
+    }),
+  );
+  expect(markup).toContain("Ending account 1 · Second account");
+  expect(markup).toContain("Ending account 2 · Synthetic account");
+});
 
 it("adds independently observed exact ending rows without changing opening, activity or cutoff", () => {
   const draft = ending();

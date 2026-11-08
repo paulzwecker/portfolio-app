@@ -29,8 +29,30 @@ import {
   type CashActivitySession,
 } from "./ledger-cash-activity";
 import { LedgerEndingBuilder } from "./ledger-ending-builder";
-import { endingOpeningAccounts } from "./ledger-ending-draft";
+import {
+  endingOpeningAccounts,
+  restoreEndingReview,
+  type EndingAccountDraft,
+} from "./ledger-ending-draft";
 import type { OpeningAccountDraft } from "./ledger-opening-draft";
+
+function matchesReviewSource(
+  opening: OpeningAccountDraft[],
+  file: LedgerReviewFile,
+  report: PortfolioLedgerPreview,
+): boolean {
+  const activity: unknown = JSON.parse(file.text).activity;
+  const accounts = new Set(
+    report.accounts.map((account) => account.account_id.toLowerCase()),
+  );
+  return (
+    Array.isArray(activity) &&
+    activity.length === report.activity_count &&
+    report.accounts.length === opening.length &&
+    accounts.size === opening.length &&
+    opening.every((account) => accounts.has(account.id.toLowerCase()))
+  );
+}
 
 export function PortfolioLedgerWorkspace({
   portfolioId,
@@ -52,6 +74,8 @@ export function PortfolioLedgerWorkspace({
   const [endingBase, setEndingBase] = useState<{
     file: LedgerReviewFile;
     opening: OpeningAccountDraft[];
+    initialAccounts?: EndingAccountDraft[];
+    cancelFile?: LedgerReviewFile;
   } | null>(null);
   const [review, setReview] = useState<{
     report: PortfolioLedgerPreview;
@@ -313,11 +337,12 @@ export function PortfolioLedgerWorkspace({
                   anchor={verified}
                   base={endingBase.file}
                   opening={endingBase.opening}
+                  initialAccounts={endingBase.initialAccounts}
                   disabled={pending || loadingFile}
                   onChange={() => clear(false, true)}
                   onReview={runPreview}
                   onClose={() => {
-                    const previous = endingBase.file;
+                    const previous = endingBase.cancelFile ?? endingBase.file;
                     clear();
                     setFile(previous);
                   }}
@@ -465,22 +490,11 @@ export function PortfolioLedgerWorkspace({
                       verified,
                       visibleReview.file,
                     );
-                    const activity: unknown = JSON.parse(
-                      visibleReview.file.text,
-                    ).activity;
-                    const projectedAccounts = new Set(
-                      visibleReview.report.accounts.map((account) =>
-                        account.account_id.toLowerCase(),
-                      ),
-                    );
                     if (
-                      !Array.isArray(activity) ||
-                      activity.length !== visibleReview.report.activity_count ||
-                      visibleReview.report.accounts.length !== opening.length ||
-                      projectedAccounts.size !== opening.length ||
-                      opening.some(
-                        (account) =>
-                          !projectedAccounts.has(account.id.toLowerCase()),
+                      !matchesReviewSource(
+                        opening,
+                        visibleReview.file,
+                        visibleReview.report,
                       )
                     )
                       throw new Error(
@@ -499,6 +513,54 @@ export function PortfolioLedgerWorkspace({
                 }}
               >
                 Add ending statement
+              </Button>
+            )}
+          {verified &&
+            !endingBase &&
+            !activityBase &&
+            (visibleReview.report.status === "ENDING_RECONCILED" ||
+              (visibleReview.report.status === "BLOCKED" &&
+                visibleReview.report.ending_status === "MISMATCH" &&
+                visibleReview.report.issues.every((issue) =>
+                  ["ENDING_MISMATCH", "ENDING_ACCOUNT_MISSING"].includes(
+                    issue.code,
+                  ),
+                ))) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  try {
+                    const restored = restoreEndingReview(
+                      verified,
+                      visibleReview.file.text,
+                    );
+                    if (
+                      !matchesReviewSource(
+                        restored.opening,
+                        visibleReview.file,
+                        visibleReview.report,
+                      )
+                    )
+                      throw new Error(
+                        "The review does not match the source activity and accounts.",
+                      );
+                    setError(null);
+                    setEndingBase({
+                      file: restored.file,
+                      opening: restored.opening,
+                      initialAccounts: restored.accounts,
+                      cancelFile: visibleReview.file,
+                    });
+                  } catch (failure) {
+                    setError(
+                      failure instanceof Error
+                        ? failure.message
+                        : "This review cannot use the guided ending form.",
+                    );
+                  }
+                }}
+              >
+                Edit supported ending statement
               </Button>
             )}
           <PortfolioLedgerResults
