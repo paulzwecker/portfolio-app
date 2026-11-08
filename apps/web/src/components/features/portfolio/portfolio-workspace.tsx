@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { AttentionCenter } from "@/components/attention-center";
 import { PendingOrError } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
@@ -260,6 +261,12 @@ export function PortfolioWorkspace({ id }: { id: string }) {
         >
           Performance
         </a>
+        <Link
+          className="rounded-md px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          href="/portfolio/ledger"
+        >
+          Ledger review
+        </Link>
       </nav>
 
       <PortfolioOverviewSection overview={view} rows={rows} />

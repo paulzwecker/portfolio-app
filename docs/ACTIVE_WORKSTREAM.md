@@ -12,13 +12,21 @@
 
 ## Current ledger increment
 
-Ending-statement reconciliation passes 79 focused checks (67 unit and 12 isolated
+`bf9f184` ending-statement reconciliation passes 79 focused checks (67 unit and 12 isolated
 PostgreSQL/API cases). Account and total comparisons preserve missing/zero, exact
 decimals, evidence and ordering. Missing empty accounts block; matching portfolio
 totals cannot conceal account differences. Golden opening-only v1 hashes retain
 compatibility. Existing canonical state and read-only pool protection are verified.
-Types, lint and generated contracts pass. The private-file Portfolio review UI and
-actual-API desktop/mobile verification are in progress.
+The private-file Portfolio UI and proxy pass 71 focused web cases. Sixteen fixture
+checks retain read-only SQL and block every non-read request except the exact
+fixture portfolio's read-only preview. Four actual-API desktop/mobile journeys and
+repeat screenshot inspection verify matching/missing zero balances, account scope,
+evidence/focus, stale files and cancellation. Protected-state hashes match. Independent
+review corrected uppercase UUID metadata and contradictory ready-status handling.
+Source financial text is forwarded verbatim, with bounded UTF-8 and existing
+origin/auth controls. Types, lint, formatting, generated contracts and docs pass.
+Evidence stays in ignored `.cache/c2.3-ledger-review*`. Normal fixture shutdown
+removes only each test-owned schema. This is LOCAL_VERIFIED with synthetic data.
 
 `43d1ed8` adds the versioned settled-booking core. The read-only API increment is
 LOCAL_VERIFIED through 40 unit, nine isolated PostgreSQL/API and 18 existing contract
@@ -35,7 +43,7 @@ Trade cash uses observed gross amounts plus explicit fees/taxes, in listing
 currency. Intermediate negative balances remain blocked after later recovery.
 `OPENING_RECONCILED` describes the supported candidate preview. Source authenticity,
 account allocation, settled-balance basis and cutover need operator review.
-Persistence, ending-statement reconciliation, review UI, cost lots and performance
+Persistence, acceptance/cutover, cost lots and performance
 remain outstanding. Commands and scope are in [the ledger contract](portfolio-ledger.md).
 No production operation occurred. Local activation/write flags remain disabled.
 
@@ -220,10 +228,10 @@ are preserved. Commands are in the
 
 ## Next build steps
 
-1. Continue C2.3 with ending-statement reconciliation and a Portfolio ledger review
-   UI using the source-bound preview. Make exact account/listing/currency differences
-   and unsupported coverage actionable. Follow with durable candidate/acceptance
-   receipts and a reviewed dated cutover. Retain the current snapshot and targets.
+1. Continue C2.3 with durable candidate/review receipts and an explicit, idempotent
+   acceptance/correction workflow in isolated tests. Reuse source-bound previews,
+   account/period reconciliation and existing guards. Preserve canonical snapshots
+   and independent targets while cutover remains a separately reviewed decision.
    Production schema/ownership/import changes remain owner-gated. This is the next
    high-value independent capability while #25 review and data activation wait.
    C3.1 real CIK evidence, international gaps and hosted validation stay outstanding;

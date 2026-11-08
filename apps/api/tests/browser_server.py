@@ -135,7 +135,11 @@ def fixture_application(
         async def read_only_fixture(
             request: Request, call_next: RequestResponseEndpoint
         ) -> Response:
-            if request.method not in {"GET", "HEAD"}:
+            ledger_preview = (
+                request.method == "POST"
+                and request.url.path == f"/v1/portfolios/{metadata['portfolio_id']}/ledger/preview"
+            )
+            if request.method not in {"GET", "HEAD"} and not ledger_preview:
                 return JSONResponse(
                     {"detail": "This fixture supports read-only inspection."}, status_code=405
                 )

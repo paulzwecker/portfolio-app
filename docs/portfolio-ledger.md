@@ -86,6 +86,21 @@ Both endpoints run inside a PostgreSQL read-only, repeatable-read transaction.
 The psycopg read-only setting is restored to its exact prior value when returning
 the connection to the pool. Existing API authentication and database guards apply.
 
+## Portfolio review screen
+
+Open Portfolio → Ledger review (`/portfolio/ledger`). Download the private anchor,
+prepare the typed ledger JSON and choose it using the file control. Files stay in
+page memory until explicit validation. The browser forwards the original financial
+text to the API, with a 1 MB UTF-8 limit and existing authentication/origin controls.
+UUID display metadata is normalized separately. Clearing/changing files cancels
+pending requests and removes previous results.
+
+The screen distinguishes opening/ending matches, blocked activity and missing
+observations. Filter by comparison, account and differences, inspect exact native
+values and source/hash evidence, or download the private report. Missing rows retain
+their explicit state beside zero balances. Account differences remain visible even
+when portfolio totals match. A successful review remains a candidate result.
+
 With the local API connected to an approved read target, the private-file workflow is
 
 ```powershell
@@ -101,8 +116,8 @@ Invoke-WebRequest "$ledgerApi/preview" -Method Post -ContentType 'application/js
 ## Remaining acceptance gates
 
 This slice has no ledger persistence, acceptance, cutover or current-holdings switch.
-It provides candidate balances and opening/ending comparisons. A review UI,
-durable revisions/receipts and transaction correction
+It provides candidate balances, opening/ending comparisons and a private-file review UI.
+Durable revisions/receipts and transaction correction
 semantics remain follow-up work. Cost lots, gains, TWR/XIRR, dividends, transfers,
 executed FX and broker imports require their documented contracts and evidence.
 Opening quantities never establish historical cost or capital flows.

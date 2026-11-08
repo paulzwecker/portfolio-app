@@ -32,7 +32,8 @@ const mainItems = [
     href: "/portfolio",
     label: "Portfolio",
     icon: BriefcaseBusiness,
-    match: (path: string) => path === "/portfolio",
+    match: (path: string) =>
+      path === "/portfolio" || path === "/portfolio/ledger",
   },
   {
     href: "/decisions",

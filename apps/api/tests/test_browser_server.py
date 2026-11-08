@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import cast
@@ -143,11 +144,62 @@ def test_actual_browser_fixture_import_and_read_only_application(
             )
             assert client.get("/v1/recurring-operations/status").status_code == 200
             assert client.post("/v1/ranking-runs", json={}).status_code == 405
+            ledger_path = f"/v1/portfolios/{metadata['portfolio_id']}/ledger"
+            anchor = client.get(f"{ledger_path}/anchor").json()
+            account_id = "11111111-1111-4111-8111-111111111111"
+            at = datetime.now(UTC).isoformat()
+            positions = anchor["snapshot"]["positions"]
+            cash = anchor["snapshot"]["cash_positions"]
+            opening = {
+                "account_id": account_id,
+                "name": "Synthetic unallocated opening",
+                "kind": "UNALLOCATED_OPENING",
+                "broker_name": None,
+                "evidence": {"source_sha256": "d" * 64, "source_record_id": "opening"},
+                "positions": positions,
+                "cash": cash,
+            }
+            packet = {
+                "contract_version": "portfolio-ledger-preview-v1",
+                "anchor_snapshot_id": anchor["snapshot"]["id"],
+                "anchor_sha256": anchor["anchor_sha256"],
+                "as_of": at,
+                "accounts": [opening],
+                "activity": [],
+                "ending_statement": {
+                    "effective_at": at,
+                    "accounts": [
+                        {
+                            "account_id": account_id,
+                            "evidence": {"source_sha256": "e" * 64, "source_record_id": "ending"},
+                            "positions": positions,
+                            "cash": cash,
+                        }
+                    ],
+                },
+            }
+            result = client.post(f"{ledger_path}/preview", json=packet)
+            assert result.status_code == 200 and result.json()["status"] == "ENDING_RECONCILED"
+            assert client.delete(f"{ledger_path}/preview").status_code == 405
+            assert (
+                client.post(
+                    "/v1/portfolios/11111111-1111-4111-8111-111111111111/ledger/preview",
+                    json=packet,
+                ).status_code
+                == 405
+            )
+            assert (
+                client.post(
+                    f"/v1/portfolios/{metadata['portfolio_id']}/holding-snapshots", json={}
+                ).status_code
+                == 405
+            )
             assert (
                 client.get("/__test/fixture").json()["protected_state_sha256"]
                 == initial["protected_state_sha256"]
             )
         with reader.begin() as connection, pytest.raises(DatabaseReadOnlyError):
+            assert connection.scalar(text("SHOW transaction_read_only")) == "on"
             connection.execute(text("UPDATE portfolios SET name = 'forbidden'"))
     finally:
         reader.dispose()

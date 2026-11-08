@@ -80,6 +80,17 @@ export type Company = components["schemas"]["CompanyRead"];
 export type Portfolio = components["schemas"]["PortfolioRead"];
 export type Overview = components["schemas"]["PortfolioOverview"];
 export type HoldingSnapshot = components["schemas"]["SnapshotRead"];
+export type PortfolioLedgerAnchor =
+  components["schemas"]["PortfolioLedgerAnchorRead"];
+export type PortfolioLedgerPreview =
+  components["schemas"]["PortfolioLedgerPreviewRead"] & {
+    consumed_listings: NonNullable<
+      components["schemas"]["PortfolioLedgerPreviewRead"]["consumed_listings"]
+    >;
+    ending_reconciliation: NonNullable<
+      components["schemas"]["PortfolioLedgerPreviewRead"]["ending_reconciliation"]
+    >;
+  };
 export type CompanyDetail = components["schemas"]["CompanyDetail"];
 export type CompanyPortfolioContext =
   components["schemas"]["CompanyPortfolioContext"];
@@ -2370,6 +2381,211 @@ function isSnapshot(v: unknown): v is HoldingSnapshot | null {
 }
 export function isSnapshotRead(v: unknown): v is HoldingSnapshot {
   return isRecord(v) && isSnapshot(v);
+}
+
+function isLedgerListing(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    uuid(value.listing_id) &&
+    uuid(value.security_id) &&
+    nullableUuid(value.company_id) &&
+    string(value.ticker) &&
+    string(value.venue) &&
+    string(value.currency) &&
+    /^[A-Z]{3}$/.test(value.currency as string) &&
+    ["COMMON_STOCK", "ADR", "PREFERRED", "ETF"].includes(
+      value.security_type as string,
+    ) &&
+    nullableString(value.identity_source_ref)
+  );
+}
+
+export function isPortfolioLedgerAnchor(
+  value: unknown,
+): value is PortfolioLedgerAnchor {
+  if (
+    !isRecord(value) ||
+    !uuid(value.portfolio_id) ||
+    !isSnapshotRead(value.snapshot) ||
+    value.snapshot.portfolio_id !== value.portfolio_id ||
+    value.snapshot.completeness !== "COMPLETE" ||
+    value.snapshot.positions.some((p) => p.quantity === null) ||
+    value.snapshot.cash_positions.some((p) => p.balance === null) ||
+    !string(value.anchor_sha256) ||
+    !/^[a-f0-9]{64}$/.test(value.anchor_sha256 as string) ||
+    !array(value.listings, isLedgerListing)
+  )
+    return false;
+  const ids = (value.listings as { listing_id: string }[]).map(
+    (p) => p.listing_id,
+  );
+  return (
+    new Set(ids).size === ids.length &&
+    ids.length === value.snapshot.positions.length &&
+    value.snapshot.positions.every((p) => ids.includes(p.listing_id))
+  );
+}
+
+export function isPortfolioLedgerPreview(
+  value: unknown,
+): value is PortfolioLedgerPreview {
+  if (
+    !isRecord(value) ||
+    value.contract_version !== "portfolio-ledger-preview-v1" ||
+    value.projection_version !== "settled-booking-v1" ||
+    value.preview_only !== true ||
+    !["OPENING_RECONCILED", "ENDING_RECONCILED", "BLOCKED"].includes(
+      value.status as string,
+    ) ||
+    !uuid(value.portfolio_id) ||
+    !uuid(value.anchor_snapshot_id) ||
+    !timestamp(value.anchor_recorded_at) ||
+    !timestamp(value.as_of) ||
+    ![value.anchor_sha256, value.input_sha256].every(
+      (digest) => string(digest) && /^[a-f0-9]{64}$/.test(digest as string),
+    ) ||
+    !Number.isInteger(value.activity_count) ||
+    Number(value.activity_count) < 0 ||
+    Number(value.activity_count) > 1000 ||
+    !array(value.consumed_listings, isLedgerListing) ||
+    !array(
+      value.positions,
+      (p) => isRecord(p) && uuid(p.listing_id) && signedDecimal(p.quantity),
+    ) ||
+    !array(
+      value.cash,
+      (p) =>
+        isRecord(p) &&
+        string(p.currency) &&
+        /^[A-Z]{3}$/.test(p.currency as string) &&
+        signedDecimal(p.balance),
+    ) ||
+    !array(
+      value.accounts,
+      (a) =>
+        isRecord(a) &&
+        uuid(a.account_id) &&
+        array(
+          a.positions,
+          (p) => isRecord(p) && uuid(p.listing_id) && signedDecimal(p.quantity),
+        ) &&
+        array(
+          a.cash,
+          (p) =>
+            isRecord(p) &&
+            string(p.currency) &&
+            /^[A-Z]{3}$/.test(p.currency as string) &&
+            signedDecimal(p.balance),
+        ),
+    ) ||
+    !array(
+      value.opening_reconciliation,
+      (r) =>
+        isRecord(r) &&
+        ["POSITION", "CASH"].includes(r.domain as string) &&
+        string(r.key) &&
+        nullableSignedDecimal(r.observed) &&
+        nullableSignedDecimal(r.opening) &&
+        nullableSignedDecimal(r.difference) &&
+        ["MATCH", "MISSING_OPENING", "EXTRA_OPENING", "DIFFERENCE"].includes(
+          r.status as string,
+        ),
+    ) ||
+    !array(
+      value.issues,
+      (issue) =>
+        isRecord(issue) &&
+        [
+          "OPENING_MISMATCH",
+          "NEGATIVE_POSITION",
+          "NEGATIVE_CASH",
+          "BALANCE_OUT_OF_RANGE",
+          "ENDING_MISMATCH",
+          "ENDING_ACCOUNT_MISSING",
+        ].includes(issue.code as string) &&
+        nullableUuid(issue.activity_id) &&
+        nullableUuid(issue.account_id) &&
+        nullableString(issue.asset_key),
+    ) ||
+    !["NOT_PROVIDED", "MATCH", "MISMATCH", "NOT_EVALUATED"].includes(
+      value.ending_status as string,
+    ) ||
+    !(
+      value.ending_statement_at === null || timestamp(value.ending_statement_at)
+    ) ||
+    !array(
+      value.ending_reconciliation,
+      (r) =>
+        isRecord(r) &&
+        nullableUuid(r.account_id) &&
+        ["POSITION", "CASH"].includes(r.domain as string) &&
+        string(r.key) &&
+        nullableSignedDecimal(r.projected) &&
+        nullableSignedDecimal(r.observed) &&
+        nullableSignedDecimal(r.difference) &&
+        [
+          "MATCH",
+          "MISSING_OBSERVATION",
+          "EXTRA_OBSERVATION",
+          "DIFFERENCE",
+        ].includes(r.status as string),
+    )
+  )
+    return false;
+  const issues = value.issues as unknown[];
+  const openingRows = value.opening_reconciliation as {
+    domain: string;
+    key: string;
+    status: string;
+  }[];
+  const endingRows = value.ending_reconciliation as {
+    domain: string;
+    key: string;
+    status: string;
+  }[];
+  const listings = value.consumed_listings as { listing_id: string }[];
+  const ids = new Set(listings.map((listing) => listing.listing_id));
+  if (
+    ids.size !== listings.length ||
+    [...openingRows, ...endingRows].some((row) =>
+      row.domain === "POSITION"
+        ? !ids.has(row.key)
+        : !/^[A-Z]{3}$/.test(row.key),
+    )
+  )
+    return false;
+  const hasIssues = issues.length > 0;
+  if ((value.status === "BLOCKED") !== hasIssues) return false;
+  if (
+    value.status !== "BLOCKED" &&
+    openingRows.some((row) => row.status !== "MATCH")
+  )
+    return false;
+  if (
+    value.ending_status === "MATCH" &&
+    endingRows.some((row) => row.status !== "MATCH")
+  )
+    return false;
+  if (value.ending_status === "MISMATCH" && value.status !== "BLOCKED")
+    return false;
+  if (
+    value.ending_status === "NOT_EVALUATED" &&
+    (value.status !== "BLOCKED" || endingRows.length !== 0)
+  )
+    return false;
+  if (value.status === "ENDING_RECONCILED" && value.ending_status !== "MATCH")
+    return false;
+  if (
+    value.status === "OPENING_RECONCILED" &&
+    value.ending_status !== "NOT_PROVIDED"
+  )
+    return false;
+  if (value.ending_status === "NOT_PROVIDED")
+    return (
+      value.ending_statement_at === null &&
+      (value.ending_reconciliation as unknown[]).length === 0
+    );
+  return timestamp(value.ending_statement_at);
 }
 function isTarget(v: unknown) {
   return (

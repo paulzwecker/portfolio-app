@@ -87,7 +87,10 @@ The browser fixture requires a loopback PostgreSQL `_test` database and verifies
 its live identity before creating a random test-owned schema. Portfolio scenarios
 use synthetic provider payloads through the real importer. FastAPI serves those
 records with PostgreSQL read-only transactions, the existing SQL write guard and
-GET/HEAD-only HTTP access. Operator application settings and credentials are isolated.
+GET/HEAD access plus one exact read-only ledger-preview POST for the fixture
+portfolio. Every other non-read path remains blocked. The ledger endpoint retains
+its dedicated read-only transaction and the fixture's SQL guard. Operator
+application settings and credentials are isolated.
 
 In a dedicated PowerShell terminal with `TEST_DATABASE_URL` configured securely,
 run the fixture from the repository root. Select `unpriced`, `fx-outage` or `valued`.
@@ -110,6 +113,12 @@ $env:WEB_ACCESS_USERNAME=''
 $env:WEB_ACCESS_PASSWORD=''
 node scripts/browser.mjs test portfolio-live-data.spec.ts --workers=1
 ```
+
+The candidate ledger journey uses the same environment and an `unpriced` fixture.
+Run `node scripts/browser.mjs test portfolio-ledger.spec.ts --workers=1` to verify
+private-file preview, exact ending comparisons, missing zero rows, evidence/focus,
+source identity and canceled requests. Its preview POSTs perform read/compute only.
+Protected-state hashes must match throughout.
 
 The test checks the fixture identity, exact decimal readback, proxy routing,
 Portfolio → Operations investigation and unchanged holdings/targets/table counts.
