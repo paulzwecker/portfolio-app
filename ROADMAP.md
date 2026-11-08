@@ -8,10 +8,10 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                                                                             |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C1.3 read-only native DCF sensitivity — BUILD. [Handoff](docs/financial-models.md#current-build-checkpoint)                                                                                               |
+| Active checkpoint           | C1.3 authenticated proxy-path verification — BUILD. [Handoff](docs/financial-models.md#current-build-checkpoint)                                                                                          |
 | Branch / PR                 | `codex/native-dcf-sensitivity`, from merged main `395f842`. Local BUILD branch                                                                                                                            |
-| Implementation              | C1.3 read-only sensitivity API and responsive workspace LOCAL_VERIFIED with fictional inputs and isolated PostgreSQL                                                                                      |
-| Next ready substantial task | Integrate completed data/ledger, CI coverage and this slice after owner-reviewed PRs merge; run comprehensive checks once on that combined baseline                                                       |
+| Implementation              | C1.3 proxy correction LOCAL_VERIFIED; authenticated production-mode request path in progress                                                                                                              |
+| Next ready substantial task | Complete isolated authenticated Next.js → HTTPS fixture verification, then preserve this slice for combined integration                                                                                   |
 | Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await review/merge. C1 investment acceptance remains separate |
 | Integration rule            | Keep completed PRs stable. Reconcile this independent slice and the preserved CI correction with latest main at the integration gate                                                                      |
 
@@ -21,10 +21,17 @@ The independent PostgreSQL test-classification correction is preserved on
 handoff in that branch's testing reference. This branch adds a user-facing C1
 review capability independently of the pending schema/data work.
 
-Final read-only GitHub inspection still reports both PRs open at their frozen
-heads. PR #25 has a base conflict and needs a scoped integration repair before
-owner merge. Preserve its C2 receipt evidence and main's capability ledger when
-resolving it. PR #26 remains mergeable. Feature expansion belongs on BUILD branches.
+PR #25's conflict repair is complete at `7d4ce2e`, passing all three CI jobs and
+Vercel Preview. PRs #25/#26 remain open and stable for owner review. Their actual
+merge state was rechecked before resuming this independent branch.
+
+Normal-entrypoint review found three missing sensitivity proxy pieces: allowlist,
+base-revision query forwarding and response validation. Browser request mocks had
+hidden the defect. The targeted correction validates the exact model/revision,
+rejects missing/ambiguous base IDs and preserves sanitized conflicts, authentication,
+HTTPS and the separate server token. Sixty-six focused proxy/access/presentation
+checks pass. Next prove the authenticated request path against a synthetic HTTPS
+fixture using process-only credentials and a trusted ephemeral test certificate.
 
 C1.3's API calculates nine hypothetical fair-value combinations with the existing
 UFCF engine and accepted inputs. It requires an exact current revision, preserves

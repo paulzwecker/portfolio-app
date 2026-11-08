@@ -327,12 +327,17 @@ in the shared fetch hook makes revision conflicts actionable while preserving
 its existing default behavior. The panel keeps hypothetical fair values separate
 from the existing acceptance workflow.
 
-Next resolve PR #25's reported base conflict as a scoped integration repair before
-owner merge. Keep the completed feature scopes stable for review. Integrate this
-slice and the CI correction after the pending PRs merge, preserving each ledger.
-Run comprehensive checks and production build once
-on the combined baseline. Remote CI, combined integration and real hosted model
-readback remain unverified. Production model acceptance remains owner-gated.
+A subsequent normal-entrypoint review found missing Next.js proxy routing, query
+forwarding and payload validation. The correction passes 66 focused proxy/access/
+presentation checks, including exact model/revision binding, rejected writes,
+HTTPS and server-token isolation. Earlier page-request mocks did not exercise that
+server boundary. Authenticated production-mode proxy verification is in progress.
+
+PR #25's base repair is complete and passing at `7d4ce2e`. PRs #25/#26 remain stable
+for owner review. Next finish the synthetic authenticated HTTPS request path, then
+integrate the completed slices after owner merges, preserving each ledger. Remote
+CI for this slice and real hosted model readback remain unverified. Production
+model acceptance remains owner-gated.
 
 ## Google Sheets interoperability
 
