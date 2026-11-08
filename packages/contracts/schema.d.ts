@@ -7079,6 +7079,7 @@ export interface components {
              * @enum {string}
              */
             reason: "AVAILABLE" | "CHECKPOINT_NOT_COMPLETE" | "IDENTITY_CHANGED" | "LISTING_CURRENCY_UNAVAILABLE" | "BATCH_UNVERIFIED" | "NO_DAILY_CLOSES" | "NO_SCHEDULE" | "DATE_LIMIT_EXCEEDED";
+            requested_window_review?: components["schemas"]["ScheduledSessionReviewRead"] | null;
             scheduled_session_review: components["schemas"]["ScheduledSessionReviewRead"] | null;
             /** Subject Key */
             subject_key: string;

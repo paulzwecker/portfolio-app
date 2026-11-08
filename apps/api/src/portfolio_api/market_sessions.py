@@ -175,7 +175,12 @@ def schedule_at(
 
 
 def scheduled_session_review(
-    venue: str | None, observed_dates: list[date], known_at: datetime
+    venue: str | None,
+    observed_dates: list[date],
+    known_at: datetime,
+    *,
+    window_start: date | None = None,
+    window_end: date | None = None,
 ) -> ScheduledSessionReviewRead | None:
     """Compare selected series dates with the exact venue's published schedule."""
     # XETR is the ISO 10383 MIC of Deutsche Börse Xetra. It is not XFRA.
@@ -184,12 +189,16 @@ def scheduled_session_review(
     schedule = schedule_at(versions, known_at)
     if schedule is None or schedule.venue != schedule_venue or not observed_dates:
         return None
-    start = max(min(observed_dates), date(2026, 1, 1))
+    if (window_start is None) != (window_end is None):
+        return None
+    if window_start is not None and window_end is not None and window_start > window_end:
+        return None
+    start = max(window_start or min(observed_dates), date(2026, 1, 1))
     known_day = known_at.astimezone(UTC).date()
     # A session on the knowledge day may not have closed yet. Include that day
     # only when a selected close already exists for it.
     last_closed_day = known_day if known_day in observed_dates else known_day - timedelta(days=1)
-    end = min(max(observed_dates), date(2026, 12, 31), last_closed_day)
+    end = min(window_end or max(observed_dates), date(2026, 12, 31), last_closed_day)
     if start > end:
         return None
     selected = {day for day in observed_dates if start <= day <= end}
@@ -211,7 +220,7 @@ def scheduled_session_review(
         source_observed_at=schedule.observed_at,
         start_date=start,
         end_date=end,
-        full_selected_span_covered=start == min(observed_dates) and end == max(observed_dates),
+        full_selected_span_covered=start <= min(observed_dates) and end >= max(observed_dates),
         scheduled_count=len(scheduled),
         absent_scheduled_dates=sorted(scheduled - selected),
         selected_unscheduled_dates=sorted(selected - scheduled),

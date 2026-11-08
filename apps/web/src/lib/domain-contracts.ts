@@ -965,7 +965,21 @@ export function isHistoricalBootstrapReview(
         ].includes(row.reason as string) &&
         (row.reason === "AVAILABLE"
           ? isScheduledSessionReview(row.scheduled_session_review)
-          : row.scheduled_session_review === null),
+          : row.scheduled_session_review === null) &&
+        (row.requested_window_review === undefined ||
+          row.requested_window_review === null ||
+          (row.reason === "AVAILABLE" &&
+            isScheduledSessionReview(row.requested_window_review) &&
+            isRecord(row.requested_window_review) &&
+            isRecord(row.scheduled_session_review) &&
+            row.requested_window_review.venue ===
+              row.scheduled_session_review.venue &&
+            row.requested_window_review.source_sha256 ===
+              row.scheduled_session_review.source_sha256 &&
+            row.requested_window_review.schedule_id ===
+              row.scheduled_session_review.schedule_id &&
+            row.requested_window_review.schedule_fingerprint ===
+              row.scheduled_session_review.schedule_fingerprint)),
     )
   )
     return false;

@@ -48,12 +48,44 @@ describe("historical bootstrap review", () => {
       <HistoricalBootstrapPanelContent data={payload} />,
     );
     expect(html).toContain("1 additional listings follow this page");
-    expect(html).toContain(
-      "does not establish coverage of the full requested window",
-    );
+    expect(html).toContain("coverage of dates outside the displayed range");
     expect(html).toContain("not confirmed missing trades");
     expect(html).toContain("FX sessions remain unassessed");
+    expect(html).toContain("Requested-window schedule review unavailable");
     expect(html).toContain("synthetic");
+  });
+
+  it("displays boundary candidates and rejects conflicting schedule evidence", () => {
+    const window = {
+      ...payload.listings[0].scheduled_session_review,
+      start_date: "2026-07-01",
+      end_date: "2026-07-10",
+      absent_scheduled_dates: ["2026-07-01", "2026-07-06", "2026-07-08"],
+    };
+    const withWindow = {
+      ...payload,
+      listings: [{ ...payload.listings[0], requested_window_review: window }],
+    };
+    expect(isHistoricalBootstrapReview(withWindow)).toBe(true);
+    if (!isHistoricalBootstrapReview(withWindow))
+      throw new Error("fixture invalid");
+    const html = renderToStaticMarkup(
+      <HistoricalBootstrapPanelContent data={withWindow} />,
+    );
+    expect(html).toContain("Requested-window schedule review");
+    expect(html).toContain("3 scheduled dates without eligible closes");
+    expect(html).toContain("Dates outside this window remain unassessed");
+    expect(
+      isHistoricalBootstrapReview({
+        ...payload,
+        listings: [
+          {
+            ...payload.listings[0],
+            requested_window_review: { ...window, schedule_id: "different" },
+          },
+        ],
+      }),
+    ).toBe(false);
   });
 
   it("keeps unavailable, empty and malformed states distinct", () => {

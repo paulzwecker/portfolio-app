@@ -323,3 +323,13 @@ not a shared transactional snapshot. Additional venues, full requested-window
 boundaries and FX remain unassessed. Ten isolated PostgreSQL cases plus a rerun
 with a newer run inserted, 52 focused web tests, strict types, and a synthetic
 desktop/mobile paging journey passed. No schema or hosted change was made.
+
+The latest BUILD separately compares the requested bootstrap window with the
+time-appropriate 2026 schedule and exposes leading/trailing date candidates in
+Operations. The prior selected-close-span review remains unchanged. The window is
+clipped to the schedule and known-day cutoff; outside dates and empty series remain
+unassessed, and candidate dates never establish missing trades. No receipt, schema,
+provider or production state changes. Next improve empty-batch investigation and
+add venues only with reviewed source evidence. Verification: 18 schedule tests, 10
+isolated PostgreSQL cases, 53 focused web tests, generated contracts, strict types,
+and a synthetic desktop/mobile Operations journey; no full-suite run in BUILD.

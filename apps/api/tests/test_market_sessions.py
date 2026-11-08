@@ -20,6 +20,48 @@ def test_nyse_scheduled_gaps_exclude_holidays_and_weekends() -> None:
     assert result.full_selected_span_covered
 
 
+def test_requested_window_exposes_boundary_candidates_without_changing_selected_span() -> None:
+    dates = [date(2026, 7, 2), date(2026, 7, 7)]
+    selected = scheduled_session_review("NYSE", dates, KNOWN)
+    window = scheduled_session_review(
+        "NYSE", dates, KNOWN, window_start=date(2026, 7, 1), window_end=date(2026, 7, 10)
+    )
+    assert selected is not None and window is not None
+    assert selected.absent_scheduled_dates == [date(2026, 7, 6)]
+    assert window.absent_scheduled_dates == [
+        date(2026, 7, 1),
+        date(2026, 7, 6),
+        date(2026, 7, 8),
+        date(2026, 7, 9),
+        date(2026, 7, 10),
+    ]
+    assert window.full_selected_span_covered
+
+
+def test_requested_window_clips_to_known_schedule_and_excludes_unclosed_days() -> None:
+    dates = [date(2026, 11, 6)]
+    window = scheduled_session_review(
+        "NYSE", dates, KNOWN, window_start=date(2025, 1, 1), window_end=date(2027, 1, 1)
+    )
+    assert window is not None
+    assert window.start_date == date(2026, 1, 1)
+    assert window.end_date == date(2026, 11, 8)
+    assert date(2026, 11, 9) not in window.absent_scheduled_dates
+    assert scheduled_session_review("NYSE", dates, KNOWN, window_start=date(2026, 1, 1)) is None
+    assert (
+        scheduled_session_review(
+            "NYSE", dates, KNOWN, window_start=date(2026, 8, 1), window_end=date(2026, 7, 1)
+        )
+        is None
+    )
+    assert (
+        scheduled_session_review(
+            "NYSE", [], KNOWN, window_start=date(2026, 1, 1), window_end=date(2026, 1, 31)
+        )
+        is None
+    )
+
+
 def test_early_close_is_a_scheduled_session_and_unscheduled_input_is_visible() -> None:
     result = scheduled_session_review(
         "NYSE", [date(2026, 11, 26), date(2026, 11, 27)], datetime(2026, 11, 28, tzinfo=UTC)

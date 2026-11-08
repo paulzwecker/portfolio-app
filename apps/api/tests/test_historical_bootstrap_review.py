@@ -228,8 +228,14 @@ def test_review_uses_only_verified_listing_and_batch_dates(
         if mode == "valid":
             assert row.scheduled_session_review is not None
             assert row.scheduled_session_review.absent_scheduled_dates == [date(2026, 7, 6)]
+            assert row.requested_window_review is not None
+            assert row.requested_window_review.start_date == date(2026, 1, 1)
+            assert row.requested_window_review.end_date == date(2026, 11, 8)
+            assert date(2026, 7, 1) in row.requested_window_review.absent_scheduled_dates
+            assert date(2026, 7, 8) in row.requested_window_review.absent_scheduled_dates
         else:
             assert row.scheduled_session_review is None
+            assert row.requested_window_review is None
         assert session.scalar(select(MarketDataBootstrapCheckpoint.status)) == (
             "PENDING" if mode == "pending" else "COMPLETE"
         )

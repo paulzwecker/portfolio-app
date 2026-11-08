@@ -98,7 +98,9 @@ def _listing_review(
     at: datetime,
 ) -> s.HistoricalBootstrapListingReviewRead:
     def result(
-        reason: str, review: s.ScheduledSessionReviewRead | None = None
+        reason: str,
+        review: s.ScheduledSessionReviewRead | None = None,
+        window_review: s.ScheduledSessionReviewRead | None = None,
     ) -> s.HistoricalBootstrapListingReviewRead:
         return s.HistoricalBootstrapListingReviewRead.model_validate(
             {
@@ -106,6 +108,7 @@ def _listing_review(
                 "checkpoint_status": checkpoint.status,
                 "reason": reason,
                 "scheduled_session_review": review,
+                "requested_window_review": window_review,
             }
         )
 
@@ -178,4 +181,7 @@ def _listing_review(
         return result("NO_DAILY_CLOSES")
     dates = [value.astimezone(UTC).date() for value in timestamps]
     review = scheduled_session_review(listing.venue, dates, at)
-    return result("AVAILABLE", review) if review else result("NO_SCHEDULE")
+    window = scheduled_session_review(
+        listing.venue, dates, at, window_start=checkpoint.start_date, window_end=checkpoint.end_date
+    )
+    return result("AVAILABLE", review, window) if review else result("NO_SCHEDULE")

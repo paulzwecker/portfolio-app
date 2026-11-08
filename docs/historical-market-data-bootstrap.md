@@ -67,9 +67,12 @@ reporting remaining listings and FX checkpoints separately. Navigation pins the 
 ID, but each page is an independent read, not a transactional snapshot. Offsets
 are capped at 10,000; use a smaller scoped run if that limit is reached. Only completed checkpoints with matching
 frozen listing identity, batch digest and provider, listing currency and eligible
-same-provider/same-currency stored closes are considered. It compares the first to
-last eligible close in 2026 against a reviewed, time-appropriate NYSE, NASDAQ or
-Xetra schedule. This is not full-window coverage, raw-payload reconciliation, a
+same-provider/same-currency stored closes are considered. It compares both the
+first-to-last eligible-close span and the requested window intersected with the
+reviewed 2026 NYSE, NASDAQ or Xetra schedule and the knowledge cutoff. The displayed
+window can exclude earlier, later or not-yet-closed dates. At least one eligible close
+is required; an empty batch remains explicitly unassessed. These comparisons are not
+raw-payload reconciliation, proof of actual trading, a
 confirmed missing trade, an assessment of FX sessions or a modification of receipts.
 Unavailable schedules, ambiguous identities and incomplete data stay explicit.
 

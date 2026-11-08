@@ -868,6 +868,7 @@ class HistoricalBootstrapListingReviewRead(Contract):
         "DATE_LIMIT_EXCEEDED",
     ]
     scheduled_session_review: ScheduledSessionReviewRead | None
+    requested_window_review: ScheduledSessionReviewRead | None = None
 
 
 class HistoricalBootstrapReviewRead(Contract):

@@ -96,11 +96,12 @@ export function HistoricalBootstrapPanelContent({
               {data.fx_checkpoint_count} FX checkpoints
             </p>
             <p className="text-muted-foreground">
-              Review uses eligible stored batch dates within 2026, between the
-              first and last returned close. It does not establish coverage of
-              the full requested window, reconcile provider payloads, or verify
-              unscheduled closures and security halts. FX sessions remain
-              unassessed.
+              Review uses eligible stored batch dates and a published schedule
+              within 2026. The requested-window comparison stops at the last
+              eligible closed day. It does not establish actual trading or
+              coverage of dates outside the displayed range, reconcile provider
+              payloads, or verify unscheduled closures and security halts. FX
+              sessions remain unassessed.
             </p>
             {data.omitted_listing_count > 0 && (
               <p>
@@ -170,6 +171,38 @@ export function HistoricalBootstrapPanelContent({
                         {row.scheduled_session_review.schedule_fingerprint ??
                           "Unavailable"}
                       </p>
+                      {row.requested_window_review ? (
+                        <details className="rounded-md border px-3 py-2">
+                          <summary className="cursor-pointer font-medium">
+                            Requested-window schedule review
+                          </summary>
+                          <p>
+                            Reviewed schedule window:{" "}
+                            {dateOnly(row.requested_window_review.start_date)} –{" "}
+                            {dateOnly(row.requested_window_review.end_date)}.
+                            Dates outside this window remain unassessed.
+                          </p>
+                          <p>
+                            {
+                              row.requested_window_review.absent_scheduled_dates
+                                .length
+                            }{" "}
+                            scheduled dates without eligible closes; these are
+                            candidates for investigation, not confirmed missing
+                            trades.
+                          </p>
+                          {row.requested_window_review.absent_scheduled_dates
+                            .length > 0 && (
+                            <p className="break-words">
+                              {row.requested_window_review.absent_scheduled_dates
+                                .map((day) => dateOnly(day))
+                                .join(", ")}
+                            </p>
+                          )}
+                        </details>
+                      ) : (
+                        <p>Requested-window schedule review unavailable.</p>
+                      )}
                     </div>
                   )}
                 </details>

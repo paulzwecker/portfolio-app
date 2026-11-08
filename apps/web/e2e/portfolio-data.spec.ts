@@ -313,6 +313,26 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
                       absent_scheduled_dates: ["2026-07-06"],
                       selected_unscheduled_dates: [],
                     },
+                    requested_window_review: {
+                      venue: "NYSE",
+                      schedule_id: "synthetic",
+                      source_url:
+                        "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+                      source_sha256: "a".repeat(64),
+                      schedule_fingerprint: "b".repeat(64),
+                      source_as_of: null,
+                      source_observed_at: "2026-11-08T18:37:45Z",
+                      start_date: "2026-07-01",
+                      end_date: "2026-07-10",
+                      full_selected_span_covered: true,
+                      scheduled_count: 7,
+                      absent_scheduled_dates: [
+                        "2026-07-01",
+                        "2026-07-06",
+                        "2026-07-08",
+                      ],
+                      selected_unscheduled_dates: [],
+                    },
                   },
                   ...Array.from({ length: 29 }, (_, i) => ({
                     subject_key: `NYSE:TEST${i}`,
@@ -337,6 +357,17 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
     await expect(panel).toContainText("FX sessions remain unassessed");
     await panel.getByText("NYSE:SYNTH", { exact: false }).click();
     await expect(panel).toContainText("not confirmed missing trades");
+    await panel.getByText("Requested-window schedule review").click();
+    await expect(
+      panel.getByText("3 scheduled dates without eligible closes", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText("Dates outside this window remain unassessed.", {
+        exact: false,
+      }),
+    ).toBeVisible();
     await expect(panel).toContainText("1 additional listings follow this page");
     await panel.getByRole("button", { name: "Next listings" }).click();
     await expect(panel).toContainText("NYSE:LAST");

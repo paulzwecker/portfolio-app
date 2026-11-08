@@ -16358,6 +16358,16 @@
             "title": "Reason",
             "type": "string"
           },
+          "requested_window_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledSessionReviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "scheduled_session_review": {
             "anyOf": [
               {
