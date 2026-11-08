@@ -218,6 +218,13 @@ means the JSON summary reported a `PARTIAL`, `BLOCKED`, or nonmatching state. A
 bounded invocation commonly returns `PARTIAL` while checkpoints remain; inspect
 the summary and continue only when no checkpoint is blocked or terminally failed.
 
+Normalization warnings, including provider rows with an invalid timestamp or without a positive close, are
+retained per listing or FX pair and make the run `PARTIAL`. They identify provider
+response issues, not a count of missing expected sessions. Older receipts may lack
+FX warning evidence; `warning_evidence_unrecorded_checkpoints` distinguishes that
+unknown state from a newly captured empty warning list. Warning-only completed
+checkpoints are not silently retried; review their source evidence and scope.
+
 Remove the non-secret target selector when finished:
 
 ```powershell

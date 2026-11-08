@@ -257,6 +257,55 @@ test("Portfolio data investigation reaches Operations without writes", async ({
   expect(writes).toEqual([]);
 });
 
+test("Provider quality warnings are reviewable without writes", async ({
+  page,
+}) => {
+  const operations = operationsFixture();
+  const fx = operations.market_data.runs?.find((run) => run.domain === "FX");
+  if (!fx) throw new Error("FX fixture missing");
+  fx.status = "PARTIAL";
+  fx.failure_code = "PARTIAL_COVERAGE";
+  fx.failure_message = "1 provider, identity, or quality checks remain for FX.";
+  fx.retry_state = "REVIEW_REQUIRED";
+  fx.retry_eligible_at = null;
+  fx.attempts[0].status = "PARTIAL";
+  fx.attempts[0].retryable = false;
+  fx.attempts[0].failure_code = "PARTIAL_COVERAGE";
+  fx.attempts[0].failure_message = fx.failure_message;
+  operations.market_data.message = fx.failure_message;
+  fx.report = {
+    domain_report: {
+      normalization_warnings: [{ code: "FX_ROWS_WITHOUT_CLOSE" }],
+    },
+  };
+  const { writes } = await installRoutes(page, operations);
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto("/operations#market-data-refresh");
+    await page.getByRole("button", { name: "Inspect FX refresh" }).click();
+    const drawer = page.getByRole("dialog", { name: "FX refresh details" });
+    const warning = drawer.getByRole("region", {
+      name: "Provider quality warnings",
+    });
+    await expect(warning).toContainText(
+      "Some returned FX rows lacked a usable timestamp or positive close",
+    );
+    await expect(warning).toContainText(
+      "do not establish expected-session coverage",
+    );
+    await expect(
+      drawer.getByText("A fresh scope check or operator review is required."),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+  }
+  expect(writes).toEqual([]);
+});
+
 test("Preflight blockers expose their scope and preserve last data success", async ({
   page,
 }, testInfo) => {

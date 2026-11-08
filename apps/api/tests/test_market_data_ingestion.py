@@ -1,6 +1,7 @@
 from typing import Any, cast
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.orm import Session
 
 from portfolio_api.market_data_ingestion import (
@@ -35,6 +36,13 @@ def test_applied_market_refresh_reports_applied_when_clean_and_idempotent() -> N
         "corporate_actions": 0,
         "fx_observations": 0,
     }
+
+
+@pytest.mark.parametrize("batch_key", ["market_data_batches", "fx_batches"])
+def test_applied_provider_warning_reports_partial(batch_key: str) -> None:
+    report: dict[str, Any] = {"plans": [], "market_data_batches": [], "fx_batches": []}
+    report[batch_key] = [{"normalization_warnings": [{"code": "ROWS_WITHOUT_CLOSE"}]}]
+    assert apply_provider_import(cast(Session, None), report)["status"] == "PARTIAL"
 
 
 def test_scoped_listing_diagnostics_exclude_unrelated_active_companies() -> None:

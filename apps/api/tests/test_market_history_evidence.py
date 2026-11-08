@@ -293,10 +293,17 @@ def test_legacy_checkpoint_does_not_gain_invented_coverage_evidence() -> None:
 
     report = _run_report(cast(Session, ReadOnlySession()), run)
     assert report["status"] == "COMPLETE"
+    assert report["warning_evidence_unrecorded_checkpoints"] == 1
     assert report["history_window_coverage"] == "NOT_ASSESSED"
     evidence = report["listing_coverage"][0]["history_window_evidence"]
     assert evidence["assessment_reason"] == "EVIDENCE_NOT_RECORDED"
     assert evidence["distinct_observed_dates"] is None
+    checkpoint.report = {
+        "coverage": {"normalization_warnings_captured": True, "normalization_warnings": None}
+    }
+    malformed = _run_report(cast(Session, ReadOnlySession()), run)
+    assert malformed["warning_evidence_unrecorded_checkpoints"] == 1
+    assert malformed["listing_coverage"][0]["normalization_warnings_captured"] is False
     checkpoint.report = {
         "coverage": {
             "price_status": "AVAILABLE",

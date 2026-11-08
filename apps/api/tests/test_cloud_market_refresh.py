@@ -216,6 +216,55 @@ def source_payload(symbol: str, at: datetime) -> bytes:
 
 
 @pytest.mark.integration
+def test_fx_missing_close_is_visible_in_operations_without_ownership_changes(
+    postgres_engine: Engine, market_scope: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    at = datetime.now(UTC) - timedelta(days=1)
+    settings = Settings(
+        _env_file=None, database_url=None, database_target_environment="development"
+    )
+    before = table_counts(postgres_engine)
+    calls: list[str] = []
+
+    def transport(url: str) -> bytes:
+        symbol = unquote(urlsplit(url).path.rsplit("/", 1)[-1])
+        calls.append(symbol)
+        payload = json.loads(source_payload(symbol, at))
+        if symbol == "EUR=X":
+            payload["chart"]["result"][0]["indicators"]["quote"][0]["close"][1] = None
+        return json.dumps(payload).encode()
+
+    def provider(crosswalk: YahooListingCrosswalk) -> YahooFinanceProvider:
+        return YahooFinanceProvider(crosswalk, transport=transport, retries=0)
+
+    monkeypatch.setattr("portfolio_api.external_ingestion.YahooFinanceProvider", provider)
+    with Session(postgres_engine) as session:
+        result = run_cloud_incremental_refresh(session, settings, at)
+    assert result["status"] == "PARTIAL"
+    assert sorted(calls) == ["EUR=X", "SYNTH"]
+    with Session(postgres_engine) as session:
+        status = queries.market_refresh_status(session)
+        fx = next(run for run in status.runs if run.domain == "FX")
+        assert fx.status == "PARTIAL"
+        domain_report = cast(dict[str, Any], fx.report["domain_report"])
+        assert domain_report["normalization_warnings"][0]["code"] == "FX_ROWS_WITHOUT_CLOSE"
+    with (
+        patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
+        TestClient(create_app(Settings(_env_file=None, database_url=None))) as client,
+    ):
+        response = client.get("/v1/market-data/status")
+        assert response.status_code == 200
+        api_fx = next(run for run in response.json()["runs"] if run["domain"] == "FX")
+        assert api_fx["status"] == "PARTIAL"
+        assert api_fx["report"]["domain_report"]["normalization_warnings"][0]["code"] == (
+            "FX_ROWS_WITHOUT_CLOSE"
+        )
+    after = table_counts(postgres_engine)
+    for name in ("companies", "securities", "listings", "holding_snapshots", "holding_positions"):
+        assert after[name] == before[name]
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("fx_outage", [False, True])
 def test_actual_cloud_import_drives_portfolio_and_operations_without_rewriting_ownership(
     postgres_engine: Engine,

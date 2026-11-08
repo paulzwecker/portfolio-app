@@ -238,5 +238,14 @@ in the shared responsive table/cards. Fifty-nine focused web checks, strict type
 lint and the synthetic mobile/desktop browser journey pass; the journey finds an
 older conflict outside the selected 90-day chart range. Screenshots were visually
 reviewed locally. No API contract or migration changed in this increment.
+The subsequent provider-quality increment preserves listing and FX normalizer
+warnings, marks affected imports/refreshes partial and shows a plain-language
+warning in Operations. Legacy checkpoints without captured warning evidence remain
+explicitly unknown; warning-only checkpoints do not silently retry. Synthetic tests
+cover warning retention, replay and a local importer-to-Operations API readback with
+unchanged canonical ownership. Expected-session coverage remains unassessed.
+Verification passed 44 focused backend units, four isolated PostgreSQL cases,
+nine web checks, strict types/lint and a read-only synthetic Operations browser
+journey at 390 and 1440 px. Synthetic screenshots were visually reviewed.
 No production or provider operation ran. Next: establish reviewed session-aware
 source validation before claiming complete history; separately approve live ingestion.

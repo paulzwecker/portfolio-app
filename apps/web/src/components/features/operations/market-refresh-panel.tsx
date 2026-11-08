@@ -25,6 +25,53 @@ const retryLabels: Record<MarketRefreshRun["retry_state"], string> = {
   NONE: "No retry is pending.",
 };
 
+export function ProviderQualityWarnings({
+  report,
+}: {
+  report: MarketRefreshRun["report"];
+}) {
+  const domain = report.domain_report;
+  if (!domain || typeof domain !== "object" || Array.isArray(domain))
+    return null;
+  const warnings = (domain as Record<string, unknown>).normalization_warnings;
+  if (!Array.isArray(warnings) || warnings.length === 0) return null;
+  const descriptions: Record<string, string> = {
+    PRICE_ROWS_WITHOUT_CLOSE:
+      "Some returned price rows lacked a usable timestamp or positive close and were excluded.",
+    FX_ROWS_WITHOUT_CLOSE:
+      "Some returned FX rows lacked a usable timestamp or positive close and were excluded.",
+    DUPLICATE_SESSION_BARS_COLLAPSED:
+      "Duplicate price bars were collapsed; volume may be unavailable.",
+  };
+  return (
+    <section
+      aria-label="Provider quality warnings"
+      className="space-y-2 rounded-md border border-warning/35 bg-warning/10 p-3 text-sm"
+    >
+      <h3 className="font-semibold">Provider quality warnings</h3>
+      <p>
+        Review the recorded diagnostics. These warnings do not establish
+        expected-session coverage.
+      </p>
+      <ul className="list-inside list-disc space-y-1">
+        {warnings.map((warning, index) => {
+          const item =
+            warning && typeof warning === "object" && !Array.isArray(warning)
+              ? (warning as Record<string, unknown>)
+              : {};
+          const code = typeof item.code === "string" ? item.code : "";
+          return (
+            <li key={index}>
+              {descriptions[code] ??
+                "A provider normalization warning requires review."}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function MarketRefreshPanel({
   status,
 }: {
@@ -169,6 +216,7 @@ export function MarketRefreshPanel({
               {selected.failure_message && (
                 <p className="break-words">{selected.failure_message}</p>
               )}
+              <ProviderQualityWarnings report={selected.report} />
               <section aria-label="Recorded attempts" className="space-y-2">
                 <h3 className="font-semibold">Attempt history</h3>
                 {selected.attempts.length === 0 && (

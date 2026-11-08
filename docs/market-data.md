@@ -102,6 +102,10 @@ An applied provider request with fetch failures, unresolved listing identities,
 unmapped FX pairs or rejected normalized rows is reported as `PARTIAL` and exits
 with code 2, even when unaffected batches were committed. Review the per-domain
 failure lists and insertion counts before treating the run as complete.
+Price and FX normalization warnings also produce `PARTIAL` provider outcomes and
+are available in the Operations run details. A warning that the provider returned
+a row with an invalid timestamp or no positive close does not establish an expected-session gap; it does
+not replace the missing value with zero or trigger an unattended retry.
 
 Yahoo's raw `close` field is preserved in `provider_close`; for canonical listing
 prices it is a split-adjusted, non-dividend-reinvested series. This adapter does

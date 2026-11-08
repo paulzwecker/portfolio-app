@@ -1003,6 +1003,8 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
     blocked_count = 0
     pending_count = 0
     retryable_count = 0
+    warning_count = 0
+    warning_evidence_unrecorded = 0
     for checkpoint in checkpoints:
         statuses[checkpoint.status] += 1
         details: dict[str, Any] = (
@@ -1010,6 +1012,15 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         )
         coverage_value = details.get("coverage")
         coverage: dict[str, Any] = dict(coverage_value) if isinstance(coverage_value, dict) else {}
+        warnings_value = coverage.get("normalization_warnings")
+        warnings = warnings_value if isinstance(warnings_value, list) else []
+        warnings_captured = coverage.get("normalization_warnings_captured") is True and isinstance(
+            warnings_value, list
+        )
+        coverage["normalization_warnings_captured"] = warnings_captured
+        warning_count += len(warnings)
+        if checkpoint.status in {"COMPLETE", "UNAVAILABLE"} and not warnings_captured:
+            warning_evidence_unrecorded += 1
         evidence = coverage.get("history_window_evidence")
         if not isinstance(evidence, dict) or evidence.get("coverage_assessment") != "NOT_ASSESSED":
             coverage["history_window_evidence"] = {
@@ -1099,6 +1110,8 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
                     "current_quote_rows": int(coverage.get("current_fx_quote_rows", 0) or 0),
                     "earliest_effective_date": coverage.get("earliest_effective_date"),
                     "latest_effective_date": coverage.get("latest_effective_date"),
+                    "normalization_warnings": warnings,
+                    "normalization_warnings_captured": warnings_captured,
                     "history_window_evidence": coverage["history_window_evidence"],
                     "batch_id": str(checkpoint.batch_id) if checkpoint.batch_id else None,
                     "pair": pair,
@@ -1138,7 +1151,12 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         else "FAILED"
         if terminal_failure and not pending_count
         else "PARTIAL"
-        if not complete or unavailable_count or failed_count or blocked_count or unverified_actions
+        if not complete
+        or unavailable_count
+        or failed_count
+        or blocked_count
+        or unverified_actions
+        or warning_count
         else "COMPLETE"
     )
     return {
@@ -1164,6 +1182,8 @@ def _run_report(session: Session, run: MarketDataBootstrapRun) -> dict[str, Any]
         "blocked_checkpoints": blocked_count,
         "unavailable_coverages": unavailable_count,
         "unverified_corporate_actions": unverified_actions,
+        "normalization_warning_count": warning_count,
+        "warning_evidence_unrecorded_checkpoints": warning_evidence_unrecorded,
         "canonical_totals": totals,
         "company_coverage": sorted(
             company_rows.values(), key=lambda item: str(item["company_name"])
@@ -1366,6 +1386,9 @@ def _process_checkpoint(
             }
             coverage["canonical_fingerprint"] = None
         coverage["normalization_warnings"] = normalizer_report.get("normalization_warnings", [])
+        coverage["normalization_warnings_captured"] = (
+            normalizer_report.get("normalization_warnings_captured") is True
+        )
         coverage["raw_response_count"] = len(plan["records"])
         coverage["source_payload_hashes"] = [record.payload_sha256 for record in plan["records"]]
         coverage["source_records"] = [
@@ -1484,7 +1507,8 @@ def execute_market_data_bootstrap(
             return run.report
         if run.status in {"COMPLETE", "FAILED", "BLOCKED"}:
             report = _run_report(session, run)
-            report["status"] = run.status
+            if run.status != "COMPLETE":
+                report["status"] = run.status
             return report
         _recover_interrupted_checkpoints(session, run.id)
         processed = 0

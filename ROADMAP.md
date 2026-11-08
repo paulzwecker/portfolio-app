@@ -203,6 +203,10 @@ The inspection view now searches all returned observations independently of the
 chart range, displaying exact close text, source symbol and adjustment basis in
 responsive table/cards. It does not assert that the selected history includes every
 provider observation or every market session.
+Price and FX provider normalization warnings now persist into run reports and make
+affected refreshes partial. Operations explains the warnings; legacy receipts with
+unrecorded warning evidence remain explicitly unknown. This is locally verified,
+not live provider coverage or approval to ingest.
 
 ## Immediate priorities and gates
 
