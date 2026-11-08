@@ -24,6 +24,7 @@ from portfolio_api.database import Base
 from portfolio_api.domain import models
 from portfolio_api.migrations import alembic_config, expected_heads
 from portfolio_api.postgres_migration import (
+    EXCLUDED_ARCHIVE_TABLES,
     TABLE_GROUP_BY_NAME,
     TABLE_GROUPS,
     DatabaseEndpoint,
@@ -50,6 +51,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 def test_every_mapped_application_table_has_a_migration_group() -> None:
     assert set(Base.metadata.tables) <= set(TABLE_GROUP_BY_NAME)
     assert len(TABLE_GROUP_BY_NAME) == sum(len(group) for group in TABLE_GROUPS.values())
+    ledger_history = {
+        "portfolio_ledger_candidates",
+        "portfolio_ledger_reviews",
+        "portfolio_ledger_publications",
+    }
+    assert ledger_history <= set(TABLE_GROUPS["portfolio_state"])
+    assert ledger_history.isdisjoint(EXCLUDED_ARCHIVE_TABLES)
 
 
 @pytest.mark.integration

@@ -577,3 +577,50 @@ def test_ledger_ownership_metadata_requires_complete_provenance(field: str) -> N
     values[field] = None
     with pytest.raises(ValidationError):
         s.HoldingsAuthorityRead.model_validate(values)
+
+
+@pytest.mark.parametrize("revision", [None, "unknown_schema", "a832e94d6f10"])
+def test_missing_ownership_storage_fails_closed_except_reviewed_preledger_schema(
+    storage_engine: Engine, revision: str | None
+) -> None:
+    portfolio_id, _packet = prepare(storage_engine)
+    before = baseline(storage_engine, portfolio_id)
+    with Session(storage_engine) as session:
+        session.execute(text("DROP TABLE portfolio_ledger_publications"))
+        if revision:
+            session.execute(
+                text("UPDATE alembic_version SET version_num = :revision"), {"revision": revision}
+            )
+        with pytest.raises(services.DomainError, match="ownership storage could not be verified"):
+            services.record_holdings(
+                session,
+                portfolio_id,
+                s.SnapshotCreate(
+                    actor="IMPORT",
+                    reason="Must fail closed without verified ownership storage",
+                    effective_at=datetime.now(UTC),
+                    completeness="COMPLETE",
+                    positions=[],
+                    cash_positions=[],
+                ),
+            )
+        session.rollback()
+    assert baseline(storage_engine, portfolio_id) == before
+
+
+@pytest.mark.parametrize("revision", ["6c2eaf0b8147", "9f2a6d4c81b7"])
+def test_older_schema_marker_never_hides_existing_ledger_ownership(
+    storage_engine: Engine, revision: str
+) -> None:
+    portfolio_id, row = accepted(storage_engine)
+    plan = preview(storage_engine, portfolio_id, row.id)
+    publish(storage_engine, portfolio_id, row.id, command(plan))
+    before = baseline(storage_engine, portfolio_id)
+    with Session(storage_engine) as session:
+        session.execute(
+            text("UPDATE alembic_version SET version_num = :revision"), {"revision": revision}
+        )
+        with pytest.raises(services.DomainError, match="Ledger-owned"):
+            services.require_observed_holdings_authority(session, portfolio_id)
+        session.rollback()
+    assert baseline(storage_engine, portfolio_id) == before

@@ -7,6 +7,8 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
+from alembic.runtime.migration import MigrationContext
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -2022,6 +2024,14 @@ def record_holdings(
 
 
 def require_observed_holdings_authority(session: Session, portfolio_id: UUID) -> None:
+    connection = session.connection()
+    if not sa_inspect(connection).has_table(PortfolioLedgerPublication.__tablename__):
+        # These reviewed bootstrap schemas predate ledger ownership. A missing
+        # ownership table at a newer or unknown revision must never grant writes.
+        heads = set(MigrationContext.configure(connection).get_current_heads())
+        if heads in ({"6c2eaf0b8147"}, {"9f2a6d4c81b7"}):
+            return
+        raise DomainError("Holdings source ownership storage could not be verified", status=409)
     if session.scalar(
         select(PortfolioLedgerPublication.id)
         .where(PortfolioLedgerPublication.portfolio_id == portfolio_id)

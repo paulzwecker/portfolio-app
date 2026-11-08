@@ -20,6 +20,16 @@ all 341 selected synthetic PostgreSQL cases are running with a process-only test
 DATABASE_URL and all production/ingestion controls disabled. Initial formatting
 caught a handoff wrap; it was corrected before the quality rerun.
 
+Integration review found and corrected pre-ledger bootstrap compatibility and
+missing recovery grouping for all three ledger tables. A missing publication table
+is compatible only at the two explicitly reviewed pre-ledger revisions; current,
+unknown or intermediate ledger states fail closed. Existing ownership always wins,
+even if an older marker is presented. The read-only release plan now pins the current
+production target and `9f2a6d4c81b7` → `b59f16c8a203`, retaining fresh recovery,
+exact confirmation and disabled writes. The runbook separates database verification
+from post-deployment readiness. Focused schema checks pass 32 cases and release
+safety passes 46; broader checks continue. No hosted operation was performed.
+
 ## Current ledger increment
 
 `a11272a` and `79ae274` add explicit, hash-bound whole-portfolio publication review in the
