@@ -9,7 +9,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Field                       | Current value                                                                                                    |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.3 guided ledger onboarding — INTEGRATE; release BLOCKED. [Handoff](docs/ACTIVE_WORKSTREAM.md)                 |
-| Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; integration PR pending                      |
+| Branch / PR                 | `codex/ledger-opening-onboarding`; [draft PR #30](https://github.com/paulzwecker/portfolio-app/pull/30)          |
 | Implementation              | Guided opening, activity and ending reconciliation LOCAL_VERIFIED                                                |
 | Next ready substantial task | Complete provider-control verification and coordinated release review                                            |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |

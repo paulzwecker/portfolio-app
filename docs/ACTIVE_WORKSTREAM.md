@@ -5,7 +5,8 @@
 Branch `codex/ledger-opening-onboarding` contains implementation `18f1f15` and
 merge `813651e` from updated main `e070406` ([merged PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)).
 The owner edits, predecessor branches/worktrees and private source artifacts remain
-preserved. The integration PR is pending.
+preserved. [Draft PR #30](https://github.com/paulzwecker/portfolio-app/pull/30)
+is blocked pending current provider-control evidence; do not merge or deploy it.
 
 Completed PRs stay frozen for owner review. Continue independent milestones from
 updated main, or record an explicit stacked branch when a dependency is unmerged.
