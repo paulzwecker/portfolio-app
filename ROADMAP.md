@@ -1,19 +1,33 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-07. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | MP2.1 read-only model publication preflight plus owner-requested capability/vision alignment                                                                                    |
-| Branch / PR                 | `codex/mp2-readonly-publication-preflight`, [PR #24](https://github.com/paulzwecker/portfolio-app/pull/24), open and unmerged at inspection                                     |
-| Implementation              | MP2.1 IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED. PR #23 is merged as `0717498`                                                                                                   |
-| Next ready substantial task | C2.1 read-only held-listing/FX coverage and current-state recovery assessment using existing bootstrap previews                                                                 |
-| Parallel owner gate         | C1.2 dated P-GOOGL source/template and assumption review, then separately authorized canonical seed/publication lifecycle                                                       |
-| Integration rule            | Finish this documentation checkpoint in PR #24. Keep it stable during review. Resume from merged main, or take independent C2 work without depending on unmerged implementation |
+| Field                       | Current value                                                                                                                                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C1.3 read-only native DCF sensitivity — BUILD. [Handoff](docs/financial-models.md#current-build-checkpoint)                                                                                               |
+| Branch / PR                 | `codex/native-dcf-sensitivity`, from merged main `395f842`. Local BUILD branch                                                                                                                            |
+| Implementation              | Revision-bound nine-cell API LOCAL_VERIFIED. Responsive valuation workspace in progress                                                                                                                   |
+| Next ready substantial task | Verify scenario switching, unavailable cells, stale responses and desktop/mobile presentation; commit the complete local slice                                                                            |
+| Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await review/merge. C1 investment acceptance remains separate |
+| Integration rule            | Keep completed PRs stable. Reconcile this independent slice and the preserved CI correction with latest main at the integration gate                                                                      |
+
+PR #24 is merged as `395f842`. The completed data/ledger PR #26 stays frozen.
+The independent PostgreSQL test-classification correction is preserved on
+`codex/ci-database-test-coverage` in `18930ac` and `f72729e`, with its verified
+handoff in that branch's testing reference. This branch adds a user-facing C1
+review capability independently of the pending schema/data work.
+
+C1.3's API calculates nine hypothetical fair-value combinations with the existing
+UFCF engine and accepted inputs. It requires an exact current revision, preserves
+probabilities/operating inputs/tail assumptions, and exposes invalid combinations
+as unavailable. Nineteen focused backend checks pass, including an API test under
+PostgreSQL read-only enforcement on verified loopback PostgreSQL 18.3. Accepted
+model readback is unchanged. Focused strict typing passes. This evidence establishes
+local calculation and read semantics; responsive browser verification is next.
 
 ## How to choose work
 

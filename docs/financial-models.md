@@ -283,6 +283,39 @@ Revision history can expand into an assumption and normalized-output comparison
 against the current revision. Imported legacy output snapshots remain in their
 separate read-only history section.
 
+## DCF valuation sensitivity
+
+`GET /v1/financial-models/{model_id}/sensitivity?base_revision_id={revision_id}`
+calculates a fixed nine-cell fair-value grid from an exact current accepted UFCF
+DCF revision. A stale revision returns 409. Other model types return 404. The
+versioned calculation contract is `ufcf-dcf-sensitivity-v1`.
+
+Rows shift all scenario discount rates by −1, 0 or +1 percentage point. Each annual
+rate in years 1–5 shifts in parallel; the native engine retains its year-5 rate
+for years 6–10. Columns shift each scenario's terminal growth by −0.5, 0 or +0.5
+percentage point. Scenario probabilities, operating assumptions, year-10 UFCF
+growth and any explicit annual tail remain fixed. The center recomputes the
+accepted assumptions. Every cell uses the existing validated input contract and
+native engine. Invalid rate bounds or terminal spreads produce explicit
+unavailable cells with null values.
+
+Outputs are Bear/Base/Bull and probability-weighted fair values per share in
+model currency, rounded to the existing 18-place model precision. This calculation
+needs no quote or Google connection. It has no persistence or acceptance operation.
+Discount-rate sensitivity retains the source DCF methodology. Investor hurdle and
+enterprise/shareholder return definitions remain governed by their own contracts.
+
+### Current BUILD checkpoint
+
+`codex/native-dcf-sensitivity` is independent of frozen PRs #25/#26 and the
+completed `codex/ci-database-test-coverage` correction. The API passes 19 focused
+backend checks including a transaction-enforced read-only PostgreSQL integration
+case, exact native-engine reconciliation, deterministic replay, explicit tail,
+invalid cells and stale revision rejection. Focused strict typing passes.
+The workspace integration and responsive browser checks are in progress. Next
+complete that user-facing slice, review and commit before a later combined
+integration gate. Real production model acceptance and readback remain owner-gated.
+
 ## Google Sheets interoperability
 
 The portable boundaries are `FinancialModelContractV1` (`1.0.0`–`1.2.0`) for DCF and

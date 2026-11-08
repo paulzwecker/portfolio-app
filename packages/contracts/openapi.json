@@ -5569,6 +5569,229 @@
         "title": "DcfScenarioRead",
         "type": "object"
       },
+      "DcfSensitivityCellRead": {
+        "additionalProperties": false,
+        "properties": {
+          "base_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Fv"
+          },
+          "bear_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bear Fv"
+          },
+          "bull_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bull Fv"
+          },
+          "discount_rate_shift": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Discount Rate Shift",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "INVALID_ASSUMPTIONS"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "terminal_growth_shift": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Terminal Growth Shift",
+            "type": "string"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          },
+          "weighted_fv": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Fv"
+          }
+        },
+        "required": [
+          "discount_rate_shift",
+          "terminal_growth_shift",
+          "status",
+          "unavailable_reason",
+          "bear_fv",
+          "base_fv",
+          "bull_fv",
+          "weighted_fv"
+        ],
+        "title": "DcfSensitivityCellRead",
+        "type": "object"
+      },
+      "DcfSensitivityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "calculation_version": {
+            "const": "ufcf-dcf-sensitivity-v1",
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/DcfSensitivityCellRead"
+            },
+            "maxItems": 9,
+            "minItems": 9,
+            "title": "Cells",
+            "type": "array"
+          },
+          "discount_rate_shifts": {
+            "items": {
+              "decimal_places": 18,
+              "max_digits": 38,
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Discount Rate Shifts",
+            "type": "array"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "model_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "revision_number": {
+            "title": "Revision Number",
+            "type": "integer"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/DcfSensitivityScenarioRead"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Scenarios",
+            "type": "array"
+          },
+          "terminal_growth_shifts": {
+            "items": {
+              "decimal_places": 18,
+              "max_digits": 38,
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Terminal Growth Shifts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "calculation_version",
+          "model_id",
+          "revision_id",
+          "revision_number",
+          "methodology_version",
+          "model_currency",
+          "discount_rate_shifts",
+          "terminal_growth_shifts",
+          "scenarios",
+          "cells"
+        ],
+        "title": "DcfSensitivityRead",
+        "type": "object"
+      },
+      "DcfSensitivityScenarioRead": {
+        "additionalProperties": false,
+        "properties": {
+          "probability": {
+            "decimal_places": 18,
+            "ge": 0,
+            "le": 1,
+            "max_digits": 38,
+            "title": "Probability",
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/DcfScenario"
+          },
+          "terminal_growth": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Terminal Growth",
+            "type": "string"
+          },
+          "year5_discount_rate": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Year5 Discount Rate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario",
+          "probability",
+          "year5_discount_rate",
+          "terminal_growth"
+        ],
+        "title": "DcfSensitivityScenarioRead",
+        "type": "object"
+      },
       "DcfTailGrowthAssumptionInput-Input": {
         "additionalProperties": false,
         "properties": {
@@ -33775,6 +33998,59 @@
           }
         },
         "summary": "Get Financial Model Revision",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/financial-models/{model_id}/sensitivity": {
+      "get": {
+        "operationId": "get_dcf_sensitivity_v1_financial_models__model_id__sensitivity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Base Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DcfSensitivityRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dcf Sensitivity",
         "tags": [
           "Portfolio research"
         ]

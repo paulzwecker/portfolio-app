@@ -3344,6 +3344,37 @@ class FinancialModelCalculationPreviewRead(Contract):
     projections: list[DcfProjectionCalculationPreviewRead] = Field(min_length=30, max_length=30)
 
 
+class DcfSensitivityCellRead(Contract):
+    discount_rate_shift: ModelNumber
+    terminal_growth_shift: ModelNumber
+    status: Literal["AVAILABLE", "INVALID_ASSUMPTIONS"]
+    unavailable_reason: str | None
+    bear_fv: ModelNumber | None
+    base_fv: ModelNumber | None
+    bull_fv: ModelNumber | None
+    weighted_fv: ModelNumber | None
+
+
+class DcfSensitivityScenarioRead(Contract):
+    scenario: DcfScenario
+    probability: Probability
+    year5_discount_rate: ModelNumber
+    terminal_growth: ModelNumber
+
+
+class DcfSensitivityRead(Contract):
+    calculation_version: Literal["ufcf-dcf-sensitivity-v1"]
+    model_id: UUID
+    revision_id: UUID
+    revision_number: int
+    methodology_version: str
+    model_currency: Currency
+    discount_rate_shifts: list[ModelNumber] = Field(min_length=3, max_length=3)
+    terminal_growth_shifts: list[ModelNumber] = Field(min_length=3, max_length=3)
+    scenarios: list[DcfSensitivityScenarioRead] = Field(min_length=3, max_length=3)
+    cells: list[DcfSensitivityCellRead] = Field(min_length=9, max_length=9)
+
+
 class FinancialModelEvidenceReference(Contract):
     evidence_type: ModelEvidenceType
     reference_id: UUID
