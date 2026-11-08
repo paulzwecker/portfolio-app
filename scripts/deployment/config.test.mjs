@@ -63,6 +63,15 @@ test("GitHub PR and main CI provide the three documented required checks", () =>
     ci,
     /npm run db:migrate|db:production-preflight|DATABASE_PRODUCTION_WRITES_AUTHORIZED/,
   );
+  assert.match(
+    ci,
+    /if: github\.event_name == 'pull_request'\s+run: node scripts\/deployment\/schema-gate\.mjs review/,
+  );
+  assert.match(
+    ci,
+    /if: github\.event_name == 'push'\s+run: node scripts\/deployment\/schema-gate\.mjs deploy/,
+  );
+  assert.doesNotMatch(ci, /continue-on-error:/);
 });
 
 test("production migrations stay manual and distinguish empty first activation from later recovery", () => {
@@ -90,7 +99,10 @@ test("production migrations stay manual and distinguish empty first activation f
   assert.match(runbook, /Never run `npm run db:migrate` from CI/);
   assert.match(runbook, /Freeze production deployments before merge/i);
   assert.ok(runbook.includes("Auto-Deploy **After CI Checks Pass**"));
-  assert.ok(runbook.includes("select **Only build preview**"));
+  assert.ok(runbook.includes("select **Only build pre-production**"));
+  assert.match(runbook, /repository_history_sha256/);
+  assert.match(runbook, /Never advance the marker/);
+  assert.match(runbook, /fresh populated-state clone/i);
 });
 
 test("the bespoke multi-environment release pipeline has been removed", () => {

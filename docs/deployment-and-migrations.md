@@ -11,14 +11,15 @@ and Sheets polling separately authorized and disabled by default.
 Prefer provider-native behavior over a bespoke release orchestrator. GitHub Actions
 checks pull requests. Protected `main` is the only production source branch. Render
 deploys its existing API service only after GitHub CI checks pass, then gates traffic
-on database readiness. Vercel keeps its native pull-request previews and deploys
-`main` to production after merge. No GitHub deployment environments, provider API
-tokens, custom deployment scripts, or deploy workflow are required.
+on database readiness. Vercel keeps its native pull-request previews. Production
+builds additionally require the reviewed schema attestation described below. No
+GitHub deployment environments, production secrets in CI or release orchestrator
+are required.
 
 ```text
 Pull request ── GitHub CI + owner review ── merge to main
-     └──────── Vercel Preview                 ├── Render: CI checks pass → /health/ready → traffic
-                                               └── Vercel: native production deployment
+     └──────── Vercel Preview                 ├── Render: schema gate + CI → readiness → traffic
+                                               └── Vercel: schema gate → native production build
 
 Production schema migration: separate operator review + recovery point + guarded CLI
 ```
@@ -59,16 +60,18 @@ instance running when the new instance fails health checks. See [Render deploys]
 and [Render health checks](https://render.com/docs/health-checks).
 
 Vercel's Git integration creates Preview deployments for pull requests and a
-production deployment for the configured production branch. CI is enforced before
-merge by GitHub branch protection; no separate Vercel Deployment Checks are needed
-for this solo workflow. This avoids adding a second gate and avoids check-name
-collisions. See [Vercel Git deployments](https://vercel.com/docs/git).
+production deployment for the configured production branch. The operator-installed
+Ignored Build Step below checks schema compatibility before production builds.
+GitHub protects code integration; this small offline check protects release ordering.
+See [Vercel Git deployments](https://vercel.com/docs/git).
 
 ## `main` protection and owner review
 
-The last read-only GitHub settings inspection recorded in the M1 evidence (2026-11-04)
-found no `main` protection rule. Configure this manually before merging; this task
-does not change GitHub settings.
+The November 8 read-only effective-rules inspection confirms PR-based integration,
+conversation resolution, the three required strict CI checks, and protection from
+deletion/force pushes. This supersedes the November 4 observation of missing
+protection. Reverify the effective rules at a release boundary. This task changes
+no GitHub settings.
 
 In repository **Settings → Branches → Add branch protection rule**, target `main`
 and enable:
@@ -87,6 +90,127 @@ this one-person repository, the owner review is a recorded manual review before
 merge; do not configure a required approving-review count that would deadlock the
 owner. A formally enforced independent approving review requires a second GitHub
 reviewer. See [GitHub's required-review behavior](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/approving-a-pull-request-with-required-reviews).
+
+## November 8 incident and immediate recovery gate
+
+Read-only checks at 12:23–12:45 UTC found release skew after
+[PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) merged as
+`deda2ced13df8ef0874df2727cca0d050ab6c164`.
+
+- Render `portfolio-api` (`srv-dba8q3rncjis73cl7to0`) rejected that candidate
+  with `update_failed`. Prior commit `395f842` remains live. Its live/ready endpoints
+  and authenticated portfolio read return 200; its ledger-anchor endpoint returns 404.
+- Vercel production alias `portfolio-research-omega.vercel.app` serves `deda2ce`.
+  The owner verified authenticated health as connected/current at 12:37:09 UTC,
+  while the ledger page displays “This record was not found”. Automated authenticated
+  browser inspection was blocked by browser URL policy. Old API health establishes
+  compatibility with its own migration head.
+- Independently verified Neon primary is `blue-pond-96398788` /
+  `br-square-butterfly-bacw0rn5` / `ep-floral-cake-bae16liy`, `neondb.public`,
+  PostgreSQL 18.6, Alembic `9f2a6d4c81b7`, 95 public tables. The accepted baseline
+  remains intact with 22 positions, two cash rows and 16 targets totaling 1.
+  Model revisions remain empty; the three ledger tables are absent. Full identity,
+  inventory and reconciliation evidence remain in the private incident store.
+- Both pending upgrades are additive. `a832e94d6f10` creates candidate/review
+  tables and indexes; `b59f16c8a203` creates publication lineage. No upgrade DML,
+  existing-table alteration or ownership activation occurs. Expected result is
+  98 public tables, three empty ledger tables and unchanged accepted state.
+- Recovery `br-sparkling-rice-baipcnmc` is ready, parented to production at LSN
+  `0/22A4B20`, created November 7 at 08:54:30 UTC and expiring November 14 at
+  08:54:33 UTC (09:54:33 CET). Read-only SQL confirms the old schema and **zero**
+  canonical records. A fresh populated-state clone is mandatory.
+
+All three required checks passed for the merge SHA. Render's `checksPass` setting
+worked, starting the candidate after the last check at 11:01:30 UTC. CI tested
+disposable schemas at repository head; it had no production-schema gate. Vercel
+built independently from main, and production freezes were absent. Readiness
+protected the old API instance but could not prevent frontend/API version skew.
+Render logs independently confirm 85 `readiness_schema_mismatch` events between
+11:03 and deployment failure, containing expected `b59f16c8a203` and observed
+`9f2a6d4c81b7`.
+
+The immediate freeze requires owner authorization. Set Render service Auto-Deploy
+**Off**, and Blueprint Auto Sync **No** if Blueprint-managed. In Vercel use Ignored
+Build Step **Only build pre-production** (older UI wording **Only build preview**).
+Preserve the healthy old instance. If temporary user impact requires rolling back
+the frontend to `395f842`, obtain separate deployment approval first. No provider
+setting or deployment was changed during this investigation.
+
+Follow the data-bearing procedure below from a separate clean `main` checkout
+pinned to `deda2ced13df8ef0874df2727cca0d050ab6c164`; preserve the ledger feature
+branch. After separate approval create a fresh recovery branch and verify its
+parent/LSN, endpoint, creation/expiry, schema/counts and private canonical content.
+Verify documented Neon restore/reset permissions and recovery access; metadata GET
+success does not establish restore authorization. A disposable restore rehearsal
+or reviewed provider recovery procedure is an acceptance gate.
+
+Local TLS inspection required the trusted certifi bundle in the operator child
+process. Retain `sslmode=verify-full`. Load exact production and **new** recovery
+credentials/IDs securely into that process as described below, with writes false.
+
+```powershell
+$env:PGSSLROOTCERT = (node scripts/uv.mjs run --locked --project apps/api python -c "import certifi; print(certifi.where())").Trim()
+$env:EXPECTED_CHECKOUT_SHA = 'deda2ced13df8ef0874df2727cca0d050ab6c164'
+npm run db:production-preflight -- readonly
+$env:MIGRATION_CONFIRMATION = 'MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/ep-floral-cake-bae16liy/neondb/9f2a6d4c81b7->b59f16c8a203'
+npm run db:production-preflight -- migration-preflight
+```
+
+Both commands are read-only; the current recovery branch fails the existing guard.
+Only a separately authorized migration may run `npm run db:migrate` using the
+temporary authorization/finally block below. Post-check existing rows/content,
+three new empty tables and Alembic head before a separately authorized native
+Render deployment of the reviewed commit. The old API can become unready once
+schema advances, so reserve a coordinated operator window. Verify authenticated
+health, Portfolio/Universe and ledger anchor before removing freezes.
+
+## Schema-aware release check
+
+[`schema-gate.mjs`](../scripts/deployment/schema-gate.mjs) reads literal Alembic
+metadata without importing migrations or contacting databases. It validates the
+single-head graph, including historical merges. The owner-reviewed
+[production schema attestation](../scripts/deployment/production-schema.json)
+records exact target, verified revision/time and SHA-256 of applied migration files,
+normalized to LF. Changes to applied history fail closed. The current attestation
+deliberately remains at observed production revision `9f2a6d4c81b7`.
+
+```sh
+node scripts/deployment/schema-gate.mjs review
+node scripts/deployment/schema-gate.mjs deploy
+```
+
+PR `review` validates history and reports the complete pending range while allowing
+synthetic checks. Main `deploy` fails the existing Quality check until repository
+head matches the attestation. Render must retain **After CI Checks Pass**. No
+production credential, migration or cloud request enters CI. The attestation is
+reviewed evidence, not a live monitor; cloud drift or restore requires new
+target-bound verification and a production freeze.
+
+For Vercel, after owner approval and once the script is available on main, replace
+the temporary freeze with this Custom Ignored Build Step, root `apps/web`.
+This provider setting has **not** been installed by this task.
+
+```sh
+if [ "$VERCEL_ENV" = "preview" ]; then exit 1; fi; if [ "$VERCEL_ENV" = "production" ] && node ../../scripts/deployment/schema-gate.mjs deploy; then exit 1; else exit 0; fi
+```
+
+The shell translates successful verification to exit 1 (build), and any Node error,
+missing script, invalid/behind attestation or unknown environment to exit 0 (skip).
+Preview builds exit 1 independently. A direct Node command would be unsafe here
+because Vercel interprets failure as permission to build. Keep the temporary freeze
+until the command is available and tested. Repository CI alone cannot hold Vercel
+production before this operator setup.
+
+At major integration boundaries review pending migrations, freezes and recovery
+before merge. Keep schema-dependent releases frozen, complete the separately
+authorized guarded migration and read-only schema/content checks, then promote
+the attestation through an owner-reviewed commit. Update its revision, timestamp
+and `migration_history_sha256` with the exact `repository_history_sha256` from
+`review` on the verified checkout. Never advance the marker to clear CI before
+verifying the database at that head. Require all three checks on the promoted main
+SHA before native deployments and authenticated readback. Manual deployments keep
+the same gates. Ordinary same-schema changes retain the fast native workflow.
+Database guards, readiness and investment acceptance remain independent.
 
 ## Historical initial schema mismatch and safety behavior
 
@@ -213,7 +337,9 @@ separate owner decision.
    ```
 
    The first command verifies the exact Neon primary, release head and mapped
-   metadata read-only. Both must pass before connecting the web service.
+   metadata read-only. Both must pass before connecting the web service. Follow
+   the schema-attestation promotion procedure above before automatic deployments;
+   a changed production target also requires review of the checked-in target pins.
 
 6. In the existing Render service, configure `APP_ENV=production`, the new direct
    `DATABASE_URL`, `DATABASE_TARGET_ENVIRONMENT=production`, the exact
@@ -228,8 +354,9 @@ separate owner decision.
    check gates traffic.
 7. In the existing Vercel project, retain root `apps/web`, production branch
    `main`, the production Render `API_BASE_URL`, the existing matching server-side
-   `API_ACCESS_TOKEN`, and existing web login settings. Keep pull-request Preview
-   deployments enabled, and do not point Preview at production data. No new
+   `API_ACCESS_TOKEN`, and existing web login settings. Install the schema-aware
+   Ignored Build Step above, keep Preview enabled, and keep Preview isolated from
+   production data. No new
    deployment service, environment, API token or orchestrator is needed.
 8. After the owner reviews the exact PR head and required checks, merge through the
    protected GitHub PR path. Render deploys natively after CI checks pass and
@@ -250,11 +377,11 @@ change. They are instructions only; no live setting has been changed here.
 1. **Protect `main`.** Configure the branch rule above and verify the PR requires all
    three CI checks. Record the owner's manual review in the PR.
 2. **Freeze production deployments before merge.** In the existing Render Blueprint
-   Settings, set **Auto Sync = No**. In the existing `portfolio-api` service Settings,
+   Settings, set **Auto Sync = No** if Blueprint-managed. In the existing `portfolio-api` service Settings,
    set **Auto-Deploy = Off**. In the existing Vercel project Settings → Build and
-   Deployment → Ignored Build Step, select **Only build preview**. This lets PR
-   previews continue while main-branch production builds are skipped. Confirm all
-   three freeze settings before continuing. Render Blueprints can redeploy affected
+   Deployment → Ignored Build Step, select **Only build pre-production** (formerly
+   **Only build preview**). This lets previews continue while production builds are
+   skipped. Confirm each applicable freeze before continuing. Render Blueprints can redeploy affected
    resources on sync; disabling Auto Sync prevents a repository push from applying
    the new Blueprint configuration. See [Render Blueprints](https://render.com/docs/infrastructure-as-code)
    and [Vercel ignored build steps](https://vercel.com/docs/project-configuration/project-settings).
@@ -269,9 +396,13 @@ change. They are instructions only; no live setting has been changed here.
    Vercel Preview to finish. Complete the owner checklist. Merge only through the
    protected PR path. This push may run CI on the resulting `main` commit; keep both
    production freezes in place.
-5. **Verify the exact merged commit.** Record the `main` SHA, confirm all three CI
-   jobs succeeded for that commit, and confirm Vercel skipped only the production
-   build. If CI failed or the merge SHA is not the reviewed content, stop.
+5. **Verify the exact merged commit.** Record the `main` SHA and passing PR quality,
+   integration and Windows evidence for its reviewed content. Confirm Vercel skipped
+   production. With the schema gate installed, the main Quality job intentionally
+   fails at `MIGRATION_REQUIRED` until the actual migration and attestation promotion.
+   That expected release hold grants no migration authority. Other failures or
+   unreviewed merge content are stop conditions. All main checks must pass before
+   deployment at step 11.
 6. **Reverify Neon read-only.** From the exact clean merged checkout, verify the live
    project, primary branch, direct endpoint, `neondb`, TLS `verify-full`, Alembic
    head and complete table/data inventory. Require current head exactly
@@ -348,14 +479,17 @@ change. They are instructions only; no live setting has been changed here.
     code is deployed, so plan a coordinated operator window. Database verification
     precedes the native deployments in the next step. If it fails, leave freezes on
     and fix forward under review or follow a separately authorized recovery plan.
-11. **Remove the freezes.** In Render, manually sync the Blueprint from `main` after
-    confirming the exact merged SHA passed all CI checks. Verify the service now has
+11. **Promote the attestation, then remove freezes.** Follow the reviewed promotion
+    procedure above after live schema/content verification. In Render, sync the
+    Blueprint only if managed by one, after the exact promoted main SHA passes all
+    CI checks. Verify the service has
     Auto-Deploy **After CI Checks Pass**, `/health/ready`, and the existing disabled
-    background flags. Then set Blueprint **Auto Sync = Yes**. Wait for the checked-in
+    background flags. Restore Blueprint **Auto Sync = Yes** only if applicable. Wait for the checked-in
     main commit to deploy and verify its live SHA and `/health/ready`. If the sync did
     not start a deploy, use Render's native dashboard **Deploy a specific commit**
-    with that exact CI-passing main SHA. In Vercel, restore Ignored Build Step to
-    **Automatic**. Verify the native production deployment uses the merged main SHA;
+    with that exact CI-passing main SHA. In Vercel, replace the temporary freeze with
+    the tested schema-aware Custom Ignored Build Step above. Verify production uses
+    the promoted main SHA;
     if Vercel skipped it while frozen, create a deployment from that exact SHA using
     the Vercel dashboard. Keep Preview deployments enabled. Verify the new Render
     `/health/ready` and authenticated Vercel `/api/health`, matching code revisions
@@ -369,7 +503,7 @@ change. They are instructions only; no live setting has been changed here.
 
 For subsequent changes after this first transition, normal operation is simple:
 open a PR, review it, wait for the required checks, merge to protected `main`, and
-let Vercel deploy natively while Render waits for CI. Any schema change still follows
+let Vercel deploy natively through its schema check while Render waits for CI. Any schema change follows
 steps 6–10 separately before deploying code that needs the new schema. Apply the
 temporary provider freezes again whenever code and schema must be released in this
 ordered way.

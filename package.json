@@ -67,7 +67,7 @@
     "docs:check": "node scripts/documentation.mjs",
     "test:docs": "node --test scripts/tests/documentation.test.mjs",
     "test:publication": "node --test scripts/tests/model-publication.test.mjs",
-    "test:deployment": "node --test scripts/deployment/config.test.mjs",
+    "test:deployment": "node --test scripts/deployment/config.test.mjs scripts/deployment/schema-gate.test.mjs",
     "test:integration": "node scripts/integration.mjs",
     "browsers:install": "node scripts/browser.mjs install chromium",
     "test:e2e": "node scripts/browser.mjs test",

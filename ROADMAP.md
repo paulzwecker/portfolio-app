@@ -8,12 +8,21 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 settled multi-account ledger — BUILD checkpoint complete. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                            |
+| Active checkpoint           | C5 schema recovery prepared; C2.3 settled-ledger BUILD checkpoint preserved. [Handoff](docs/ACTIVE_WORKSTREAM.md)                              |
 | Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                        |
-| Implementation              | Bounded income/tax and paired cash/security transfer scope IMPLEMENTATION_COMPLETE / LOCAL_VERIFIED; comprehensive integration next            |
-| Next ready substantial task | INTEGRATE this milestone branch, run comprehensive checks and independent review, then open one cohesive PR                                    |
+| Implementation              | Ledger scope LOCAL_VERIFIED; offline schema-aware release gate and recovery procedure LOCAL_VERIFIED. Provider activation remains owner-gated  |
+| Next ready substantial task | Owner review of incident freeze/recovery; independently INTEGRATE the preserved ledger branch with its release safeguard into one cohesive PR  |
 | Parallel owner gate         | Current-state recovery, production migrations/deployment, provider activation, model acceptance and ledger ownership retain separate approvals |
 | Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream    |
+
+November 8 incident evidence confirms a healthy old Render deployment (`395f842`),
+new Vercel frontend (`deda2ce`) and Neon still at `9f2a6d4c81b7`. Ledger reads fail
+with 404; canonical portfolio counts remain intact. A fresh populated-state recovery
+point and separate migration/deployment authorization are required. The
+[release runbook](docs/deployment-and-migrations.md) records the exact plan, CI
+sequencing cause and offline release gate. The marker stays at the verified schema;
+no production or provider change occurred. Focused checks passed 16 deployment,
+55 readiness/preflight and three isolated migration/replay tests, plus docs/privacy.
 
 ## Where we are
 
