@@ -560,6 +560,89 @@ class CashPosition(Base):
     balance: Mapped[Decimal | None] = mapped_column(Numeric(28, 10))
 
 
+class PortfolioLedgerCandidate(Base):
+    """Immutable candidate packet and replay, separate from canonical holdings."""
+
+    __tablename__ = "portfolio_ledger_candidates"
+    __table_args__ = (
+        UniqueConstraint("portfolio_id", "id"),
+        UniqueConstraint(
+            "portfolio_id",
+            "request_sha256",
+            name="uq_portfolio_ledger_candidates_portfolio_request",
+        ),
+        ForeignKeyConstraint(
+            ["portfolio_id", "base_candidate_id"],
+            ["portfolio_ledger_candidates.portfolio_id", "portfolio_ledger_candidates.id"],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "base_candidate_id IS NULL OR base_candidate_id <> id", name="base_candidate"
+        ),
+        CheckConstraint("length(input_sha256) = 64", name="input_sha256"),
+        CheckConstraint("length(packet_sha256) = 64", name="packet_sha256"),
+        CheckConstraint("length(preview_sha256) = 64", name="preview_sha256"),
+        CheckConstraint("length(request_sha256) = 64", name="request_sha256"),
+        CheckConstraint("submitted_by = 'LOCAL_USER'", name="submitted_by"),
+        CheckConstraint(
+            "preview_status IN ('BLOCKED','OPENING_RECONCILED','ENDING_RECONCILED')",
+            name="preview_status",
+        ),
+        Index("ix_portfolio_ledger_candidates_portfolio_submitted", "portfolio_id", "submitted_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    portfolio_id: Mapped[UUID] = mapped_column(ForeignKey("portfolios.id", ondelete="RESTRICT"))
+    anchor_snapshot_id: Mapped[UUID] = mapped_column(
+        ForeignKey("holding_snapshots.id", ondelete="RESTRICT")
+    )
+    base_candidate_id: Mapped[UUID | None] = mapped_column()
+    input_sha256: Mapped[str] = mapped_column(String(64))
+    packet_sha256: Mapped[str] = mapped_column(String(64))
+    preview_sha256: Mapped[str] = mapped_column(String(64))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    preview_status: Mapped[str] = mapped_column(String(24))
+    packet_data: Mapped[dict[str, object]] = mapped_column(JSON)
+    preview_data: Mapped[dict[str, object]] = mapped_column(JSON)
+    reason: Mapped[str] = mapped_column(Text)
+    submitted_by: Mapped[str] = mapped_column(String(24), default="LOCAL_USER")
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class PortfolioLedgerReview(Base):
+    """One immutable terminal review per independent ledger candidate."""
+
+    __tablename__ = "portfolio_ledger_reviews"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["portfolio_id", "candidate_id"],
+            ["portfolio_ledger_candidates.portfolio_id", "portfolio_ledger_candidates.id"],
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("candidate_id"),
+        UniqueConstraint("portfolio_id", "revision_number"),
+        CheckConstraint("decision IN ('ACCEPT','REJECT')", name="decision"),
+        CheckConstraint(
+            "(decision = 'ACCEPT' AND revision_number IS NOT NULL AND revision_number >= 1) OR "
+            "(decision = 'REJECT' AND revision_number IS NULL)",
+            name="revision_number",
+        ),
+        CheckConstraint("length(request_sha256) = 64", name="request_sha256"),
+        CheckConstraint("reviewed_by = 'LOCAL_USER'", name="reviewed_by"),
+        Index("ix_portfolio_ledger_reviews_portfolio_reviewed", "portfolio_id", "reviewed_at"),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    portfolio_id: Mapped[UUID] = mapped_column(ForeignKey("portfolios.id", ondelete="RESTRICT"))
+    candidate_id: Mapped[UUID] = mapped_column()
+    decision: Mapped[str] = mapped_column(String(8))
+    revision_number: Mapped[int | None] = mapped_column(Integer)
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    reason: Mapped[str] = mapped_column(Text)
+    reviewed_by: Mapped[str] = mapped_column(String(24), default="LOCAL_USER")
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    review_data: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
 class TargetRevision(Audit, Base):
     __tablename__ = "target_allocation_revisions"
     __table_args__ = (
@@ -4022,6 +4105,8 @@ def protect_history(session: Session, flush_context: object, instances: object) 
         HoldingSnapshot,
         HoldingPosition,
         CashPosition,
+        PortfolioLedgerCandidate,
+        PortfolioLedgerReview,
         ScoreAssessment,
         LegacyImportBatch,
         WorkbookSyncArtifact,

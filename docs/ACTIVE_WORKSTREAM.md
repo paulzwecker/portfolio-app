@@ -12,6 +12,12 @@
 
 ## Current ledger increment
 
+Durable storage now passes 21 isolated PostgreSQL checks. Migration `a832e94d6f10`
+follows `9f2a6d4c81b7` and adds candidate/review tables, hash/request uniqueness,
+portfolio-scoped ancestry and immutable terminal reviews. Upgrade/replay, constraints,
+rollback and append-only enforcement pass. Review API/corrections are being integrated.
+Production migration and activation remain owner-gated.
+
 `bf9f184` ending-statement reconciliation passes 79 focused checks (67 unit and 12 isolated
 PostgreSQL/API cases). Account and total comparisons preserve missing/zero, exact
 decimals, evidence and ordering. Missing empty accounts block; matching portfolio
