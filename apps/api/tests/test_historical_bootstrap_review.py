@@ -74,6 +74,49 @@ def test_large_scope_is_bounded_and_reports_omitted_listings(postgres_engine: En
         assert len(result.listings) == 30
         assert result.omitted_listing_count == 1
         assert all(row.reason == "CHECKPOINT_NOT_COMPLETE" for row in result.listings)
+        assert result.run_id is not None
+        page = latest_historical_bootstrap_review(
+            session, checked_at=NOW, run_id=result.run_id, offset=30
+        )
+        assert page.offset == 30 and page.omitted_listing_count == 0
+        assert [row.subject_key for row in page.listings] == ["SYNTH:30"]
+        assert {row.subject_key for row in result.listings}.isdisjoint(
+            {row.subject_key for row in page.listings}
+        )
+        with pytest.raises(ValueError):
+            latest_historical_bootstrap_review(session, checked_at=NOW, offset=30)
+        with pytest.raises(ValueError):
+            latest_historical_bootstrap_review(
+                session, checked_at=NOW, run_id=result.run_id, offset=31
+            )
+        with pytest.raises(LookupError):
+            latest_historical_bootstrap_review(session, checked_at=NOW, run_id=uuid4())
+        pinned_id = result.run_id
+    newer_id = uuid4()
+    with Session(postgres_engine) as session, session.begin():
+        session.add(
+            MarketDataBootstrapRun(
+                id=newer_id,
+                input_digest="e" * 64,
+                provider_id="synthetic",
+                provider_schema_version="v1",
+                crosswalk_sha256="c" * 64,
+                target_environment="development",
+                start_date=date(2026, 1, 1),
+                end_date=date(2026, 12, 31),
+                scope={},
+                status="PREPARED",
+                prepared_at=datetime(2026, 11, 8, 22, tzinfo=UTC),
+                report={},
+            )
+        )
+    with Session(postgres_engine) as session, session.begin():
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        assert latest_historical_bootstrap_review(session, checked_at=NOW).run_id == newer_id
+        page = latest_historical_bootstrap_review(
+            session, checked_at=NOW, run_id=pinned_id, offset=30
+        )
+        assert page.run_id == pinned_id and page.listings[0].subject_key == "SYNTH:30"
 
 
 @pytest.mark.integration

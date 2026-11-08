@@ -7096,6 +7096,8 @@ export interface components {
             listing_count: number;
             /** Listings */
             listings: components["schemas"]["HistoricalBootstrapListingReviewRead"][];
+            /** Offset */
+            offset: number;
             /** Omitted Listing Count */
             omitted_listing_count: number;
             /** Prepared At */
@@ -15978,7 +15980,10 @@ export interface operations {
     };
     get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get: {
         parameters: {
-            query?: never;
+            query?: {
+                run_id?: string | null;
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -15992,6 +15997,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HistoricalBootstrapReviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

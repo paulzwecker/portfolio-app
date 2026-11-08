@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useResearch } from "@/hooks/use-research";
 import {
@@ -20,19 +22,38 @@ const reasonLabels = {
 } as const;
 
 export function HistoricalBootstrapPanel() {
-  const { data, error } = useResearch(
-    "market-data/historical-bootstrap",
+  const [page, setPage] = useState<{ runId: string; offset: number } | null>(
+    null,
+  );
+  const { data, error, retry } = useResearch(
+    page
+      ? `market-data/historical-bootstrap?run_id=${encodeURIComponent(page.runId)}&offset=${page.offset}`
+      : "market-data/historical-bootstrap",
     isHistoricalBootstrapReview,
   );
-  return <HistoricalBootstrapPanelContent data={data} error={error} />;
+  return (
+    <HistoricalBootstrapPanelContent
+      data={data}
+      error={error}
+      onPage={(runId, offset) => setPage({ runId, offset })}
+      onLatest={() => {
+        if (page) setPage(null);
+        else retry();
+      }}
+    />
+  );
 }
 
 export function HistoricalBootstrapPanelContent({
   data,
   error,
+  onPage,
+  onLatest,
 }: {
   data?: HistoricalBootstrapReview;
   error?: string;
+  onPage?: (runId: string, offset: number) => void;
+  onLatest?: () => void;
 }) {
   return (
     <Card className="shadow-none">
@@ -41,10 +62,17 @@ export function HistoricalBootstrapPanelContent({
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {error ? (
-          <p role="status">
-            Historical bootstrap review is unavailable. Check the API version
-            and retry.
-          </p>
+          <div role="status">
+            <p>
+              Historical bootstrap review is unavailable. Check the API version
+              and retry.
+            </p>
+            {onLatest && (
+              <Button variant="outline" onClick={onLatest}>
+                Load latest run
+              </Button>
+            )}
+          </div>
         ) : !data ? (
           <p>Loading historical bootstrap review…</p>
         ) : !data.run_id ? (
@@ -52,8 +80,8 @@ export function HistoricalBootstrapPanelContent({
         ) : (
           <>
             <p>
-              Latest run: {data.run_status} · prepared{" "}
-              {dateTime(data.prepared_at)} · checked {dateTime(data.checked_at)}
+              Run: {data.run_status} · prepared {dateTime(data.prepared_at)} ·
+              checked {dateTime(data.checked_at)}
             </p>
             <p>
               Requested{" "}
@@ -76,10 +104,14 @@ export function HistoricalBootstrapPanelContent({
             </p>
             {data.omitted_listing_count > 0 && (
               <p>
-                {data.omitted_listing_count} additional listings are not
-                reviewed in this panel.
+                {data.omitted_listing_count} additional listings follow this
+                page.
               </p>
             )}
+            <p className="text-muted-foreground">
+              Each page is checked independently; the run is pinned, but its
+              data may change between requests.
+            </p>
             <div className="space-y-2">
               {data.listings.map((row) => (
                 <details
@@ -143,6 +175,44 @@ export function HistoricalBootstrapPanelContent({
                 </details>
               ))}
             </div>
+            {onPage && (
+              <div
+                className="flex flex-wrap items-center gap-2"
+                aria-label="Historical bootstrap pages"
+              >
+                <Button
+                  variant="outline"
+                  disabled={data.offset === 0}
+                  onClick={() =>
+                    onPage(data.run_id!, Math.max(0, data.offset - 30))
+                  }
+                >
+                  Previous listings
+                </Button>
+                <span>
+                  Showing {data.listings.length ? data.offset + 1 : 0}–
+                  {data.offset + data.listings.length} of {data.listing_count}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={
+                    data.omitted_listing_count === 0 || data.offset + 30 > 10000
+                  }
+                  onClick={() => onPage(data.run_id!, data.offset + 30)}
+                >
+                  Next listings
+                </Button>
+                <Button variant="ghost" onClick={onLatest}>
+                  Latest run
+                </Button>
+              </div>
+            )}
+            {data.omitted_listing_count > 0 && data.offset + 30 > 10000 && (
+              <p>
+                Further listings exceed the page limit; review a smaller scoped
+                run.
+              </p>
+            )}
           </>
         )}
       </CardContent>

@@ -262,7 +262,7 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
 }) => {
   const { writes } = await installRoutes(page, operationsFixture());
   await page.route(
-    "**/api/research/market-data/historical-bootstrap",
+    "**/api/research/market-data/historical-bootstrap*",
     (route) =>
       route.fulfill({
         json: {
@@ -272,32 +272,55 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
           requested_start: "2025-01-01",
           requested_end: "2026-12-31",
           checked_at: "2026-11-09T00:00:00Z",
-          listing_count: 2,
+          listing_count: 31,
           fx_checkpoint_count: 1,
-          omitted_listing_count: 1,
-          listings: [
-            {
-              subject_key: "NYSE:SYNTH",
-              checkpoint_status: "COMPLETE",
-              reason: "AVAILABLE",
-              scheduled_session_review: {
-                venue: "NYSE",
-                schedule_id: "synthetic",
-                source_url:
-                  "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
-                source_sha256: "a".repeat(64),
-                schedule_fingerprint: "b".repeat(64),
-                source_as_of: null,
-                source_observed_at: "2026-11-08T18:37:45Z",
-                start_date: "2026-07-02",
-                end_date: "2026-07-07",
-                full_selected_span_covered: true,
-                scheduled_count: 3,
-                absent_scheduled_dates: ["2026-07-06"],
-                selected_unscheduled_dates: [],
-              },
-            },
-          ],
+          offset:
+            new URL(route.request().url()).searchParams.get("offset") === "30"
+              ? 30
+              : 0,
+          omitted_listing_count:
+            new URL(route.request().url()).searchParams.get("offset") === "30"
+              ? 0
+              : 1,
+          listings:
+            new URL(route.request().url()).searchParams.get("offset") === "30"
+              ? [
+                  {
+                    subject_key: "NYSE:LAST",
+                    checkpoint_status: "PENDING",
+                    reason: "CHECKPOINT_NOT_COMPLETE",
+                    scheduled_session_review: null,
+                  },
+                ]
+              : [
+                  {
+                    subject_key: "NYSE:SYNTH",
+                    checkpoint_status: "COMPLETE",
+                    reason: "AVAILABLE",
+                    scheduled_session_review: {
+                      venue: "NYSE",
+                      schedule_id: "synthetic",
+                      source_url:
+                        "https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf",
+                      source_sha256: "a".repeat(64),
+                      schedule_fingerprint: "b".repeat(64),
+                      source_as_of: null,
+                      source_observed_at: "2026-11-08T18:37:45Z",
+                      start_date: "2026-07-02",
+                      end_date: "2026-07-07",
+                      full_selected_span_covered: true,
+                      scheduled_count: 3,
+                      absent_scheduled_dates: ["2026-07-06"],
+                      selected_unscheduled_dates: [],
+                    },
+                  },
+                  ...Array.from({ length: 29 }, (_, i) => ({
+                    subject_key: `NYSE:TEST${i}`,
+                    checkpoint_status: "PENDING",
+                    reason: "CHECKPOINT_NOT_COMPLETE",
+                    scheduled_session_review: null,
+                  })),
+                ],
         },
       }),
   );
@@ -309,12 +332,17 @@ test("Historical bootstrap schedule evidence is reviewable without writes", asyn
       .filter({
         has: page.getByText("Historical bootstrap review", { exact: true }),
       })
-      .filter({ hasText: "Latest run:" })
+      .filter({ hasText: "Run:" })
       .last();
     await expect(panel).toContainText("FX sessions remain unassessed");
     await panel.getByText("NYSE:SYNTH", { exact: false }).click();
     await expect(panel).toContainText("not confirmed missing trades");
-    await expect(panel).toContainText("1 additional listings are not reviewed");
+    await expect(panel).toContainText("1 additional listings follow this page");
+    await panel.getByRole("button", { name: "Next listings" }).click();
+    await expect(panel).toContainText("NYSE:LAST");
+    await expect(panel).toContainText("Showing 31–31 of 31");
+    await panel.getByRole("button", { name: "Previous listings" }).click();
+    await expect(panel).toContainText("NYSE:SYNTH");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

@@ -62,8 +62,10 @@ usable price history, FX coverage, completeness or freshness. Review expected se
 and source conventions separately before interpreting coverage or chart readiness.
 
 Operations also offers an on-demand, read-only schedule review for the latest run.
-It examines at most 30 listing checkpoints ordered by subject key, reporting any
-omitted count and FX checkpoints separately. Only completed checkpoints with matching
+It examines at most 30 listing checkpoints per page ordered by subject key and ID,
+reporting remaining listings and FX checkpoints separately. Navigation pins the run
+ID, but each page is an independent read, not a transactional snapshot. Offsets
+are capped at 10,000; use a smaller scoped run if that limit is reached. Only completed checkpoints with matching
 frozen listing identity, batch digest and provider, listing currency and eligible
 same-provider/same-currency stored closes are considered. It compares the first to
 last eligible close in 2026 against a reviewed, time-appropriate NYSE, NASDAQ or

@@ -315,3 +315,11 @@ PostgreSQL cases, 52 web checks and a desktop/mobile browser journey passed; no
 schema, receipt, hosted setting or production data changed. Next extend review to
 the full requested scope and more explicitly reviewed venues while preserving these
 boundaries; live ingestion and deployment remain separately authorized.
+
+The next BUILD enables run-pinned page navigation in Operations, with 30 listings
+per request and an offset cap of 10,000. It checks the returned run/page against the
+request and fails closed on mismatches. Pages are separately checked live reads,
+not a shared transactional snapshot. Additional venues, full requested-window
+boundaries and FX remain unassessed. Ten isolated PostgreSQL cases plus a rerun
+with a newer run inserted, 52 focused web tests, strict types, and a synthetic
+desktop/mobile paging journey passed. No schema or hosted change was made.

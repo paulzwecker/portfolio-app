@@ -1,6 +1,7 @@
 """Bounded read-only review of dates in the latest historical bootstrap batch."""
 
 from datetime import UTC, date, datetime, time, timedelta
+from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -20,17 +21,27 @@ MAX_DAILY_TIMESTAMPS = 366
 
 
 def latest_historical_bootstrap_review(
-    session: Session, *, checked_at: datetime | None = None
+    session: Session,
+    *,
+    checked_at: datetime | None = None,
+    run_id: UUID | None = None,
+    offset: int = 0,
 ) -> s.HistoricalBootstrapReviewRead:
     """Review stored batch dates, without reconciling payloads or changing receipts."""
+    if offset < 0 or offset > 10000 or (offset and run_id is None):
+        raise ValueError("Invalid page")
     at = checked_at or datetime.now(UTC)
+    query = select(MarketDataBootstrapRun).where(MarketDataBootstrapRun.prepared_at <= at)
+    if run_id is not None:
+        query = query.where(MarketDataBootstrapRun.id == run_id)
     run = session.scalar(
-        select(MarketDataBootstrapRun)
-        .where(MarketDataBootstrapRun.prepared_at <= at)
-        .order_by(MarketDataBootstrapRun.prepared_at.desc(), MarketDataBootstrapRun.id.desc())
-        .limit(1)
+        query.order_by(
+            MarketDataBootstrapRun.prepared_at.desc(), MarketDataBootstrapRun.id.desc()
+        ).limit(1)
     )
     if run is None:
+        if run_id is not None:
+            raise LookupError("Run unavailable")
         return s.HistoricalBootstrapReviewRead(
             run_id=None,
             run_status=None,
@@ -40,6 +51,7 @@ def latest_historical_bootstrap_review(
             checked_at=at,
             listing_count=0,
             fx_checkpoint_count=0,
+            offset=0,
             omitted_listing_count=0,
             listings=[],
         )
@@ -51,6 +63,8 @@ def latest_historical_bootstrap_review(
         ).all()
     )
     listing_count = int(counts.get("LISTING", 0))
+    if offset and offset >= listing_count:
+        raise ValueError("Page outside run")
     checkpoints = session.scalars(
         select(MarketDataBootstrapCheckpoint)
         .where(
@@ -58,6 +72,7 @@ def latest_historical_bootstrap_review(
             MarketDataBootstrapCheckpoint.subject_kind == "LISTING",
         )
         .order_by(MarketDataBootstrapCheckpoint.subject_key, MarketDataBootstrapCheckpoint.id)
+        .offset(offset)
         .limit(MAX_LISTINGS)
     ).all()
     rows = [_listing_review(session, run, checkpoint, at) for checkpoint in checkpoints]
@@ -70,7 +85,8 @@ def latest_historical_bootstrap_review(
         checked_at=at,
         listing_count=listing_count,
         fx_checkpoint_count=int(counts.get("FX_PAIR", 0)),
-        omitted_listing_count=max(0, listing_count - len(rows)),
+        offset=offset,
+        omitted_listing_count=max(0, listing_count - offset - len(rows)),
         listings=rows,
     )
 

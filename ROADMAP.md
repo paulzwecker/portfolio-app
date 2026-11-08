@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                        |
 | Branch / PR                 | `codex/market-history-coverage`, integrated with main `aef3572`; no PR yet                                   |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                 |
-| Next ready substantial task | Extend bounded history review to the full requested scope and additional reviewed venues; keep activation gated |
+| Next ready substantial task | Extend reviewed schedule coverage to more venues and requested-window boundaries; keep activation gated |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                             |
 
@@ -40,6 +40,10 @@ eligible 2026 closes with reviewed schedules. This covers only the selected clos
 span, does not reconcile payloads or certify trading, and changes no receipts.
 Ten isolated PostgreSQL tests, 52 web tests, and a synthetic desktop/mobile
 browser journey passed. No migration or provider activation was performed.
+The next BUILD adds run-pinned, bounded page navigation for remaining listings.
+Each page is an independent read; offsets above 10,000 require a smaller scoped run.
+Ten isolated PostgreSQL cases, 52 web tests and a desktop/mobile paging journey
+passed; a newer run did not change the pinned page's identity.
 
 PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and

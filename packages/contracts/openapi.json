@@ -16405,6 +16405,10 @@
             "title": "Listings",
             "type": "array"
           },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
           "omitted_listing_count": {
             "title": "Omitted Listing Count",
             "type": "integer"
@@ -16478,6 +16482,7 @@
           "checked_at",
           "listing_count",
           "fx_checkpoint_count",
+          "offset",
           "omitted_listing_count",
           "listings"
         ],
@@ -39928,6 +39933,37 @@
     "/v1/market-data/historical-bootstrap": {
       "get": {
         "operationId": "get_historical_bootstrap_review_v1_market_data_historical_bootstrap_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -39938,6 +39974,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Historical Bootstrap Review",

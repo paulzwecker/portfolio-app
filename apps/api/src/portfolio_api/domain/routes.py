@@ -899,8 +899,15 @@ def get_market_refresh_status(db: Db) -> s.MarketRefreshStatusRead:
 
 
 @router.get("/market-data/historical-bootstrap", response_model=s.HistoricalBootstrapReviewRead)
-def get_historical_bootstrap_review(db: LedgerDb) -> s.HistoricalBootstrapReviewRead:
-    return latest_historical_bootstrap_review(db)
+def get_historical_bootstrap_review(
+    db: LedgerDb, run_id: UUID | None = None, offset: Annotated[int, Query(ge=0, le=10000)] = 0
+) -> s.HistoricalBootstrapReviewRead:
+    try:
+        return latest_historical_bootstrap_review(db, run_id=run_id, offset=offset)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="Invalid review page") from error
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail="Bootstrap run unavailable") from error
 
 
 @router.get(

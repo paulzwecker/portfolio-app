@@ -441,6 +441,14 @@ async function proxy(request: Request, path: string[]) {
       throw new Error("Invalid API configuration");
     const search = new URL(request.url).searchParams;
     if (
+      joined === "market-data/historical-bootstrap" &&
+      ["run_id", "offset"].some((key) => search.getAll(key).length > 1)
+    )
+      return Response.json(
+        { detail: "Invalid review page" },
+        { status: 400, headers },
+      );
+    if (
       sensitivityPath.test(joined) &&
       (search.getAll("base_revision_id").length !== 1 ||
         !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
@@ -479,8 +487,16 @@ async function proxy(request: Request, path: string[]) {
       "status",
       "lookback_days",
       "limit",
+      "run_id",
+      "offset",
     ]) {
       const value = search.get(key);
+      if (
+        value !== null &&
+        joined === "market-data/historical-bootstrap" &&
+        ["run_id", "offset"].includes(key)
+      )
+        url.searchParams.set(key, value);
       if (
         value !== null &&
         key === "base_revision_id" &&
@@ -813,6 +829,13 @@ async function proxy(request: Request, path: string[]) {
         : validRead(joined, data);
     if (
       !valid ||
+      (joined === "market-data/historical-bootstrap" &&
+        (!isHistoricalBootstrapReview(data) ||
+          (search.has("run_id") &&
+            data.run_id?.toLowerCase() !==
+              search.get("run_id")?.toLowerCase()) ||
+          (search.has("offset") &&
+            String(data.offset) !== search.get("offset")))) ||
       (sensitivityPath.test(joined) &&
         (!isDcfSensitivity(data) ||
           data.revision_id.toLowerCase() !==

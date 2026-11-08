@@ -154,6 +154,7 @@ it("forwards the historical bootstrap review as a validated read-only endpoint",
     checked_at: "2026-11-09T00:00:00Z",
     listing_count: 0,
     fx_checkpoint_count: 0,
+    offset: 0,
     omitted_listing_count: 0,
     listings: [],
   };
@@ -169,6 +170,43 @@ it("forwards the historical bootstrap review as a validated read-only endpoint",
   expect((mock.mock.calls[0][0] as URL).pathname).toBe(
     "/v1/market-data/historical-bootstrap",
   );
+  mock.mockResolvedValueOnce(
+    Response.json({
+      ...response,
+      run_id: "11111111-1111-4111-8111-111111111111",
+      run_status: "COMPLETE",
+      prepared_at: "2026-11-08T20:00:00Z",
+      requested_start: "2026-01-01",
+      requested_end: "2026-12-31",
+      listing_count: 31,
+      offset: 30,
+      listings: [
+        {
+          subject_key: "NYSE:LAST",
+          checkpoint_status: "PENDING",
+          reason: "CHECKPOINT_NOT_COMPLETE",
+          scheduled_session_review: null,
+        },
+      ],
+    }),
+  );
+  const page = await GET(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap?run_id=11111111-1111-4111-8111-111111111111&offset=30",
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(page.status).toBe(200);
+  expect((mock.mock.calls[1][0] as URL).search).toBe(
+    "?run_id=11111111-1111-4111-8111-111111111111&offset=30",
+  );
+  const mismatch = await GET(
+    new Request(
+      "http://localhost/api/research/market-data/historical-bootstrap?run_id=11111111-1111-4111-8111-111111111111&offset=30",
+    ),
+    context(["market-data", "historical-bootstrap"]),
+  );
+  expect(mismatch.status).toBe(503);
   const mutation = await POST(
     new Request(
       "http://localhost/api/research/market-data/historical-bootstrap",
@@ -177,7 +215,7 @@ it("forwards the historical bootstrap review as a validated read-only endpoint",
     context(["market-data", "historical-bootstrap"]),
   );
   expect(mutation.status).not.toBe(200);
-  expect(mock).toHaveBeenCalledTimes(1);
+  expect(mock).toHaveBeenCalledTimes(3);
 });
 it("validates recurring operations status before forwarding it", async () => {
   const response = {

@@ -941,6 +941,9 @@ export function isHistoricalBootstrapReview(
     (v.listing_count as number) < 0 ||
     !Number.isInteger(v.fx_checkpoint_count) ||
     (v.fx_checkpoint_count as number) < 0 ||
+    !Number.isInteger(v.offset) ||
+    (v.offset as number) < 0 ||
+    (v.offset as number) > 10000 ||
     !Number.isInteger(v.omitted_listing_count) ||
     (v.omitted_listing_count as number) < 0 ||
     !Array.isArray(v.listings) ||
@@ -974,6 +977,7 @@ export function isHistoricalBootstrapReview(
       v.requested_end === null &&
       v.listing_count === 0 &&
       v.fx_checkpoint_count === 0 &&
+      v.offset === 0 &&
       v.omitted_listing_count === 0 &&
       v.listings.length === 0
     );
@@ -984,8 +988,12 @@ export function isHistoricalBootstrapReview(
     typeof v.requested_start === "string" &&
     typeof v.requested_end === "string" &&
     v.requested_start <= v.requested_end &&
+    ((v.offset as number) === 0 ||
+      (v.offset as number) < (v.listing_count as number)) &&
     (v.listing_count as number) ===
-      v.listings.length + (v.omitted_listing_count as number) &&
+      (v.offset as number) +
+        v.listings.length +
+        (v.omitted_listing_count as number) &&
     v.listings.length <= 30
   );
 }

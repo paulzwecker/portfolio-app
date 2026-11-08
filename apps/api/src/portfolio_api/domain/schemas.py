@@ -879,6 +879,7 @@ class HistoricalBootstrapReviewRead(Contract):
     checked_at: datetime
     listing_count: int
     fx_checkpoint_count: int
+    offset: int
     omitted_listing_count: int
     listings: list[HistoricalBootstrapListingReviewRead]
 

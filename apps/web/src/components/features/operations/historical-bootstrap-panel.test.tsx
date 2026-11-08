@@ -13,6 +13,7 @@ describe("historical bootstrap review", () => {
     checked_at: "2026-11-09T00:00:00Z",
     listing_count: 2,
     fx_checkpoint_count: 1,
+    offset: 0,
     omitted_listing_count: 1,
     listings: [
       {
@@ -46,7 +47,7 @@ describe("historical bootstrap review", () => {
     const html = renderToStaticMarkup(
       <HistoricalBootstrapPanelContent data={payload} />,
     );
-    expect(html).toContain("1 additional listings are not reviewed");
+    expect(html).toContain("1 additional listings follow this page");
     expect(html).toContain(
       "does not establish coverage of the full requested window",
     );
@@ -90,6 +91,7 @@ describe("historical bootstrap review", () => {
     expect(isHistoricalBootstrapReview({ ...payload, run_id: null })).toBe(
       false,
     );
+    expect(isHistoricalBootstrapReview({ ...payload, offset: 30 })).toBe(false);
     expect(
       isHistoricalBootstrapReview({ ...payload, requested_start: null }),
     ).toBe(false);
