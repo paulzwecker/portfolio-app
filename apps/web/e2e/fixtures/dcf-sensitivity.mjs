@@ -1,6 +1,7 @@
 // Fictional, deterministic API payload. Contains no workbook or portfolio data.
 export const modelId = "99999999-9999-4999-8999-999999999999";
 export const revisionId = "22222222-2222-4222-8222-222222222222";
+export const malformedModelId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 export function sensitivityFixture() {
   return {
@@ -23,11 +24,11 @@ export function sensitivityFixture() {
         discount_rate_shift,
         terminal_growth_shift,
         status: "AVAILABLE",
-        unavailable_reason: null,
-        bear_fv: "15",
-        base_fv: "20",
-        bull_fv: "30",
-        weighted_fv: "21",
+        unavailable_reason: /** @type {string | null} */ (null),
+        bear_fv: /** @type {string | null} */ ("15"),
+        base_fv: /** @type {string | null} */ ("20"),
+        bull_fv: /** @type {string | null} */ ("30"),
+        weighted_fv: /** @type {string | null} */ ("21"),
       })),
     ),
   };

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { sensitivityFixture } from "./fixtures/dcf-sensitivity.mjs";
 import type { Overview } from "../src/lib/domain-contracts";
 
 const id = "11111111-1111-4111-8111-111111111111";
@@ -268,47 +269,22 @@ const contractModel = {
   history: [contractRevision],
 };
 
-function sensitivityFixture() {
-  return {
-    calculation_version: "ufcf-dcf-sensitivity-v1",
-    model_id: contractModelId,
-    revision_id: contractRevisionId,
-    revision_number: 1,
-    methodology_version: "ufcf-dcf-fade-v1",
-    model_currency: "USD",
-    discount_rate_shifts: ["-0.01", "0", "0.01"],
-    terminal_growth_shifts: ["-0.005", "0", "0.005"],
-    scenarios: scenarioNames.map((scenario) => ({
-      scenario,
-      probability: scenario === "BASE" ? "0.6" : "0.2",
-      year5_discount_rate: "0.09",
-      terminal_growth: "0.025",
-    })),
-    cells: ["-0.01", "0", "0.01"].flatMap((discount_rate_shift) =>
-      ["-0.005", "0", "0.005"].map((terminal_growth_shift) => ({
-        discount_rate_shift,
-        terminal_growth_shift,
-        status: "AVAILABLE",
-        unavailable_reason: null as string | null,
-        bear_fv: "15" as string | null,
-        base_fv: "20" as string | null,
-        bull_fv: "30" as string | null,
-        weighted_fv: "21" as string | null,
-      })),
-    ),
-  };
-}
-
 for (const mode of [
   "complete",
   "invalid-cell",
   "stale",
   "wrong-revision",
   "unavailable",
+  "real-proxy",
 ] as const) {
   test(`DCF sensitivity ${mode} stays read-only and revision-bound`, async ({
     page,
   }, testInfo) => {
+    test.skip(
+      mode === "real-proxy" &&
+        process.env.E2E_MANAGED_PRODUCTION_SERVER !== "1",
+      "Requires managed authenticated HTTPS fixture",
+    );
     let sensitivityReads = 0;
     let writes = 0;
     const data = sensitivityFixture();
@@ -353,6 +329,7 @@ for (const mode of [
         return route.fulfill({ json: [] });
       if (path === `financial-models/${contractModelId}/sensitivity`) {
         sensitivityReads += 1;
+        if (mode === "real-proxy") return route.continue();
         expect(url.searchParams.get("base_revision_id")).toBe(
           contractRevisionId,
         );
@@ -435,9 +412,9 @@ for (const mode of [
         () => document.documentElement.scrollWidth > window.innerWidth,
       );
       expect(overflow).toBe(false);
-      if (mode === "complete")
+      if (mode === "complete" || mode === "real-proxy")
         await panel.screenshot({
-          path: `../../.cache/dcf-sensitivity/${testInfo.project.name}.png`,
+          path: `../../.cache/dcf-sensitivity/${testInfo.project.name}${mode === "real-proxy" ? "-proxy" : ""}.png`,
         });
       await page.getByRole("button", { name: "Hide sensitivity" }).click();
       await expect(panel.getByRole("table")).toHaveCount(0);

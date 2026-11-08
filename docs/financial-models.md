@@ -331,10 +331,15 @@ A subsequent normal-entrypoint review found missing Next.js proxy routing, query
 forwarding and payload validation. The correction passes 66 focused proxy/access/
 presentation checks, including exact model/revision binding, rejected writes,
 HTTPS and server-token isolation. Earlier page-request mocks did not exercise that
-server boundary. Authenticated production-mode proxy verification is in progress.
+server boundary. Authenticated production-mode proxy verification now passes
+24 desktop/mobile cases, including two real proxy UI journeys. A loopback-only
+HTTPS fixture retains certificate/hostname verification, independent web/API tokens
+and rejected writes. Five Node isolation checks and the certificate fixture unit
+case pass. The [managed browser command](testing.md#managed-authenticated-production-browser-fixtures)
+reproduces this without operator credentials or a database.
 
 PR #25's base repair is complete and passing at `7d4ce2e`. PRs #25/#26 remain stable
-for owner review. Next finish the synthetic authenticated HTTPS request path, then
+for owner review. Next finish focused regression/review, then
 integrate the completed slices after owner merges, preserving each ledger. Remote
 CI for this slice and real hosted model readback remain unverified. Production
 model acceptance remains owner-gated.

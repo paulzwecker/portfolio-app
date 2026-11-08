@@ -10,8 +10,8 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C1.3 authenticated proxy-path verification — BUILD. [Handoff](docs/financial-models.md#current-build-checkpoint)                                                                                          |
 | Branch / PR                 | `codex/native-dcf-sensitivity`, from merged main `395f842`. Local BUILD branch                                                                                                                            |
-| Implementation              | C1.3 proxy correction LOCAL_VERIFIED; authenticated production-mode request path in progress                                                                                                              |
-| Next ready substantial task | Complete isolated authenticated Next.js → HTTPS fixture verification, then preserve this slice for combined integration                                                                                   |
+| Implementation              | C1.3 complete proxy path LOCAL_VERIFIED with authenticated production-mode desktop/mobile fixtures                                                                                                        |
+| Next ready substantial task | Finish final focused verification/review, then preserve the complete slice for integration after pending owner reviews                                                                                    |
 | Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await review/merge. C1 investment acceptance remains separate |
 | Integration rule            | Keep completed PRs stable. Reconcile this independent slice and the preserved CI correction with latest main at the integration gate                                                                      |
 
@@ -30,8 +30,11 @@ base-revision query forwarding and response validation. Browser request mocks ha
 hidden the defect. The targeted correction validates the exact model/revision,
 rejects missing/ambiguous base IDs and preserves sanitized conflicts, authentication,
 HTTPS and the separate server token. Sixty-six focused proxy/access/presentation
-checks pass. Next prove the authenticated request path against a synthetic HTTPS
-fixture using process-only credentials and a trusted ephemeral test certificate.
+checks pass. Twenty-four desktop/mobile production-mode checks now pass, including
+real Next.js auth → HTTPS source → validated sensitivity → UI. Negative cases
+cover anonymous/incorrect access, missing/stale revision, malformed output, denied
+writes, server-token separation, untrusted CA and wrong hostname. Five Node isolation
+checks and the TLS fixture unit test pass. Final focused regression/review is next.
 
 C1.3's API calculates nine hypothetical fair-value combinations with the existing
 UFCF engine and accepted inputs. It requires an exact current revision, preserves
