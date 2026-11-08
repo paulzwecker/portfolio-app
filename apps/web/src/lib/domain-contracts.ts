@@ -2506,8 +2506,12 @@ export function isPortfolioLedgerPreview(
 ): value is PortfolioLedgerPreview {
   if (
     !isRecord(value) ||
-    value.contract_version !== "portfolio-ledger-preview-v1" ||
-    value.projection_version !== "settled-booking-v1" ||
+    !(
+      (value.contract_version === "portfolio-ledger-preview-v1" &&
+        value.projection_version === "settled-booking-v1") ||
+      (value.contract_version === "portfolio-ledger-preview-v2" &&
+        value.projection_version === "settled-booking-v2")
+    ) ||
     value.preview_only !== true ||
     !["OPENING_RECONCILED", "ENDING_RECONCILED", "BLOCKED"].includes(
       value.status as string,
@@ -6583,16 +6587,27 @@ export function isLedgerCandidate(value: unknown): value is LedgerCandidate {
         evidence(row.evidence) &&
         string(row.currency) &&
         /^[A-Z]{3}$/.test(row.currency as string) &&
-        (["BUY", "SELL"].includes(row.kind as string)
-          ? uuid(row.listing_id) &&
-            decimal(row.quantity) &&
+        (row.kind === "DIVIDEND"
+          ? packet.contract_version === "portfolio-ledger-preview-v2" &&
+            uuid(row.listing_id) &&
+            preview.consumed_listings.some(
+              (listing) => listing.listing_id === row.listing_id,
+            ) &&
             decimal(row.gross_cash) &&
             decimal(row.fees) &&
-            decimal(row.taxes) &&
-            string(row.trade_date) &&
-            string(row.settlement_date)
-          : ["DEPOSIT", "WITHDRAWAL", "FEE"].includes(row.kind as string) &&
-            decimal(row.amount)),
+            decimal(row.taxes)
+          : ["BUY", "SELL"].includes(row.kind as string)
+            ? uuid(row.listing_id) &&
+              decimal(row.quantity) &&
+              decimal(row.gross_cash) &&
+              decimal(row.fees) &&
+              decimal(row.taxes) &&
+              string(row.trade_date) &&
+              string(row.settlement_date)
+            : (["DEPOSIT", "WITHDRAWAL", "FEE"].includes(row.kind as string) ||
+                (packet.contract_version === "portfolio-ledger-preview-v2" &&
+                  row.kind === "TAX")) &&
+              decimal(row.amount)),
     )
   )
     return false;

@@ -44,6 +44,58 @@ function fixture(): LedgerCandidate {
     throw new Error("Invalid synthetic candidate fixture");
   return value;
 }
+
+it("validates source-bound dividend and tax records only in explicit v2 packets", () => {
+  const row = fixture();
+  row.packet.contract_version = "portfolio-ledger-preview-v2";
+  row.preview.contract_version = "portfolio-ledger-preview-v2";
+  row.preview.projection_version = "settled-booking-v2";
+  row.packet.activity = [
+    {
+      id: candidateId,
+      account_id: row.packet.accounts[0].account_id,
+      kind: "DIVIDEND",
+      sequence: 1,
+      effective_at: row.as_of,
+      listing_id: row.preview.consumed_listings[0].listing_id,
+      currency: "EUR",
+      gross_cash: "12.3456789012",
+      fees: "0.1",
+      taxes: "2.3456789012",
+      evidence: { source_sha256: "a".repeat(64), source_record_id: "dividend" },
+    },
+    {
+      id: "88888888-8888-4888-8888-888888888888",
+      account_id: row.packet.accounts[0].account_id,
+      kind: "TAX",
+      sequence: 2,
+      effective_at: row.as_of,
+      currency: "EUR",
+      amount: "0.9",
+      evidence: { source_sha256: "a".repeat(64), source_record_id: "tax" },
+    },
+  ];
+  row.preview.activity_count = 2;
+  expect(isLedgerCandidate(row)).toBe(true);
+  const missingIdentity = structuredClone(row);
+  Object.assign(missingIdentity.packet.activity[0], {
+    listing_id: candidateId,
+  });
+  expect(isLedgerCandidate(missingIdentity)).toBe(false);
+  const imprecise = structuredClone(row);
+  Object.assign(imprecise.packet.activity[0], { gross_cash: 12.345 });
+  expect(isLedgerCandidate(imprecise)).toBe(false);
+  const missingCharge = structuredClone(row);
+  delete (missingCharge.packet.activity[0] as Partial<{ taxes: string }>).taxes;
+  expect(isLedgerCandidate(missingCharge)).toBe(false);
+  row.packet.contract_version = "portfolio-ledger-preview-v1";
+  row.preview.contract_version = "portfolio-ledger-preview-v1";
+  row.preview.projection_version = "settled-booking-v1";
+  expect(isLedgerCandidate(row)).toBe(false);
+  row.packet.activity.shift();
+  row.preview.activity_count = 1;
+  expect(isLedgerCandidate(row)).toBe(false);
+});
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");

@@ -505,7 +505,13 @@ function LedgerCandidateDetail({
                 {item.kind} · {dateTime(item.effective_at)}
               </p>
               <p className="break-all font-mono text-xs">{item.id}</p>
-              {"gross_cash" in item ? (
+              {item.kind === "DIVIDEND" ? (
+                <p className="mt-1 break-words">
+                  Listing {item.listing_id} · Gross receipt {item.gross_cash}{" "}
+                  {item.currency} · Fees {item.fees} · Withholding {item.taxes}
+                  {" · "}Observed settlement currency
+                </p>
+              ) : "gross_cash" in item ? (
                 <p className="mt-1 break-words">
                   Quantity {item.quantity} · Listing {item.listing_id} · Gross{" "}
                   {item.gross_cash} {item.currency} · Fees {item.fees} · Taxes{" "}

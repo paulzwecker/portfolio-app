@@ -17991,7 +17991,8 @@
             "enum": [
               "DEPOSIT",
               "WITHDRAWAL",
-              "FEE"
+              "FEE",
+              "TAX"
             ],
             "title": "Kind",
             "type": "string"
@@ -18054,7 +18055,8 @@
             "enum": [
               "DEPOSIT",
               "WITHDRAWAL",
-              "FEE"
+              "FEE",
+              "TAX"
             ],
             "title": "Kind",
             "type": "string"
@@ -18151,6 +18153,194 @@
           "balance"
         ],
         "title": "LedgerCashRead",
+        "type": "object"
+      },
+      "LedgerDividend-Input": {
+        "additionalProperties": false,
+        "description": "Observed account cash in one settlement currency, independently of quote currency.",
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "fees": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Fees"
+          },
+          "gross_cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Gross Cash"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "DIVIDEND",
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "taxes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Taxes"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "currency",
+          "gross_cash",
+          "fees",
+          "taxes"
+        ],
+        "title": "LedgerDividend",
+        "type": "object"
+      },
+      "LedgerDividend-Output": {
+        "additionalProperties": false,
+        "description": "Observed account cash in one settlement currency, independently of quote currency.",
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/LedgerEvidence"
+          },
+          "fees": {
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Fees",
+            "type": "string"
+          },
+          "gross_cash": {
+            "decimal_places": 10,
+            "ge": 0,
+            "gt": 0,
+            "max_digits": 28,
+            "title": "Gross Cash",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "DIVIDEND",
+            "title": "Kind",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "taxes": {
+            "decimal_places": 10,
+            "ge": 0,
+            "max_digits": 28,
+            "title": "Taxes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "sequence",
+          "effective_at",
+          "evidence",
+          "kind",
+          "listing_id",
+          "currency",
+          "gross_cash",
+          "fees",
+          "taxes"
+        ],
+        "title": "LedgerDividend",
         "type": "object"
       },
       "LedgerEndingAccount-Input": {
@@ -22407,8 +22597,10 @@
                 "mapping": {
                   "BUY": "#/components/schemas/LedgerTrade-Input",
                   "DEPOSIT": "#/components/schemas/LedgerCashActivity-Input",
+                  "DIVIDEND": "#/components/schemas/LedgerDividend-Input",
                   "FEE": "#/components/schemas/LedgerCashActivity-Input",
                   "SELL": "#/components/schemas/LedgerTrade-Input",
+                  "TAX": "#/components/schemas/LedgerCashActivity-Input",
                   "WITHDRAWAL": "#/components/schemas/LedgerCashActivity-Input"
                 },
                 "propertyName": "kind"
@@ -22419,6 +22611,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/LedgerCashActivity-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerDividend-Input"
                 }
               ]
             },
@@ -22442,7 +22637,10 @@
             "type": "string"
           },
           "contract_version": {
-            "const": "portfolio-ledger-preview-v1",
+            "enum": [
+              "portfolio-ledger-preview-v1",
+              "portfolio-ledger-preview-v2"
+            ],
             "title": "Contract Version",
             "type": "string"
           },
@@ -22486,8 +22684,10 @@
                 "mapping": {
                   "BUY": "#/components/schemas/LedgerTrade-Output",
                   "DEPOSIT": "#/components/schemas/LedgerCashActivity-Output",
+                  "DIVIDEND": "#/components/schemas/LedgerDividend-Output",
                   "FEE": "#/components/schemas/LedgerCashActivity-Output",
                   "SELL": "#/components/schemas/LedgerTrade-Output",
+                  "TAX": "#/components/schemas/LedgerCashActivity-Output",
                   "WITHDRAWAL": "#/components/schemas/LedgerCashActivity-Output"
                 },
                 "propertyName": "kind"
@@ -22498,6 +22698,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/LedgerCashActivity-Output"
+                },
+                {
+                  "$ref": "#/components/schemas/LedgerDividend-Output"
                 }
               ]
             },
@@ -22521,7 +22724,10 @@
             "type": "string"
           },
           "contract_version": {
-            "const": "portfolio-ledger-preview-v1",
+            "enum": [
+              "portfolio-ledger-preview-v1",
+              "portfolio-ledger-preview-v2"
+            ],
             "title": "Contract Version",
             "type": "string"
           },
@@ -22596,7 +22802,10 @@
             "type": "array"
           },
           "contract_version": {
-            "const": "portfolio-ledger-preview-v1",
+            "enum": [
+              "portfolio-ledger-preview-v1",
+              "portfolio-ledger-preview-v2"
+            ],
             "title": "Contract Version",
             "type": "string"
           },
@@ -22667,7 +22876,10 @@
             "type": "boolean"
           },
           "projection_version": {
-            "const": "settled-booking-v1",
+            "enum": [
+              "settled-booking-v1",
+              "settled-booking-v2"
+            ],
             "title": "Projection Version",
             "type": "string"
           },

@@ -50,7 +50,9 @@ function ledgerFileMetadata(
 ): LedgerReviewFile {
   if (
     !isRecord(value) ||
-    value.contract_version !== "portfolio-ledger-preview-v1" ||
+    !["portfolio-ledger-preview-v1", "portfolio-ledger-preview-v2"].includes(
+      value.contract_version as string,
+    ) ||
     typeof value.anchor_snapshot_id !== "string" ||
     !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(
       value.anchor_snapshot_id,
@@ -63,7 +65,7 @@ function ledgerFileMetadata(
     value.accounts.length > 20
   )
     throw new Error(
-      "The file needs the portfolio-ledger-preview-v1 contract and an exact anchor ID/hash.",
+      "The file needs a supported portfolio-ledger-preview-v1 or v2 contract and an exact anchor ID/hash.",
     );
   const accountNames: Record<string, string> = {};
   for (const account of value.accounts) {

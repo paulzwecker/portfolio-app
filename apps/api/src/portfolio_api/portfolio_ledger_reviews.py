@@ -100,6 +100,7 @@ def _stored(
         or preview.anchor_snapshot_id != row.anchor_snapshot_id
         or packet.anchor_snapshot_id != row.anchor_snapshot_id
         or preview.anchor_sha256 != packet.anchor_sha256
+        or preview.contract_version != packet.contract_version
         or preview.as_of != packet.as_of
         or preview.as_of != row.as_of
         or preview.status != row.preview_status
@@ -266,7 +267,11 @@ def _lock_sources(
     ids = {item.listing_id for item in anchor.listings} | {
         item.listing_id for account in packet.accounts for item in account.positions
     }
-    ids.update(item.listing_id for item in packet.activity if isinstance(item, c.LedgerTrade))
+    ids.update(
+        item.listing_id
+        for item in packet.activity
+        if isinstance(item, (c.LedgerTrade, c.LedgerDividend))
+    )
     if packet.ending_statement:
         ids.update(
             item.listing_id

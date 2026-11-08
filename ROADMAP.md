@@ -6,14 +6,14 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Consolidated Portfolio release candidate — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                  |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), based on main `395f842`        |
-| Implementation              | INTEGRATION_VERIFIED code candidate; 307 web / 833 Linux units / 380 Linux PostgreSQL cases and all CI jobs pass                            |
-| Next ready substantial task | Owner review of PR #26, then current-state recovery and separately authorized migration/deployment with exact reviewed commit               |
-| Parallel owner gate         | P-GOOGL assumptions/acceptance, production migrations/deployment, provider activation and ledger source ownership retain separate approvals |
-| Integration rule            | The owner requested latest-work consolidation. Preserve all predecessor commits and evidence; freeze the passing candidate for review       |
+| Field                       | Current value                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.3 observed dividends and tax activity — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                         |
+| Branch / PR                 | `codex/portfolio-ledger-income`, based on merged main `deda2ce`. No new PR during BUILD                                                        |
+| Implementation              | v2 typed income projection/replay and web compatibility LOCAL_VERIFIED. Durable lifecycle and browser verification in progress                 |
+| Next ready substantial task | Prove dividend/tax preview → saved review → publication/readback in isolated PostgreSQL and responsive UI                                      |
+| Parallel owner gate         | Current-state recovery, production migrations/deployment, provider activation, model acceptance and ledger ownership retain separate approvals |
+| Integration rule            | PR #26 merged as `deda2ce`. Preserve that release and predecessor branches; use focused tests and incremental commits on the new workstream    |
 
 ## Where we are
 
@@ -27,10 +27,9 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | C5 operations and delivery               | Guarded workers, recovery preflight, CI classification and authenticated browser fixtures implemented; combined release checks pass; hosted operational proof remains gated |
 | C6/C7 App Hub and additional apps        | Planned after useful Portfolio workflows and operational safeguards                                                                                                         |
 
-PR #26 now includes the unchanged PR #25 receipt adapter, the preserved CI
+Merged PR #26 includes the unchanged PR #25 receipt adapter, the preserved CI
 classification correction (`18930ac`, `f72729e`) and DCF sensitivity/authenticated
-proxy work through `78dcf1b`. PR #25 remains separately reviewable, with its original
-history intact. The [dated evidence](docs/history/data-ledger-build-through-2026-11-08.md)
+proxy work through `78dcf1b`. The predecessor history remains intact. The [dated evidence](docs/history/data-ledger-build-through-2026-11-08.md)
 preserves each predecessor's scope and checks. All branches, stash and private
 source artifacts are preserved.
 
@@ -49,7 +48,8 @@ journeys also pass. Local PostgreSQL
 passes 376 cases with four privilege-dependent skips. Linux CI passes all 380 and
 833 unit cases. Code `a952d60` passes all three [CI jobs](https://github.com/paulzwecker/portfolio-app/actions/runs/42471476408)
 and Vercel Preview. Require the latest [PR checks](https://github.com/paulzwecker/portfolio-app/pull/26/checks)
-before owner merge. The handoff records exact scope and review findings.
+for the recorded integration. PR #26 merged as `deda2ce`; cloud deployment and
+migration status remain unverified in this BUILD run.
 
 ## How to choose work
 
@@ -75,7 +75,7 @@ The recorded C2.1 read-only assessment in [PR #25](https://github.com/paulzwecke
 subsequently verified zero prices, FX, corporate actions, fundamentals, filings,
 models and reviewed CIK mappings on the production target. Its candidate-code
 preview resolved all 22 held listings and DKK/EUR plus USD/EUR; the receipt adapter
-is included in PR #26 and awaiting owner review. This review adds repository
+is included in merged PR #26. This review adds repository
 evidence, not a fresh live inventory.
 Historical local reports and disabled configuration cannot prove hosted automation.
 Reverify target, coverage, source rights and controls before activation.
@@ -83,7 +83,7 @@ Reverify target, coverage, source rights and controls before activation.
 | Capability                           | Implemented / verified outcome                                                                                                                                 | Outstanding outcome                                                                                                                                                                                                                                                                                            |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Identity, holdings, cash, targets    | OPERATIONALLY_VERIFIED for M1 minimal scope, receipts, zero reconciliation differences and owner UI readback                                                   | Ongoing source synchronization and decision-grade valuation                                                                                                                                                                                                                                                    |
-| Prices and FX                        | Adapters, bounded backfill, exact crosswalks, raw provenance and dated observations LOCAL_VERIFIED; C2.1 mapping preview PRODUCTION_PREVIEW_VERIFIED on PR #25 | Production observations were zero at the recorded check. Review consolidated #26, authorize backfill, reconcile actual EUR valuation and prove incremental refresh                                                                                                                                             |
+| Prices and FX                        | Adapters, bounded backfill, exact crosswalks, raw provenance and dated observations LOCAL_VERIFIED; C2.1 mapping preview PRODUCTION_PREVIEW_VERIFIED on PR #25 | Production observations were zero at the recorded check. Complete the merged release gates, authorize backfill, reconcile actual EUR valuation and prove incremental refresh                                                                                                                                   |
 | SEC fundamentals and filings         | Company Facts/submissions, amendments, accession/provenance and financial explorer LOCAL_VERIFIED                                                              | Zero production facts/documents/reviewed CIK mappings at C2.1. Review issuer coverage; non-SEC coverage PARTIAL. Filing-body download is outside the existing bootstrap. [Contract](docs/fundamentals-source-bootstrap.md)                                                                                     |
 | Consensus                            | Provider-specific snapshots, annual/quarterly FMP adapter, revision/continuity rules and tests implemented                                                     | FMP opt-in is DISABLED by default. Provider rights, issuer mapping, credentials and live coverage UNVERIFIED; historical estimate coverage cannot be invented. [Contract](docs/consensus-estimates.md)                                                                                                         |
 | Corporate actions                    | Split/dividend provider evidence and separate adjusted/native price fields LOCAL_VERIFIED                                                                      | Events remain unverified; mergers/spinoffs/other unsupported actions and account-level processing need reviewed contracts. Provider dividends do not establish received cash or withholding. [Semantics](docs/historical-market-data-bootstrap.md#corporate-actions-and-adjustment-semantics)                  |
@@ -119,7 +119,7 @@ references through the linked ledgers. They do not create a second execution que
 
 | Slice / status                                                        | Dependencies and meaningful acceptance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C2.1 Held mapping and recovery preview — VERIFIED on candidate PR #25 | 22/22 held mappings, required FX allowlisted, read-only exact-target preview and current schema/count evidence. Zero provider calls/writes. Included in PR #26 for owner review; the old recovery branch protects only the pre-import state                                                                                                                                                                                                                                                                                                                                                                                                 |
+| C2.1 Held mapping and recovery preview — VERIFIED on candidate PR #25 | 22/22 held mappings, required FX allowlisted, read-only exact-target preview and current schema/count evidence. Zero provider calls/writes. Included in merged PR #26; the old recovery branch protects only the pre-import state                                                                                                                                                                                                                                                                                                                                                                                                           |
 | C2.2 Daily portfolio data — PARTIAL / BUILD                           | C0, reviewed #25 receipt fix, current recovery and approved scope. Bounded backfill → exact-listing prices/dated FX → EUR holdings/cash/weights/gaps → source drill-down. Reconcile all reviewed held instruments and native cash; missing data stays visible. Desktop/mobile readback, two authorized hosted refresh cycles including restart, synthetic outage/rate-limit/partial tests and durable last-success/retry/coverage prove the outcome. Reuse manual jobs and one-cycle runners; provider-only unattended activation needs separate approval                                                                                   |
 | C3.1 SEC statements and filings — PARTIAL / BUILD                     | Portfolio-scoped bootstrap and filing-before-facts recovery LOCAL_VERIFIED with synthetic Financials/filings API readback. Verify real CIK identity/evidence and held/Watchlist scope, review international gaps and prove incremental per-issuer freshness/coverage in the research workflow. Preserve amendments, accessions, units, fiscal periods and source dates. Reviewed mapping writes and hosted ingestion/readback retain separate authorization                                                                                                                                                                                 |
 | C3.2 Permitted consensus/international coverage — SOURCE-GATED        | Reviewed provider rights, identities, coverage and retention precede requests. Prove representative annual/quarterly series, currencies, fiscal periods, analyst coverage, revision history and missing-data behavior. Distinguish current snapshots from genuine estimate history and external consensus from agent forecasts                                                                                                                                                                                                                                                                                                              |
@@ -130,13 +130,15 @@ references through the linked ledgers. They do not create a second execution que
 
 ## Immediate priorities and gates
 
-1. **Daily valued portfolio with reliable refresh.** Review the consolidated PR #26,
-   which includes C2.1's PR #25 receipt fix and C2.2 implementation. Complete the
+1. **Daily valued portfolio with reliable refresh.** PR #26 merged with C2.1's
+   receipt fix and C2.2 implementation. Complete the
    current-state recovery, schema and deployment gates before authorized backfill
    and hosted valuation/refresh reconciliation. Two monitored refresh cycles and
    separately approved scheduling establish the remaining operational outcome.
-2. **Transaction accounting foundation.** C2.3 can proceed independently in isolated
-   tests while production data activation is gated. Resolve cutover/account evidence
+2. **Transaction accounting foundation.** C2.3 observed dividend/withholding and
+   tax activity is the active independent BUILD slice. Typed v2 replay and web
+   compatibility pass 93 ledger unit tests and 77 focused web tests. Complete the
+   isolated durable lifecycle and browser verification next. Resolve cutover/account evidence
    and lot/performance policy before promoting actual records. Keep the existing
    holdings anchor and targets authoritative until a reviewed ownership transition.
 3. **Model and company evidence in parallel.** C1.2 retains the P-GOOGL DEFER decision

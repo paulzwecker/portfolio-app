@@ -256,7 +256,7 @@ def project_ledger(
                 "Ending observations must use declared opening accounts", status=422
             )
     listing_ids = {p.listing_id for a in value.accounts for p in a.positions} | {
-        a.listing_id for a in value.activity if isinstance(a, c.LedgerTrade)
+        a.listing_id for a in value.activity if isinstance(a, (c.LedgerTrade, c.LedgerDividend))
     }
     if ending is not None:
         listing_ids.update(p.listing_id for a in ending.accounts for p in a.positions)
@@ -340,6 +340,8 @@ def project_ledger(
                                 asset_key=str(item.listing_id),
                             )
                         )
+                elif isinstance(item, c.LedgerDividend):
+                    amount = item.gross_cash - item.fees - item.taxes
                 else:
                     amount = item.amount if item.kind == "DEPOSIT" else -item.amount
                 account_cash[item.currency] = account_cash.get(item.currency, Decimal(0)) + amount
@@ -441,7 +443,9 @@ def project_ledger(
                 )
         return c.PortfolioLedgerPreviewRead(
             contract_version=value.contract_version,
-            projection_version="settled-booking-v1",
+            projection_version="settled-booking-v2"
+            if value.contract_version == "portfolio-ledger-preview-v2"
+            else "settled-booking-v1",
             preview_only=True,
             status="BLOCKED"
             if issues
@@ -494,7 +498,7 @@ def preview_portfolio_ledger(
 ) -> c.PortfolioLedgerPreviewRead:
     anchor = portfolio_ledger_anchor(session, portfolio_id)
     ids = {p.listing_id for a in value.accounts for p in a.positions} | {
-        a.listing_id for a in value.activity if isinstance(a, c.LedgerTrade)
+        a.listing_id for a in value.activity if isinstance(a, (c.LedgerTrade, c.LedgerDividend))
     }
     if value.ending_statement is not None:
         ids.update(p.listing_id for a in value.ending_statement.accounts for p in a.positions)

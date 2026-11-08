@@ -14,6 +14,35 @@ opening accounts/balances and up to 1,000 activity records. It permits 20 accoun
 1,000 opening position rows and 100 opening cash rows across those accounts.
 `settled-booking-v1` supports BUY, SELL, DEPOSIT, WITHDRAWAL and FEE.
 
+`portfolio-ledger-preview-v2` explicitly opts into `settled-booking-v2`, adding
+DIVIDEND and TAX. Existing v1 packets, projections and receipt hashes retain
+their original meaning. A v1 packet cannot contain either new kind. Both versions
+use the same review/publication workflow and existing migrated receipt tables.
+
+### Observed income and taxes
+
+A DIVIDEND record declares an exact `listing_id`, settlement `currency`, positive
+`gross_cash`, nonnegative `fees` and nonnegative `taxes` (withholding), including
+explicit zero charges. It retains the common account, settled booking timestamp,
+sequence and source document/record evidence. Net cash is gross less fees and
+withholding; charges exceeding gross are rejected. Full withholding preserves an
+explicit zero receipt. A separate TAX record debits its positive `amount` in the
+stated currency. Do not record the same withholding both inside a dividend and as
+a separate TAX row. Duplicate source keys remain blocked; source review must also
+identify differently keyed duplicates from overlapping statements.
+
+All dividend amounts use one observed account-settlement currency, which can
+differ from the listing quote currency. The broker evidence must supply every
+amount in that currency. The application performs no implicit conversion or
+reconstruction of an original announced payout/rate. Unconverted multi-currency
+legs require a future explicit FX contract. Dividends do not alter quantities or
+require a current position, since an evidenced payment can arrive after a sale.
+Their listing identity is still verified, locked and hash-bound, including a
+companyless ETF or a security absent from current holdings. Provider action data
+alone cannot create an account dividend. Automatic reinvestment requires a
+separate evidenced purchase. Income, external funding and strategic targets keep
+their distinct meanings. No yield, cost basis or performance is inferred.
+
 An optional `ending_statement` contains an `effective_at` equal to `as_of` and
 per-account observations with account ID, evidence, positions and cash. Its scope
 uses the declared opening accounts. Every account, including empty accounts,
