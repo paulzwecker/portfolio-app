@@ -94,10 +94,13 @@ The browser publication review is locally verified with explicit source-bound
 confirmation and read-only recovery of ambiguous responses. Real account/source
 review and production ownership activation remain gated. V2 packets additionally
 support evidenced dividend receipts, explicit withholding/fees and standalone tax
-debits, plus matched same-currency internal cash transfers with two account
-source records, through the same reviewed lifecycle, locally verified in isolated schemas
+debits, plus matched same-currency cash and same-listing security transfers with
+two account source records, through the same reviewed lifecycle, locally verified
+in isolated schemas
 and responsive browser tests. Quote currency and observed settlement currency stay
-independent. No dividend entitlement, conversion or reinvestment is inferred.
+independent. Security-transfer acquisition basis and gains remain explicitly
+unavailable pending reviewed lot accounting. No dividend entitlement, conversion
+or reinvestment is inferred.
 The steps below describe the complete transition; remaining accounting coverage
 is planned.
 
