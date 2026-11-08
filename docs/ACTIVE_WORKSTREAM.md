@@ -161,9 +161,24 @@ checks. Synthetic desktop and mobile layouts were inspected.
 The frontend lookup requires the matching API endpoint; coordinate API availability
 before using it. No schema migration is introduced.
 
+## Native guided candidate journey
+
+The exact-ticker lookup now passes through the authenticated read-only Next.js
+proxy with one bounded query and a validated, ticker-bound response. A synthetic
+real-API/PostgreSQL browser journey covers guided opening, non-anchor purchase,
+ending reconciliation, source identity, save and explicit review. Desktop cancels
+the synthetic decision; mobile confirms it. The fixture permits only local test
+receipt writes and protected holdings/targets hashes remain unchanged. Focused
+proxy tests cover production authentication and HTTPS; the native browser fixture
+itself runs with local development authentication. Two desktop/mobile journeys,
+96 focused web tests, one isolated PostgreSQL fixture-guard test, typecheck, build,
+focused lint and generated-contract checks passed. The fixture shut down and
+removed its own schema. No production operation was performed.
+
 ## Next increment and release boundaries
 
-Verify the complete guided candidate review journey against the native API. Reuse the versioned ledger contract, server calculations,
+Review the milestone integration and release prerequisites, then run the relevant
+comprehensive checks. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
 lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.

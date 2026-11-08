@@ -328,7 +328,9 @@ synthetic rehearsal, start `npm run test:e2e:api -- --scenario ledger-review
 --lifetime-seconds 600` with child-process `BROWSER_API_PORT=8015`. Run
 `node scripts/browser.mjs test portfolio-ledger-decisions.spec.ts --workers=1`
 with `E2E_LEDGER_REVIEW_API=1`, matching loopback `API_BASE_URL`/`BROWSER_API_PORT`
-and the local web port. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
+and the local web port. `portfolio-ledger-guided-native.spec.ts` exercises the
+guided opening, non-anchor listing, activity, ending and saved-review journey;
+run it with one worker and a fresh fixture. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
 Normal fixture shutdown removes its own schema. Screenshots remain ignored.
 
 ## Dated ownership and holdings publication
