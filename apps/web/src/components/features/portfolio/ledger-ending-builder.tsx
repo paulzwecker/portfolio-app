@@ -7,6 +7,7 @@ import { dateTime } from "@/lib/display";
 import type { LedgerReviewFile } from "./portfolio-ledger-data";
 import { type OpeningAccountDraft } from "./ledger-opening-draft";
 import { ledgerAvailableListings, type LedgerListing } from "./ledger-listings";
+import { LedgerListingSearch } from "./ledger-listing-search";
 import {
   buildEndingReview,
   type EndingAccountDraft,
@@ -17,6 +18,7 @@ const field =
 
 export function LedgerEndingBuilder({
   anchor,
+  portfolioId,
   base,
   opening,
   initialAccounts,
@@ -27,13 +29,17 @@ export function LedgerEndingBuilder({
   onClose,
 }: {
   anchor: PortfolioLedgerAnchor;
+  portfolioId: string;
   base: LedgerReviewFile;
   opening: OpeningAccountDraft[];
   initialAccounts?: EndingAccountDraft[];
   extraListings?: readonly LedgerListing[];
   disabled: boolean;
   onChange: () => void;
-  onReview: (file: LedgerReviewFile) => Promise<void>;
+  onReview: (
+    file: LedgerReviewFile,
+    listings: readonly LedgerListing[],
+  ) => Promise<void>;
   onClose: () => void;
 }) {
   const [accounts, setAccounts] = useState<EndingAccountDraft[]>(
@@ -49,6 +55,9 @@ export function LedgerEndingBuilder({
   );
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedListings, setSelectedListings] =
+    useState<readonly LedgerListing[]>(extraListings);
+  const [demoLabels, setDemoLabels] = useState<Record<string, boolean>>({});
   const changed = () => {
     onChange();
     setConfirmed(false);
@@ -73,6 +82,61 @@ export function LedgerEndingBuilder({
           : "Amounts start empty and must come from the statements."}{" "}
         The API compares them with the candidate projection.
       </p>
+      <LedgerListingSearch
+        portfolioId={portfolioId}
+        disabled={disabled}
+        onSelect={(item) => {
+          changed();
+          try {
+            const next = ledgerAvailableListings(anchor, [
+              ...selectedListings,
+              item,
+            ]);
+            setSelectedListings(next);
+            setDemoLabels((current) => ({
+              ...current,
+              [item.listing_id]: item.is_demo,
+            }));
+          } catch (failure) {
+            setError(
+              failure instanceof Error
+                ? failure.message
+                : "Listing identity could not be verified.",
+            );
+          }
+        }}
+      />
+      {selectedListings.some(
+        (item) =>
+          !anchor.listings.some((row) => row.listing_id === item.listing_id),
+      ) && (
+        <div
+          className="space-y-1 text-xs text-muted-foreground"
+          aria-label="Additional selected ending listings"
+        >
+          {selectedListings
+            .filter(
+              (item) =>
+                !anchor.listings.some(
+                  (row) => row.listing_id === item.listing_id,
+                ),
+            )
+            .map((item) => (
+              <p key={item.listing_id} className="break-all">
+                Selected: {item.ticker} · {item.venue} · {item.currency} ·{" "}
+                {item.security_type} · {item.listing_id} ·{" "}
+                {demoLabels[item.listing_id] === undefined
+                  ? "Demo status unavailable in preview; search to recheck"
+                  : demoLabels[item.listing_id]
+                    ? "Demo data at lookup"
+                    : "Not demo at lookup"}
+              </p>
+            ))}
+          <p>
+            Demo status is display-only and is not bound to the review hash.
+          </p>
+        </div>
+      )}
       <form
         className="space-y-4"
         onSubmit={(event) => {
@@ -85,8 +149,9 @@ export function LedgerEndingBuilder({
                 base,
                 accounts,
                 confirmed,
-                extraListings,
+                selectedListings,
               ),
+              selectedListings,
             );
           } catch (failure) {
             setError(
@@ -163,7 +228,7 @@ export function LedgerEndingBuilder({
                         }
                       >
                         <option value="">Choose exact listing</option>
-                        {ledgerAvailableListings(anchor, extraListings).map(
+                        {ledgerAvailableListings(anchor, selectedListings).map(
                           (item) => (
                             <option
                               key={item.listing_id}
@@ -171,6 +236,7 @@ export function LedgerEndingBuilder({
                             >
                               {item.venue} · {item.ticker} · {item.currency} ·{" "}
                               {item.security_type}
+                              {demoLabels[item.listing_id] && " · Demo data"}
                             </option>
                           ),
                         )}

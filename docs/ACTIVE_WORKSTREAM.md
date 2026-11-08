@@ -177,8 +177,22 @@ removed its own schema. No production operation was performed.
 
 ## Next increment and release boundaries
 
-Review the milestone integration and release prerequisites, then run the relevant
-comprehensive checks. Reuse the versioned ledger contract, server calculations,
+Integration review identified an unexpected holding present only on an ending
+statement. The ending builder now accepts the same exact-listing search and passes
+its reviewed identity to the preview drift guard. An unexplained holding remains a
+blocked mismatch; it never creates an inferred trade. Demo status from a restored
+preview is explicitly unavailable until searched again. The isolated real-API
+desktop/mobile journey covers the mismatch and rejects altered preview identity.
+
+Fresh read-only Neon project/branch/endpoint and TLS-verified `neondb.public`
+revision evidence matched `b59f16c8a203` and the offline schema attestation.
+The active GitHub `main` ruleset requires a PR, resolved review threads and the
+three strict CI checks, with no configured bypass actors. Current Render/Vercel
+release controls remain unverified through available read-only access. The frontend's new listing
+lookup also requires the new API endpoint; release API first, then frontend, under
+separate approval. Do not infer deploy safety from matching schema or green CI.
+
+Complete the milestone integration checks and release review. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
 lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.

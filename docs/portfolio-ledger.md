@@ -331,6 +331,8 @@ with `E2E_LEDGER_REVIEW_API=1`, matching loopback `API_BASE_URL`/`BROWSER_API_PO
 and the local web port. `portfolio-ledger-guided-native.spec.ts` exercises the
 guided opening, non-anchor listing, activity, ending and saved-review journey;
 run it with one worker and a fresh fixture. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
+Ending statements can also select an unexpected exact listing absent from the
+opening and activity. The API reports a mismatch; it does not infer a transaction.
 Normal fixture shutdown removes its own schema. Screenshots remain ignored.
 
 ## Dated ownership and holdings publication

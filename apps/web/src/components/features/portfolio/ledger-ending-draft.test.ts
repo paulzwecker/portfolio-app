@@ -176,6 +176,7 @@ it("labels reordered ending accounts by identity", () => {
   const markup = renderToStaticMarkup(
     createElement(LedgerEndingBuilder, {
       anchor: ledgerAnchor,
+      portfolioId: ledgerAnchor.portfolio_id,
       base: restored.file,
       opening: restored.opening,
       initialAccounts: restored.accounts,

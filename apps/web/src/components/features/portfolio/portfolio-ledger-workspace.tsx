@@ -349,14 +349,15 @@ export function PortfolioLedgerWorkspace({
                 <LedgerEndingBuilder
                   key={endingBase.file.text}
                   anchor={verified}
+                  portfolioId={portfolioId}
                   base={endingBase.file}
                   opening={endingBase.opening}
                   initialAccounts={endingBase.initialAccounts}
                   extraListings={endingBase.listings}
                   disabled={pending || loadingFile}
                   onChange={() => clear(false, true)}
-                  onReview={(candidate) =>
-                    runPreview(candidate, endingBase.listings)
+                  onReview={(candidate, listings) =>
+                    runPreview(candidate, listings)
                   }
                   onClose={() => {
                     const previous = endingBase.cancelFile ?? endingBase.file;

@@ -98,6 +98,129 @@ test("guided non-anchor purchase and ending statements reach explicit candidate 
     (await (await request.get(`${api}/__test/fixture`)).json())
       .protected_state_sha256,
   ).toBe(before.protected_state_sha256);
+  // An unexpected ending-only holding must be observable without inventing a trade.
+  await page
+    .getByRole("button", { name: "Add ending statement", exact: true })
+    .click();
+  await page.getByLabel("Exact listing ticker", { exact: true }).fill("SYNNEW");
+  await page.getByLabel("Exact listing ticker", { exact: true }).press("Enter");
+  await page
+    .getByRole("button", { name: "Use this listing", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Additional selected ending listings"),
+  ).toContainText("Demo data at lookup");
+  await page
+    .getByLabel("Statement SHA-256", { exact: true })
+    .fill("d".repeat(64));
+  await page
+    .getByLabel("Statement record reference", { exact: true })
+    .fill(`unexpected-${info.project.name}`);
+  for (const [index, position] of [
+    ...anchor.snapshot.positions,
+    { listing_id: before.unheld_listing_id, quantity: "0.5000000000" },
+  ].entries()) {
+    await page
+      .getByRole("button", { name: "Add ending position", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", {
+        name: `Ending position ${index + 1} listing`,
+        exact: true,
+      })
+      .selectOption(position.listing_id);
+    await page
+      .getByLabel(`Ending position ${index + 1} quantity`, { exact: true })
+      .fill(position.quantity!);
+  }
+  for (const [index, cash] of anchor.snapshot.cash_positions.entries()) {
+    await page
+      .getByRole("button", { name: "Add ending cash", exact: true })
+      .click();
+    await page
+      .getByLabel(`Ending cash ${index + 1} currency`, { exact: true })
+      .fill(cash.currency);
+    await page
+      .getByLabel(`Ending cash ${index + 1} balance`, { exact: true })
+      .fill(cash.balance!);
+  }
+  await page
+    .getByLabel(
+      "I confirm these ending observations are effective at the review cutoff.",
+      { exact: true },
+    )
+    .check();
+  await page
+    .getByRole("heading", { name: "Ending statement", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("ending-unexpected-listing.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  // Verify the ending builder forwards the selected identity to the drift guard.
+  await page.route(
+    "**/ledger/preview",
+    async (route) => {
+      const response = await route.fetch();
+      const result = await response.json();
+      const item = result.consumed_listings.find(
+        (row: { listing_id: string }) =>
+          row.listing_id === before.unheld_listing_id,
+      );
+      if (!item) throw new Error("Synthetic ending identity was not returned");
+      item.identity_source_ref = "synthetic-drift";
+      await route.fulfill({ response, json: result });
+    },
+    { times: 1 },
+  );
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "listing identity is missing or changed",
+  );
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+  const unexpectedResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/ledger/preview") &&
+      response.request().method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Reconcile ending statement", exact: true })
+    .click();
+  const unexpected = await (await unexpectedResponse).json();
+  expect(unexpected.status).toBe("BLOCKED");
+  expect(unexpected.ending_status).toBe("MISMATCH");
+  expect(
+    unexpected.ending_reconciliation.some(
+      (row: { key: string; status: string }) =>
+        row.key === before.unheld_listing_id && row.status !== "MATCH",
+    ),
+  ).toBe(true);
+  expect(
+    unexpected.consumed_listings.some(
+      (row: { listing_id: string }) =>
+        row.listing_id === before.unheld_listing_id,
+    ),
+  ).toBe(true);
+  await expect(page.getByText("Review blocked", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Discard ending statement", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Add settled activity", exact: true })
     .click();

@@ -105,3 +105,27 @@ it("requires every used selected identity to match the preview but ignores unuse
   report.consumed_listings = [other];
   expect(selectedListingsMatchPreview(file, [], report)).toBe(true);
 });
+
+it("checks an ending-only identity against the preview and rejects drift or omission", () => {
+  const file = inspectLedgerFile(
+    JSON.stringify({
+      contract_version: "portfolio-ledger-preview-v2",
+      anchor_snapshot_id: ledgerAnchor.snapshot.id,
+      anchor_sha256: ledgerAnchor.anchor_sha256,
+      as_of: "2026-01-31T00:00:00Z",
+      accounts: [],
+      activity: [],
+      ending_statement: {
+        accounts: [{ positions: [{ listing_id: other.listing_id }] }],
+      },
+    }),
+    "synthetic-ending.json",
+  );
+  const report = ledgerReport();
+  report.consumed_listings = [other];
+  expect(selectedListingsMatchPreview(file, [other], report)).toBe(true);
+  report.consumed_listings = [{ ...other, currency: "EUR" }];
+  expect(selectedListingsMatchPreview(file, [other], report)).toBe(false);
+  report.consumed_listings = [];
+  expect(selectedListingsMatchPreview(file, [other], report)).toBe(false);
+});

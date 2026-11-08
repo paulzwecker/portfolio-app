@@ -15,6 +15,12 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
 
+Integration review added exact listing lookup for an unexpected ending-only
+position. The preview treats an unexplained observation as a blocking mismatch,
+does not infer a trade, and rejects changed lookup identity. Read-only Neon and
+the repository attestation match `b59f16c8a203`; current hosted release controls
+remain unverified. The new API endpoint must precede the frontend at release.
+
 The current BUILD fixes the Next.js read-only proxy for exact listing search and
 verifies the guided opening → non-anchor purchase → ending → saved review journey
 against real FastAPI and a disposable PostgreSQL fixture. Desktop cancels its

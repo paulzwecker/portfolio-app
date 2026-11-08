@@ -2199,6 +2199,9 @@ test("a reviewed non-anchor listing survives activity and ending reconciliation"
     })
     .click();
   await expect(
+    page.getByLabel("Additional selected ending listings"),
+  ).toContainText("Demo status unavailable in preview; search to recheck");
+  await expect(
     page.getByRole("combobox", {
       name: "Ending position 2 listing",
       exact: true,
