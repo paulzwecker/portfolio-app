@@ -6,6 +6,7 @@ import {
 } from "./ledger-opening-draft";
 import {
   buildCashActivityReview,
+  restoreCashActivityReview,
   type CashActivityDraft,
 } from "./ledger-cash-activity";
 
@@ -44,6 +45,81 @@ function record(): CashActivityDraft {
     sourceRecordId: "deposit-1",
   };
 }
+
+it("restores exact cash packets with their original identities, evidence and precision", () => {
+  const first = record();
+  const second = {
+    ...record(),
+    id: "77777777-7777-4777-8777-777777777777",
+    kind: "FEE" as const,
+    sequence: "2",
+    amount: "0.0000000001",
+    sourceRecordId: "fee-1",
+  };
+  const original = buildCashActivityReview(ledgerAnchor, base, cutoff, [
+    first,
+    second,
+  ]);
+  const restored = restoreCashActivityReview(ledgerAnchor, original.text);
+  expect(restored.entries).toEqual([first, second]);
+  expect(restored.cutoff).toBe(cutoff);
+  expect(restored.base.text).toBe(base.text);
+  expect(
+    buildCashActivityReview(
+      ledgerAnchor,
+      restored.base,
+      restored.cutoff,
+      restored.entries,
+    ).text,
+  ).toBe(original.text);
+});
+
+it("rejects stale, lossy, unsupported or extended packets without discarding data", () => {
+  const text = buildCashActivityReview(ledgerAnchor, base, cutoff, [
+    record(),
+  ]).text;
+  type FixturePacket = {
+    activity: { kind: string; amount: string | number; unknown?: string }[];
+    ending_statement: unknown;
+    accounts: { cash: { balance: string | number }[] }[];
+  };
+  const altered = (change: (packet: FixturePacket) => void) => {
+    const packet = JSON.parse(text) as FixturePacket;
+    change(packet);
+    return JSON.stringify(packet);
+  };
+  for (const candidate of [
+    "{bad",
+    text + " ",
+    altered((packet) => {
+      packet.activity[0].kind = "DIVIDEND";
+    }),
+    altered((packet) => {
+      packet.activity[0].amount = 9007199254740992;
+    }),
+    altered((packet) => {
+      packet.activity[0].unknown = "evidence";
+    }),
+    altered((packet) => {
+      packet.ending_statement = { accounts: [] };
+    }),
+    altered((packet) => {
+      packet.activity = [];
+    }),
+    altered((packet) => {
+      packet.accounts[0].cash[0].balance = 0;
+    }),
+  ])
+    expect(() => restoreCashActivityReview(ledgerAnchor, candidate)).toThrow(
+      /cannot be edited/,
+    );
+  expect(() =>
+    restoreCashActivityReview(
+      { ...ledgerAnchor, anchor_sha256: "f".repeat(64) },
+      text,
+    ),
+  ).toThrow(/cannot be edited/);
+});
 
 it("builds deterministic cash records preserving the exact opening and decimal text", () => {
   const first = record();

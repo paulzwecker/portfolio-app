@@ -1,4 +1,4 @@
-import type { PortfolioLedgerAnchor } from "@/lib/domain-contracts";
+import { isRecord, type PortfolioLedgerAnchor } from "@/lib/domain-contracts";
 import {
   inspectLedgerFile,
   type LedgerReviewFile,
@@ -21,6 +21,85 @@ const timestamp =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 const amount = /^(?:0|[1-9]\d{0,17})(?:\.\d{1,10})?$/;
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
+
+export type CashActivitySession = {
+  base: LedgerReviewFile;
+  cutoff: string;
+  entries: CashActivityDraft[];
+};
+
+/** Accept only an unchanged packet that this cash editor can reproduce completely. */
+export function restoreCashActivityReview(
+  anchor: PortfolioLedgerAnchor,
+  text: string,
+): CashActivitySession {
+  const invalid =
+    "This review cannot be edited in the cash form. Use the private file workflow for its full contents.";
+  let packet: unknown;
+  try {
+    packet = JSON.parse(text);
+  } catch {
+    throw new Error(invalid);
+  }
+  if (
+    !isRecord(packet) ||
+    typeof packet.as_of !== "string" ||
+    !Array.isArray(packet.activity) ||
+    packet.activity.length < 1 ||
+    packet.activity.length > 1000 ||
+    packet.ending_statement !== null
+  )
+    throw new Error(invalid);
+  const entries: CashActivityDraft[] = packet.activity.map((item: unknown) => {
+    if (
+      !isRecord(item) ||
+      !isRecord(item.evidence) ||
+      typeof item.id !== "string" ||
+      typeof item.account_id !== "string" ||
+      (item.kind !== "DEPOSIT" &&
+        item.kind !== "WITHDRAWAL" &&
+        item.kind !== "FEE" &&
+        item.kind !== "TAX") ||
+      typeof item.sequence !== "number" ||
+      !Number.isSafeInteger(item.sequence) ||
+      typeof item.effective_at !== "string" ||
+      typeof item.currency !== "string" ||
+      typeof item.amount !== "string" ||
+      typeof item.evidence.source_sha256 !== "string" ||
+      typeof item.evidence.source_record_id !== "string"
+    )
+      throw new Error(invalid);
+    return {
+      id: item.id,
+      accountId: item.account_id,
+      kind: item.kind,
+      sequence: String(item.sequence),
+      effectiveAt: item.effective_at,
+      currency: item.currency,
+      amount: item.amount,
+      sourceSha256: item.evidence.source_sha256,
+      sourceRecordId: item.evidence.source_record_id,
+    };
+  });
+  try {
+    const base = inspectLedgerFile(
+      JSON.stringify({
+        ...packet,
+        as_of: anchor.snapshot.effective_at,
+        activity: [],
+        ending_statement: null,
+      }),
+      "opening-balances.json",
+    );
+    if (
+      buildCashActivityReview(anchor, base, packet.as_of, entries).text !== text
+    )
+      throw new Error(invalid);
+    return { base, cutoff: packet.as_of, entries };
+  } catch {
+    throw new Error(invalid);
+  }
+}
 
 export function buildCashActivityReview(
   anchor: PortfolioLedgerAnchor,

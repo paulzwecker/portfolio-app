@@ -17,6 +17,8 @@ export function LedgerCashActivityBuilder({
   anchor,
   base,
   disabled,
+  initialCutoff = "",
+  initialEntries = [],
   onChange,
   onReview,
   onClose,
@@ -24,6 +26,8 @@ export function LedgerCashActivityBuilder({
   anchor: PortfolioLedgerAnchor;
   base: LedgerReviewFile;
   disabled: boolean;
+  initialCutoff?: string;
+  initialEntries?: CashActivityDraft[];
   onChange: () => void;
   onReview: (file: LedgerReviewFile) => Promise<void>;
   onClose: () => void;
@@ -33,8 +37,8 @@ export function LedgerCashActivityBuilder({
       (account) => account.kind === "BROKERAGE",
     ),
   );
-  const [cutoff, setCutoff] = useState("");
-  const [entries, setEntries] = useState<CashActivityDraft[]>([]);
+  const [cutoff, setCutoff] = useState(initialCutoff);
+  const [entries, setEntries] = useState<CashActivityDraft[]>(initialEntries);
   const [error, setError] = useState<string | null>(null);
   const changed = () => {
     onChange();

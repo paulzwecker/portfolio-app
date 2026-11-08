@@ -10,16 +10,24 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.3 guided ledger onboarding — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                      |
 | Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; PR #29 merged; no new BUILD PR              |
-| Implementation              | Guided opening and evidenced cash activity with read-only API projections LOCAL_VERIFIED                         |
-| Next ready substantial task | Guided trade/dividend entry, reusable activity drafts and ending-statement reconciliation                        |
+| Implementation              | Guided opening and resumable evidenced cash activity with read-only API projections LOCAL_VERIFIED               |
+| Next ready substantial task | Guided trade/dividend entry and ending-statement reconciliation                                                  |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
 
-The latest BUILD adds source-evidenced cash deposits, withdrawals, fees and taxes
+The latest BUILD restores supported cash activity from an unchanged downloaded
+packet after the API revalidates it against the current anchor. Record identities,
+evidence and exact amounts survive replay. Unsupported activity or additional
+fields fail the guided restore without losing the original file. Continue with
+guided trades, dividends and independently evidenced ending statements. The
+increment passed 114 focused web tests and 14 synthetic desktop/mobile browser
+cases, along with typecheck, build, focused lint and documentation checks.
+
+The prior BUILD adds source-evidenced cash deposits, withdrawals, fees and taxes
 to a reconciled opening, with explicit account, booking timestamp, sequence and
 review cutoff. Native preview results now show projected account/portfolio balances.
-Guided activity restoration, trades, dividends, transfers and ending statements
-remain upcoming. The opening and activity drafts cannot be switched implicitly.
+Guided trades, dividends, transfers and ending statements remain upcoming. The
+opening and activity drafts cannot be switched implicitly.
 Focused verification and the exact next step are recorded in the active handoff.
 
 The prior BUILD adds restoration of a previously downloaded opening packet into

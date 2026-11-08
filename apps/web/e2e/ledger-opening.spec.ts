@@ -496,6 +496,60 @@ test("guided cash activity reviews exact source evidence against a reconciled op
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const download = await downloadEvent;
+  const savedPath = await download.path();
+  if (!savedPath) throw new Error("Synthetic cash review download missing");
+  expect(await readFile(savedPath, "utf8")).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Discard cash activity", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(savedPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[2].text).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Edit supported cash activity", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Review cutoff timestamp", { exact: true }),
+  ).toHaveValue("2026-01-31T23:59:59+01:00");
+  await expect(page.getByLabel("Amount", { exact: true })).toHaveValue(
+    "1.2500000000",
+  );
+  await expect(
+    page.getByLabel("Source record reference", { exact: true }),
+  ).toHaveValue("synthetic-deposit");
+  await page
+    .getByRole("heading", { name: "Settled cash activity", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("cash-resumed.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Review cash activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[3].text).toBe(calls[1].text);
   await page.getByLabel("Amount", { exact: true }).fill("2");
   await expect(
     page.getByLabel("Ledger review result", { exact: true }),
@@ -510,8 +564,72 @@ test("guided cash activity reviews exact source evidence against a reconciled op
     page.getByLabel("Ledger review JSON", { exact: true }),
   ).toBeEnabled();
   await expect(
-    page.getByLabel("Position 1 quantity", { exact: true }),
-  ).toHaveValue("2.5000000000");
+    page.getByRole("button", { name: "Add opening account", exact: true }),
+  ).toBeEnabled();
+});
+
+test("unsupported reviewed activity stays available in its original file", async ({
+  page,
+}) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  const packet = JSON.parse(calls[0].text);
+  packet.as_of = "2026-01-31T23:59:59+01:00";
+  packet.activity = [
+    {
+      id: "66666666-6666-4666-8666-666666666666",
+      account_id: packet.accounts[0].account_id,
+      kind: "DIVIDEND",
+      sequence: 1,
+      effective_at: "2026-01-15T10:30:00+01:00",
+      evidence: {
+        source_sha256: "c".repeat(64),
+        source_record_id: "synthetic-dividend",
+      },
+      listing_id: ledgerAnchor.listings[0].listing_id,
+      currency: "USD",
+      gross_cash: "1",
+      fees: "0",
+      taxes: "0",
+    },
+  ];
+  const text = JSON.stringify(packet);
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles({
+      name: "dividend.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(text),
+    });
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Edit supported cash activity", exact: true })
+    .click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "cannot be edited in the cash form",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Settled cash activity", exact: true }),
+  ).toHaveCount(0);
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const savedPath = await (await downloadEvent).path();
+  if (!savedPath) throw new Error("Synthetic dividend review missing");
+  expect(await readFile(savedPath, "utf8")).toBe(text);
+  expect(calls.map((call) => call.path)).toEqual([previewPath, previewPath]);
 });
 
 test("restoring the same account cannot reuse an earlier pending hash", async ({

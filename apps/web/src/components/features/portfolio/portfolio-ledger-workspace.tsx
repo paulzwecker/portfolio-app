@@ -23,6 +23,10 @@ import { PortfolioLedgerCandidates } from "./portfolio-ledger-candidates";
 import { PortfolioLedgerResults } from "./portfolio-ledger-results";
 import { LedgerOpeningBuilder } from "./ledger-opening-builder";
 import { LedgerCashActivityBuilder } from "./ledger-cash-activity-builder";
+import {
+  restoreCashActivityReview,
+  type CashActivitySession,
+} from "./ledger-cash-activity";
 
 export function PortfolioLedgerWorkspace({
   portfolioId,
@@ -38,7 +42,7 @@ export function PortfolioLedgerWorkspace({
   const verified =
     anchor.data?.portfolio_id === portfolioId ? anchor.data : undefined;
   const [file, setFile] = useState<LedgerReviewFile | null>(null);
-  const [activityBase, setActivityBase] = useState<LedgerReviewFile | null>(
+  const [activityBase, setActivityBase] = useState<CashActivitySession | null>(
     null,
   );
   const [review, setReview] = useState<{
@@ -263,15 +267,17 @@ export function PortfolioLedgerWorkspace({
             />
           </PageSection>
           {activityBase &&
-            activityBase.anchorSha256 === verified.anchor_sha256 && (
+            activityBase.base.anchorSha256 === verified.anchor_sha256 && (
               <PageSection
                 title="Settled cash activity"
                 description="Build a candidate from the reconciled opening and your transaction evidence."
               >
                 <LedgerCashActivityBuilder
-                  key={activityBase.text}
+                  key={activityBase.base.text}
                   anchor={verified}
-                  base={activityBase}
+                  base={activityBase.base}
+                  initialCutoff={activityBase.cutoff}
+                  initialEntries={activityBase.entries}
                   disabled={pending || loadingFile}
                   onChange={() => clear(true)}
                   onReview={runPreview}
@@ -363,9 +369,47 @@ export function PortfolioLedgerWorkspace({
             !activityBase && (
               <Button
                 variant="outline"
-                onClick={() => setActivityBase(visibleReview.file)}
+                onClick={() =>
+                  setActivityBase({
+                    base: visibleReview.file,
+                    cutoff: "",
+                    entries: [],
+                  })
+                }
               >
                 Add settled cash activity
+              </Button>
+            )}
+          {verified &&
+            visibleReview.report.status === "OPENING_RECONCILED" &&
+            visibleReview.report.activity_count > 0 &&
+            visibleReview.report.ending_status === "NOT_PROVIDED" &&
+            !activityBase && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  try {
+                    const session = restoreCashActivityReview(
+                      verified,
+                      visibleReview.file.text,
+                    );
+                    if (
+                      session.entries.length !==
+                      visibleReview.report.activity_count
+                    )
+                      throw new Error("The review activity count changed.");
+                    setError(null);
+                    setActivityBase(session);
+                  } catch (failure) {
+                    setError(
+                      failure instanceof Error
+                        ? failure.message
+                        : "This review cannot be edited in the cash form.",
+                    );
+                  }
+                }}
+              >
+                Edit supported cash activity
               </Button>
             )}
           <PortfolioLedgerResults

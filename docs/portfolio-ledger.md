@@ -195,9 +195,12 @@ exact positive amount, document hash and source-record reference. The user also
 supplies the review cutoff. The API owns ordering, time-boundary, balance and
 duplicate-source validation. Its candidate balances are displayed by account or
 portfolio when replay succeeds. The cash draft must be explicitly discarded before
-the opening or source file is changed. Its downloaded review JSON can be replayed
-through the file workflow. Guided restoration of activity, trades, dividends,
-transfers and ending statements remains future work.
+the opening or source file is changed. To resume it, load the unchanged downloaded
+review JSON, validate it against the current anchor and select the cash editor.
+Restoration preserves account and record IDs, source evidence and exact amounts.
+Packets with other activities, ending statements or extra fields remain available
+through the file workflow. Guided trades, dividends, transfers and ending
+statements remain future work.
 
 For activity and ending observations, prepare the typed ledger JSON and choose it
 using the file control. Files stay in

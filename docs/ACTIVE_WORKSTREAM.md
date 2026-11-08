@@ -43,7 +43,7 @@ after an opening reconciles. Account, type, amount, currency, sequence, timestam
 cutoff and source evidence are explicit. Native preview results display account
 and portfolio balances. Editing invalidates the result, and the cash draft must be
 discarded before switching its opening or source file. Full activity packets can
-be downloaded and replayed in the existing file workflow. Guided restoration,
+be downloaded and replayed in the existing file workflow. Guided
 trade/dividend/transfer entry and ending statements remain outstanding.
 
 Verification passed 112 focused web tests, 14 isolated PostgreSQL/API cases and
@@ -51,9 +51,21 @@ Verification passed 112 focused web tests, 14 isolated PostgreSQL/API cases and
 production build, focused lint and docs checks passed. Mobile and desktop layouts
 were visually reviewed. No production operation was involved.
 
+## Current cash restoration increment
+
+A downloaded guided cash packet can be revalidated against the current anchor and
+reopened for editing. Account and activity IDs, source evidence, timestamps and
+exact decimal text are retained. Restoration refuses unsupported activity, ending
+statements, stale anchors, numerical financial literals and additional fields.
+The original file remains available for the existing file-review workflow.
+Focused verification passed 114 web tests and 14 synthetic desktop/mobile browser
+cases, including reload, identical replay and refusal of unsupported activity.
+Typecheck, production build, focused lint and documentation checks passed. The
+resumed mobile form was visually reviewed.
+
 ## Next increment and release boundaries
 
-Add guided trade/dividend entry, activity restoration and ending-statement entry to complete the existing
+Add guided trade/dividend entry and ending-statement entry to complete the existing
 candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,
