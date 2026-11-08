@@ -50,10 +50,29 @@ NASDAQ_2026_HOLIDAYS = frozenset(
     )
 )
 
+XETRA_2026_SOURCE = (
+    "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/"
+    "1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf"
+)
+XETRA_2026_SOURCE_SHA256 = "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6"
+XETRA_2026_KNOWN_SINCE = datetime(2026, 11, 8, 18, 42, 31, 412425, tzinfo=UTC)
+XETRA_2026_HOLIDAYS = frozenset(
+    date.fromisoformat(day)
+    for day in (
+        "2026-01-01",
+        "2026-04-03",
+        "2026-04-06",
+        "2026-05-01",
+        "2026-12-24",
+        "2026-12-25",
+        "2026-12-31",
+    )
+)
+
 
 @dataclass(frozen=True)
 class PublishedSchedule:
-    venue: Literal["NYSE", "NASDAQ"]
+    venue: Literal["NYSE", "NASDAQ", "XETRA"]
     schedule_id: str
     source_url: str
     source_sha256: str
@@ -81,6 +100,15 @@ SCHEDULES = {
         NASDAQ_2026_KNOWN_SINCE,
         NASDAQ_2026_HOLIDAYS,
     ),
+    "XETRA": PublishedSchedule(
+        "XETRA",
+        "XETRA-2026-observed-2026-11-08-v1",
+        XETRA_2026_SOURCE,
+        XETRA_2026_SOURCE_SHA256,
+        None,
+        XETRA_2026_KNOWN_SINCE,
+        XETRA_2026_HOLIDAYS,
+    ),
 }
 
 
@@ -88,7 +116,8 @@ def scheduled_session_review(
     venue: str | None, observed_dates: list[date], known_at: datetime
 ) -> ScheduledSessionReviewRead | None:
     """Compare selected series dates with the exact venue's published schedule."""
-    schedule = SCHEDULES.get(venue or "")
+    # XETR is the ISO 10383 MIC of Deutsche Börse Xetra. It is not XFRA.
+    schedule = SCHEDULES.get("XETRA" if venue == "XETR" else venue or "")
     if schedule is None or not observed_dates or known_at < schedule.observed_at:
         return None
     start = max(min(observed_dates), date(2026, 1, 1))

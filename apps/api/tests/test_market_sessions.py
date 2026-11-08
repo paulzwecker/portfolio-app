@@ -76,6 +76,49 @@ def test_nasdaq_early_close_is_a_session_and_exchange_holiday_is_not() -> None:
     assert result.absent_scheduled_dates == [date(2026, 11, 27)]
 
 
+def test_xetra_and_xetr_use_xetra_source_only_after_exact_capture() -> None:
+    dates = [date(2026, 7, 2), date(2026, 7, 7)]
+    assert (
+        scheduled_session_review(
+            "XETR", dates, datetime(2026, 11, 8, 18, 42, 31, 412424, tzinfo=UTC)
+        )
+        is None
+    )
+    xetr = scheduled_session_review(
+        "XETR", dates, datetime(2026, 11, 8, 18, 42, 31, 412425, tzinfo=UTC)
+    )
+    xetra = scheduled_session_review("XETRA", dates, KNOWN)
+    assert xetr == xetra
+    assert xetr is not None
+    assert xetr.venue == "XETRA"
+    assert xetr.source_as_of is None
+    assert xetr.absent_scheduled_dates == [date(2026, 7, 3), date(2026, 7, 6)]
+    assert scheduled_session_review("XFRA", dates, KNOWN) is None
+
+
+def test_xetra_easter_and_may_holidays_are_not_us_holidays() -> None:
+    easter = scheduled_session_review("XETRA", [date(2026, 4, 2), date(2026, 4, 7)], KNOWN)
+    assert easter is not None
+    assert easter.scheduled_count == 2
+    assert easter.absent_scheduled_dates == []
+    may = scheduled_session_review("XETRA", [date(2026, 5, 22), date(2026, 5, 26)], KNOWN)
+    assert may is not None
+    assert may.absent_scheduled_dates == [date(2026, 5, 25)]
+
+
+def test_xetra_christmas_eve_and_new_years_eve_are_closed() -> None:
+    result = scheduled_session_review(
+        "XETRA", [date(2026, 12, 23), date(2026, 12, 30)], datetime(2027, 1, 2, tzinfo=UTC)
+    )
+    assert result is not None
+    assert result.absent_scheduled_dates == [date(2026, 12, 28), date(2026, 12, 29)]
+    year_end = scheduled_session_review(
+        "XETRA", [date(2026, 12, 30), date(2026, 12, 31)], datetime(2027, 1, 2, tzinfo=UTC)
+    )
+    assert year_end is not None
+    assert year_end.selected_unscheduled_dates == [date(2026, 12, 31)]
+
+
 def test_scope_is_bounded_and_duplicates_do_not_hide_gaps() -> None:
     result = scheduled_session_review(
         "NYSE", [date(2025, 12, 31), date(2026, 1, 5), date(2026, 1, 5)], KNOWN

@@ -195,7 +195,7 @@ def test_listing_analytics_reject_incompatible_price_streams(
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("venue", ["NYSE", "NASDAQ"])
+@pytest.mark.parametrize("venue", ["NYSE", "NASDAQ", "XETR", "XETRA"])
 def test_schedule_review_uses_only_point_in_time_selected_closes(
     postgres_engine: Engine,
     venue: str,
@@ -229,8 +229,12 @@ def test_schedule_review_uses_only_point_in_time_selected_closes(
         )
         review = result.analytics.scheduled_session_review
         assert review is not None
-        assert review.venue == venue
-        assert review.absent_scheduled_dates == [date(2026, 7, 6)]
+        assert review.venue == ("XETRA" if venue == "XETR" else venue)
+        assert review.absent_scheduled_dates == (
+            [date(2026, 7, 3), date(2026, 7, 6)]
+            if venue in {"XETR", "XETRA"}
+            else [date(2026, 7, 6)]
+        )
         assert result.analytics.session_coverage == "NOT_ASSESSED"
         earlier = queries.listing_market_data(
             session, listing, known_at=datetime(2026, 7, 4, tzinfo=UTC)

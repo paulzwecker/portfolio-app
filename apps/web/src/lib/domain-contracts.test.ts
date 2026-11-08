@@ -1699,6 +1699,24 @@ describe("domain display integrity", () => {
           ...withEvidence.analytics,
           scheduled_session_review: {
             ...withEvidence.analytics.scheduled_session_review,
+            venue: "XETRA",
+            source_url:
+              "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf",
+            source_sha256:
+              "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
+            source_as_of: null,
+            source_observed_at: "2026-11-08T18:42:31.412425Z",
+          },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isListingMarketData({
+        ...withEvidence,
+        analytics: {
+          ...withEvidence.analytics,
+          scheduled_session_review: {
+            ...withEvidence.analytics.scheduled_session_review,
             venue: "NASDAQ",
             source_url: "https://nasdaqtrader.com/Trader.aspx?id=Calendar",
             source_sha256:

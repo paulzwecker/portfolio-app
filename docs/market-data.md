@@ -197,7 +197,12 @@ independently observed November 8, 2026, with SHA-256
 Nasdaq source does not state an as-of date; none is inferred. Separate local
 content-addressed source copies are retained outside Git in
 `%LOCALAPPDATA%/PortfolioResearch/reference-calendars`; this local store is not a
-durable backup. Other venues and years remain unassessed; no FX schedule is inferred.
+durable backup. Exact `XETRA` or `XETR` listings use Deutsche Börse's independently
+captured [2026 Xetra schedule](https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf)
+(SHA-256 `1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6`;
+observed November 8, 2026; no as-of date stated). Deutsche Börse identifies XETR
+as Xetra's MIC; it is distinct from XFRA. Other venues and years remain unassessed;
+no FX schedule is inferred.
 Quotes and historical closes remain separately identified. Returns are
 split-adjusted price returns; Yahoo dividend-adjusted values are not used because
 the stored dividend facts are not independently verified, so the figures are not

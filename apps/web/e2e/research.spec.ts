@@ -2793,7 +2793,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         json: incompatibleHistory
           ? marketData.map((market) => ({
               ...market,
-              listing: { ...market.listing, venue: "NASDAQ" },
+              listing: { ...market.listing, venue: "XETR" },
               availability: "PARTIAL",
               history: conflictHistory,
               analytics: {
@@ -2805,14 +2805,14 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                   "ADJUSTMENT_BASIS_MISMATCH",
                 ],
                 scheduled_session_review: {
-                  venue: "NASDAQ",
-                  schedule_id: "NASDAQ-2026-observed-2026-11-08-v1",
+                  venue: "XETRA",
+                  schedule_id: "XETRA-2026-observed-2026-11-08-v1",
                   source_url:
-                    "https://nasdaqtrader.com/Trader.aspx?id=Calendar",
+                    "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf",
                   source_as_of: null,
-                  source_observed_at: "2026-11-08T18:37:45.961889Z",
+                  source_observed_at: "2026-11-08T18:42:31.412425Z",
                   source_sha256:
-                    "33e2c294b3959430f9b4edbbbb0e6c5ed832ca6da30a3ea0de53748857e6698f",
+                    "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
                   start_date: "2026-10-01",
                   end_date: "2026-10-04",
                   full_selected_span_covered: false,
@@ -3509,7 +3509,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByText(/price adjustment descriptions differ/),
     ).toBeVisible();
-    await page.getByText(/Review scheduled NASDAQ dates/).click();
+    await page.getByText(/Review scheduled XETRA dates/).click();
     await expect(page.getByText(/not a confirmed missing trade/)).toBeVisible();
     await expect(
       page.getByRole("img", { name: "Exact-listing price history for EXPL" }),

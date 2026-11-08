@@ -221,6 +221,50 @@ describe("historical market coverage notice", () => {
     expect(html).toContain("Published NASDAQ calendar");
   });
 
+  it("identifies a Xetra schedule without inferring missing trades", () => {
+    const analytics = {
+      status: "PARTIAL",
+      methodology_version: "fixture",
+      observation_count: 2,
+      as_of: null,
+      session_coverage: "NOT_ASSESSED",
+      daily_return: null,
+      dma_20: null,
+      dma_50: null,
+      dma_200: null,
+      high_52w: null,
+      drawdown_52w: null,
+      price_return_1m: null,
+      price_return_3m: null,
+      price_return_6m: null,
+      realized_vol_20d: null,
+      trend_state: null,
+      correction_state: null,
+      scheduled_session_review: {
+        venue: "XETRA",
+        schedule_id: "XETRA-2026-observed-2026-11-08-v1",
+        source_url:
+          "https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf",
+        source_sha256:
+          "1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6",
+        source_as_of: null,
+        source_observed_at: "2026-11-08T18:42:31.412425Z",
+        start_date: "2026-07-02",
+        end_date: "2026-07-07",
+        full_selected_span_covered: true,
+        scheduled_count: 4,
+        absent_scheduled_dates: ["2026-07-03", "2026-07-06"],
+        selected_unscheduled_dates: [],
+      },
+    } satisfies PriceHistoryAnalytics;
+    const html = renderToStaticMarkup(
+      <HistoryCoverageNotice analytics={analytics} />,
+    );
+    expect(html).toContain("Review scheduled XETRA dates");
+    expect(html).toContain("2 without selected closes");
+    expect(html).toContain("not a confirmed missing trade");
+  });
+
   it("filters all returned observations and keeps exact close text", () => {
     const observations = Array.from({ length: 75 }, (_, index) => ({
       id: String(index),

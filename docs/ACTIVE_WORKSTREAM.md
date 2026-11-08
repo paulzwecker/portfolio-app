@@ -281,3 +281,12 @@ remain review candidates, not verified sessions or full history coverage.
 Twenty-four focused backend tests including isolated PostgreSQL cases, 57 web
 checks, contract/type/lint checks and a synthetic desktop/mobile browser journey
 passed. No schema migration or hosted changes.
+
+Current BUILD increment adds source-hashed 2026 Deutsche Börse Xetra schedule
+review for exact `XETRA` and its explicitly evidenced MIC `XETR`; it does not
+map `XFRA`. The source PDF and immutable manifest are retained in the same local
+evidence store. Separate source capture time and unstated as-of date are preserved.
+Twenty-nine focused backend tests including isolated PostgreSQL, 58 web checks,
+contract/type/lint checks and a synthetic desktop/mobile browser journey passed.
+No schema migration or hosted changes. Next: preserve schedule revision history
+and handle later schedule updates without changing earlier point-in-time reviews.

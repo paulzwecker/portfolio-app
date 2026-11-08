@@ -31252,7 +31252,8 @@
           "venue": {
             "enum": [
               "NYSE",
-              "NASDAQ"
+              "NASDAQ",
+              "XETRA"
             ],
             "title": "Venue",
             "type": "string"

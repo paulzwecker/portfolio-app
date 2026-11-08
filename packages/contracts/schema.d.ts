@@ -11925,7 +11925,7 @@ export interface components {
              * Venue
              * @enum {string}
              */
-            venue: "NYSE" | "NASDAQ";
+            venue: "NYSE" | "NASDAQ" | "XETRA";
         };
         /** ScoreAssessmentCreate */
         ScoreAssessmentCreate: {
