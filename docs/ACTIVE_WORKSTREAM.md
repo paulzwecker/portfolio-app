@@ -36,16 +36,29 @@ to retain its economic adjustment basis. Mypy passes all 223 source/test files.
 
 ## Release assessment
 
-Current classification is **BLOCKED** pending fresh production target verification.
-The existing read-only guard returned `read_target_preflight_failed` with an underlying
-PostgreSQL connection `OperationalError`. The recorded schema attestation is
-`b59f16c8a203`; this branch adds no migration. Provider configuration and production
-alias enforcement still require current verification at release time.
+Current classification is **CONFIGURATION_REQUIRED** pending current Vercel
+release-control evidence and Blueprint sync confirmation. The earlier Neon
+connection failure is resolved by the runbook's process-local certifi CA bundle.
+On November 8 at 19:49 UTC the existing read-only target guard verified the exact
+production project, branch, endpoint and `neondb.public` with TLS `verify-full`.
+Live Alembic is `b59f16c8a203`, all 98 tables are present and mapped metadata has
+no drift. Both offline schema-gate modes pass with an empty pending range.
+
+Accepted counts remain 209 companies, 23 securities, 23 listings, one portfolio,
+one snapshot, 22 positions, two cash rows, one accepted target revision and 16
+allocations totaling 100%. Source and canonical bootstrap receipts each count one.
+Prices, FX and native model revisions each count zero. Private evidence remains
+under `%LOCALAPPDATA%/PortfolioResearch/private-reports`.
 
 Fresh Render read-only inspection found the intended `portfolio-api` service on
 `main`, live deployment `dep-dbobrqbl550s7399afg0` at `aef3572`, and Auto-Deploy
-enabled with `checksPass`. This supersedes the older freeze observation. Vercel
-plan/check enforcement and Blueprint sync were unavailable in this inspection.
+enabled with `checksPass`. Render uses the expected Neon target, TLS verification
+and `/health/ready`. Both health routes return 200. Authenticated API reads return
+209 Universe companies, one portfolio and a ledger anchor with its snapshot.
+All inspected write, ingestion and background flags are disabled. GitHub effective
+main rules require PRs, conversation resolution and the three strict CI checks.
+Vercel CLI/frontend credentials were unavailable. The requested dashboard evidence
+is its production commit/plan, required checks, exact ignore command and Blueprint sync.
 
 Follow the existing [deployment runbook](deployment-and-migrations.md). Hosted
 setting changes, live provider activation, recovery operations and model acceptance
@@ -54,10 +67,23 @@ remain outstanding operational acceptance criteria.
 
 ## Next action
 
-Draft #29 awaits owner review and fresh release verification. CI/Preview results
-must be checked for the latest head before advancing it. Additional venue schedules
+Draft #29 awaits owner review and the remaining release-control evidence. The code
+head `1587ce0` passed all three GitHub jobs and Vercel Preview in CI run 113.
+Documentation updates retain focused checks and require latest-head CI readback.
+Additional venue schedules
 require reviewed source evidence. Detailed earlier evidence and production recovery
 history remain in the [historical handoff](history/market-history-build-through-2026-11-08.md).
+
+## Bounded enrichment planning
+
+The existing production read-only preview is READY for all 22 held listings and
+the two required FX pairs, DKK/EUR and USD/EUR. It reuses the earlier diagnostic
+window November 7, 2025 through November 6, 2026 for comparison. The plan has 24
+logical provider scopes and zero unresolved mappings. It made zero provider
+requests and database writes. The immutable private report hash is
+`1cd4ddf9815e068343ab67c4baeca2e18d5c6bbeecede1e132d38576fa3ebdf5`.
+Owner review must establish the actual first-run window, provider/retry budget and
+current-state recovery before separately authorizing execution.
 
 Canonical behavior lives in [market data](market-data.md),
 [historical bootstrap](historical-market-data-bootstrap.md),

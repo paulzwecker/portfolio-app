@@ -11,7 +11,7 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Active checkpoint           | C2.2 historical market-data reliability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                              |
 | Branch / PR                 | `codex/market-history-coverage`, based on current main `aef3572`; [draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29) |
 | Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                                           |
-| Next ready substantial task | Reverify live Neon/provider release controls, review draft #29, then resume approved held-listing enrichment                           |
+| Next ready substantial task | Confirm Vercel release controls and Blueprint sync, review draft #29, then authorize a bounded held-listing enrichment plan            |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                           |
 | Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                       |
 
@@ -27,10 +27,16 @@ separately authorized live enrichment and monitored refresh acceptance.
 browser suite passed. Browser evidence is 95 passed and 35 explicit skips. Independent
 review tightened alert evidence and added HTTP authentication/read-only coverage.
 
-The current integration review found Render live at `aef3572`, with Auto-Deploy
-enabled through `checksPass`. Fresh Neon verification stopped at the read-only
-target guard with a connection `OperationalError`. Release classification is BLOCKED
-until target compatibility and provider release controls are freshly verified.
+Fresh November 8 read-only verification passes for the exact Neon target at
+`b59f16c8a203`, all 98 tables and mapped metadata without drift. Accepted portfolio
+counts and the 100% target total match the baseline. The earlier connection failure
+is resolved using the documented process-local CA bundle. Render is live at
+`aef3572`, uses `checksPass`, has healthy readiness and disabled write/background
+controls. Effective main rules enforce PRs and all three strict CI checks.
+Classification is CONFIGURATION_REQUIRED pending current Vercel release-control
+evidence and Blueprint sync confirmation. The read-only market preview resolves
+22/22 holdings and two FX pairs across 24 planned scopes. Enrichment execution
+retains the owner-reviewed window, budget and recovery prerequisites.
 
 Historical release evidence follows. PRs #27 and #28 are merged into main. The owner-authorized Render release of `aef3572` is healthy;
 Vercel reported Ready but production alias and enforcement remain unverified. Render auto-deploy and
