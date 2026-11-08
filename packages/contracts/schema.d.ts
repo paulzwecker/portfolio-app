@@ -1006,6 +1006,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/financial-models/{model_id}/sensitivity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dcf Sensitivity */
+        get: operations["get_dcf_sensitivity_v1_financial_models__model_id__sensitivity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fx-observations": {
         parameters: {
             query?: never;
@@ -4121,6 +4138,70 @@ export interface components {
             year10_ufcf_growth: string;
             /** Years */
             years: components["schemas"]["DcfYearAssumptionRead"][];
+        };
+        /** DcfSensitivityCellRead */
+        DcfSensitivityCellRead: {
+            /** Base Fv */
+            base_fv: string | null;
+            /** Bear Fv */
+            bear_fv: string | null;
+            /** Bull Fv */
+            bull_fv: string | null;
+            /** Discount Rate Shift */
+            discount_rate_shift: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "INVALID_ASSUMPTIONS";
+            /** Terminal Growth Shift */
+            terminal_growth_shift: string;
+            /** Unavailable Reason */
+            unavailable_reason: string | null;
+            /** Weighted Fv */
+            weighted_fv: string | null;
+        };
+        /** DcfSensitivityRead */
+        DcfSensitivityRead: {
+            /**
+             * Calculation Version
+             * @constant
+             */
+            calculation_version: "ufcf-dcf-sensitivity-v1";
+            /** Cells */
+            cells: components["schemas"]["DcfSensitivityCellRead"][];
+            /** Discount Rate Shifts */
+            discount_rate_shifts: string[];
+            /** Methodology Version */
+            methodology_version: string;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Scenarios */
+            scenarios: components["schemas"]["DcfSensitivityScenarioRead"][];
+            /** Terminal Growth Shifts */
+            terminal_growth_shifts: string[];
+        };
+        /** DcfSensitivityScenarioRead */
+        DcfSensitivityScenarioRead: {
+            /** Probability */
+            probability: string;
+            scenario: components["schemas"]["DcfScenario"];
+            /** Terminal Growth */
+            terminal_growth: string;
+            /** Year5 Discount Rate */
+            year5_discount_rate: string;
         };
         /** DcfTailGrowthAssumptionInput */
         "DcfTailGrowthAssumptionInput-Input": {
@@ -14445,6 +14526,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinancialModelRevisionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dcf_sensitivity_v1_financial_models__model_id__sensitivity_get: {
+        parameters: {
+            query: {
+                base_revision_id: string;
+            };
+            header?: never;
+            path: {
+                model_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DcfSensitivityRead"];
                 };
             };
             /** @description Validation Error */

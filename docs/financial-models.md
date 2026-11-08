@@ -283,6 +283,43 @@ Revision history can expand into an assumption and normalized-output comparison
 against the current revision. Imported legacy output snapshots remain in their
 separate read-only history section.
 
+## DCF valuation sensitivity
+
+`GET /v1/financial-models/{model_id}/sensitivity?base_revision_id={revision_id}`
+calculates a fixed nine-cell fair-value grid from an exact current accepted UFCF
+DCF revision. A stale revision returns 409. Other model types return 404. The
+versioned calculation contract is `ufcf-dcf-sensitivity-v1`.
+
+Rows shift all scenario discount rates by −1, 0 or +1 percentage point. Each annual
+rate in years 1–5 shifts in parallel; the native engine retains its year-5 rate
+for years 6–10. Columns shift each scenario's terminal growth by −0.5, 0 or +0.5
+percentage point. Scenario probabilities, operating assumptions, year-10 UFCF
+growth and any explicit annual tail remain fixed. The center recomputes the
+accepted assumptions. Every cell uses the existing validated input contract and
+native engine. Invalid rate bounds or terminal spreads produce explicit
+unavailable cells with null values.
+
+Outputs are Bear/Base/Bull and probability-weighted fair values per share in
+model currency, rounded to the existing 18-place model precision. Fair values
+are calculated solely from accepted inputs through a read-only endpoint.
+Discount-rate sensitivity retains the source DCF methodology. Investor hurdle and
+enterprise/shareholder return definitions remain governed by their own contracts.
+
+In Company Valuation select an accepted native DCF and open **Explore sensitivity**.
+Switch between probability-weighted, Bear, Base and Bull fair values. The panel
+fetches on demand, pins the displayed model/revision and explains unavailable
+combinations. A changed accepted revision requires reloading the company.
+
+### Integration status
+
+The read-only sensitivity/proxy implementation and its authenticated browser fixtures
+are included in [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26).
+The [active workstream](ACTIVE_WORKSTREAM.md) owns combined verification and release
+status. Its [dated evidence](history/data-ledger-build-through-2026-11-08.md) retains
+native parity, scoped PostgreSQL checks, the proxy defect/correction and real
+Next.js → synthetic HTTPS → UI verification. Hosted model readback and financial
+acceptance retain their separate gates.
+
 ## Google Sheets interoperability
 
 The portable boundaries are `FinancialModelContractV1` (`1.0.0`–`1.2.0`) for DCF and

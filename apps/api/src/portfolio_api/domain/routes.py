@@ -25,6 +25,7 @@ from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
 from portfolio_api.company_sec_coverage import company_sec_coverage
 from portfolio_api.database_write_target import DatabaseWriteTargetError
+from portfolio_api.dcf_sensitivity import model_dcf_sensitivity
 from portfolio_api.decision_evaluation import company_decision_evaluation
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
@@ -1769,6 +1770,11 @@ def post_financial_model_initial_calculation_preview(
 @router.get("/financial-models/{model_id}", response_model=s.FinancialModelRead)
 def get_financial_model(model_id: UUID, db: Db) -> s.FinancialModelRead:
     return q.financial_model(db, model_id)
+
+
+@router.get("/financial-models/{model_id}/sensitivity", response_model=s.DcfSensitivityRead)
+def get_dcf_sensitivity(model_id: UUID, base_revision_id: UUID, db: Db) -> s.DcfSensitivityRead:
+    return model_dcf_sensitivity(db, model_id, base_revision_id)
 
 
 @router.get(

@@ -372,3 +372,212 @@ usable database, plus all 32 classified PostgreSQL cases with the guard active.
 Dynamic requests fail before missing-DB skips. Source-bound tests retain their
 separate privacy/opt-in policy. Types, scoped lint/format, source policy, docs and
 whitespace pass. Combined-baseline and remote CI verification remain for INTEGRATE.
+
+## Pre-consolidation integration checkpoint — 2026-11-08
+
+| Field                       | Current value                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2/C3.1/C2.3 local release candidate - INTEGRATE. [Handoff](../../docs/ACTIVE_WORKSTREAM.md)                                        |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), from main `395f842`      |
+| Implementation              | LOCAL_VERIFIED workflows. Full quality/build and browser checks pass; PR checks govern integration. Hosted activation remains pending |
+| Next ready substantial task | Owner review of #25/#26 after CI. Integrate #25 after owner merge, then prepare the gated C2.2 operational slice                      |
+| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                |
+| Integration rule            | Keep completed PRs stable during review. #26 is the cohesive local milestone integration boundary; production gates remain separate   |
+
+Owner-requested consolidation now includes PR #25's exact minimal-receipt adapter
+and its unchanged source-binding/reconciliation tests. Its dated read-only coverage
+assessment is preserved in the [integration history](../../docs/history/data-ledger-build-through-2026-11-08.md#c21-recorded-readiness-evidence--2026-11-07)
+and [ingestion runbook](../../docs/production-data-ingestion-operations.md). PR #25 remains
+separately reviewable; its commits are included in this candidate. The CI-classification branch is now integrated with its collection/runtime
+guards. Sensitivity and authenticated proxy fixtures are next before combined checks.
+
+Integration review corrected the pre-ledger bootstrap path and added all ledger
+history to the recovery inventory. `9048c47` also pins the existing read-only release
+preflight to the current target and reviewed `9f2a6d4c81b7` → `b59f16c8a203` range.
+The full quality/build command passes with 294 web checks and 810 API unit checks
+(two Windows skips). Browser evidence covers 71 regression and ten actual-API
+journeys. The pre-fix DB sweep found one regression among 341 selected cases; its
+corrected path and 34 schema/publication checks pass. Final CI must exercise the
+complete updated PostgreSQL suite, including local privilege-dependent skips.
+[Handoff](../../docs/ACTIVE_WORKSTREAM.md) records evidence, release prerequisites and
+[earlier BUILD history](../../docs/history/data-ledger-build-through-2026-11-08.md).
+Linux CI additionally identified the Docker-published test service's non-loopback
+server address. Test-only container/image/address/port attestation now preserves
+exact identity verification, with 23 focused safety cases passing. The complete
+CI rerun remains the merge gate. Hosted source freshness, ingestion, schema/cutover
+and model acceptance remain gated.
+
+`a11272a` adds scoped publication plan/ownership/publish proxy contracts and the
+explicit whole-portfolio approval UI. The workflow is LOCAL_VERIFIED through 135
+focused web checks, 45 PostgreSQL/API/fixture checks and actual desktop/mobile
+publication journeys. Source-bound confirmations, conflicts, exact decimal readback
+and lost-response recovery pass. Second-pass review corrected sanitized network
+messaging and historical plan labels. The original opening and strategic targets
+remain intact in synthetic rehearsals. [Handoff](../../docs/ACTIVE_WORKSTREAM.md) records
+fixture safeguards and scope. Milestone-wide integration checks remain pending.
+
+C2.3 saved-candidate decisions/history are LOCAL_VERIFIED. Ninety focused web,
+43 API/fixture checks and four repeated real-API desktop/mobile journeys pass.
+Source/receipt scope, explicit confirmations, corrections, rejection, immutable
+history and ambiguous-commit readback are covered. [Handoff](../../docs/ACTIVE_WORKSTREAM.md)
+records the guarded fixture and canonical-state evidence. Dated cutover and
+production activation retain their owner gates.
+
+`71dee7e` adds explicit whole-portfolio ledger publication, immutable snapshot
+lineage and writer ownership guards. Publication/provenance, migration, replay,
+concurrency, rollback, stale approvals and canonical API readback are locally verified.
+The source UI displays the ledger owner and original opening, with manual snapshot
+editing replaced by history navigation. Focused web checks and real desktop/mobile
+read-only journeys pass. Detailed evidence and next scope are in the
+[handoff](../../docs/ACTIVE_WORKSTREAM.md). Migration `b59f16c8a203` follows `a832e94d6f10`.
+Populated ownership prevents downgrade. Same-cutoff publication and full workbook
+apply after transfer remain explicitly blocked. Real source scope/recovery and
+production activation retain separate gates.
+
+### Current BUILD evidence
+
+`a7557b0` C2.3 storage is LOCAL_VERIFIED through 21 isolated PostgreSQL checks.
+Additive revision `a832e94d6f10` follows `9f2a6d4c81b7`, creating immutable
+candidate packets and terminal review receipts. Same-portfolio ancestry, request
+and accepted-revision uniqueness, rollback, replay and migration compatibility pass.
+The source-bound stage/review/correction API passes focused unit, PostgreSQL/API,
+authorization and contract checks. Independent review corrected workbook writer
+lock ordering and retained-ORM identity freshness, with targeted regressions.
+Exact tested counts and the next task are in [the handoff](../../docs/ACTIVE_WORKSTREAM.md).
+The browser decision/history and dated publication/readback follow-ups are locally
+verified above. Real ownership activation remains outstanding. Production migration,
+current-state recovery and activation remain separately authorized gates.
+
+Prior head `2c1b5aa` subsequently passed all three CI jobs and Vercel Preview in [run 42440104834](https://github.com/paulzwecker/portfolio-app/actions/runs/42440104834). This archived checkpoint preserves earlier pending-verification wording in its original context.
+
+## C1.3 authenticated sensitivity BUILD evidence — 2026-11-08
+
+| Field                       | Current value                                                                                                                                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C1.3 authenticated proxy-path verification — BUILD. [Handoff](../../docs/financial-models.md#current-build-checkpoint)                                                                                    |
+| Branch / PR                 | `codex/native-dcf-sensitivity`, from merged main `395f842`. Local BUILD branch                                                                                                                            |
+| Implementation              | C1.3 complete proxy path LOCAL_VERIFIED with authenticated production-mode desktop/mobile fixtures                                                                                                        |
+| Next ready substantial task | Owner review/merge PRs #25/#26; integrate this completed slice and CI classification against updated main at one reviewed milestone gate                                                                  |
+| Parallel owner gate         | Completed [PR #25](https://github.com/paulzwecker/portfolio-app/pull/25) and [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) await review/merge. C1 investment acceptance remains separate |
+| Integration rule            | Keep completed PRs stable. Reconcile this independent slice and the preserved CI correction with latest main at the integration gate                                                                      |
+
+PR #24 is merged as `395f842`. The completed data/ledger PR #26 stays frozen.
+The independent PostgreSQL test-classification correction is preserved on
+`codex/ci-database-test-coverage` in `18930ac` and `f72729e`, with its verified
+handoff in that branch's testing reference. This branch adds a user-facing C1
+review capability independently of the pending schema/data work.
+
+PR #25's conflict repair is complete at `7d4ce2e`, passing all three CI jobs and
+Vercel Preview. PRs #25/#26 remain open and stable for owner review. Their actual
+merge state was rechecked before resuming this independent branch.
+
+Normal-entrypoint review found three missing sensitivity proxy pieces: allowlist,
+base-revision query forwarding and response validation. Earlier mocked browser
+requests hid that defect. Commit `32eb94f` fixes the exact model/revision read path,
+rejects missing/ambiguous base IDs, preserves sanitized conflicts and denied writes,
+and retains HTTPS plus separate web/API credentials.
+
+Commit `17ca4c1` adds an authenticated production-mode fixture on the existing
+browser driver. Twenty-four desktop/mobile checks pass, including real Next.js
+auth → HTTPS source → validated sensitivity → UI. Negative cases cover anonymous/
+incorrect access, stale revision, malformed output, denied writes, server-token
+separation, untrusted CA and wrong hostname. Two default development-mode browser
+regressions also pass. Actual proxy screenshots were visually inspected.
+
+Final focused verification passes 68 web checks, 20 backend checks (including
+read-only PostgreSQL and fixture TLS), five Node isolation/cleanup checks, deployment
+and source-policy checks, generated contracts, scoped lint/format and docs links.
+The ordinary production build and frontend types pass; changed Python files pass
+strict typing. Independent review tightened child-only write-authorization controls
+and temporary-file cleanup. Synthetic fixtures establish local behavior. Full
+combined-baseline/remote CI and hosted model readback remain unverified. Production
+model acceptance retains its owner gate. Keep completed PRs stable for review.
+
+## Original PR 26 handoff before owner-requested consolidation
+
+# Active workstream
+
+## Data and ledger local release candidate — INTEGRATE
+
+- Branch `codex/portfolio-data-ledger-capabilities`, based on main `395f842`.
+- Completed PR #25 remains frozen for owner review. Its receipt adapter is required
+  before real provider previews on the minimal production baseline. Integrate after
+  owner merge, preserving this branch's capability roadmap.
+- [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26) is the cohesive local
+  implementation integration boundary. Require all checks, then freeze it for owner
+  review. Hosted coverage and ownership activation remain owner-gated.
+
+## User workflows delivered locally
+
+- C2.2 bounded provider-only market/FX cycles, frozen correction/retry scopes,
+  durable diagnostics and inspectable Portfolio/Operations valuation gaps.
+- C3.1 held/Watchlist SEC scopes, filing-before-facts recovery, per-issuer provenance,
+  coverage and company-scoped refresh eligibility with visible terminal outcomes.
+- C2.3 exact account opening/settled activity/ending reconciliation, immutable saved
+  candidates and explicit accept/reject/correction history. A separate, hash-bound
+  whole-portfolio publication command produces canonical holdings and an ownership
+  receipt. Manual/observed and full-workbook writers are blocked after cutover.
+  Original opening and strategic targets retain independent provenance/authority.
+- Browser controls require rationale, evidence/recovery acknowledgements and exact
+  typed publication confirmation. Ambiguous responses recover through read-only
+  receipts and clear approval inputs. Mutation retries remain explicit.
+
+Detailed increment results are in the
+[dated BUILD evidence](../history/data-ledger-build-through-2026-11-08.md).
+
+## Integration findings and verification
+
+- Main, open PRs, clean feature lineage and public repository visibility verified.
+- The disposable loopback `_test` server is PostgreSQL 18.3 with matching client
+  tools. Tests use random isolated schemas and a process-only test DATABASE_URL.
+  The local role lacks CREATEROLE/CREATEDB, leaving privilege-dependent tests for CI.
+- Full `npm run check` passes, including 294 web checks, 810 API unit checks with two
+  Windows-specific skips, strict types, formatting/lint, repository policy,
+  generated contracts, script tests and production build. Toolchain pins match.
+- The pre-fix full PostgreSQL sweep passed 336 checks with four privilege skips
+  and found one historical-schema bootstrap regression. That defect is corrected
+  and both reviewed old heads pass. Thirty-four distinct schema/publication cases
+  and 46 release-safety checks pass after correction. Missing ownership storage at
+  current/unknown/intermediate ledger revisions blocks writes; existing ownership
+  wins over an older schema marker. CI must rerun the complete current suite.
+- Browser regression passes 71 enabled desktop/mobile checks; 29 fixture/live-only
+  checks are gated. Eight actual-API SEC/ledger journeys and two dedicated valued
+  Portfolio journeys pass with unchanged protected-state hashes. A wrong-fixture
+  selection was rejected by the Portfolio test and rerun against its declared
+  market fixture. Screenshots inspected; ignored evidence stays in
+  `.cache/milestone-integration`. Both fictional schemas shut down normally.
+- Recovery inventory now includes all three ledger tables. The read-only production
+  migration preflight is pinned to the current project and `9f2a6d4c81b7` →
+  `b59f16c8a203`, with fresh recovery, exact confirmation and write controls retained.
+  The runbook separates database verification from post-deployment readiness.
+
+The first Linux PostgreSQL run exposed a test-harness identity mismatch through
+Docker port publishing. The fixture now attests the existing CI PostgreSQL 18
+container, its running state, server address and exact loopback-published port
+using the existing container ID. Remote/overridden URLs, mismatched ports, images,
+addresses and missing metadata fail closed. Production verification continues
+through the existing database-target guard. Fifty-one focused fixture/storage
+checks and strict mypy pass before the full CI rerun.
+
+## Release and next action
+
+1. Require PR #26's GitHub quality/PostgreSQL/Windows checks and Vercel Preview.
+   Keep passing implementation frozen during owner review; avoid new feature work
+   on this completed PR. The full local quality/build and browser checks are
+   complete. Linux CI supplies the final full DB rerun and privileged role/restore
+   coverage. Current check results remain visible on the PR.
+2. Owner reviews/merges #25 first. Integrate its receipt fix after merge, resolve
+   roadmap conflicts semantically and reverify the milestone PR before owner merge.
+3. Before merging schema-dependent code, independently verify native deployment
+   freezes, current production head/counts and a fresh current-state recovery point.
+   Use the reviewed [deployment/migration runbook](../deployment-and-migrations.md).
+   This branch adds `a832e94d6f10` then `b59f16c8a203`; production was last verified
+   at `9f2a6d4c81b7`. Recovery creation, migration and deployment require authorization.
+4. Highest-value operational follow-up is held-listing price/FX enrichment and two
+   monitored refresh cycles including restart. Real SEC identities/coverage and
+   ledger account/basis/source review are separate prerequisites. Provider scope,
+   scheduling, source ownership, imports and investment/model acceptance retain
+   independent owner gates. C2.4 accounting and C2.5 performance remain outstanding.
+
+Use [the ledger contract](../portfolio-ledger.md), [recurring operations](../recurring-operations.md)
+and [SEC bootstrap](../fundamentals-source-bootstrap.md) for behavior/commands.

@@ -6,78 +6,41 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2/C3.1/C2.3 local release candidate - INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                              |
-| Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), from main `395f842`      |
-| Implementation              | LOCAL_VERIFIED workflows. Full quality/build and browser checks pass; PR checks govern integration. Hosted activation remains pending |
-| Next ready substantial task | Owner review of #25/#26 after CI. Integrate #25 after owner merge, then prepare the gated C2.2 operational slice                      |
-| Parallel owner gate         | C1.2 P-GOOGL assumptions/base acceptance; C2 cutover/accounting policy and separately authorized production operations                |
-| Integration rule            | Keep completed PRs stable during review. #26 is the cohesive local milestone integration boundary; production gates remain separate   |
+| Field                       | Current value                                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Consolidated Portfolio release candidate — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                                  |
+| Branch / PR                 | `codex/portfolio-data-ledger-capabilities` / [PR #26](https://github.com/paulzwecker/portfolio-app/pull/26), based on main `395f842`        |
+| Implementation              | C1.3/C2.1/C2.2/C2.3/C3.1/C5.2 completed slices combined; integrated verification in progress                                                |
+| Next ready substantial task | Verify the combined candidate and update PR #26, then owner review and separately authorized recovery/schema/release preflight              |
+| Parallel owner gate         | P-GOOGL assumptions/acceptance, production migrations/deployment, provider activation and ledger source ownership retain separate approvals |
+| Integration rule            | The owner requested latest-work consolidation. Preserve all predecessor commits and evidence; freeze the passing candidate for review       |
 
-Owner-requested consolidation now includes PR #25's exact minimal-receipt adapter
-and its unchanged source-binding/reconciliation tests. Its dated read-only coverage
-assessment is preserved in the [integration history](docs/history/data-ledger-build-through-2026-11-08.md#c21-recorded-readiness-evidence--2026-11-07)
-and [ingestion runbook](docs/production-data-ingestion-operations.md). PR #25 remains
-separately reviewable; its commits are included in this candidate. The CI-classification branch is now integrated with its collection/runtime
-guards. Sensitivity and authenticated proxy fixtures are next before combined checks.
+## Where we are
 
-Integration review corrected the pre-ledger bootstrap path and added all ledger
-history to the recovery inventory. `9048c47` also pins the existing read-only release
-preflight to the current target and reviewed `9f2a6d4c81b7` → `b59f16c8a203` range.
-The full quality/build command passes with 294 web checks and 810 API unit checks
-(two Windows skips). Browser evidence covers 71 regression and ten actual-API
-journeys. The pre-fix DB sweep found one regression among 341 selected cases; its
-corrected path and 34 schema/publication checks pass. Final CI must exercise the
-complete updated PostgreSQL suite, including local privilege-dependent skips.
-[Handoff](docs/ACTIVE_WORKSTREAM.md) records evidence, release prerequisites and
-[earlier BUILD history](docs/history/data-ledger-build-through-2026-11-08.md).
-Linux CI additionally identified the Docker-published test service's non-loopback
-server address. Test-only container/image/address/port attestation now preserves
-exact identity verification, with 23 focused safety cases passing. The complete
-CI rerun remains the merge gate. Hosted source freshness, ingestion, schema/cutover
-and model acceptance remain gated.
+| Outcome                                  | Actual state                                                                                                                                                                |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1 / C0 minimal canonical portfolio      | PRODUCTION_VERIFIED for the recorded Nov 7 baseline, including 22 positions and two cash currencies                                                                         |
+| C1 model lifecycle and sensitivity       | Implemented/local verification. First accepted production P-GOOGL revision remains an owner investment decision                                                             |
+| C2 daily prices/FX and ledger transition | Implemented/local verification. Real enrichment, refresh activation and source/ownership cutover require separate execution                                                 |
+| C3 SEC facts/filings                     | Implemented/local verification. Reviewed issuer mappings and actual coverage remain operational prerequisites; international and licensed consensus coverage remain partial |
+| C4 actionable decisions                  | Existing engines/UI depend on eligible accepted models, market facts, scores and research evidence                                                                          |
+| C5 operations and delivery               | Guarded workers, recovery preflight, CI classification and authenticated browser fixtures implemented; combined release checks are running                                  |
+| C6/C7 App Hub and additional apps        | Planned after useful Portfolio workflows and operational safeguards                                                                                                         |
 
-`a11272a` adds scoped publication plan/ownership/publish proxy contracts and the
-explicit whole-portfolio approval UI. The workflow is LOCAL_VERIFIED through 135
-focused web checks, 45 PostgreSQL/API/fixture checks and actual desktop/mobile
-publication journeys. Source-bound confirmations, conflicts, exact decimal readback
-and lost-response recovery pass. Second-pass review corrected sanitized network
-messaging and historical plan labels. The original opening and strategic targets
-remain intact in synthetic rehearsals. [Handoff](docs/ACTIVE_WORKSTREAM.md) records
-fixture safeguards and scope. Milestone-wide integration checks remain pending.
+PR #26 now includes the unchanged PR #25 receipt adapter, the preserved CI
+classification correction (`18930ac`, `f72729e`) and DCF sensitivity/authenticated
+proxy work through `78dcf1b`. PR #25 remains separately reviewable, with its original
+history intact. The [dated evidence](docs/history/data-ledger-build-through-2026-11-08.md)
+preserves each predecessor's scope and checks. All branches, stash and private
+source artifacts are preserved.
 
-C2.3 saved-candidate decisions/history are LOCAL_VERIFIED. Ninety focused web,
-43 API/fixture checks and four repeated real-API desktop/mobile journeys pass.
-Source/receipt scope, explicit confirmations, corrections, rejection, immutable
-history and ambiguous-commit readback are covered. [Handoff](docs/ACTIVE_WORKSTREAM.md)
-records the guarded fixture and canonical-state evidence. Dated cutover and
-production activation retain their owner gates.
-
-`71dee7e` adds explicit whole-portfolio ledger publication, immutable snapshot
-lineage and writer ownership guards. Publication/provenance, migration, replay,
-concurrency, rollback, stale approvals and canonical API readback are locally verified.
-The source UI displays the ledger owner and original opening, with manual snapshot
-editing replaced by history navigation. Focused web checks and real desktop/mobile
-read-only journeys pass. Detailed evidence and next scope are in the
-[handoff](docs/ACTIVE_WORKSTREAM.md). Migration `b59f16c8a203` follows `a832e94d6f10`.
-Populated ownership prevents downgrade. Same-cutoff publication and full workbook
-apply after transfer remain explicitly blocked. Real source scope/recovery and
-production activation retain separate gates.
-
-### Current BUILD evidence
-
-`a7557b0` C2.3 storage is LOCAL_VERIFIED through 21 isolated PostgreSQL checks.
-Additive revision `a832e94d6f10` follows `9f2a6d4c81b7`, creating immutable
-candidate packets and terminal review receipts. Same-portfolio ancestry, request
-and accepted-revision uniqueness, rollback, replay and migration compatibility pass.
-The source-bound stage/review/correction API passes focused unit, PostgreSQL/API,
-authorization and contract checks. Independent review corrected workbook writer
-lock ordering and retained-ORM identity freshness, with targeted regressions.
-Exact tested counts and the next task are in [the handoff](docs/ACTIVE_WORKSTREAM.md).
-The browser decision/history and dated publication/readback follow-ups are locally
-verified above. Real ownership activation remains outstanding. Production migration,
-current-state recovery and activation remain separately authorized gates.
+**Release prerequisite.** This code requires additive migrations
+`9f2a6d4c81b7` → `a832e94d6f10` → `b59f16c8a203`. Production was last recorded at
+`9f2a6d4c81b7`; its current state must be reverified. Before releasing schema-dependent
+code, follow the [native-provider freeze, current-state recovery and guarded migration
+procedure](docs/deployment-and-migrations.md). The historical empty pre-import
+recovery branch does not protect accepted holdings. Schema deployment does not
+activate ingestion, transfer ownership or accept models. Each retains its own gate.
 
 ## How to choose work
 

@@ -2,6 +2,71 @@ import type { components } from "@portfolio/contracts";
 
 export type CompanyFinancialStatements =
   components["schemas"]["CompanyFinancialStatementsRead"];
+export type DcfSensitivity = components["schemas"]["DcfSensitivityRead"];
+
+export function isDcfSensitivity(value: unknown): value is DcfSensitivity {
+  if (
+    !isRecord(value) ||
+    value.calculation_version !== "ufcf-dcf-sensitivity-v1" ||
+    !uuid(value.model_id) ||
+    !uuid(value.revision_id) ||
+    !Number.isInteger(value.revision_number) ||
+    (value.revision_number as number) < 1 ||
+    !string(value.methodology_version) ||
+    typeof value.model_currency !== "string" ||
+    !/^[A-Z]{3}$/.test(value.model_currency) ||
+    !Array.isArray(value.discount_rate_shifts) ||
+    !value.discount_rate_shifts.every(signedDecimal) ||
+    value.discount_rate_shifts.join(",") !== "-0.01,0,0.01" ||
+    !Array.isArray(value.terminal_growth_shifts) ||
+    !value.terminal_growth_shifts.every(signedDecimal) ||
+    value.terminal_growth_shifts.join(",") !== "-0.005,0,0.005" ||
+    !Array.isArray(value.scenarios) ||
+    value.scenarios.length !== 3 ||
+    !array(
+      value.scenarios,
+      (scenario) =>
+        isRecord(scenario) &&
+        ["BEAR", "BASE", "BULL"].includes(scenario.scenario as string) &&
+        decimal(scenario.probability) &&
+        Number(scenario.probability) >= 0 &&
+        Number(scenario.probability) <= 1 &&
+        decimal(scenario.year5_discount_rate) &&
+        signedDecimal(scenario.terminal_growth),
+    ) ||
+    new Set(value.scenarios.map((scenario) => scenario.scenario)).size !== 3 ||
+    !Array.isArray(value.cells) ||
+    value.cells.length !== 9
+  )
+    return false;
+  const discountShifts = value.discount_rate_shifts;
+  const growthShifts = value.terminal_growth_shifts;
+  const coordinates = new Set<string>();
+  return value.cells.every((cell: unknown) => {
+    if (
+      !isRecord(cell) ||
+      !discountShifts.includes(cell.discount_rate_shift) ||
+      !growthShifts.includes(cell.terminal_growth_shift)
+    )
+      return false;
+    const coordinate = `${cell.discount_rate_shift},${cell.terminal_growth_shift}`;
+    if (coordinates.has(coordinate)) return false;
+    coordinates.add(coordinate);
+    const outputs = [
+      cell.bear_fv,
+      cell.base_fv,
+      cell.bull_fv,
+      cell.weighted_fv,
+    ];
+    return cell.status === "AVAILABLE"
+      ? cell.unavailable_reason === null && outputs.every(signedDecimal)
+      : cell.status === "INVALID_ASSUMPTIONS" &&
+          typeof cell.unavailable_reason === "string" &&
+          cell.unavailable_reason.length > 0 &&
+          outputs.every((output) => output === null);
+  });
+}
+
 export type FinancialStatementRow =
   components["schemas"]["FinancialStatementRowRead"];
 export type FinancialStatementCell =

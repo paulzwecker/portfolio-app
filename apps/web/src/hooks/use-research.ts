@@ -7,6 +7,7 @@ export function useResearch<T>(
   validate: (data: unknown) => data is T,
   refreshIntervalMs = 0,
   enabled = true,
+  conflictMessage?: string,
 ) {
   const [state, setState] = useState<{
     path: string;
@@ -36,7 +37,9 @@ export function useResearch<T>(
           throw new Error(
             response.status === 404
               ? "This record was not found."
-              : "Research data is unavailable. Check the API, database and migrations, then retry.",
+              : response.status === 409 && conflictMessage
+                ? conflictMessage
+                : "Research data is unavailable. Check the API, database and migrations, then retry.",
           );
         if (!validate(data))
           throw new Error(
@@ -50,7 +53,9 @@ export function useResearch<T>(
             path,
             error:
               failure instanceof Error &&
-              failure.message === "This record was not found."
+              (failure.message === "This record was not found." ||
+                (conflictMessage !== undefined &&
+                  failure.message === conflictMessage))
                 ? failure.message
                 : "Research data is unavailable. Check the API, database and migrations, then retry.",
           });
@@ -61,7 +66,7 @@ export function useResearch<T>(
       clearTimeout(timer);
       controller.abort();
     };
-  }, [path, validate, attempt, enabled]);
+  }, [path, validate, attempt, enabled, conflictMessage]);
 
   useEffect(() => {
     if (refreshIntervalMs <= 0) return;

@@ -69,6 +69,7 @@ import {
   isFinancialModelRevisionDetail,
   isFinancialModelRevisionHistory,
   isFinancialModelCalculationPreview,
+  isDcfSensitivity,
   isFinancialModelContract,
   isFinancialModelContractPreview,
   isFinancialModelContractImport,
@@ -116,6 +117,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "no-store" };
 const id = "[0-9a-fA-F-]{36}";
+const sensitivityPath = new RegExp(`^financial-models/${id}/sensitivity$`);
 const digest = "[0-9a-f]{64}";
 const ledgerPreviewPath = new RegExp(`^portfolios/${id}/ledger/preview$`);
 const ledgerCandidatesPath = new RegExp(`^portfolios/${id}/ledger/candidates$`);
@@ -136,7 +138,7 @@ const ledgerBodyPath = new RegExp(
   `^portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?)$`,
 );
 const readable = new RegExp(
-  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|model-revision-proposals|model-revision-proposals/${id}|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(candidate-pipeline|research|thesis|risk-assessments|market-data|sec-coverage|refresh-options|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(overview|risk-assessments|ledger/anchor|ledger/ownership|ledger/candidates(?:/${id}(?:/publication-preview)?)?))$`,
+  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|model-revision-proposals|model-revision-proposals/${id}|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(candidate-pipeline|research|thesis|risk-assessments|market-data|sec-coverage|refresh-options|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/sensitivity|/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(overview|risk-assessments|ledger/anchor|ledger/ownership|ledger/candidates(?:/${id}(?:/publication-preview)?)?))$`,
 );
 const writable = new RegExp(
   `^(operations/job-requests|operations/job-requests/${id}/retry|research-queue/${digest}/complete|research-triggers/refresh|research-revisions|investment-thesis-revisions|model-revision-proposals/${id}/(preview|accept|reject)|companies/${id}/(candidate-pipeline-revisions|lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|google-sheets-agent-operations/(DATA_UNIVERSE_STEWARD|PORTFOLIO_THESIS_SENTINEL|MODEL_ALLOCATION_STEWARD)/work/publish|google-sheets-sync/(connection-test|check|thesis-watch/publish|portfolio-state/publish|candidates/${id}/(preview|accept|reject))|google-sheets-risk-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|google-sheets-research-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|ranking-runs|execution-pace-runs|fx-observations|portfolios/${id}/holding-snapshots|portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?))$`,
@@ -271,6 +273,11 @@ function validRead(path: string, data: unknown): boolean {
     );
   if (/^portfolios\/[0-9a-fA-F-]{36}\/ledger\/anchor$/.test(path))
     return isPortfolioLedgerAnchor(data);
+  if (sensitivityPath.test(path))
+    return (
+      isDcfSensitivity(data) &&
+      data.model_id.toLowerCase() === path.split("/")[1].toLowerCase()
+    );
   if (path === "model-revision-proposals")
     return isModelRevisionProposalList(data);
   if (path.startsWith("model-revision-proposals/"))
@@ -430,6 +437,17 @@ async function proxy(request: Request, path: string[]) {
     )
       throw new Error("Invalid API configuration");
     const search = new URL(request.url).searchParams;
+    if (
+      sensitivityPath.test(joined) &&
+      (search.getAll("base_revision_id").length !== 1 ||
+        !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
+          search.get("base_revision_id") ?? "",
+        ))
+    )
+      return Response.json(
+        { detail: "Provide exactly one valid base revision." },
+        { status: 400, headers },
+      );
     for (const key of [
       "lifecycle",
       "search",
@@ -448,6 +466,7 @@ async function proxy(request: Request, path: string[]) {
       "horizons_days",
       "prior_point_id",
       "current_point_id",
+      "base_revision_id",
       "document_type",
       "company_id",
       "event_type",
@@ -459,6 +478,12 @@ async function proxy(request: Request, path: string[]) {
       "limit",
     ]) {
       const value = search.get(key);
+      if (
+        value !== null &&
+        key === "base_revision_id" &&
+        sensitivityPath.test(joined)
+      )
+        url.searchParams.set(key, value);
       if (
         value !== null &&
         joined === "attention" &&
@@ -783,7 +808,14 @@ async function proxy(request: Request, path: string[]) {
       request.method === "POST"
         ? validWrite(joined, data)
         : validRead(joined, data);
-    if (!valid) throw new Error("Invalid domain response");
+    if (
+      !valid ||
+      (sensitivityPath.test(joined) &&
+        (!isDcfSensitivity(data) ||
+          data.revision_id.toLowerCase() !==
+            search.get("base_revision_id")?.toLowerCase()))
+    )
+      throw new Error("Invalid domain response");
     return Response.json(data, { status: response.status, headers });
   } catch {
     return Response.json(
