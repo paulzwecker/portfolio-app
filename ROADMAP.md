@@ -10,10 +10,17 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C2.3 guided ledger onboarding — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                      |
 | Branch / PR                 | `codex/ledger-opening-onboarding`, synchronized with main `e070406`; PR #29 merged; no new BUILD PR              |
-| Implementation              | Guided opening, resumable cash/trades and ending reconciliation LOCAL_VERIFIED                                   |
-| Next ready substantial task | Guided dividend entry with exact source evidence and ending reconciliation                                       |
+| Implementation              | Guided opening, resumable cash/trades/dividends and ending reconciliation LOCAL_VERIFIED                         |
+| Next ready substantial task | Guided internal transfers and reviewed non-anchor listing selection                                              |
 | Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
 | Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
+
+The current BUILD adds source-evidenced dividends to the guided review. Users
+enter the received currency, gross cash, explicit fees and withheld taxes without
+assuming an FX conversion; native API replay validates the receipt. Downloaded
+reviews and ending observations retain the dividend evidence. Focused verification
+passed 146 web tests, 17 isolated PostgreSQL/API tests and 36 synthetic desktop/mobile
+journeys; the dividend flow was rerun after the final wording change. No schema or production changes were made.
 
 The current BUILD adds source-evidenced purchases and sales for verified anchor
 listings to the existing read-only ledger review. It retains exact text and evidence

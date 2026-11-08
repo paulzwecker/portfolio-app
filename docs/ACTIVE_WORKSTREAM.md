@@ -100,9 +100,21 @@ Focused checks passed 136 web tests, 16 isolated PostgreSQL/API cases and 34 syn
 desktop/mobile journeys, including trade download and restoration. Typecheck,
 production build and focused lint passed; the synthetic desktop and mobile forms were inspected.
 
+## Current dividend activity increment
+
+The guided activity form now accepts evidenced dividends for verified anchor
+listings, with explicit gross receipt, fees and withheld taxes. The actual cash
+currency may differ from the listing currency; there is no inferred conversion.
+Existing preview validation owns charge limits and native-currency replay. Exact
+input and evidence survive download, revalidation and ending-statement restoration.
+Focused checks passed 146 web tests and 17 isolated PostgreSQL/API cases, including
+a cross-currency receipt and rejection of charges above gross. All 36 synthetic desktop/mobile ledger journeys passed; the dividend journey was
+rerun after adding guidance against duplicate withholding. Screenshots were
+reviewed. Production build, typecheck and focused lint passed.
+
 ## Next increment and release boundaries
 
-Add guided dividend entry and expand reviewed listing selection to complete the existing
+Add guided internal transfers and expand reviewed listing selection to complete the existing
 candidate review journey. Reuse the versioned ledger contract, server calculations,
 immutable review packets and explicit decisions. Preserve the observed holdings,
 strategic targets and unavailable acquisition basis. A reviewed first broker format,

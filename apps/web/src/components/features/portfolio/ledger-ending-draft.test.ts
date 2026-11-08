@@ -360,3 +360,35 @@ it("retains mixed trade and cash evidence when independently recorded ending obs
       .text,
   ).toBe(original.text);
 });
+
+it("retains dividend evidence through ending-statement restoration", () => {
+  const income: SettledActivityDraft = {
+    ...activity,
+    kind: "DIVIDEND",
+    amount: "",
+    currency: "EUR",
+    listingId: ledgerAnchor.listings[0].listing_id,
+    grossCash: "1.2500000000",
+    fees: "0",
+    taxes: "0.1500000000",
+    sourceRecordId: "dividend",
+  };
+  const incomeBase = buildSettledActivityReview(
+    ledgerAnchor,
+    base,
+    "2026-01-31T23:59:59+01:00",
+    [income],
+  );
+  const original = buildEndingReview(
+    ledgerAnchor,
+    incomeBase,
+    [ending()],
+    true,
+  );
+  const restored = restoreEndingReview(ledgerAnchor, original.text);
+  expect(restored.file.text).toBe(incomeBase.text);
+  expect(
+    buildEndingReview(ledgerAnchor, restored.file, restored.accounts, true)
+      .text,
+  ).toBe(original.text);
+});

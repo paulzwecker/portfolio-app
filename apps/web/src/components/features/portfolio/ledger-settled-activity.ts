@@ -8,7 +8,8 @@ import { restoreOpeningReview } from "./ledger-opening-draft";
 export type SettledActivityDraft = {
   id: string;
   accountId: string;
-  kind: "" | "DEPOSIT" | "WITHDRAWAL" | "FEE" | "TAX" | "BUY" | "SELL";
+  kind:
+    "" | "DEPOSIT" | "WITHDRAWAL" | "FEE" | "TAX" | "BUY" | "SELL" | "DIVIDEND";
   sequence: string;
   effectiveAt: string;
   currency: string;
@@ -69,7 +70,8 @@ export function restoreSettledActivityReview(
           item.kind !== "FEE" &&
           item.kind !== "TAX" &&
           item.kind !== "BUY" &&
-          item.kind !== "SELL") ||
+          item.kind !== "SELL" &&
+          item.kind !== "DIVIDEND") ||
         typeof item.sequence !== "number" ||
         !Number.isSafeInteger(item.sequence) ||
         typeof item.effective_at !== "string" ||
@@ -79,6 +81,7 @@ export function restoreSettledActivityReview(
       )
         throw new Error(invalid);
       const trade = item.kind === "BUY" || item.kind === "SELL";
+      const dividend = item.kind === "DIVIDEND";
       if (
         trade
           ? [
@@ -90,7 +93,11 @@ export function restoreSettledActivityReview(
               item.trade_date,
               item.settlement_date,
             ].some((value) => typeof value !== "string")
-          : typeof item.amount !== "string"
+          : dividend
+            ? [item.listing_id, item.gross_cash, item.fees, item.taxes].some(
+                (value) => typeof value !== "string",
+              )
+            : typeof item.amount !== "string"
       )
         throw new Error(invalid);
       return {
@@ -100,7 +107,7 @@ export function restoreSettledActivityReview(
         sequence: String(item.sequence),
         effectiveAt: item.effective_at,
         currency: item.currency,
-        amount: trade ? "" : (item.amount as string),
+        amount: trade || dividend ? "" : (item.amount as string),
         ...(trade
           ? {
               listingId: item.listing_id as string,
@@ -111,7 +118,14 @@ export function restoreSettledActivityReview(
               tradeDate: item.trade_date as string,
               settlementDate: item.settlement_date as string,
             }
-          : {}),
+          : dividend
+            ? {
+                listingId: item.listing_id as string,
+                grossCash: item.gross_cash as string,
+                fees: item.fees as string,
+                taxes: item.taxes as string,
+              }
+            : {}),
         sourceSha256: item.evidence.source_sha256,
         sourceRecordId: item.evidence.source_record_id,
       };
@@ -167,9 +181,15 @@ export function buildSettledActivityReview(
     if (!brokerIds.has(entry.accountId))
       throw new Error(`${label} needs an evidenced brokerage account.`);
     if (
-      !["DEPOSIT", "WITHDRAWAL", "FEE", "TAX", "BUY", "SELL"].includes(
-        entry.kind,
-      )
+      ![
+        "DEPOSIT",
+        "WITHDRAWAL",
+        "FEE",
+        "TAX",
+        "BUY",
+        "SELL",
+        "DIVIDEND",
+      ].includes(entry.kind)
     )
       throw new Error(`${label} needs a supported type.`);
     if (
@@ -188,19 +208,25 @@ export function buildSettledActivityReview(
     if (!/^[A-Z]{3}$/.test(entry.currency))
       throw new Error(`${label} needs a currency.`);
     const trade = entry.kind === "BUY" || entry.kind === "SELL";
-    if (trade) {
+    const dividend = entry.kind === "DIVIDEND";
+    if (trade || dividend) {
       const listing = anchor.listings.find(
         (item) => item.listing_id === entry.listingId,
       );
-      if (!listing || listing.currency !== entry.currency)
+      if (!listing || (trade && listing.currency !== entry.currency))
         throw new Error(
-          `${label} needs an anchored listing and its exact trading currency.`,
+          `${label} needs an anchored listing${trade ? " and its exact trading currency" : ""}.`,
         );
       if (
         entry.amount ||
-        !entry.quantity ||
-        !amount.test(entry.quantity) ||
-        !/[1-9]/.test(entry.quantity) ||
+        (trade &&
+          (!entry.quantity ||
+            !amount.test(entry.quantity) ||
+            !/[1-9]/.test(entry.quantity))) ||
+        (dividend &&
+          [entry.quantity, entry.tradeDate, entry.settlementDate].some(
+            Boolean,
+          )) ||
         !entry.grossCash ||
         !amount.test(entry.grossCash) ||
         !/[1-9]/.test(entry.grossCash) ||
@@ -210,11 +236,12 @@ export function buildSettledActivityReview(
         !amount.test(entry.taxes)
       )
         throw new Error(
-          `${label} needs positive exact quantity and gross cash, and explicit nonnegative fees and taxes.`,
+          `${label} needs ${trade ? "positive exact quantity and " : ""}positive gross cash, and explicit nonnegative fees and taxes.`,
         );
       if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(entry.tradeDate ?? "") ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(entry.settlementDate ?? "")
+        trade &&
+        (!/^\d{4}-\d{2}-\d{2}$/.test(entry.tradeDate ?? "") ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(entry.settlementDate ?? ""))
       )
         throw new Error(`${label} needs explicit trade and settlement dates.`);
     } else if (
@@ -264,7 +291,14 @@ export function buildSettledActivityReview(
             trade_date: entry.tradeDate,
             settlement_date: entry.settlementDate,
           }
-        : { amount: entry.amount }),
+        : dividend
+          ? {
+              listing_id: entry.listingId,
+              gross_cash: entry.grossCash,
+              fees: entry.fees,
+              taxes: entry.taxes,
+            }
+          : { amount: entry.amount }),
     };
   });
   const packet = JSON.parse(base.text);

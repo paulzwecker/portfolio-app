@@ -50,7 +50,21 @@ async function setup(page: Page, status = 200) {
         const hasBuy = packet.activity.some(
           (row: { kind: string }) => row.kind === "BUY",
         );
-        const usd = hasBuy ? "89.7500000000" : "101.2500000000";
+        const hasDividend = packet.activity.some(
+          (row: { kind: string }) => row.kind === "DIVIDEND",
+        );
+        const usd = hasBuy
+          ? "89.7500000000"
+          : hasDividend
+            ? "100.0000000000"
+            : "101.2500000000";
+        if (hasDividend) {
+          report.cash.find((row) => row.currency === "EUR")!.balance =
+            "1.1000000000";
+          report.accounts[0].cash.find(
+            (row) => row.currency === "EUR",
+          )!.balance = "1.1000000000";
+        }
         report.cash.find((row) => row.currency === "USD")!.balance = usd;
         report.accounts[0].cash.find((row) => row.currency === "USD")!.balance =
           usd;
@@ -1159,12 +1173,12 @@ test("unsupported reviewed activity stays available in its original file", async
     {
       id: "66666666-6666-4666-8666-666666666666",
       account_id: packet.accounts[0].account_id,
-      kind: "DIVIDEND",
+      kind: "CASH_TRANSFER",
       sequence: 1,
       effective_at: "2026-01-15T10:30:00+01:00",
       evidence: {
         source_sha256: "c".repeat(64),
-        source_record_id: "synthetic-dividend",
+        source_record_id: "synthetic-transfer",
       },
       listing_id: ledgerAnchor.listings[0].listing_id,
       currency: "USD",
@@ -1175,7 +1189,7 @@ test("unsupported reviewed activity stays available in its original file", async
   ];
   const text = JSON.stringify(packet);
   await page.getByLabel("Ledger review JSON", { exact: true }).setInputFiles({
-    name: "dividend.json",
+    name: "transfer.json",
     mimeType: "application/json",
     buffer: Buffer.from(text),
   });
@@ -1199,7 +1213,7 @@ test("unsupported reviewed activity stays available in its original file", async
     .getByRole("button", { name: "Download private review JSON", exact: true })
     .click();
   const savedPath = await (await downloadEvent).path();
-  if (!savedPath) throw new Error("Synthetic dividend review missing");
+  if (!savedPath) throw new Error("Synthetic transfer review missing");
   expect(await readFile(savedPath, "utf8")).toBe(text);
   expect(calls.map((call) => call.path)).toEqual([previewPath, previewPath]);
 });
@@ -1414,6 +1428,123 @@ test("a guided purchase keeps source evidence and exact amounts through download
   ).toBeVisible();
   expect(calls[3].text).toBe(calls[1].text);
   await page.getByLabel("Fees", { exact: true }).fill("0");
+  await expect(
+    page.getByLabel("Ledger review result", { exact: true }),
+  ).toHaveCount(0);
+});
+
+test("guided dividend preserves its received currency and evidence through restoration", async ({
+  page,
+}, info) => {
+  const calls = await setup(page);
+  await page.getByLabel(acknowledgement, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Reconcile opening balances", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add settled activity", exact: true })
+    .click();
+  await page
+    .getByLabel("Review cutoff timestamp", { exact: true })
+    .fill("2026-01-31T23:59:59+01:00");
+  await page
+    .getByRole("button", { name: "Add activity record", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption(JSON.parse(calls[0].text).accounts[0].account_id);
+  await page
+    .getByRole("combobox", { name: "Type", exact: true })
+    .selectOption("DIVIDEND");
+  await expect(
+    page.getByText(/Do not enter the same withholding again as a separate tax/),
+  ).toBeVisible();
+  await page
+    .getByLabel("Booking timestamp", { exact: true })
+    .fill("2026-01-15T10:30:00+01:00");
+  await page.getByLabel("Sequence", { exact: true }).fill("1");
+  await page.getByLabel("Received cash currency", { exact: true }).fill("EUR");
+  await page
+    .getByRole("combobox", { name: "Listing", exact: true })
+    .selectOption(ledgerAnchor.listings[0].listing_id);
+  await page
+    .getByLabel("Gross dividend cash", { exact: true })
+    .fill("1.2500000000");
+  await page.getByLabel("Fees", { exact: true }).fill("0");
+  await page.getByLabel("Taxes withheld", { exact: true }).fill("0.1500000000");
+  await page
+    .getByLabel("Source document SHA-256", { exact: true })
+    .last()
+    .fill("c".repeat(64));
+  await page
+    .getByLabel("Source record reference", { exact: true })
+    .fill("synthetic-dividend");
+  await page
+    .getByRole("heading", { name: "Settled activity", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: info.outputPath("dividend-entry.png"),
+    fullPage: true,
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(JSON.parse(calls[1].text).activity[0]).toMatchObject({
+    kind: "DIVIDEND",
+    currency: "EUR",
+    gross_cash: "1.2500000000",
+    fees: "0",
+    taxes: "0.1500000000",
+  });
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download private review JSON", exact: true })
+    .click();
+  const savedPath = await (await download).path();
+  if (!savedPath) throw new Error("Synthetic dividend review download missing");
+  expect(await readFile(savedPath, "utf8")).toBe(calls[1].text);
+  await page
+    .getByRole("button", { name: "Discard activity", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByLabel("Ledger review JSON", { exact: true })
+    .setInputFiles(savedPath);
+  await page
+    .getByRole("button", { name: "Validate and reconcile", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Edit supported activity", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Received cash currency", { exact: true }),
+  ).toHaveValue("EUR");
+  await expect(page.getByLabel("Taxes withheld", { exact: true })).toHaveValue(
+    "0.1500000000",
+  );
+  await page
+    .getByRole("button", { name: "Review activity", exact: true })
+    .click();
+  await expect(
+    page.getByText("Opening balances reconciled", { exact: true }),
+  ).toBeVisible();
+  expect(calls[3].text).toBe(calls[1].text);
+  await page.getByLabel("Fees", { exact: true }).fill("0.01");
   await expect(
     page.getByLabel("Ledger review result", { exact: true }),
   ).toHaveCount(0);

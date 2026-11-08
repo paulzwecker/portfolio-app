@@ -728,3 +728,51 @@ def test_guided_mixed_trade_payload_replays_and_rejects_invalid_dates_read_only(
         payload["activity"][1]["settlement_date"] = "2025-12-31"
         assert client.post(f"{path}/preview", headers=headers, json=payload).status_code == 422
     assert baseline(postgres_engine, portfolio_id) == before
+
+
+def test_guided_dividend_preserves_native_currency_and_rejects_excess_charges(
+    postgres_engine: Engine,
+) -> None:
+    portfolio_id = source(postgres_engine)
+    before = baseline(postgres_engine, portfolio_id)
+    settings = fixture_settings().model_copy(
+        update={"app_env": "staging", "api_access_token": SecretStr("synthetic-token")}
+    )
+    with TestClient(fixture_application(postgres_engine, settings)) as client:
+        path = f"/v1/portfolios/{portfolio_id}/ledger"
+        headers = {"x-api-access-token": "synthetic-token"}
+        anchor = c.PortfolioLedgerAnchorRead.model_validate(
+            client.get(f"{path}/anchor", headers=headers).json()
+        )
+        common = next(item for item in anchor.listings if item.security_type == "COMMON_STOCK")
+        value = candidate(anchor)
+        value.contract_version = "portfolio-ledger-preview-v2"
+        payload = value.model_dump(mode="json")
+        payload["activity"] = [
+            {
+                "id": str(UUID(int=201)),
+                "account_id": str(value.accounts[0].account_id),
+                "kind": "DIVIDEND",
+                "sequence": 1,
+                "effective_at": "2026-01-02T00:00:00Z",
+                "evidence": {"source_sha256": "c" * 64, "source_record_id": "income"},
+                "currency": "EUR",
+                "listing_id": str(common.listing_id),
+                "gross_cash": "1.2500000000",
+                "fees": "0",
+                "taxes": "0.1500000000",
+            }
+        ]
+        first = client.post(f"{path}/preview", headers=headers, json=payload)
+        assert first.status_code == 200
+        result = c.PortfolioLedgerPreviewRead.model_validate(first.json())
+        assert result.status == "OPENING_RECONCILED" and not result.issues
+        assert next(row.balance for row in result.cash if row.currency == "EUR") == Decimal("1.10")
+        assert next(row.balance for row in result.cash if row.currency == "USD") == Decimal("100")
+        assert next(
+            row.quantity for row in result.positions if row.listing_id == common.listing_id
+        ) == Decimal("2.5")
+        assert client.post(f"{path}/preview", headers=headers, json=payload).json() == first.json()
+        payload["activity"][0]["taxes"] = "1.26"
+        assert client.post(f"{path}/preview", headers=headers, json=payload).status_code == 422
+    assert baseline(postgres_engine, portfolio_id) == before

@@ -292,3 +292,65 @@ it.each([
     ]),
   ).toThrow();
 });
+
+function dividend(): SettledActivityDraft {
+  return {
+    ...record(),
+    kind: "DIVIDEND",
+    amount: "",
+    listingId: ledgerAnchor.listings[0].listing_id,
+    currency: "EUR",
+    grossCash: "1.2500000000",
+    fees: "0",
+    taxes: "0.1500000000",
+    sourceRecordId: "dividend",
+  };
+}
+
+it("preserves a dividend received in a currency different from the listing and round-trips its evidence", () => {
+  const original = buildSettledActivityReview(ledgerAnchor, base, cutoff, [
+    dividend(),
+  ]);
+  const item = JSON.parse(original.text).activity[0];
+  expect(item).toMatchObject({
+    kind: "DIVIDEND",
+    currency: "EUR",
+    gross_cash: "1.2500000000",
+    fees: "0",
+    taxes: "0.1500000000",
+  });
+  expect(item).not.toHaveProperty("quantity");
+  const restored = restoreSettledActivityReview(ledgerAnchor, original.text);
+  expect(restored.entries).toEqual([dividend()]);
+  expect(
+    buildSettledActivityReview(
+      ledgerAnchor,
+      restored.base,
+      restored.cutoff,
+      restored.entries,
+    ).text,
+  ).toBe(original.text);
+  item.taxes = 0;
+  const changed = JSON.parse(original.text);
+  changed.activity[0] = item;
+  expect(() =>
+    restoreSettledActivityReview(ledgerAnchor, JSON.stringify(changed)),
+  ).toThrow(/cannot be edited/);
+});
+
+it.each([
+  { listingId: "unknown" },
+  { grossCash: "0" },
+  { fees: "" },
+  { taxes: undefined },
+  { currency: "eur" },
+  { quantity: "1" },
+  { tradeDate: "2026-01-01" },
+  { amount: "1" },
+])("rejects incomplete or conflicting dividend evidence %j", (change) => {
+  expect(() =>
+    buildSettledActivityReview(ledgerAnchor, base, cutoff, [
+      { ...dividend(), ...change },
+    ]),
+  ).toThrow();
+});

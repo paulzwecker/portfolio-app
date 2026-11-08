@@ -57,9 +57,11 @@ export function LedgerSettledActivityBuilder({
   return (
     <div className="space-y-4 rounded-lg border bg-card p-4">
       <p className="text-sm text-muted-foreground">
-        Enter settled purchases, sales, deposits, withdrawals, fees or taxes
-        from your records. Trades currently require a listing in the verified
-        anchor. Enter timestamps with seconds and a UTC offset, for example
+        Enter settled purchases, sales, dividends, deposits, withdrawals, fees
+        or taxes from your records. Trades and dividends require a listing in
+        the verified anchor. Dividend currency is the received cash currency and
+        can differ from the listing currency; no conversion is inferred. Enter
+        timestamps with seconds and a UTC offset, for example
         2026-01-15T10:30:00+01:00. The sequence determines ordering when booking
         times match. The API checks the complete reconstruction.
       </p>
@@ -113,6 +115,14 @@ export function LedgerSettledActivityBuilder({
               <legend className="px-1 text-sm font-semibold">
                 Activity record {index + 1}
               </legend>
+              {entry.kind === "DIVIDEND" && (
+                <p className="text-xs text-muted-foreground">
+                  Enter the evidenced gross receipt, fees and withholding in the
+                  received cash currency. Fees plus withholding cannot exceed
+                  gross cash. Do not enter the same withholding again as a
+                  separate tax.
+                </p>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm">
                   Account
@@ -152,6 +162,7 @@ export function LedgerSettledActivityBuilder({
                     <option value="">Choose type</option>
                     <option value="BUY">Purchase</option>
                     <option value="SELL">Sale</option>
+                    <option value="DIVIDEND">Dividend</option>
                     <option value="DEPOSIT">Deposit</option>
                     <option value="WITHDRAWAL">Withdrawal</option>
                     <option value="FEE">Fee</option>
@@ -181,7 +192,9 @@ export function LedgerSettledActivityBuilder({
                   />
                 </label>
                 <label className="text-sm">
-                  Currency
+                  {entry.kind === "DIVIDEND"
+                    ? "Received cash currency"
+                    : "Currency"}
                   <input
                     className={field}
                     maxLength={3}
@@ -191,7 +204,9 @@ export function LedgerSettledActivityBuilder({
                     }
                   />
                 </label>
-                {entry.kind === "BUY" || entry.kind === "SELL" ? (
+                {entry.kind === "BUY" ||
+                entry.kind === "SELL" ||
+                entry.kind === "DIVIDEND" ? (
                   <>
                     <label className="text-sm">
                       Listing
@@ -215,14 +230,32 @@ export function LedgerSettledActivityBuilder({
                       </select>
                     </label>
                     {(
-                      [
-                        ["Quantity", "quantity"],
-                        ["Gross settlement cash", "grossCash"],
-                        ["Fees", "fees"],
-                        ["Taxes", "taxes"],
-                        ["Trade date", "tradeDate"],
-                        ["Settlement date", "settlementDate"],
-                      ] as const
+                      (entry.kind === "DIVIDEND"
+                        ? [
+                            ["Gross dividend cash", "grossCash"],
+                            ["Fees", "fees"],
+                            ["Taxes withheld", "taxes"],
+                          ]
+                        : [
+                            ["Quantity", "quantity"],
+                            ["Gross settlement cash", "grossCash"],
+                            ["Fees", "fees"],
+                            ["Taxes", "taxes"],
+                            ["Trade date", "tradeDate"],
+                            ["Settlement date", "settlementDate"],
+                          ]) as ReadonlyArray<
+                        readonly [
+                          string,
+                          (
+                            | "quantity"
+                            | "grossCash"
+                            | "fees"
+                            | "taxes"
+                            | "tradeDate"
+                            | "settlementDate"
+                          ),
+                        ]
+                      >
                     ).map(([label, key]) => (
                       <label className="text-sm" key={key}>
                         {label}
