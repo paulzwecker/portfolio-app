@@ -448,7 +448,7 @@ class SecSubmissionsNormalizer:
 
 
 class _NoSecRedirects(HTTPRedirectHandler):
-    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+    def redirect_request(self, *args: Any, **kwargs: Any) -> Request | None:
         return None
 
 

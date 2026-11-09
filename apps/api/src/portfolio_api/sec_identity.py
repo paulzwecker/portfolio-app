@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 from uuid import UUID
 
 from portfolio_api.domain.models import CompanyProviderIdentifier, ReportedFundamentalBatch
@@ -17,6 +17,18 @@ def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
         return None
     try:
         url = urlsplit(mapping.evidence_source)
+        identifiers = [
+            value
+            for key, value in parse_qsl(url.query, keep_blank_values=True, max_num_fields=200)
+            if key.casefold() == "cik"
+        ]
+        for pattern in (
+            r"/(?:archives/)?edgar/data/([0-9]{1,10})(?:/|$)",
+            r"/(?:submissions|api/xbrl/companyfacts)/cik([0-9]{10})\.json$",
+        ):
+            match = re.search(pattern, url.path, re.IGNORECASE)
+            if match:
+                identifiers.append(match.group(1))
         host = url.hostname.casefold().rstrip(".") if url.hostname else ""
         if (
             mapping.provider_id != SEC_PROVIDER_ID
@@ -27,7 +39,11 @@ def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
             or url.username
             or url.password
             or url.port not in {None, 443}
-            or re.search(rf"(?<![0-9]){int(cik)}(?![0-9])", f"{url.path}?{url.query}") is None
+            or not identifiers
+            or any(
+                not re.fullmatch(r"[0-9]{1,10}", value) or int(value) != int(cik)
+                for value in identifiers
+            )
         ):
             return None
     except (TypeError, ValueError, AttributeError):

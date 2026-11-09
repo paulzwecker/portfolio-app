@@ -717,8 +717,8 @@ def test_sec_warning_changes_agent_delivery_identity_once_for_safety(
         refresh_research_triggers(session, as_of=now, company_id=company_id)
         request = s.ResearchAgentWorkRequest(as_of=now, limit=50)
         import portfolio_api.research_triggers as trigger_module
+        from portfolio_api.source_document_provenance import trigger_document_warnings as original
 
-        original = trigger_module.trigger_document_warnings
         monkeypatch.setattr(trigger_module, "trigger_document_warnings", lambda *args: {})
         old = next(
             item

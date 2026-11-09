@@ -37,6 +37,39 @@ def test_mapping_requires_canonical_cik_and_public_evidence() -> None:
 
 
 @pytest.mark.parametrize(
+    "cik,url,expected",
+    [
+        ("0000320193", "https://www.sec.gov/edgar/?CIK=320193", True),
+        ("0000320193", "https://www.sec.gov/edgar/?CIK=0000320193", True),
+        ("0000320193", "https://www.sec.gov/edgar/data/0000320193/submissions.json", True),
+        ("0000320193", "https://www.sec.gov/?CIK=10000320193", False),
+        ("0000320193", "https://www.sec.gov/?CIK=00003201930", False),
+        ("0000320193", "https://user@www.sec.gov/?CIK=0000320193", False),
+        ("0000320193", "https://www.sec.gov.evil.test/?CIK=0000320193", False),
+        ("0000000000", "https://www.sec.gov/?CIK=0000000000", True),
+        ("0000000000", "https://www.sec.gov/?CIK=1000000000", False),
+        ("0000320193", "https://www.sec.gov/?CIK=1&unrelated=320193", False),
+        ("0000320193", "https://www.sec.gov/?CIK=320193&CIK=1", False),
+        ("0000320193", "https://www.sec.gov/?unrelated=320193", False),
+        ("0000320193", "https://www.sec.gov/Archives/edgar/data/320193/filing?CIK=1", False),
+        ("0000320193", "https://data.sec.gov/submissions/CIK0000320193.json", True),
+        ("0000320193", "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json", True),
+    ],
+)
+def test_sec_evidence_accepts_exact_cik_with_optional_padding(
+    cik: str, url: str, expected: bool
+) -> None:
+    mapping = CompanyProviderIdentifier(
+        provider_id="sec_edgar",
+        identifier_type="SEC_CIK",
+        identifier_value=cik,
+        provider_company_name="Issuer",
+        evidence_source=url,
+    )
+    assert (reviewed_cik(mapping) == cik) is expected
+
+
+@pytest.mark.parametrize(
     "scope,provider,expected",
     [
         ("valid", "sec_edgar", True),
