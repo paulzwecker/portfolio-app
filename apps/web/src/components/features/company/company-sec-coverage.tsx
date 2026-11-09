@@ -249,8 +249,7 @@ export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
                   data.fundamental_identity_counts.unverified > 0) && (
                   <p className="text-warning">
                     Review issuer attribution before relying on reported
-                    financial statements; their existing resolution can include
-                    these retained facts.
+                    financial statements.
                   </p>
                 )}
               </div>
@@ -428,8 +427,8 @@ export function CompanySecCoveragePanel({
                 data.fundamental_identity_counts.unverified > 0) && (
                 <p role="alert" className="text-sm text-warning">
                   Retained facts include different or unverifiable issuer CIK
-                  metadata. Financial statements may include them; review
-                  attribution before use.
+                  metadata. Review attribution before relying on financial
+                  statements.
                 </p>
               )}
             <p className="text-xs text-muted-foreground">

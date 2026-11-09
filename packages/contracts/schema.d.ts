@@ -3569,6 +3569,8 @@ export interface components {
             latest_observed_at: string | null;
             /** Periods */
             periods: components["schemas"]["ReportedFundamentalPeriodRead"][];
+            /** Provider Identity Issue */
+            provider_identity_issue?: string | null;
             /**
              * Provider Identity Status
              * @enum {string}
@@ -10481,6 +10483,8 @@ export interface components {
             fiscal_period: string | null;
             /** Fiscal Year */
             fiscal_year: number | null;
+            /** Identity Issue */
+            identity_issue?: string | null;
             metric: components["schemas"]["FundamentalMetric"];
             /** Observations */
             observations: components["schemas"]["ReportedFundamentalObservationRead"][];

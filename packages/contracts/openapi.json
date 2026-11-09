@@ -3493,6 +3493,17 @@
             "title": "Periods",
             "type": "array"
           },
+          "provider_identity_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Identity Issue"
+          },
           "provider_identity_status": {
             "enum": [
               "MAPPED",
@@ -26701,6 +26712,17 @@
               }
             ],
             "title": "Fiscal Year"
+          },
+          "identity_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Issue"
           },
           "metric": {
             "$ref": "#/components/schemas/FundamentalMetric"

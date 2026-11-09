@@ -445,7 +445,7 @@ describe("Company SEC coverage", () => {
     const panel = renderToStaticMarkup(
       <CompanySecCoveragePanel companyId={id} />,
     );
-    expect(panel).toContain("Financial statements may include them");
+    expect(panel).toContain("Review attribution before relying on financial statements");
     const details = renderToStaticMarkup(
       <SecCoverageDetails data={withCounts} />,
     );

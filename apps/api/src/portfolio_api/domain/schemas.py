@@ -1194,6 +1194,7 @@ class ReportedFundamentalPeriodRead(Contract):
     unit: str
     value: FixedDecimal | None
     selection_status: Literal["AVAILABLE", "CONFLICT", "DATA_CHECK"]
+    identity_issue: str | None = None
     selected_observation: ReportedFundamentalObservationRead | None
     observations: list[ReportedFundamentalObservationRead]
 
@@ -1218,6 +1219,7 @@ class ReportedFundamentalDefinitionRead(Contract):
 class CompanyReportedFundamentalsRead(Contract):
     company_id: UUID
     provider_identity_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS"]
+    provider_identity_issue: str | None = None
     provider_ids: list[str]
     coverage: list[ReportedFundamentalCoverageRead]
     periods: list[ReportedFundamentalPeriodRead]

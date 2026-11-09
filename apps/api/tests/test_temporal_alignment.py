@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from portfolio_api.domain.models import (
     Company,
+    CompanyProviderIdentifier,
     ConsensusEstimateProviderMapping,
     DcfProjection,
     DcfScenarioAssumptions,
@@ -258,6 +259,19 @@ def test_temporal_alignment_respects_intraday_effective_and_knowledge_cutoffs(
         )
 
         session.add(
+            CompanyProviderIdentifier(
+                company_id=company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value="0000000001",
+                provider_company_name="Temporal fixture",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=1",
+                effective_at=stamp("2020-01-01T00:00:00"),
+                recorded_at=stamp("2020-01-01T00:00:00"),
+                actor="IMPORT",
+            )
+        )
+        session.add(
             ReportedFundamentalBatch(
                 id=batch_id,
                 provider_id="sec_edgar",
@@ -265,7 +279,7 @@ def test_temporal_alignment_respects_intraday_effective_and_knowledge_cutoffs(
                 normalizer_version="fixture-v1",
                 domain="REPORTED_FUNDAMENTALS",
                 source_digest="a" * 64,
-                query_scope={"fixture": True},
+                query_scope={"company_id": str(company_id), "cik": "0000000001"},
                 observed_at=stamp("2028-03-15T15:00:00"),
                 recorded_at=stamp("2028-03-15T15:00:00"),
                 provider_summary={},

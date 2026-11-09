@@ -6,11 +6,13 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain.models import (
     Company,
+    CompanyProviderIdentifier,
     ConsensusEstimateBatch,
     ConsensusEstimateObservation,
     ConsensusEstimateProviderMapping,
@@ -32,6 +34,7 @@ from portfolio_api.domain.models import (
 from portfolio_api.forecast_accuracy import company_forecast_accuracy
 from portfolio_api.main import create_app
 from portfolio_api.settings import Settings
+from portfolio_api.temporal_alignment import _actual_value
 
 
 def stamp(value: str) -> datetime:
@@ -120,6 +123,27 @@ def add_reported_revenue(
     quality: str = "PASS",
     accession_suffix: str = "1",
 ) -> ReportedFundamentalObservation:
+    cik = f"{company_id.int % 9999999999 + 1:010d}"
+    if not session.scalar(
+        select(CompanyProviderIdentifier).where(
+            CompanyProviderIdentifier.company_id == company_id,
+            CompanyProviderIdentifier.provider_id == "sec_edgar",
+        )
+    ):
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value=cik,
+                provider_company_name="Fixture issuer",
+                evidence_source=f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}",
+                effective_at=stamp("2020-01-01T00:00:00Z"),
+                recorded_at=stamp("2020-01-01T00:00:00Z"),
+                actor="IMPORT",
+            )
+        )
+        session.flush()
     batch_id = uuid4()
     session.add(
         ReportedFundamentalBatch(
@@ -129,7 +153,7 @@ def add_reported_revenue(
             normalizer_version="fixture-v1",
             domain="REPORTED_FUNDAMENTALS",
             source_digest=f"{uuid4().hex}{uuid4().hex[:32]}",
-            query_scope={"fixture": True},
+            query_scope={"company_id": str(company_id), "cik": cik},
             observed_at=observed_at,
             recorded_at=recorded_at,
             provider_summary={},
@@ -143,7 +167,7 @@ def add_reported_revenue(
         security_id=None,
         batch_id=batch_id,
         provider_id="sec_edgar",
-        provider_entity_id="0000000001",
+        provider_entity_id=cik,
         source_priority=10,
         metric=FundamentalMetric.REVENUE.value,
         statement=FundamentalStatement.INCOME_STATEMENT.value,
@@ -179,6 +203,45 @@ def add_reported_revenue(
     session.add(observation)
     session.flush()
     return observation
+
+
+@pytest.mark.integration
+def test_unverified_issuer_is_not_used_as_an_actual_in_accuracy_or_temporal_analysis(
+    postgres_engine: Engine,
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        company = Company(name="Unsafe actual fixture")
+        session.add(company)
+        session.flush()
+        _, forecast = add_research_forecast(
+            session,
+            company.id,
+            revision_number=1,
+            observed_at=stamp("2026-02-01T09:00:00Z"),
+            recorded_at=stamp("2026-02-01T09:05:00Z"),
+            value=Decimal("100"),
+        )
+        actual = add_reported_revenue(
+            session,
+            company.id,
+            value=Decimal("120"),
+            filed_at=stamp("2027-03-01T10:00:00Z"),
+            observed_at=stamp("2027-03-01T11:00:00Z"),
+            recorded_at=stamp("2027-03-01T11:00:00Z"),
+        )
+        # Fixture-only corruption represents missing historical identity evidence.
+        session.execute(
+            update(ReportedFundamentalBatch)
+            .where(ReportedFundamentalBatch.id == actual.batch_id)
+            .values(query_scope={"fixture": True})
+        )
+        cutoff = stamp("2027-03-20T00:00:00Z")
+        rows = company_forecast_accuracy(session, company.id, outcome_known_at=cutoff).observations
+        result = next(row for row in rows if row.forecast_id == forecast.id)
+        assert result.status == "ACTUAL_DATA_CHECK"
+        assert result.actual.value is None and result.error.absolute_error is None
+        aligned = _actual_value(session, company.id, 2026, outcome_known_at=cutoff)
+        assert aligned.status == "DATA_CHECK" and aligned.value is None
 
 
 @pytest.mark.integration

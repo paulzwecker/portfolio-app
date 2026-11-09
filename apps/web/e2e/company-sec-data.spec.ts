@@ -261,7 +261,7 @@ test("a changed issuer identity is visible beside the historical refresh", async
       .filter({ visible: true }),
   ).toBeVisible();
   await expect(panel.getByRole("alert")).toContainText(
-    "Financial statements may include them",
+    "Review attribution before relying on financial statements",
   );
   await panel.screenshot({
     path: info.outputPath("sec-identity-drift-summary.png"),

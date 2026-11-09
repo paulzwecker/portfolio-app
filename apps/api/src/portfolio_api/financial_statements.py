@@ -124,7 +124,9 @@ def company_financial_statements(
         currency_missing = fact.unit in {"currency", "currency_per_share"} and not fact.currency
         cell_status = fact.selection_status
         cell_reason = (
-            "Currency is unknown; the reported value is retained for source "
+            fact.identity_issue
+            if fact.identity_issue
+            else "Currency is unknown; the reported value is retained for source "
             "inspection but is not chartable."
             if currency_missing
             else None
