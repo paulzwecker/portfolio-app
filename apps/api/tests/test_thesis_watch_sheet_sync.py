@@ -260,8 +260,11 @@ def test_oversized_context_fails_before_any_workbook_write(
 
 @pytest.mark.integration
 def test_publish_service_serializes_with_a_postgres_transaction_lock(
-    postgres_engine: Engine,
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Exercise the retained lock in isolation; publication stays disabled in the app.
+    monkeypatch.setattr(sync, "require_sheet_publication_available", lambda: None)
+
     class Publisher:
         spreadsheet_id = SPREADSHEET_ID
 

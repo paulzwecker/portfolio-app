@@ -63,7 +63,10 @@ from portfolio_api.market_data_startup import (
 )
 from portfolio_api.migrations import expected_heads
 from portfolio_api.networking import bypass_known_local_port_nine_proxy
-from portfolio_api.portfolio_sheet_sync import PortfolioSheetPublishError
+from portfolio_api.portfolio_sheet_sync import (
+    PortfolioSheetPublishError,
+    require_sheet_publication_available,
+)
 from portfolio_api.research_agent_operations import (
     ResearchAgentOperationError,
     deliver_agent_work,
@@ -568,6 +571,10 @@ def _run_trigger_scan(
 
 
 def _publish_agent_feeds(engine: Engine, settings: Settings, now_at: datetime) -> dict[str, object]:
+    try:
+        require_sheet_publication_available()
+    except PortfolioSheetPublishError as error:
+        return {"status": "BLOCKED", "failure_code": error.code, "failure_message": str(error)}
     if not settings.google_sheets_spreadsheet_id or not settings.google_sheets_service_account_file:
         return {
             "status": "BLOCKED",

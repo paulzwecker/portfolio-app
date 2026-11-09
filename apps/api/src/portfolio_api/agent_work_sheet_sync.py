@@ -18,6 +18,7 @@ from portfolio_api.portfolio_sheet_sync import (
     GoogleSheetsPortfolioPublisher,
     PortfolioSheetPublishError,
     _column_name,
+    require_sheet_publication_available,
 )
 from portfolio_api.settings import Settings
 
@@ -397,6 +398,7 @@ def publish_agent_work_feed(
             status_reason=contract.status_reason,
             message=contract.status_reason or "No open agent work is available for this page.",
         )
+    require_sheet_publication_available()
     writer = publisher or GoogleSheetsAgentWorkPublisher(settings)
     lock_key = int.from_bytes(
         hashlib.sha256(f"agent-work-feed:{writer.spreadsheet_id}".encode()).digest()[:8],
