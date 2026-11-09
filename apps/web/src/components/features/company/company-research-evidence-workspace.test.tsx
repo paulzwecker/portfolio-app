@@ -111,7 +111,8 @@ describe("company research evidence activity", () => {
         {
           id: "44444444-4444-4444-8444-444444444444",
           title: "New filing",
-          reason: "Review it",
+          reason:
+            "SEC issuer attribution is unverified. Confirm the company against the original source before relying on this filing.",
           effective_at: "2026-10-07T00:00:00Z",
           source_recorded_at: "2026-10-07T01:00:00Z",
           detected_at: "2026-10-07T01:00:00Z",
@@ -132,6 +133,9 @@ describe("company research evidence activity", () => {
       "Accepted qualitative risk",
       "Deterministic evidence trigger",
     ]);
+    expect(
+      activity.find((record) => record.category === "TRIGGERS")?.summary,
+    ).toContain("SEC issuer attribution is unverified");
   });
   it("warns for SEC filing attribution in both activity and the source catalog, including older APIs", () => {
     const document = {

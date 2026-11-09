@@ -37,6 +37,10 @@ from portfolio_api.domain.models import (
 from portfolio_api.investment_thesis import company_investment_thesis
 from portfolio_api.research_forecasts import company_research
 from portfolio_api.research_trigger_links import publications_for_trigger
+from portfolio_api.source_document_provenance import (
+    append_source_warning,
+    trigger_document_warnings,
+)
 
 TRIGGER_EVENT_TYPES = {
     "NEW_FILING": ResearchTriggerType.NEW_FILING,
@@ -153,6 +157,7 @@ def _event_candidates(
         lookback_days=lookback_days,
         company_id=company_id,
         limit=100_000,
+        include_source_warnings=False,
     )
     if feed.total > len(feed.events):
         feed = attention_feed(
@@ -161,6 +166,7 @@ def _event_candidates(
             lookback_days=lookback_days,
             company_id=company_id,
             limit=feed.total,
+            include_source_warnings=False,
         )
 
     def event_uuid(event_id: str | None, *, composite: bool = False) -> UUID | None:
@@ -425,6 +431,9 @@ def _thesis_evidence_candidates(
                         ]
                     ),
                     SourceDocument.recorded_at <= as_of,
+                    or_(
+                        SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= as_of
+                    ),
                 )
             ).all()
         }
@@ -680,6 +689,7 @@ def list_research_triggers(
         (item.task_id, item.condition_fingerprint): item for item in completions
     }
     superseded_source_ids = _superseded_source_ids(session, cutoff)
+    source_warnings = trigger_document_warnings(session, rows, cutoff)
     result: list[s.ResearchTriggerRead] = []
     for row in rows:
         company = _company_read(session, row.company_id, cutoff)
@@ -702,7 +712,7 @@ def list_research_triggers(
                 fingerprint=row.fingerprint,
                 trigger_type=ResearchTriggerType(row.trigger_type),
                 title=row.title,
-                reason=row.reason,
+                reason=append_source_warning(row.reason, source_warnings.get(row.id)),
                 source_domain=row.source_domain,
                 source_record_id=row.source_record_id,
                 source_reference=row.source_reference,
@@ -784,6 +794,7 @@ def research_trigger_context(session: Session, trigger_id: UUID) -> s.ResearchTr
         ),
         superseded_source_ids=_superseded_source_ids(session, cutoff),
     )
+    source_warnings = trigger_document_warnings(session, [row], cutoff)
     trigger = s.ResearchTriggerRead(
         id=row.id,
         company=company,
@@ -792,7 +803,7 @@ def research_trigger_context(session: Session, trigger_id: UUID) -> s.ResearchTr
         fingerprint=row.fingerprint,
         trigger_type=ResearchTriggerType(row.trigger_type),
         title=row.title,
-        reason=row.reason,
+        reason=append_source_warning(row.reason, source_warnings.get(row.id)),
         source_domain=row.source_domain,
         source_record_id=row.source_record_id,
         source_reference=row.source_reference,

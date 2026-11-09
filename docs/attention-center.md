@@ -27,7 +27,8 @@ does not change the feed's read-only behavior; see
   currency and unit, when a positive baseline changes by at least five percent.
   The selected consensus continuity source is used; providers are not blended.
 - New recent filings or issuer documents. A document superseded by a later
-  source record is omitted from the current feed.
+  source record is omitted from the current feed. SEC issuer attribution remains
+  unverified and the item asks the reviewer to confirm the company in the source.
 - Split-adjusted moves of at least ten percent between adjacent recorded closes for
   one exact listing. Both closes must be unambiguous, clean, from the same provider,
   symbol, currency and adjustment basis, and no more than five calendar days apart.

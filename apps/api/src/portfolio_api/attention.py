@@ -35,6 +35,7 @@ from portfolio_api.domain.models import (
     Security,
     SourceDocument,
 )
+from portfolio_api.source_document_provenance import append_source_warning, document_warning
 
 PRICE_FRESH_DAYS = 5  # documented current-quote freshness window
 EXPECTED_IRR_MOVE = Decimal("0.05")  # conservative feed threshold, not an investment rule
@@ -144,6 +145,7 @@ def attention_feed(
     severity: str | None = None,
     status: str | None = None,
     limit: int = 50,
+    include_source_warnings: bool = True,
 ) -> s.AttentionFeedRead:
     """Compose recent material changes and current missing/stale states from source records."""
     now = as_of or datetime.now(UTC)
@@ -516,7 +518,9 @@ def attention_feed(
     replaced_docs = set(
         session.scalars(
             select(SourceDocument.supersedes_document_id).where(
-                SourceDocument.supersedes_document_id.is_not(None)
+                SourceDocument.supersedes_document_id.is_not(None),
+                SourceDocument.recorded_at <= now,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= now),
             )
         ).all()
     )
@@ -524,6 +528,8 @@ def attention_feed(
         session.scalars(
             select(SourceDocument).where(
                 SourceDocument.company_id.in_(company_ids),
+                SourceDocument.recorded_at <= now,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= now),
             )
         ).all()
         if company_ids
@@ -542,9 +548,10 @@ def attention_feed(
             event_type="NEW_FILING",
             severity="MEDIUM",
             title=f"New {document.document_type}: {document.title}",
-            explanation=(
+            explanation=append_source_warning(
                 f"{document.source_name} · "
-                f"{document.reporting_period or 'reporting period unavailable'}."
+                f"{document.reporting_period or 'reporting period unavailable'}.",
+                document_warning(document) if include_source_warnings else None,
             ),
             effective_at=document.published_at or document.filed_at,
             recorded_at=document.recorded_at,

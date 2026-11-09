@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
@@ -57,6 +57,11 @@ from portfolio_api.domain.models import (
     ThesisWatchClassification,
 )
 from portfolio_api.domain.services import DomainError
+from portfolio_api.source_document_provenance import (
+    append_source_warning,
+    document_warning,
+    trigger_document_warnings,
+)
 
 THESIS_REVIEW_DAYS = 365
 SOURCE_DOCUMENT_LOOKBACK_DAYS = 30
@@ -491,13 +496,17 @@ def _derive_tasks(
                 SourceDocument.company_id.in_(company_ids),
                 SourceDocument.document_type != "OTHER",
                 SourceDocument.data_quality == "PASS",
+                SourceDocument.recorded_at <= cutoff,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= cutoff),
             )
         )
     )
     superseded_document_ids = set(
         session.scalars(
             select(SourceDocument.supersedes_document_id).where(
-                SourceDocument.supersedes_document_id.is_not(None)
+                SourceDocument.supersedes_document_id.is_not(None),
+                SourceDocument.recorded_at <= cutoff,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= cutoff),
             )
         ).all()
     )
@@ -838,9 +847,10 @@ def _derive_tasks(
                 "canonical_url": document.canonical_url,
             },
             title="Review a new primary source",
-            reason=(
+            reason=append_source_warning(
                 f"{document.document_type} '{document.title}' is not linked to a canonical "
-                "research, thesis, Candidate-gate, or risk assessment."
+                "research, thesis, Candidate-gate, or risk assessment.",
+                document_warning(document),
             ),
             trigger_rule=(
                 "Unreferenced PASS-quality source published within "
@@ -1296,6 +1306,7 @@ def _derive_tasks(
     latest_triggers: dict[str, ResearchTrigger] = {}
     for trigger in trigger_rows:
         latest_triggers.setdefault(trigger.event_key, trigger)
+    trigger_warnings = trigger_document_warnings(session, list(latest_triggers.values()), cutoff)
     for trigger in latest_triggers.values():
         if trigger.company_id not in companies:
             continue
@@ -1324,7 +1335,7 @@ def _derive_tasks(
             f"research-trigger:{trigger.id}",
             {"trigger_id": trigger.id, "fingerprint": trigger.fingerprint},
             title=trigger.title,
-            reason=trigger.reason,
+            reason=append_source_warning(trigger.reason, trigger_warnings.get(trigger.id)),
             trigger_rule=(
                 f"Canonical {trigger.trigger_type.replace('_', ' ').lower()} event; "
                 "review the linked source and record an explicit completion."
