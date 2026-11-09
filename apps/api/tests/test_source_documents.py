@@ -6,14 +6,14 @@ import asyncio
 import gzip
 import hashlib
 import json
-from datetime import UTC, date, datetime
-from typing import Any
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
 from browser_server import fixture_application, fixture_read_engine, fixture_settings
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_cloud_market_refresh import table_counts
@@ -37,6 +37,7 @@ from portfolio_api.external_data import (
     ProviderQuery,
     RawProviderRecord,
 )
+from portfolio_api.fundamentals_bootstrap import _known_history_records
 from portfolio_api.source_documents import (
     COMPANY_REFERENCE_PROVIDER_ID,
     SEC_DOCUMENT_NORMALIZER_VERSION,
@@ -46,6 +47,7 @@ from portfolio_api.source_documents import (
     SecSubmissionsProvider,
     create_company_source_document,
     ingest_sec_submissions,
+    known_processed_sec_history,
 )
 
 COMPANY_ID = UUID("11111111-1111-4111-8111-111111111111")
@@ -99,6 +101,162 @@ def query(company_id: UUID = COMPANY_ID) -> ProviderQuery:
         subjects=(CanonicalSubjectRef(kind=CanonicalSubjectKind.COMPANY, id=company_id),),
         requested_at=RETRIEVED_AT,
     )
+
+
+@pytest.mark.integration
+def test_history_skip_requires_exact_accepted_page_receipt_and_raw_metadata(
+    postgres_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    history_name = f"CIK{CIK}-submissions-001.json"
+    history_id = f"CIK{CIK}:HISTORY:{history_name}"
+    url = f"{SEC_SUBMISSIONS_BASE}/{history_name}"
+    bad = submissions_record({"form": []}, source_record_id=history_id, source_url=url)
+    good = submissions_record(
+        columnar(["10-K"], [ACCESSION], ["2026-02-10"], ["2025-12-31"]),
+        source_record_id=history_id,
+        source_url=url,
+    )
+    with Session(postgres_engine) as session, session.begin():
+        session.add(Company(id=COMPANY_ID, name="Receipt fixture"))
+        session.flush()
+        failed = ingest_sec_submissions(session, query(), [bad], {COMPANY_ID: CIK})
+        assert cast(dict[str, Any], failed["reconciliation"])["rejected_payloads"] == 1
+        session.flush()
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        assert _known_history_records(session, COMPANY_ID, CIK) == set()
+        failed_batch_id = UUID(str(failed["batch_id"]))
+        failed_batch = session.get(SourceDocumentBatch, failed_batch_id)
+        assert failed_batch is not None
+        failed_reconciliation = dict(failed_batch.reconciliation)
+        forged = {
+            "company_id": str(COMPANY_ID),
+            "cik": CIK,
+            "source_record_id": history_id,
+            "payload_sha256": bad.payload_sha256,
+        }
+        session.execute(
+            update(SourceDocumentBatch)
+            .where(SourceDocumentBatch.id == failed_batch_id)
+            .values(reconciliation={**failed_reconciliation, "processed_history_pages": [forged]})
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        session.execute(
+            update(SourceDocumentBatch)
+            .where(SourceDocumentBatch.id == failed_batch_id)
+            .values(reconciliation=failed_reconciliation)
+        )
+        success = ingest_sec_submissions(session, query(), [good], {COMPANY_ID: CIK})
+        session.flush()
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == {history_id}
+        with monkeypatch.context() as bounded:
+            bounded.setattr("portfolio_api.source_documents.MAX_HISTORY_RECEIPT_VERIFY_PAGES", 0)
+            with pytest.raises(ValueError, match="bounded budget"):
+                known_processed_sec_history(session, {COMPANY_ID: CIK})
+        assert _known_history_records(session, COMPANY_ID, CIK) == {history_id}
+        assert known_processed_sec_history(session, {COMPANY_ID: "0000000002"}) == set()
+        batch_id = UUID(str(success["batch_id"]))
+        raw = session.scalar(
+            select(ExternalRawPayload).where(
+                ExternalRawPayload.source_document_batch_id == batch_id
+            )
+        )
+        assert raw is not None
+        # Fixture-only SQL corruption models metadata mismatch without mutating ORM history.
+        session.execute(
+            update(ExternalRawPayload)
+            .where(ExternalRawPayload.id == raw.id)
+            .values(payload_sha256="0" * 64)
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        session.execute(
+            update(ExternalRawPayload)
+            .where(ExternalRawPayload.id == raw.id)
+            .values(payload_sha256=good.payload_sha256)
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == {history_id}
+        original_bytes = raw.payload_bytes
+        session.execute(
+            update(ExternalRawPayload)
+            .where(ExternalRawPayload.id == raw.id)
+            .values(payload_bytes=gzip.compress(b"tampered"))
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        session.execute(
+            update(ExternalRawPayload)
+            .where(ExternalRawPayload.id == raw.id)
+            .values(payload_bytes=original_bytes)
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == {history_id}
+        batch = session.get(SourceDocumentBatch, batch_id)
+        assert batch is not None
+        reconciliation = dict(batch.reconciliation)
+        pages = cast(list[dict[str, object]], reconciliation["processed_history_pages"])
+        session.execute(
+            update(SourceDocumentBatch)
+            .where(SourceDocumentBatch.id == batch_id)
+            .values(reconciliation={**reconciliation, "processed_history_pages": pages * 2})
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        session.execute(
+            update(SourceDocumentBatch)
+            .where(SourceDocumentBatch.id == batch_id)
+            .values(reconciliation=reconciliation)
+        )
+        for issue in (
+            {"code": "EXISTING_ACCESSION_METADATA_CHANGED", "source_record_id": ACCESSION},
+            {"code": ["malformed"], "source_record_id": ACCESSION},
+        ):
+            session.execute(
+                update(SourceDocumentBatch)
+                .where(SourceDocumentBatch.id == batch_id)
+                .values(reconciliation={**reconciliation, "issues": [issue]})
+            )
+            assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        session.execute(
+            update(SourceDocumentBatch)
+            .where(SourceDocumentBatch.id == batch_id)
+            .values(reconciliation=reconciliation)
+        )
+        session.execute(
+            update(SourceDocumentBatch)
+            .where(SourceDocumentBatch.id == batch_id)
+            .values(normalizer_version="sec-edgar-filings-v1")
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+        replay = ingest_sec_submissions(session, query(), [good], {COMPANY_ID: CIK})
+        session.flush()
+        assert replay["status"] == "IMPORTED" and replay["documents_imported"] == 0
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == {history_id}
+        assert (
+            ingest_sec_submissions(session, query(), [good], {COMPANY_ID: CIK})["status"]
+            == "ALREADY_IMPORTED"
+        )
+        assert session.scalar(select(func.count(SourceDocument.id))) == 1
+
+
+@pytest.mark.integration
+def test_valid_empty_history_page_is_processed_but_malformed_rows_are_not(
+    postgres_engine: Engine,
+) -> None:
+    name = f"CIK{CIK}-submissions-001.json"
+    source_id = f"CIK{CIK}:HISTORY:{name}"
+    url = f"{SEC_SUBMISSIONS_BASE}/{name}"
+    empty = submissions_record(columnar([], [], [], []), source_record_id=source_id, source_url=url)
+    malformed = submissions_record(
+        columnar(["10-K"], ["bad"], ["2026-02-10"], ["2025-12-31"]),
+        source_record_id=source_id,
+        source_url=url,
+    ).model_copy(update={"retrieved_at": RETRIEVED_AT + timedelta(days=1)})
+    with Session(postgres_engine) as session, session.begin():
+        session.add(Company(id=COMPANY_ID, name="Empty page fixture"))
+        session.flush()
+        ingest_sec_submissions(session, query(), [empty], {COMPANY_ID: CIK})
+        session.flush()
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == {source_id}
+        ingest_sec_submissions(session, query(), [malformed], {COMPANY_ID: CIK})
+        session.flush()
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
 
 
 def test_sec_normalizer_maps_forms_without_inventing_fiscal_period_or_dates() -> None:
@@ -219,6 +377,24 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
     assert incremental[0].source_record_id == f"CIK{CIK}"
     assert requested == [f"{SEC_SUBMISSIONS_BASE}/CIK{CIK}.json"]
     assert already_known.skipped_history_files == 1
+
+
+def test_provider_does_not_follow_history_links_from_an_invalid_issuer_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    wrong = columnar([], [], [], [])
+    wrong["cik"] = 2
+    cast(dict[str, Any], wrong["filings"])["files"] = [{"name": f"CIK{CIK}-submissions-001.json"}]
+    calls: list[str] = []
+
+    def download(url: str, _agent: str) -> bytes:
+        calls.append(url)
+        return json.dumps(wrong).encode()
+
+    monkeypatch.setattr("portfolio_api.source_documents._download_sec_json", download)
+    provider = SecSubmissionsProvider({COMPANY_ID: CIK}, "Portfolio Research test@example.com")
+    records = asyncio.run(provider.fetch(query()))
+    assert len(records) == len(calls) == provider.request_count == 1
 
 
 def test_sec_provider_bounds_new_history_files_for_resumable_pages(

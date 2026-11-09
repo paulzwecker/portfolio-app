@@ -34,6 +34,7 @@ from portfolio_api.fundamentals_bootstrap import (
 )
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
 from portfolio_api.sec_refresh_scope import (
+    LEGACY_SEC_SCOPE_VERSION,
     MAX_SEC_ISSUERS,
     SEC_SCOPE_VERSION,
     _mapping_hash,
@@ -122,6 +123,22 @@ def _filing_issuer_result(
         deferred = by_issuer[str(company_id)]
     elif deferred_total:
         return "NOT_REPORTED", None
+    unresolved_total = result.get("history_files_unresolved", 0)
+    if type(unresolved_total) is not int or unresolved_total < 0:
+        return "NOT_REPORTED", None
+    unresolved = 0
+    if "issuer_history_files_unresolved" in result:
+        by_issuer = result["issuer_history_files_unresolved"]
+        if (
+            not isinstance(by_issuer, dict)
+            or set(by_issuer) != mapped_ids
+            or not all(type(value) is int and value >= 0 for value in by_issuer.values())
+            or sum(by_issuer.values()) != unresolved_total
+        ):
+            return "NOT_REPORTED", None
+        unresolved = by_issuer[str(company_id)]
+    elif unresolved_total:
+        return "NOT_REPORTED", None
     count = item.documents_imported + item.documents_reused
     if any(
         (
@@ -133,6 +150,7 @@ def _filing_issuer_result(
             item.data_check_documents,
             item.amendments_unlinked,
             deferred,
+            unresolved,
         )
     ):
         return "DATA_CHECK", count
@@ -305,7 +323,7 @@ def _refresh_identity(
         ids = scope["company_ids"]
         if (
             scope.get("scope") != "sec_issuer_refresh"
-            or scope.get("sec_scope_version") != SEC_SCOPE_VERSION
+            or scope.get("sec_scope_version") not in {SEC_SCOPE_VERSION, LEGACY_SEC_SCOPE_VERSION}
             or not isinstance(ids, list)
             or not all(isinstance(item, str) and str(UUID(item)) == item for item in ids)
             or len(set(ids)) != len(ids)
@@ -384,7 +402,7 @@ def _refresh(
     if request_id is not None:
         trigger = "MANUAL"
     elif (
-        scope.get("sec_scope_version") == SEC_SCOPE_VERSION
+        scope.get("sec_scope_version") in {SEC_SCOPE_VERSION, LEGACY_SEC_SCOPE_VERSION}
         and scope.get("operational_request_id") is None
     ):
         trigger = "SCHEDULED"

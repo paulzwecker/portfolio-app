@@ -62,6 +62,7 @@ from portfolio_api.reported_fundamentals import (
     sync_reported_fundamentals,
 )
 from portfolio_api.sec_refresh_scope import (
+    LEGACY_SEC_SCOPE_VERSION,
     SEC_SCOPE_VERSION,
     SecRefreshScopeError,
     capture_sec_refresh_scope,
@@ -841,8 +842,13 @@ def _source_documents_operation(
     reconciliation = result.get("reconciliation", {})
     if not isinstance(reconciliation, dict):
         reconciliation = {}
-    raw_history_skips = result.get("history_files_skipped_as_unchanged", 0)
+    raw_history_skips = result.get(
+        "history_files_skipped_previously_processed",
+        result.get("history_files_skipped_as_unchanged", 0),
+    )
     raw_deferred = result.get("history_files_deferred", 0)
+    raw_unresolved = result.get("history_files_unresolved", 0)
+    unresolved = raw_unresolved if type(raw_unresolved) is int and raw_unresolved >= 0 else 0
     deferred = raw_deferred if isinstance(raw_deferred, int) else 0
     document_count = int(
         reconciliation.get("documents_imported", result.get("documents_imported", 0)) or 0
@@ -857,6 +863,7 @@ def _source_documents_operation(
     issues = reconciliation.get("issues", [])
     issue_count = (
         deferred
+        + unresolved
         + len(missing_ids)
         + len(missing_filings)
         + unsupported
@@ -873,7 +880,8 @@ def _source_documents_operation(
         "mapped_companies_without_supported_filings": missing_filings,
         "normalized_document_count": document_count,
         "history_files_deferred": deferred,
-        "history_files_skipped_as_unchanged": (
+        "history_files_unresolved": unresolved,
+        "history_files_skipped_previously_processed": (
             raw_history_skips if isinstance(raw_history_skips, int) else 0
         ),
         "unsupported_form_count": unsupported,
@@ -1359,8 +1367,9 @@ def run_scheduled(
                         ExternalIngestionRun.domain.in_([item.value for item in sec_domains]),
                         ExternalIngestionRun.request_scope["operational_request_id"].as_string()
                         == str(request_nonce),
-                        ExternalIngestionRun.request_scope["sec_scope_version"].as_string()
-                        == SEC_SCOPE_VERSION,
+                        ExternalIngestionRun.request_scope["sec_scope_version"]
+                        .as_string()
+                        .in_([LEGACY_SEC_SCOPE_VERSION, SEC_SCOPE_VERSION]),
                     )
                     .limit(2)
                 )

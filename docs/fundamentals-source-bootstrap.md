@@ -98,6 +98,24 @@ continue with explicit evidence gaps. Other eligible issuers can progress while 
 failed issuer waits. Failure/retry history and exact source batches remain in the
 existing checkpoint ledger.
 
+Historical pages are skipped only when a versioned receipt matches the exact issuer,
+page, retained bytes and normalization result. A previously processed filename is
+not proof that SEC still serves the same content. Legacy raw-only pages remain
+unknown. Rejected, malformed, conflicting or otherwise unresolved pages block the
+bootstrap instead of making a partial import look complete; review the checkpoint
+before preparing a new run. Older prepared bootstrap or incremental refresh scopes
+do not silently switch to the new normalizer. CIK-less historical payloads remain
+unsupported until bound to a validated issuer index.
+
+Receipt scans cap returned rows at 4,096, candidate pages at 256, compressed input
+at 8 MiB per page and 64 MiB total, and decompression at 16 MiB per page and 64 MiB
+total. Exceeding a cap requires operator review; a single issuer may itself exceed
+these limits. The underlying database may still scan more rows because history IDs
+have no dedicated index. An accepted page followed by a rejected response and then
+the identical accepted bytes remains unresolved: batch deduplication does not retain
+the later re-observation. Do not delete or rewrite retained evidence to clear it.
+These checks assume append-only receipts and do not authenticate SEC as the source.
+
 ### Run the reviewed checkpoints
 
 Use a private local directory for reports. Do not put SEC contact details, database
