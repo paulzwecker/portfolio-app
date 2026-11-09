@@ -43,7 +43,12 @@ behavior, recording the conflict and obtaining a decision where required.
 ## Execute and record
 
 Preserve branches, stashes, edits and private artifacts. Continue an applicable open
-feature PR with unfinished work. Keep completed PRs stable during owner review.
+feature PR with unfinished work. Freeze completed PRs for owner review and continue
+independent work from updated main without waiting for their merge. If a new task
+depends on an unmerged PR, document its base as a stacked branch and reconcile it
+after the dependency merges. Avoid overlapping scopes and duplicate PRs.
+At the start of each run fetch main, inspect remote PRs and reconcile the active
+branch without discarding local changes or rewriting history.
 Choose the highest-value ready capability in `ROADMAP.md`, checking its actual
 data, code and authorization dependencies. Prefer a complete investor workflow over
 another preparation layer. If an owner gate blocks it, advance an independent ready

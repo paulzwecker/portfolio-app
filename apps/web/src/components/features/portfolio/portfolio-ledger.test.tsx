@@ -11,8 +11,15 @@ import {
   ledgerPortfolioId,
   ledgerReport,
 } from "../../../../e2e/fixtures/ledger";
-import { inspectLedgerFile, ledgerFileLimit } from "./portfolio-ledger-data";
-import { PortfolioLedgerResults } from "./portfolio-ledger-results";
+import {
+  inspectLedgerFile,
+  ledgerFileLimit,
+  ledgerSameInstant,
+} from "./portfolio-ledger-data";
+import {
+  LedgerIdentityEvidence,
+  PortfolioLedgerResults,
+} from "./portfolio-ledger-results";
 
 beforeEach(() => {
   vi.stubEnv("API_BASE_URL", "http://127.0.0.1:8000");
@@ -20,6 +27,61 @@ beforeEach(() => {
   vi.stubEnv("API_ACCESS_TOKEN", "");
   vi.stubEnv("WEB_ACCESS_USERNAME", "");
   vi.stubEnv("WEB_ACCESS_PASSWORD", "");
+});
+
+it("compares source timestamps at full fractional precision across UTC offsets", () => {
+  expect(
+    ledgerSameInstant(
+      "2026-01-01T01:00:00.123456+01:00",
+      "2026-01-01T00:00:00.123456Z",
+    ),
+  ).toBe(true);
+  expect(
+    ledgerSameInstant(
+      "2026-01-01T00:00:00.123400Z",
+      "2026-01-01T00:00:00.1234Z",
+    ),
+  ).toBe(true);
+  expect(
+    ledgerSameInstant("2026-01-01T00:00:00Z", "2026-01-01T00:00:00.000000Z"),
+  ).toBe(true);
+  expect(
+    ledgerSameInstant(
+      "2026-01-01T00:00:00.123456Z",
+      "2026-01-01T00:00:00.123457Z",
+    ),
+  ).toBe(false);
+  expect(
+    ledgerSameInstant("2026-01-01T00:00:00Z", "2026-01-01T00:00:00.000001Z"),
+  ).toBe(false);
+  expect(ledgerSameInstant("not-a-time", "not-a-time")).toBe(false);
+});
+
+it("does not present candidate balances as usable when replay is blocked", () => {
+  const report = ledgerReport();
+  report.activity_count = 1;
+  report.status = "BLOCKED";
+  report.ending_status = "NOT_EVALUATED";
+  report.ending_statement_at = null;
+  report.ending_reconciliation = [];
+  report.issues = [
+    {
+      code: "NEGATIVE_CASH",
+      activity_id: null,
+      account_id: null,
+      asset_key: "USD",
+    },
+  ];
+  const markup = renderToStaticMarkup(
+    <PortfolioLedgerResults
+      report={report}
+      file={inspectLedgerFile(JSON.stringify(ledgerPacket()), "fixture.json")}
+    />,
+  );
+  expect(markup).toContain(
+    "Resolve the blocking issues before using projected balances.",
+  );
+  expect(markup).not.toContain('aria-label="Candidate balances, mobile view"');
 });
 
 it("accepts explicit v2 income packets and their matching projection contract", () => {
@@ -272,4 +334,28 @@ it("bounds ledger UTF-8 payload bytes while retaining same-origin checks", async
     ).status,
   ).toBe(403);
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it("shows preview identities for activity-only companyless listings even when absent from balances", () => {
+  const report = ledgerReport();
+  const activityOnly = {
+    ...ledgerAnchor.listings[0],
+    listing_id: "99999999-9999-4999-8999-999999999999",
+    ticker: "ACTV",
+    venue: "XETRA",
+    identity_source_ref: "synthetic-evidence",
+  };
+  report.consumed_listings.push(activityOnly);
+  expect(
+    report.positions.some((row) => row.listing_id === activityOnly.listing_id),
+  ).toBe(false);
+  const markup = renderToStaticMarkup(
+    <LedgerIdentityEvidence listings={report.consumed_listings} />,
+  );
+  expect(markup).toContain("ACTV");
+  expect(markup).toContain(activityOnly.listing_id);
+  expect(markup).toContain(activityOnly.security_id);
+  expect(markup).toContain("No company issuer");
+  expect(markup).toContain("synthetic-evidence");
+  expect(markup).toContain("not part of this identity evidence");
 });

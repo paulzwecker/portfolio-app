@@ -1,90 +1,214 @@
 # Active workstream
 
-## Historical market-data reliability integration
+## C2.3 guided ledger onboarding — INTEGRATE / BLOCKED release
 
-Branch `codex/market-history-coverage` includes current `origin/main` at
-`aef35724120d63d608d6ffdc6f10f88d41eff27f`. The working checkpoint before integration
-was `f28b1e2`. Repository visibility is public. Preserve predecessor worktrees,
-the owner edits and private evidence. [Draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)
-contains the cohesive checkpoint. Implementation review commit is `9bf466c`.
+Branch `codex/ledger-opening-onboarding` contains implementation `18f1f15` and
+merge `813651e` from updated main `e070406` ([merged PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)).
+The owner edits, predecessor branches/worktrees and private source artifacts remain
+preserved. [Draft PR #30](https://github.com/paulzwecker/portfolio-app/pull/30)
+is blocked pending current provider-control evidence; do not merge or deploy it.
 
-This engineering checkpoint delivers an investor investigation workflow through
-Company Explorer and Operations. It includes source-stream/adjustment conflicts,
-searchable returned observations, bounded schedule review, provider diagnostics,
-run-pinned pagination and explicitly requested checkpoint reconciliation.
+Completed PRs stay frozen for owner review. Continue independent milestones from
+updated main, or record an explicit stacked branch when a dependency is unmerged.
+Fetch and reconcile remote merges at the start of each run while preserving work.
 
-## Integration acceptance
+At `/portfolio/ledger`, the opening builder collects explicit evidenced accounts,
+exact listing quantities and native-currency cash. A statement can be SHA-256
+hashed locally or identified by an existing hash/reference. Drafts remain in page
+memory. Submission reuses the authenticated read-only preview and its anchor/hash
+checks. The source-date acknowledgement resets after edits. Download/re-upload
+preserves exact financial text and account IDs. Separate saved-candidate decisions
+retain their existing server authorization.
 
-- Verify ordinary entry points, API authentication and PostgreSQL read-only behavior.
-- Run repository checks, relevant PostgreSQL integration tests and desktop/mobile
-  browser coverage. Inspect synthetic screenshots and fix review findings.
-- Confirm migration files and model metadata stay compatible with the production
-  schema contract. Record fresh live evidence separately from the recorded marker.
-- Publish one cohesive PR after local acceptance. Owner review controls merging.
+The opening workflow is LOCAL_VERIFIED with 96 focused web checks, 67 native ledger
+unit tests, 13 isolated PostgreSQL/API cases and six managed desktop/mobile browser
+checks. Synthetic light/dark screenshots were visually reviewed. Typecheck,
+production build and focused lint pass. All selections passed again after merging
+PR #29. Both offline schema-gate modes match `b59f16c8a203` with no pending range.
+The new API regression checks v2 at the exact anchor boundary with zero
+activity, deterministic replay and unchanged canonical state.
 
-The engineering checkpoint is IMPLEMENTATION_COMPLETE and LOCAL_VERIFIED.
-`npm run check` passed with 333 web tests, 929 backend units and two skips.
-Relevant PostgreSQL integration covered 112 cases across the initial selection
-and a focused rerun after fixture corrections. The full managed browser run passed
-95 cases with 35 explicit fixture/live-only skips. The affected Operations journey
-passed again at desktop/mobile widths. Synthetic screenshots were visually reviewed.
+The latest BUILD restores the form's unchanged downloaded opening packet for the
+current anchor, preserving account IDs and exact decimal text. It rejects packets
+containing activity, ending statements or additional fields, and asks for the
+date acknowledgement again. A pending older document hash cannot overwrite a newer
+hash after restoration. Continue with guided activity and ending observations.
+Verification passed 98 focused web tests and ten managed desktop/mobile browser
+cases using synthetic data. Typecheck, production build, focused lint and docs
+checks passed. The mobile light-theme layout was visually inspected.
 
-The second-pass review added alert checks for known adjustment labels and listing
-currency, plus HTTP authentication/read-only transaction coverage. It corrected
-fixture URL/receipt typing, auth-mode configuration and a numeric-correction fixture
-to retain its economic adjustment basis. Mypy passes all 223 source/test files.
+## Current cash activity increment
 
-## Release assessment
+The guided review now accepts evidenced DEPOSIT, WITHDRAWAL, FEE and TAX records
+after an opening reconciles. Account, type, amount, currency, sequence, timestamp,
+cutoff and source evidence are explicit. Native preview results display account
+and portfolio balances. Editing invalidates the result, and the cash draft must be
+discarded before switching its opening or source file. Full activity packets can
+be downloaded and replayed in the existing file workflow. At that checkpoint,
+guided trade/dividend/transfer entry and ending statements were outstanding.
 
-Current classification is **CONFIGURATION_REQUIRED** pending current Vercel
-release-control evidence and Blueprint sync confirmation. The earlier Neon
-connection failure is resolved by the runbook's process-local certifi CA bundle.
-On November 8 at 19:49 UTC the existing read-only target guard verified the exact
-production project, branch, endpoint and `neondb.public` with TLS `verify-full`.
-Live Alembic is `b59f16c8a203`, all 98 tables are present and mapped metadata has
-no drift. Both offline schema-gate modes pass with an empty pending range.
+Verification passed 112 focused web tests, 14 isolated PostgreSQL/API cases and
+12 managed desktop/mobile browser cases using synthetic data. Typecheck, the
+production build, focused lint and docs checks passed. Mobile and desktop layouts
+were visually reviewed. No production operation was involved.
 
-Accepted counts remain 209 companies, 23 securities, 23 listings, one portfolio,
-one snapshot, 22 positions, two cash rows, one accepted target revision and 16
-allocations totaling 100%. Source and canonical bootstrap receipts each count one.
-Prices, FX and native model revisions each count zero. Private evidence remains
-under `%LOCALAPPDATA%/PortfolioResearch/private-reports`.
+## Current cash restoration increment
 
-Fresh Render read-only inspection found the intended `portfolio-api` service on
-`main`, live deployment `dep-dbobrqbl550s7399afg0` at `aef3572`, and Auto-Deploy
-enabled with `checksPass`. Render uses the expected Neon target, TLS verification
-and `/health/ready`. Both health routes return 200. Authenticated API reads return
-209 Universe companies, one portfolio and a ledger anchor with its snapshot.
-All inspected write, ingestion and background flags are disabled. GitHub effective
-main rules require PRs, conversation resolution and the three strict CI checks.
-Vercel CLI/frontend credentials were unavailable. The requested dashboard evidence
-is its production commit/plan, required checks, exact ignore command and Blueprint sync.
+A downloaded guided cash packet can be revalidated against the current anchor and
+reopened for editing. Account and activity IDs, source evidence, timestamps and
+exact decimal text are retained. Restoration refuses unsupported activity, ending
+statements, stale anchors, numerical financial literals and additional fields.
+The original file remains available for the existing file-review workflow.
+Focused verification passed 114 web tests and 14 synthetic desktop/mobile browser
+cases, including reload, identical replay and refusal of unsupported activity.
+Typecheck, production build, focused lint and documentation checks passed. The
+resumed mobile form was visually reviewed.
 
-Follow the existing [deployment runbook](deployment-and-migrations.md). Hosted
-setting changes, live provider activation, recovery operations and model acceptance
-retain separate owner approvals. C2.2's hosted ingestion and two monitored refresh cycles
-remain outstanding operational acceptance criteria.
+## Current ending statement increment
 
-## Next action
+The guided workflow adds independently entered ending positions, cash and source
+evidence for every opening account at the existing cutoff. Fields start empty, the
+user confirms the observation time, and the API evaluates missing rows, zeroes and
+differences. Edits invalidate the result. Discarding the ending draft returns the
+previous packet for revalidation. At that checkpoint guided restoration remained open.
+Preview cutoff and ending timestamps are checked at full fractional precision.
+The increment passed 120 focused web tests, 15 isolated PostgreSQL/API cases and
+28 synthetic desktop/mobile browser checks. Build, typecheck, focused lint and
+documentation checks passed. Desktop and mobile synthetic layouts were inspected.
 
-Draft #29 awaits owner review and the remaining release-control evidence. The code
-head `1587ce0` passed all three GitHub jobs and Vercel Preview in CI run 113.
-Documentation updates retain focused checks and require latest-head CI readback.
-Additional venue schedules
-require reviewed source evidence. Detailed earlier evidence and production recovery
-history remain in the [historical handoff](history/market-history-build-through-2026-11-08.md).
+## Current ending restoration increment
 
-## Bounded enrichment planning
+An unchanged downloaded ending packet can be revalidated and reopened when its
+statement matches or has only ending-observation mismatches. The form retains
+account IDs, exact amounts and evidence, and asks for cutoff confirmation again.
+Discard returns the original packet for revalidation. Unsupported, altered or
+lossy packets stay in the file workflow. Account labels use stable IDs even if
+the statement order differs from the opening account order.
+Focused verification passed 123 web tests and 32 synthetic desktop/mobile browser
+cases, including matched and blocked statement reload, correction, discard and
+revalidation. Typecheck, build, focused lint and documentation checks passed.
+The resumed desktop and mobile layouts were visually inspected.
 
-The existing production read-only preview is READY for all 22 held listings and
-the two required FX pairs, DKK/EUR and USD/EUR. It reuses the earlier diagnostic
-window November 7, 2025 through November 6, 2026 for comparison. The plan has 24
-logical provider scopes and zero unresolved mappings. It made zero provider
-requests and database writes. The immutable private report hash is
-`1cd4ddf9815e068343ab67c4baeca2e18d5c6bbeecede1e132d38576fa3ebdf5`.
-Owner review must establish the actual first-run window, provider/retry budget and
-current-state recovery before separately authorizing execution.
+## Current trade activity increment
 
-Canonical behavior lives in [market data](market-data.md),
-[historical bootstrap](historical-market-data-bootstrap.md),
-[attention](attention-center.md) and the [roadmap](../ROADMAP.md).
+The guided activity form supports evidenced BUY and SELL records for listings in
+the verified anchor, alongside existing cash records. Listing and trading currency,
+exact quantity, gross settlement cash, explicit fees/taxes and both dates come from
+the source; replay and date/balance checks remain in the API. Mixed packets retain
+identity, precision and evidence on restoration. Other listings and activity types
+remain in the existing file workflow; no cost basis or FX is inferred.
+Focused checks passed 136 web tests, 16 isolated PostgreSQL/API cases and 34 synthetic
+desktop/mobile journeys, including trade download and restoration. Typecheck,
+production build and focused lint passed; the synthetic desktop and mobile forms were inspected.
+
+## Current dividend activity increment
+
+The guided activity form now accepts evidenced dividends for verified anchor
+listings, with explicit gross receipt, fees and withheld taxes. The actual cash
+currency may differ from the listing currency; there is no inferred conversion.
+Existing preview validation owns charge limits and native-currency replay. Exact
+input and evidence survive download, revalidation and ending-statement restoration.
+Focused checks passed 146 web tests and 17 isolated PostgreSQL/API cases, including
+a cross-currency receipt and rejection of charges above gross. All 36 synthetic desktop/mobile ledger journeys passed; the dividend journey was
+rerun after adding guidance against duplicate withholding. Screenshots were
+reviewed. Production build, typecheck and focused lint passed.
+
+## Current internal cash transfer increment
+
+The guided form accepts paired internal cash transfers between two independently
+identified brokerage accounts. Both legs require their own exact amounts, currency,
+settled timestamp and source evidence; API validation owns matching and replay.
+Restoration retains both legs, and duplicate source keys fail closed. The transfer
+option is unavailable unless the opening contains two evidenced brokerage accounts.
+Focused checks passed 157 web tests and three isolated PostgreSQL transfer API
+cases and 38 synthetic desktop/mobile journeys, including the form, download and
+restoration. Build, typecheck, focused lint and documentation checks passed.
+Synthetic desktop and mobile forms were visually reviewed. No production or schema
+changes were made.
+
+## Current internal security transfer increment
+
+The guided form accepts paired security transfers between evidenced brokerage
+accounts, with independent listing, quantity, timestamp and source evidence for
+each leg. The user explicitly acknowledges unavailable acquisition basis; no
+lot, gain, ADR conversion or sale is inferred. The API validates matching legs
+and source quantities. Downloaded and ending-review packets retain all evidence.
+Focused checks passed 170 web tests and three isolated PostgreSQL security-transfer
+API cases and 40 synthetic desktop/mobile journeys, including basis acknowledgement
+and restoration. Build, typecheck, focused lint and documentation checks passed;
+synthetic desktop and mobile layouts were inspected. No production changes were made.
+
+## Non-anchor listing lookup API
+
+An authenticated read-only exact-ticker lookup returns at most 50 reviewable
+identity candidates, flags truncation, missing/invalid currency and demo records,
+and keeps the snapshot anchor unchanged. Names, share class and demo status are
+lookup context; the existing preview hash binds the core listing identity instead.
+Three focused isolated PostgreSQL/API tests pass, including non-anchor purchase replay
+and 50/51-result boundaries. The guided activity and ending forms now integrate this lookup.
+
+## Guided non-anchor listing increment
+
+Guided activity can select a canonical non-anchor listing from an exact-ticker
+lookup, keeping lookup results separate from the opening anchor. Preview rejects
+changed or omitted consumed identities, and all consumed identities are visible
+in the evidence drawer, including activity-only listings. Activity and ending
+reviews restore from revalidated preview identities. Display names, share class
+and demo labels are lookup context, not hash-bound facts. Exact-ticker search
+reports unsupported and truncated results; companyless ETFs remain companyless.
+Verification passed 176 focused web tests, three isolated PostgreSQL/API tests,
+48 synthetic desktop/mobile journeys, typecheck, build, focused lint and contract
+checks. Synthetic desktop and mobile layouts were inspected.
+The frontend lookup requires the matching API endpoint; coordinate API availability
+before using it. No schema migration is introduced.
+
+## Native guided candidate journey
+
+The exact-ticker lookup now passes through the authenticated read-only Next.js
+proxy with one bounded query and a validated, ticker-bound response. A synthetic
+real-API/PostgreSQL browser journey covers guided opening, non-anchor purchase,
+ending reconciliation, source identity, save and explicit review. Desktop cancels
+the synthetic decision; mobile confirms it. The fixture permits only local test
+receipt writes and protected holdings/targets hashes remain unchanged. Focused
+proxy tests cover production authentication and HTTPS; the native browser fixture
+itself runs with local development authentication. Two desktop/mobile journeys,
+96 focused web tests, one isolated PostgreSQL fixture-guard test, typecheck, build,
+focused lint and generated-contract checks passed. The fixture shut down and
+removed its own schema. No production operation was performed.
+
+## Next increment and release boundaries
+
+Integration review identified an unexpected holding present only on an ending
+statement. The ending builder now accepts the same exact-listing search and passes
+its reviewed identity to the preview drift guard. An unexplained holding remains a
+blocked mismatch; it never creates an inferred trade. Demo status from a restored
+preview is explicitly unavailable until searched again. The isolated real-API
+desktop/mobile journey covers the mismatch and rejects altered preview identity.
+
+Fresh read-only Neon project/branch/endpoint and TLS-verified `neondb.public`
+revision evidence matched `b59f16c8a203` and the offline schema attestation.
+The active GitHub `main` ruleset requires a PR, resolved review threads and the
+three strict CI checks, with no configured bypass actors. Current Render/Vercel
+release controls remain unverified through available read-only access. The frontend's new listing
+lookup also requires the new API endpoint; release API first, then frontend, under
+separate approval. Do not infer deploy safety from matching schema or green CI.
+
+Complete the release review. Reuse the versioned ledger contract, server calculations,
+immutable review packets and explicit decisions. Preserve the observed holdings,
+strategic targets and unavailable acquisition basis. A reviewed first broker format,
+lot/FX policy, historical completeness and genuine TWR/XIRR remain later work.
+
+This increment adds no schema or provider configuration. Its milestone remains
+subject to verified provider release controls before merge or deployment. Integration
+checks passed `npm run check` (442 web and 929 API unit tests, 2 skipped), 452
+isolated PostgreSQL integration tests (4 skipped), 48 managed desktop/mobile
+browser tests and two real-API browser journeys. The updated synthetic desktop and
+mobile ending form was visually inspected; independent review found no actionable
+security or financial-integrity issue. No hosted verification is implied.
+Price/FX enrichment, recovery operations, production
+ledger cutover, model acceptance and provider activation require their own scope
+and authorization. No production writes or provider configuration changes ran.
+
+[Ledger behavior](portfolio-ledger.md) owns this contract and workflow.
+[The roadmap](../ROADMAP.md) owns priority. The previous market integration and
+live-read evidence are preserved in the [dated handoff](history/market-history-build-through-2026-11-08.md).

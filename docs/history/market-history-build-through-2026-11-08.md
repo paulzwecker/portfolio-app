@@ -353,3 +353,96 @@ Thirty isolated PostgreSQL cases passed, including tampered raw bytes and row sc
 the intact-batch case was rerun with missing-receipt and size-limit checks. Seven
 focused backend units, 56 web checks, strict types/contracts and a synthetic
 desktop/mobile journey passed. No production or provider operation ran.
+
+## Integration and read-only assessment, November 8
+
+### Historical market-data reliability integration
+
+Branch `codex/market-history-coverage` includes current `origin/main` at
+`aef35724120d63d608d6ffdc6f10f88d41eff27f`. The working checkpoint before integration
+was `f28b1e2`. Repository visibility is public. Preserve predecessor worktrees,
+the owner edits and private evidence. [Draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)
+contains the cohesive checkpoint. Implementation review commit is `9bf466c`.
+
+This engineering checkpoint delivers an investor investigation workflow through
+Company Explorer and Operations. It includes source-stream/adjustment conflicts,
+searchable returned observations, bounded schedule review, provider diagnostics,
+run-pinned pagination and explicitly requested checkpoint reconciliation.
+
+### Integration acceptance
+
+- Verify ordinary entry points, API authentication and PostgreSQL read-only behavior.
+- Run repository checks, relevant PostgreSQL integration tests and desktop/mobile
+  browser coverage. Inspect synthetic screenshots and fix review findings.
+- Confirm migration files and model metadata stay compatible with the production
+  schema contract. Record fresh live evidence separately from the recorded marker.
+- Publish one cohesive PR after local acceptance. Owner review controls merging.
+
+The engineering checkpoint is IMPLEMENTATION_COMPLETE and LOCAL_VERIFIED.
+`npm run check` passed with 333 web tests, 929 backend units and two skips.
+Relevant PostgreSQL integration covered 112 cases across the initial selection
+and a focused rerun after fixture corrections. The full managed browser run passed
+95 cases with 35 explicit fixture/live-only skips. The affected Operations journey
+passed again at desktop/mobile widths. Synthetic screenshots were visually reviewed.
+
+The second-pass review added alert checks for known adjustment labels and listing
+currency, plus HTTP authentication/read-only transaction coverage. It corrected
+fixture URL/receipt typing, auth-mode configuration and a numeric-correction fixture
+to retain its economic adjustment basis. Mypy passes all 223 source/test files.
+
+### Release assessment
+
+Current classification is **CONFIGURATION_REQUIRED** pending current Vercel
+release-control evidence and Blueprint sync confirmation. The earlier Neon
+connection failure is resolved by the runbook's process-local certifi CA bundle.
+On November 8 at 19:49 UTC the existing read-only target guard verified the exact
+production project, branch, endpoint and `neondb.public` with TLS `verify-full`.
+Live Alembic is `b59f16c8a203`, all 98 tables are present and mapped metadata has
+no drift. Both offline schema-gate modes pass with an empty pending range.
+
+Accepted counts remain 209 companies, 23 securities, 23 listings, one portfolio,
+one snapshot, 22 positions, two cash rows, one accepted target revision and 16
+allocations totaling 100%. Source and canonical bootstrap receipts each count one.
+Prices, FX and native model revisions each count zero. Private evidence remains
+under `%LOCALAPPDATA%/PortfolioResearch/private-reports`.
+
+Fresh Render read-only inspection found the intended `portfolio-api` service on
+`main`, live deployment `dep-dbobrqbl550s7399afg0` at `aef3572`, and Auto-Deploy
+enabled with `checksPass`. Render uses the expected Neon target, TLS verification
+and `/health/ready`. Both health routes return 200. Authenticated API reads return
+209 Universe companies, one portfolio and a ledger anchor with its snapshot.
+All inspected write, ingestion and background flags are disabled. GitHub effective
+main rules require PRs, conversation resolution and the three strict CI checks.
+Vercel CLI/frontend credentials were unavailable. The requested dashboard evidence
+is its production commit/plan, required checks, exact ignore command and Blueprint sync.
+
+Follow the existing [deployment runbook](../deployment-and-migrations.md). Hosted
+setting changes, live provider activation, recovery operations and model acceptance
+retain separate owner approvals. C2.2's hosted ingestion and two monitored refresh cycles
+remain outstanding operational acceptance criteria.
+
+### Next action
+
+Draft #29 awaits owner review and the remaining release-control evidence. The code
+head `1587ce0` passed all three GitHub jobs and Vercel Preview in CI run 113.
+Documentation updates retain focused checks and require latest-head CI readback.
+Additional venue schedules
+require reviewed source evidence. Detailed earlier evidence and production recovery
+history remain in the [historical handoff](market-history-build-through-2026-11-08.md).
+
+### Bounded enrichment planning
+
+The existing production read-only preview is READY for all 22 held listings and
+the two required FX pairs, DKK/EUR and USD/EUR. It reuses the earlier diagnostic
+window November 7, 2025 through November 6, 2026 for comparison. The plan has 24
+logical provider scopes and zero unresolved mappings. It made zero provider
+requests and database writes. The immutable private report hash is
+`1cd4ddf9815e068343ab67c4baeca2e18d5c6bbeecede1e132d38576fa3ebdf5`.
+Owner review must establish the actual first-run window, provider/retry budget and
+current-state recovery before separately authorizing execution.
+
+Canonical behavior lives in [market data](../market-data.md),
+[historical bootstrap](../historical-market-data-bootstrap.md),
+[attention](../attention-center.md) and the [roadmap](../../ROADMAP.md).
+
+PR #29 was merged as `e0704068e7b437cff4530eff35374da689b66155` on November 8 at 20:23:59 UTC. The merged code head `9f8d9f1` passed all three GitHub CI jobs and Vercel Preview. Provider-control evidence and live enrichment retain their separate operational gates.

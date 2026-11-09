@@ -303,6 +303,19 @@ class LedgerListingRead(Contract):
     identity_source_ref: str | None
 
 
+class LedgerListingSearchItem(LedgerListingRead):
+    security_name: str
+    share_class: str | None
+    company_name: str | None
+    is_demo: bool
+
+
+class LedgerListingSearchRead(Contract):
+    results: list[LedgerListingSearchItem]
+    truncated: bool
+    unsupported_results: bool
+
+
 class PortfolioLedgerAnchorRead(Contract):
     portfolio_id: UUID
     snapshot: SnapshotRead

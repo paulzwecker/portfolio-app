@@ -168,8 +168,72 @@ the connection to the pool. Existing API authentication and database guards appl
 
 ## Portfolio review screen
 
-Open Portfolio → Ledger review (`/portfolio/ledger`). Download the private anchor,
-prepare the typed ledger JSON and choose it using the file control. Files stay in
+Open Portfolio → Ledger review (`/portfolio/ledger`). The guided opening review
+collects explicit brokerage or unallocated opening accounts with source evidence,
+exact listing quantities and native-currency cash. It starts with empty fields.
+Reference holdings can be inspected while account allocation remains an evidenced
+user declaration. Confirm the source balances use the displayed anchor date.
+Edits reset that acknowledgement and invalidate the prior result.
+
+Hash a nonempty statement up to 10 MiB locally with browser SHA-256, or enter an
+existing document hash and source-record reference. Statement bytes remain local.
+Reconciliation sends entered balances and evidence through the existing read-only
+preview, bound to the verified snapshot/hash. Amounts retain decimal text and
+explicit zeros. The opening uses v2 at the anchor instant with empty activity and
+an absent ending statement. Native validation owns financial constraints and
+comparisons. Acquisition basis remains unavailable. Clearing the draft removes
+its in-memory accounts and cancels outstanding statement hash results.
+An unchanged opening review JSON downloaded from this form can replace the draft
+for the same anchor. Restoration preserves account IDs, exact amounts and evidence,
+and requires the source-date confirmation again. Packets with activity, ending
+statements, changed anchors or other fields use the existing file review workflow.
+
+After a guided opening reconciles, the screen can add evidenced BUY, SELL, DIVIDEND,
+DEPOSIT, WITHDRAWAL, FEE, TAX, CASH_TRANSFER and SECURITY_TRANSFER records for declared brokerage accounts. Each
+record has an explicit type, sequence, settled timestamp with UTC offset, currency,
+document hash and source-record reference. Trades additionally require an exact reviewed
+listing in its trading currency, exact quantity and gross settlement cash,
+explicit fees and taxes (including zero), and trade and settlement dates. Dividends
+require an exact reviewed listing, gross cash, explicit fees and withheld taxes; the received
+cash currency can differ from the listing currency. The API rejects charges above
+gross cash. Record withheld tax once, using the same cash currency as the receipt.
+No FX,
+acquisition basis or historical transactions are inferred. The user supplies the
+review cutoff. The API owns ordering, dates, balance and source validation and
+calculates candidate balances. The activity draft must be discarded before its
+opening or source file is changed. Revalidate an unchanged downloaded review JSON
+to resume; account and record IDs, evidence and exact amounts remain intact.
+Guided internal cash transfers require two evidenced brokerage accounts and
+independently entered debit and receipt amounts, currencies, booking timestamps
+and source keys. Security transfers likewise require two independent matching
+listing/quantity observations and explicit acknowledgement that acquisition basis
+is unavailable. The API verifies the legs and source holdings. Other activities or unsupported
+extra fields use the file workflow.
+
+For a listing outside the opening snapshot, search its exact ticker and review
+venue, security, issuer and currency before selection. Search flags demo records,
+unsupported currencies and truncated results. It does not modify the opening
+anchor. The preview compares the selected core identity with the API-consumed
+identity and blocks discrepancies; its evidence drawer lists every consumed
+identity, including activity-only listings. Search names, share class and demo
+status are display context, not bound to the preview hash. Revalidation of a saved
+packet retrieves current consumed identities; lookup-only demo status must be
+rechecked. No company is invented for a companyless ETF.
+
+After a guided opening or supported activity review reconciles, the ending form accepts
+independently entered positions, native cash and source evidence for every account
+at the existing review cutoff. Fields start empty. The user confirms the observation
+time, and the API distinguishes missing rows, explicit zeros and differences.
+Edits invalidate the prior result. An unchanged downloaded guided ending packet
+can be revalidated and reopened for editing when it reconciles or has only ending
+observation differences. Restoration retains every source field and requires a new
+cutoff confirmation. Discarding an edited ending returns the original packet for
+revalidation. Packets the form cannot reproduce remain in the file workflow.
+Preview cutoff and ending timestamps are compared at full fractional precision
+across UTC offsets before a result is shown.
+
+For activity and ending observations, prepare the typed ledger JSON and choose it
+using the file control. Files stay in
 page memory until explicit validation. The browser forwards the original financial
 text to the API, with a 1 MB UTF-8 limit and existing authentication/origin controls.
 UUID display metadata is normalized separately. Clearing/changing files cancels
@@ -177,7 +241,9 @@ pending requests and removes previous results.
 
 The screen distinguishes opening/ending matches, blocked activity and missing
 observations. Filter by comparison, account and differences, inspect exact native
-values and source/hash evidence, or download the private report. Missing rows retain
+values and source/hash evidence, or download the private report and exact review
+JSON. The review JSON preserves its decimal text and stable account IDs for replay
+and later evidenced additions. Missing rows retain
 their explicit state beside zero balances. Account differences remain visible even
 when portfolio totals match. A successful review remains a candidate result.
 
@@ -262,7 +328,11 @@ synthetic rehearsal, start `npm run test:e2e:api -- --scenario ledger-review
 --lifetime-seconds 600` with child-process `BROWSER_API_PORT=8015`. Run
 `node scripts/browser.mjs test portfolio-ledger-decisions.spec.ts --workers=1`
 with `E2E_LEDGER_REVIEW_API=1`, matching loopback `API_BASE_URL`/`BROWSER_API_PORT`
-and the local web port. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
+and the local web port. `portfolio-ledger-guided-native.spec.ts` exercises the
+guided opening, non-anchor listing, activity, ending and saved-review journey;
+run it with one worker and a fresh fixture. Follow the existing [browser setup](codex-cloud-development.md#portfolio-data-rehearsal).
+Ending statements can also select an unexpected exact listing absent from the
+opening and activity. The API reports a mismatch; it does not infer a transaction.
 Normal fixture shutdown removes its own schema. Screenshots remain ignored.
 
 ## Dated ownership and holdings publication

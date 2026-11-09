@@ -36,6 +36,7 @@ from portfolio_api.database_write_target import (
     install_database_read_only_guard,
 )
 from portfolio_api.domain import queries
+from portfolio_api.domain.models import Listing, Security
 from portfolio_api.domain.routes import ledger_write_session_for
 from portfolio_api.domain.seed import seed
 from portfolio_api.main import create_app
@@ -393,6 +394,23 @@ def main(argv: list[str] | None = None) -> None:
             reader = fixture_read_engine(url, schema, settings)
         if args.scenario == "ledger-review":
             assert metadata is not None
+            with Session(engine) as session, session.begin():
+                security = Security(
+                    name="Synthetic Unheld Fund", security_type="ETF", company_id=None, is_demo=True
+                )
+                session.add(security)
+                session.flush()
+                listing = Listing(
+                    security_id=security.id,
+                    ticker="SYNNEW",
+                    venue="XNYS",
+                    currency="USD",
+                    identity_source_ref="synthetic-browser-identity",
+                    is_demo=True,
+                )
+                session.add(listing)
+                session.flush()
+                metadata["unheld_listing_id"] = str(listing.id)
             metadata["ledger_receipts_only"] = True
             ledger_writer = fixture_ledger_writer(url, schema)
         if args.scenario == "ledger-publication":

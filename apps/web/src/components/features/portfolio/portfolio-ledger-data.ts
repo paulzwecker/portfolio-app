@@ -2,6 +2,18 @@ import { type LedgerCandidate, isRecord } from "@/lib/domain-contracts";
 
 export const ledgerFileLimit = 1_000_000;
 
+/** Compare timestamp instants without dropping sub-millisecond source precision. */
+export function ledgerSameInstant(left: string, right: string): boolean {
+  const millis = Date.parse(left);
+  if (!Number.isFinite(millis) || millis !== Date.parse(right)) return false;
+  const remainder = (value: string) => {
+    const fraction =
+      value.match(/\.(\d+)(?=(?:Z|[+-]\d{2}:?\d{2})$)/i)?.[1] ?? "";
+    return fraction.padEnd(3, "0").slice(3).replace(/0+$/, "");
+  };
+  return remainder(left) === remainder(right);
+}
+
 export type LedgerReviewFile = {
   text: string;
   name: string;
@@ -131,8 +143,12 @@ function ledgerFileMetadata(
 }
 
 export function downloadLedgerJson(value: unknown, filename: string) {
+  downloadLedgerText(JSON.stringify(value, null, 2), filename);
+}
+
+export function downloadLedgerText(text: string, filename: string) {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+    new Blob([text], { type: "application/json" }),
   );
   const link = document.createElement("a");
   link.href = url;

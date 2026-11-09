@@ -6,22 +6,131 @@ Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                          |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2 historical market-data reliability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md)                                              |
-| Branch / PR                 | `codex/market-history-coverage`, based on current main `aef3572`; [draft PR #29](https://github.com/paulzwecker/portfolio-app/pull/29) |
-| Implementation              | Date-span evidence, source reconciliation and investor-facing coverage limits LOCAL_VERIFIED                                           |
-| Next ready substantial task | Confirm Vercel release controls and Blueprint sync, review draft #29, then authorize a bounded held-listing enrichment plan            |
-| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals                           |
-| Integration rule            | Preserve the owner edits, predecessor worktrees and the release/recovery history                                                       |
+| Field                       | Current value                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.3 guided ledger onboarding — INTEGRATE; release BLOCKED. [Handoff](docs/ACTIVE_WORKSTREAM.md)                 |
+| Branch / PR                 | `codex/ledger-opening-onboarding`; [draft PR #30](https://github.com/paulzwecker/portfolio-app/pull/30)          |
+| Implementation              | Guided opening, activity and ending reconciliation LOCAL_VERIFIED                                                |
+| Next ready substantial task | Complete provider-control verification and coordinated release review                                            |
+| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
+| Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
+
+Integration review added exact listing lookup for an unexpected ending-only
+position. The preview treats an unexplained observation as a blocking mismatch,
+does not infer a trade, and rejects changed lookup identity. Read-only Neon and
+the repository attestation match `b59f16c8a203`; current hosted release controls
+remain unverified. The new API endpoint must precede the frontend at release.
+Integration checks passed `npm run check`, 452 isolated PostgreSQL tests (4 skipped),
+48 managed desktop/mobile tests and two real-API browser journeys. An independent
+review found no authorization or financial-integrity defect in the inspected paths.
+
+The current BUILD fixes the Next.js read-only proxy for exact listing search and
+verifies the guided opening → non-anchor purchase → ending → saved review journey
+against real FastAPI and a disposable PostgreSQL fixture. Desktop cancels its
+synthetic decision; mobile explicitly confirms it. Both retain the observed
+holdings/targets fingerprint. Proxy auth, TLS, query and response checks pass in
+focused tests. Hosted behavior and production release remain unverified.
+
+The current BUILD connects exact non-anchor listing search to activity and ending
+review without changing the opening anchor. It compares selected identities with
+the native preview, rejects missing or changed consumed identities, and displays
+all hash-bound identities including activity-only listings. Lookup names, share
+class and demo status are context rather than hash-bound facts. Verification passed
+176 focused web tests, three isolated PostgreSQL/API tests and 48 synthetic
+desktop/mobile journeys; production integration and release checks remain pending.
+
+The non-anchor listing lookup API supports bounded, exact ticker searches with
+security/company/venue identity, demo and unsupported-currency indicators. The
+lookup does not change the opening anchor. Two isolated PostgreSQL/API tests pass,
+including a non-anchor preview and 50/51 result boundary. Guided selection and
+identity-drift review were integrated in the following BUILD.
+
+The current BUILD adds guided paired security transfers for verified anchor
+listings. Both legs retain independent source evidence and exact quantities;
+the user acknowledges unavailable acquisition basis and the API validates the
+match and source holdings. Download, restoration and ending review preserve the
+packet. Focused verification passed 170 web tests, three isolated PostgreSQL API
+cases and 40 synthetic desktop/mobile journeys. No schema or production changes.
+
+The current BUILD adds guided internal cash transfers with independently sourced
+debit and receipt legs. Exact values and evidence survive download, restoration
+and ending review; the API verifies matching currency, amount and booking instant.
+Focused verification passed 157 web tests, three isolated PostgreSQL transfer API
+cases and 38 synthetic desktop/mobile journeys. No schema or production changes.
+
+The current BUILD adds source-evidenced dividends to the guided review. Users
+enter the received currency, gross cash, explicit fees and withheld taxes without
+assuming an FX conversion; native API replay validates the receipt. Downloaded
+reviews and ending observations retain the dividend evidence. Focused verification
+passed 146 web tests, 17 isolated PostgreSQL/API tests and 36 synthetic desktop/mobile
+journeys; the dividend flow was rerun after the final wording change. No schema or production changes were made.
+
+The current BUILD adds source-evidenced purchases and sales for verified anchor
+listings to the existing read-only ledger review. It retains exact text and evidence
+through download and restoration, with explicit dates, fees and taxes; native API
+replay remains authoritative. Listing expansion, dividends and transfers remain.
+Focused verification passed 136 web tests, 16 isolated PostgreSQL/API tests and
+34 synthetic desktop/mobile journeys. No schema or production changes were made.
+
+The latest BUILD restores a revalidated guided ending packet for editing, including
+ending-only mismatches. It preserves the original source on discard, retains exact
+amounts and evidence, and requires renewed cutoff confirmation. Unsupported or
+lossy packets remain in the file workflow. Guided trade and dividend entry remains.
+Focused verification passed 123 web tests and 32 synthetic desktop/mobile browser
+cases, plus build, typecheck, lint and documentation checks.
+
+The prior BUILD adds independently evidenced ending observations to reviewed
+opening and supported cash packets. Each account starts with empty ending rows,
+explicit zeroes remain distinct from missing observations, and the existing API
+owns reconciliation. Discarding the ending draft returns the prior packet for
+revalidation. At that checkpoint trade/dividend entry and guided restoration remained.
+The preview also checks cutoff and ending timestamps at full fractional precision.
+Focused verification passed 120 web tests, 15 isolated PostgreSQL/API cases and
+28 synthetic desktop/mobile browser cases, plus build, typecheck and lint.
+
+The prior BUILD restores supported cash activity from an unchanged downloaded
+packet after the API revalidates it against the current anchor. Record identities,
+evidence and exact amounts survive replay. Unsupported activity or additional
+fields fail the guided restore without losing the original file. The
+increment passed 114 focused web tests and 14 synthetic desktop/mobile browser
+cases, along with typecheck, build, focused lint and documentation checks.
+
+The prior BUILD adds source-evidenced cash deposits, withdrawals, fees and taxes
+to a reconciled opening, with explicit account, booking timestamp, sequence and
+review cutoff. Native preview results now show projected account/portfolio balances.
+At that checkpoint guided trades, dividends, transfers and ending statements remained upcoming. The
+opening and activity drafts cannot be switched implicitly.
+Focused verification and the exact next step are recorded in the active handoff.
+
+The prior BUILD adds restoration of a previously downloaded opening packet into
+the guided form. Restoration preserves account IDs, exact decimal text and evidence,
+requires fresh date confirmation, and rejects packets whose data cannot be retained
+by this form. A failed replacement clears the previous review and retains the draft.
+Focused verification passed 98 web tests, ten desktop/mobile browser cases, the
+production build, typecheck, lint and documentation checks. Continue with guided
+settled activity and ending statements.
+
+Opening-balance onboarding `18f1f15` lets the investor enter evidenced accounts,
+exact listing quantities and currency cash, review native reconciliation and
+download/replay the same private packet. Edits invalidate earlier results and reset
+the source-date acknowledgement. Focused checks pass 96 web, 67 native ledger units,
+13 isolated PostgreSQL/API cases and six desktop/mobile browser cases with light/dark
+visual review. Typecheck, production build and focused lint pass. No schema,
+production, provider or investment change is included. The new branch preserves
+the predecessor worktrees and owner edits. PR #29 merged during BUILD and was
+integrated without conflicts as `813651e`. The focused checks, production build,
+desktop/mobile journeys and documentation checks passed again after the merge.
+Both offline schema-gate modes match `b59f16c8a203` with no pending revisions;
+this records repository compatibility with the attestation, with hosted release
+configuration/freshness verification reserved for INTEGRATE.
 
 The historical market-data reliability engineering checkpoint is IMPLEMENTATION_COMPLETE
 and LOCAL_VERIFIED. Company Explorer and Operations expose source conflicts, returned-row
 search, published schedule evidence, receipt diagnostics and bounded checkpoint
 reconciliation. Prior BUILD evidence remains in the
 [historical handoff](docs/history/market-history-build-through-2026-11-08.md).
-Current verification and release gates are tracked in the
-[active handoff](docs/ACTIVE_WORKSTREAM.md). C2.2 remains operationally partial until
+PR #29 merged as `e070406` on November 8; its dated evidence and outstanding
+release-control gates remain in the historical handoff. C2.2 remains operationally partial until
 separately authorized live enrichment and monitored refresh acceptance.
 `npm run check`, 112 relevant PostgreSQL cases across selection/rerun and the managed
 browser suite passed. Browser evidence is 95 passed and 35 explicit skips. Independent
@@ -185,16 +294,16 @@ references through the linked ledgers. They do not create a second execution que
 
 ## Data and portfolio delivery slices
 
-| Slice / status                                                        | Dependencies and meaningful acceptance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C2.1 Held mapping and recovery preview — VERIFIED on candidate PR #25 | 22/22 held mappings, required FX allowlisted, read-only exact-target preview and current schema/count evidence. Zero provider calls/writes. Included in merged PR #26; the old recovery branch protects only the pre-import state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| C2.2 Daily portfolio data — PARTIAL / BUILD                           | C0, reviewed #25 receipt fix, current recovery and approved scope. Bounded backfill → exact-listing prices/dated FX → EUR holdings/cash/weights/gaps → source drill-down. Reconcile all reviewed held instruments and native cash; missing data stays visible. Desktop/mobile readback, two authorized hosted refresh cycles including restart, synthetic outage/rate-limit/partial tests and durable last-success/retry/coverage prove the outcome. Reuse manual jobs and one-cycle runners; provider-only unattended activation needs separate approval                                                                                                                                                              |
-| C3.1 SEC statements and filings — PARTIAL / BUILD                     | Portfolio-scoped bootstrap and filing-before-facts recovery LOCAL_VERIFIED with synthetic Financials/filings API readback. Verify real CIK identity/evidence and held/Watchlist scope, review international gaps and prove incremental per-issuer freshness/coverage in the research workflow. Preserve amendments, accessions, units, fiscal periods and source dates. Reviewed mapping writes and hosted ingestion/readback retain separate authorization                                                                                                                                                                                                                                                            |
-| C3.2 Permitted consensus/international coverage — SOURCE-GATED        | Reviewed provider rights, identities, coverage and retention precede requests. Prove representative annual/quarterly series, currencies, fiscal periods, analyst coverage, revision history and missing-data behavior. Distinguish current snapshots from genuine estimate history and external consensus from agent forecasts                                                                                                                                                                                                                                                                                                                                                                                         |
-| C2.3 Ledger foundation and safe cutover - PARTIAL / BUILD             | Opening accounts + settled buy/sell, deposit/withdrawal/fee -> exact position/cash projection and opening reconciliation LOCAL_VERIFIED through read-only PostgreSQL/API. Ending/account reconciliation and private-file review UI are locally verified. Durable candidate/review/correction API locally verified. Explicit decision/history UI locally verified. Dated publication/readback locally verified. Publication approval UI and v2 income/withholding/tax and matched cash/security-transfer lifecycle locally verified; comprehensive integration is next. Preserve snapshots/targets. Production requires reviewed account/basis/source scope, schema/ownership/import authorization and current recovery |
-| C2.4 Broker imports and accounting — MISSING                          | C2.3 and reviewed lot/fee/tax/FX policy. One real broker format first. Preview → map → deduplicate → accept → statement reconciliation, with rollback/replay/conflict tests. Purchases/sales, dividends/withholding, fees/taxes, cash/security transfers and FX need provenance. Cross-account moves carry evidenced basis; unknown basis produces unavailable gains. Re-import must preserve positions and targets                                                                                                                                                                                                                                                                                                    |
-| C2.5 Genuine performance — MISSING                                    | C2.3 complete flows plus C2.2 dated valuations/FX and verified action handling. Prove TWR and dated XIRR against independent fixtures, including same-day flows, transfers, retained/withdrawn dividends, fees/taxes, FX, zero opening value, missing valuations and absent/ambiguous IRR roots. Since-cutover coverage may precede full lot history. Hosted return drill-down must reproduce inputs and clearly label coverage, timing and net/gross methodology                                                                                                                                                                                                                                                      |
-| C5.1 Provider-only cloud operation — CROSS-CUTTING                    | C2.2/C3 need explicit cadence, source scope, request/storage limits, least privilege, current recovery and separately approved scheduling. Reuse existing durable jobs/locks/backoff and one-cycle entrypoint. Prove sleeping-runtime/restart recovery, overlap prevention, partial failures, data freshness and alerts. Broad worker activation must not silently enable Sheets writes, model/research acceptance, target changes or unrelated decision jobs                                                                                                                                                                                                                                                          |
+| Slice / status                                                        | Dependencies and meaningful acceptance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| C2.1 Held mapping and recovery preview — VERIFIED on candidate PR #25 | 22/22 held mappings, required FX allowlisted, read-only exact-target preview and current schema/count evidence. Zero provider calls/writes. Included in merged PR #26; the old recovery branch protects only the pre-import state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| C2.2 Daily portfolio data — PARTIAL / BUILD                           | C0, reviewed #25 receipt fix, current recovery and approved scope. Bounded backfill → exact-listing prices/dated FX → EUR holdings/cash/weights/gaps → source drill-down. Reconcile all reviewed held instruments and native cash; missing data stays visible. Desktop/mobile readback, two authorized hosted refresh cycles including restart, synthetic outage/rate-limit/partial tests and durable last-success/retry/coverage prove the outcome. Reuse manual jobs and one-cycle runners; provider-only unattended activation needs separate approval                                                                                                                                                                                                                                              |
+| C3.1 SEC statements and filings — PARTIAL / BUILD                     | Portfolio-scoped bootstrap and filing-before-facts recovery LOCAL_VERIFIED with synthetic Financials/filings API readback. Verify real CIK identity/evidence and held/Watchlist scope, review international gaps and prove incremental per-issuer freshness/coverage in the research workflow. Preserve amendments, accessions, units, fiscal periods and source dates. Reviewed mapping writes and hosted ingestion/readback retain separate authorization                                                                                                                                                                                                                                                                                                                                            |
+| C3.2 Permitted consensus/international coverage — SOURCE-GATED        | Reviewed provider rights, identities, coverage and retention precede requests. Prove representative annual/quarterly series, currencies, fiscal periods, analyst coverage, revision history and missing-data behavior. Distinguish current snapshots from genuine estimate history and external consensus from agent forecasts                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| C2.3 Ledger foundation and safe cutover - PARTIAL / BUILD             | Opening accounts + settled buy/sell, deposit/withdrawal/fee -> exact position/cash projection and opening reconciliation LOCAL_VERIFIED through read-only PostgreSQL/API. Ending/account reconciliation and private-file review UI are locally verified. Durable candidate/review/correction API locally verified. Explicit decision/history UI locally verified. Dated publication/readback locally verified. Publication approval and v2 income/tax and paired cash/security-transfer scope shipped in merged PR #27. Guided source-evidenced opening, activity and ending review are LOCAL_VERIFIED; perform the milestone integration review next. Preserve snapshots/targets. Production requires reviewed account/basis/source scope, schema/ownership/import authorization and current recovery |
+| C2.4 Broker imports and accounting — MISSING                          | C2.3 and reviewed lot/fee/tax/FX policy. One real broker format first. Preview → map → deduplicate → accept → statement reconciliation, with rollback/replay/conflict tests. Purchases/sales, dividends/withholding, fees/taxes, cash/security transfers and FX need provenance. Cross-account moves carry evidenced basis; unknown basis produces unavailable gains. Re-import must preserve positions and targets                                                                                                                                                                                                                                                                                                                                                                                    |
+| C2.5 Genuine performance — MISSING                                    | C2.3 complete flows plus C2.2 dated valuations/FX and verified action handling. Prove TWR and dated XIRR against independent fixtures, including same-day flows, transfers, retained/withdrawn dividends, fees/taxes, FX, zero opening value, missing valuations and absent/ambiguous IRR roots. Since-cutover coverage may precede full lot history. Hosted return drill-down must reproduce inputs and clearly label coverage, timing and net/gross methodology                                                                                                                                                                                                                                                                                                                                      |
+| C5.1 Provider-only cloud operation — CROSS-CUTTING                    | C2.2/C3 need explicit cadence, source scope, request/storage limits, least privilege, current recovery and separately approved scheduling. Reuse existing durable jobs/locks/backoff and one-cycle entrypoint. Prove sleeping-runtime/restart recovery, overlap prevention, partial failures, data freshness and alerts. Broad worker activation must not silently enable Sheets writes, model/research acceptance, target changes or unrelated decision jobs                                                                                                                                                                                                                                                                                                                                          |
 
 **C2.2 independent BUILD:** `codex/market-history-coverage` adds explicit
 normalized-batch date-span evidence to historical price/FX receipts. It does not
@@ -240,15 +349,13 @@ not live provider coverage or approval to ingest.
    current-state recovery, schema and deployment gates before authorized backfill
    and hosted valuation/refresh reconciliation. Two monitored refresh cycles and
    separately approved scheduling establish the remaining operational outcome.
-2. **Transaction accounting foundation.** The bounded C2.3 settled income/tax and
-   matched internal cash/security-transfer scope is IMPLEMENTATION_COMPLETE and
-   LOCAL_VERIFIED. Current checks pass 135 ledger units, 79 PostgreSQL cases and
-   79 web cases, plus two real-API desktop/mobile security-transfer journeys.
-   Same-listing quantities/cash reconcile, both source legs persist, and native
-   acquisition basis/gains remain explicitly unavailable. The next engineering
-   step is comprehensive INTEGRATE verification and one cohesive PR. Broker
-   onboarding, lot/FX/performance policy and actual account/source cutover remain
-   separate follow-ons and owner gates. Preserve the accepted holdings and targets.
+2. **Usable transaction accounting.** Merged PR #27 delivers the bounded ledger
+   and guarded review/publication lifecycle. The current C2.3 BUILD makes evidenced
+   opening accounts and balances usable through the UI. Extend guided entry to
+   settled activity and ending statements, with exact server reconciliation and
+   source evidence. Broker imports, lot/FX/performance policy and real account/source
+   cutover remain follow-ons. Preserve accepted holdings, strategic targets and
+   explicitly unavailable acquisition basis/gains.
 3. **Model and company evidence in parallel.** C1.2 retains the P-GOOGL DEFER decision
    until dated assumptions and methodology are owner-reviewed. C3.1 can prepare
    reviewed SEC identities and a filings/fundamentals slice independently. C3.2

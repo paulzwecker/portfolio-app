@@ -10,6 +10,7 @@ import type { PortfolioLedgerPreview } from "@/lib/domain-contracts";
 import { dateTime, quantity, statusLabel } from "@/lib/display";
 import {
   downloadLedgerJson,
+  downloadLedgerText,
   type LedgerReviewFile,
 } from "./portfolio-ledger-data";
 
@@ -22,6 +23,65 @@ type ComparisonRow = {
   status: string;
 };
 
+export function LedgerIdentityEvidence({
+  listings,
+}: {
+  listings: PortfolioLedgerPreview["consumed_listings"];
+}) {
+  const [visible, setVisible] = useState(50);
+  return (
+    <details className="mt-3 rounded-lg border p-3 text-sm">
+      <summary className="cursor-pointer font-medium">
+        Preview listing identities ({listings.length})
+      </summary>
+      <p className="mt-2 text-xs text-muted-foreground">
+        These are the exact identities used in the preview, including listings
+        that do not appear in the projected holdings. Lookup names, share class
+        and demo labels are not part of this identity evidence.
+      </p>
+      {listings.length === 0 ? (
+        <p className="mt-3 text-xs">No listing identities were consumed.</p>
+      ) : (
+        <ol className="mt-3 space-y-4">
+          {listings.slice(0, visible).map((listing) => (
+            <li
+              key={listing.listing_id}
+              className="space-y-1 break-all text-xs"
+            >
+              <p className="font-medium">
+                {listing.ticker} · {listing.venue} · {listing.currency} ·{" "}
+                {listing.security_type}
+              </p>
+              <p>Listing {listing.listing_id}</p>
+              <p>Security {listing.security_id}</p>
+              <p>
+                {listing.company_id
+                  ? `Company ${listing.company_id}`
+                  : "No company issuer"}
+              </p>
+              <p>
+                {listing.identity_source_ref
+                  ? `Identity source ${listing.identity_source_ref}`
+                  : "Identity source unavailable"}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+      {listings.length > visible && (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3"
+          onClick={() => setVisible((count) => count + 50)}
+        >
+          Show next 50 identities
+        </Button>
+      )}
+    </details>
+  );
+}
+
 export function PortfolioLedgerResults({
   report,
   file,
@@ -33,6 +93,8 @@ export function PortfolioLedgerResults({
     report.ending_status === "NOT_PROVIDED" ? "opening" : "ending",
   );
   const [account, setAccount] = useState("portfolio");
+  const [projectionAccount, setProjectionAccount] = useState("portfolio");
+  const [visibleProjection, setVisibleProjection] = useState(50);
   const [onlyDifferences, setOnlyDifferences] = useState(true);
   const [visibleRows, setVisibleRows] = useState(50);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -66,6 +128,24 @@ export function PortfolioLedgerResults({
     </span>
   );
   const statementReady = report.status === "ENDING_RECONCILED";
+  const projection =
+    projectionAccount === "portfolio"
+      ? report
+      : report.accounts.find((item) => item.account_id === projectionAccount);
+  const projectedBalances = projection
+    ? [
+        ...projection.positions.map((row) => ({
+          domain: "POSITION",
+          key: row.listing_id,
+          value: row.quantity,
+        })),
+        ...projection.cash.map((row) => ({
+          domain: "CASH",
+          key: row.currency,
+          value: row.balance,
+        })),
+      ]
+    : [];
 
   return (
     <div className="space-y-6" aria-label="Ledger review result">
@@ -114,6 +194,62 @@ export function PortfolioLedgerResults({
               Showing 50 of {report.issues.length} issues. Download the full
               report for every record.
             </p>
+          )}
+        </PageSection>
+      )}
+
+      {report.activity_count > 0 && (
+        <PageSection
+          title="Candidate balances at cutoff"
+          description="These native quantities and cash balances are supplied by the ledger preview. Ending-statement reconciliation is shown separately."
+        >
+          {report.status === "BLOCKED" ? (
+            <p className="rounded-lg border p-4 text-sm">
+              Resolve the blocking issues before using projected balances.
+            </p>
+          ) : (
+            <>
+              <label className="mb-4 block max-w-sm text-xs font-medium">
+                Projection account
+                <select
+                  className="mt-1 block h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={projectionAccount}
+                  onChange={(event) => {
+                    setProjectionAccount(event.target.value);
+                    setVisibleProjection(50);
+                  }}
+                >
+                  <option value="portfolio">Portfolio total</option>
+                  {report.accounts.map((item) => (
+                    <option key={item.account_id} value={item.account_id}>
+                      {accountLabel(item.account_id)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ResponsiveDataTable
+                caption="Candidate balances"
+                rows={projectedBalances.slice(0, visibleProjection)}
+                getRowKey={(row) => `${row.domain}-${row.key}`}
+                columns={[
+                  { id: "asset", header: "Exact asset", render: assetLabel },
+                  {
+                    id: "amount",
+                    header: "Candidate balance",
+                    render: (row) => exact(row.value),
+                  },
+                ]}
+              />
+              {projectedBalances.length > visibleProjection && (
+                <Button
+                  className="mt-3"
+                  variant="outline"
+                  onClick={() => setVisibleProjection((count) => count + 50)}
+                >
+                  Show next 50 balances
+                </Button>
+              )}
+            </>
           )}
         </PageSection>
       )}
@@ -242,6 +378,12 @@ export function PortfolioLedgerResults({
         >
           Download private report
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => downloadLedgerText(file.text, "ledger-review.json")}
+        >
+          Download private review JSON
+        </Button>
       </div>
       <DetailDrawer
         open={evidenceOpen}
@@ -291,6 +433,7 @@ export function PortfolioLedgerResults({
             ))}
           </ol>
         </details>
+        <LedgerIdentityEvidence listings={report.consumed_listings} />
       </DetailDrawer>
     </div>
   );

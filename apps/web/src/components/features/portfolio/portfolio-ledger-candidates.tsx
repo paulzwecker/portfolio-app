@@ -162,7 +162,7 @@ export function PortfolioLedgerCandidates({
             {sourceReview && (
               <div className="space-y-3 rounded-lg border p-4">
                 <p className="text-sm font-medium">
-                  Save validated file · {sourceReview.file.name}
+                  Save validated review · {sourceReview.file.name}
                 </p>
                 <p className="break-all font-mono text-xs">
                   Input SHA-256 {sourceReview.report.input_sha256}
@@ -188,7 +188,8 @@ export function PortfolioLedgerCandidates({
             )}
             {verified.candidates.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No saved candidates. Validate a private file to prepare one.
+                No saved candidates. Reconcile opening balances or validate a
+                private file to prepare a candidate.
               </p>
             ) : (
               <ul
