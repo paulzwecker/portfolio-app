@@ -110,9 +110,11 @@ def test_incremental_scope_rejects_older_or_unbound_source_contract(
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("legacy_version", ["sec-issuer-refresh-v1", "sec-issuer-refresh-v2"])
 def test_legacy_manual_nonce_is_blocked_without_replacing_scope_or_fetching(
     postgres_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,
+    legacy_version: str,
 ) -> None:
     _source(postgres_engine)
     calls = _transports(monkeypatch)
@@ -129,7 +131,7 @@ def test_legacy_manual_nonce_is_blocked_without_replacing_scope_or_fetching(
             for key, value in run.request_scope.items()
             if key != "source_document_normalizer_version"
         }
-        run.request_scope = {**run.request_scope, "sec_scope_version": "sec-issuer-refresh-v1"}
+        run.request_scope = {**run.request_scope, "sec_scope_version": legacy_version}
     second = _refresh(
         postgres_engine, domains=[FILINGS], company_ids={COMPANY_ID}, request_nonce=request_id
     )
@@ -138,13 +140,15 @@ def test_legacy_manual_nonce_is_blocked_without_replacing_scope_or_fetching(
     assert len(calls) == 1
     with Session(postgres_engine) as session:
         scopes = list(session.scalars(select(ExternalIngestionRun.request_scope)))
-        assert all(scope["sec_scope_version"] == "sec-issuer-refresh-v1" for scope in scopes)
+        assert all(scope["sec_scope_version"] == legacy_version for scope in scopes)
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("legacy_version", ["sec-issuer-refresh-v1", "sec-issuer-refresh-v2"])
 def test_scheduled_legacy_scope_remains_idempotent_across_upgrade(
     postgres_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,
+    legacy_version: str,
 ) -> None:
     _source(postgres_engine)
     calls = _transports(monkeypatch)
@@ -159,7 +163,7 @@ def test_scheduled_legacy_scope_remains_idempotent_across_upgrade(
             for key, value in run.request_scope.items()
             if key != "source_document_normalizer_version"
         }
-        run.request_scope = {**run.request_scope, "sec_scope_version": "sec-issuer-refresh-v1"}
+        run.request_scope = {**run.request_scope, "sec_scope_version": legacy_version}
     second = _run_sec_domain(postgres_engine, SETTINGS, FACTS, at)
     assert second["idempotent_reuse"] is True and len(calls) == 1
     with Session(postgres_engine) as session:
@@ -378,6 +382,9 @@ def test_filings_history_is_bounded_and_continues_with_retained_raw_ids(
             data["filings"]["files"] = [
                 {"name": f"CIK{CIK}-submissions-{index:03d}.json"} for index in range(1, 8)
             ]
+        else:
+            # Actual SEC history pages are columnar and do not include the issuer CIK.
+            data = data["filings"]["recent"]
         return json.dumps(data).encode()
 
     monkeypatch.setattr("portfolio_api.source_documents._download_sec_json", download)

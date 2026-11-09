@@ -62,7 +62,7 @@ from portfolio_api.reported_fundamentals import (
     sync_reported_fundamentals,
 )
 from portfolio_api.sec_refresh_scope import (
-    LEGACY_SEC_SCOPE_VERSION,
+    LEGACY_SEC_SCOPE_VERSIONS,
     SEC_SCOPE_VERSION,
     SecRefreshScopeError,
     capture_sec_refresh_scope,
@@ -1369,7 +1369,7 @@ def run_scheduled(
                         == str(request_nonce),
                         ExternalIngestionRun.request_scope["sec_scope_version"]
                         .as_string()
-                        .in_([LEGACY_SEC_SCOPE_VERSION, SEC_SCOPE_VERSION]),
+                        .in_([*LEGACY_SEC_SCOPE_VERSIONS, SEC_SCOPE_VERSION]),
                     )
                     .limit(2)
                 )

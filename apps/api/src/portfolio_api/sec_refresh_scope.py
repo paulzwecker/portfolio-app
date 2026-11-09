@@ -18,8 +18,8 @@ from portfolio_api.fundamentals_bootstrap import (
 )
 from portfolio_api.source_documents import SEC_DOCUMENT_NORMALIZER_VERSION
 
-SEC_SCOPE_VERSION = "sec-issuer-refresh-v2"
-LEGACY_SEC_SCOPE_VERSION = "sec-issuer-refresh-v1"
+SEC_SCOPE_VERSION = "sec-issuer-refresh-v3"
+LEGACY_SEC_SCOPE_VERSIONS = ("sec-issuer-refresh-v1", "sec-issuer-refresh-v2")
 MAX_SEC_ISSUERS = 30
 MAX_SEC_HISTORY_FILES = 5
 

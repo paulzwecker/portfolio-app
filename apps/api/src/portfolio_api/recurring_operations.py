@@ -76,7 +76,7 @@ from portfolio_api.research_sheet_sync import run_research_sync_check
 from portfolio_api.research_triggers import refresh_research_triggers
 from portfolio_api.risk_assessments import run_risk_sync_check
 from portfolio_api.sec_refresh_scope import (
-    LEGACY_SEC_SCOPE_VERSION,
+    LEGACY_SEC_SCOPE_VERSIONS,
     SEC_SCOPE_VERSION,
     SecRefreshScopeError,
 )
@@ -370,7 +370,7 @@ def _run_sec_domain(
             [
                 ExternalIngestionRun.request_scope["sec_scope_version"]
                 .as_string()
-                .in_([LEGACY_SEC_SCOPE_VERSION, SEC_SCOPE_VERSION]),
+                .in_([*LEGACY_SEC_SCOPE_VERSIONS, SEC_SCOPE_VERSION]),
                 ExternalIngestionRun.request_scope["operational_request_id"].as_string().is_(None),
                 ExternalIngestionRun.request_scope["scope_date"].as_string()
                 == now_utc.date().isoformat(),

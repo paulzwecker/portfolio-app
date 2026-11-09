@@ -34,7 +34,7 @@ from portfolio_api.fundamentals_bootstrap import (
 )
 from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
 from portfolio_api.sec_refresh_scope import (
-    LEGACY_SEC_SCOPE_VERSION,
+    LEGACY_SEC_SCOPE_VERSIONS,
     MAX_SEC_ISSUERS,
     SEC_SCOPE_VERSION,
     _mapping_hash,
@@ -323,7 +323,7 @@ def _refresh_identity(
         ids = scope["company_ids"]
         if (
             scope.get("scope") != "sec_issuer_refresh"
-            or scope.get("sec_scope_version") not in {SEC_SCOPE_VERSION, LEGACY_SEC_SCOPE_VERSION}
+            or scope.get("sec_scope_version") not in {SEC_SCOPE_VERSION, *LEGACY_SEC_SCOPE_VERSIONS}
             or not isinstance(ids, list)
             or not all(isinstance(item, str) and str(UUID(item)) == item for item in ids)
             or len(set(ids)) != len(ids)
@@ -402,7 +402,7 @@ def _refresh(
     if request_id is not None:
         trigger = "MANUAL"
     elif (
-        scope.get("sec_scope_version") in {SEC_SCOPE_VERSION, LEGACY_SEC_SCOPE_VERSION}
+        scope.get("sec_scope_version") in {SEC_SCOPE_VERSION, *LEGACY_SEC_SCOPE_VERSIONS}
         and scope.get("operational_request_id") is None
     ):
         trigger = "SCHEDULED"

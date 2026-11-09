@@ -45,6 +45,7 @@ from portfolio_api.source_documents import (
     SEC_SUBMISSIONS_BASE,
     SecSubmissionsNormalizer,
     SecSubmissionsProvider,
+    _NoSecRedirects,
     create_company_source_document,
     ingest_sec_submissions,
     known_processed_sec_history,
@@ -312,6 +313,143 @@ def test_sec_normalizer_rejects_cik_mismatch_and_malformed_accessions() -> None:
     assert result.observation.malformed_record_count == 1
 
 
+def test_cikless_history_requires_exact_valid_prior_issuer_index() -> None:
+    name = f"CIK{CIK}-submissions-001.json"
+    history = submissions_record(
+        {
+            "form": ["10-K"],
+            "accessionNumber": [ACCESSION],
+            "filingDate": ["2026-02-10"],
+            "reportDate": ["2025-12-31"],
+        },
+        source_record_id=f"CIK{CIK}:HISTORY:{name}",
+        source_url=f"{SEC_SUBMISSIONS_BASE}/{name}",
+    )
+    main = columnar([], [], [], [])
+    cast(dict[str, Any], main["filings"])["files"] = [{"name": name}]
+    index = submissions_record(main)
+    normalizer = SecSubmissionsNormalizer()
+    assert (
+        normalizer.normalize(history, COMPANY_ID, CIK, index).disposition
+        == NormalizationDisposition.ACCEPTED
+    )
+    assert (
+        normalizer.normalize(history, COMPANY_ID, CIK).disposition
+        == NormalizationDisposition.REJECTED
+    )
+    for invalid in (
+        index.model_copy(update={"source_record_id": "CIK0000000002"}),
+        index.model_copy(update={"source_url": f"{SEC_SUBMISSIONS_BASE}/CIK0000000002.json"}),
+        index.model_copy(update={"retrieved_at": RETRIEVED_AT + timedelta(seconds=1)}),
+        submissions_record({**main, "cik": 2}),
+        submissions_record(
+            {**main, "filings": {**cast(dict[str, Any], main["filings"]), "files": []}}
+        ),
+        submissions_record(
+            {
+                **main,
+                "filings": {
+                    **cast(dict[str, Any], main["filings"]),
+                    "files": [{"name": name}, {"name": name}],
+                },
+            }
+        ),
+    ):
+        assert (
+            normalizer.normalize(history, COMPANY_ID, CIK, invalid).disposition
+            == NormalizationDisposition.REJECTED
+        )
+    explicit_wrong_cik = submissions_record(
+        {"cik": 2, "form": [], "accessionNumber": [], "filingDate": [], "reportDate": []},
+        source_record_id=history.source_record_id or "",
+        source_url=str(history.source_url),
+    )
+    assert (
+        normalizer.normalize(explicit_wrong_cik, COMPANY_ID, CIK, index).disposition
+        == NormalizationDisposition.REJECTED
+    )
+    unaligned_index = submissions_record(
+        {
+            **main,
+            "filings": {
+                **cast(dict[str, Any], main["filings"]),
+                "recent": {
+                    "form": [],
+                    "accessionNumber": [ACCESSION],
+                    "filingDate": [],
+                    "reportDate": [],
+                },
+            },
+        }
+    )
+    missing_columns_index = submissions_record(
+        {**main, "filings": {"recent": {"form": []}, "files": [{"name": name}]}}
+    )
+    unaligned_page = submissions_record(
+        {"form": [], "accessionNumber": [ACCESSION], "filingDate": [], "reportDate": []},
+        source_record_id=history.source_record_id or "",
+        source_url=str(history.source_url),
+    )
+    assert (
+        normalizer.normalize(history, COMPANY_ID, CIK, unaligned_index).disposition
+        == NormalizationDisposition.REJECTED
+    )
+    assert (
+        normalizer.normalize(history, COMPANY_ID, CIK, missing_columns_index).disposition
+        == NormalizationDisposition.REJECTED
+    )
+    assert (
+        normalizer.normalize(unaligned_page, COMPANY_ID, CIK, index).disposition
+        == NormalizationDisposition.REJECTED
+    )
+
+
+def test_sec_transport_disallows_redirects() -> None:
+    assert (
+        _NoSecRedirects().redirect_request(None, None, 302, "", {}, "https://example.com") is None
+    )
+
+
+@pytest.mark.integration
+def test_cikless_history_receipt_revalidates_retained_index(
+    postgres_engine: Engine,
+) -> None:
+    name = f"CIK{CIK}-submissions-001.json"
+    source_id = f"CIK{CIK}:HISTORY:{name}"
+    history = submissions_record(
+        {
+            "form": ["10-K"],
+            "accessionNumber": [ACCESSION],
+            "filingDate": ["2026-02-10"],
+            "reportDate": ["2025-12-31"],
+        },
+        source_record_id=source_id,
+        source_url=f"{SEC_SUBMISSIONS_BASE}/{name}",
+    )
+    main = columnar([], [], [], [])
+    cast(dict[str, Any], main["filings"])["files"] = [{"name": name}]
+    index = submissions_record(main)
+    with Session(postgres_engine) as session, session.begin():
+        session.add(Company(id=COMPANY_ID, name="Indexed history fixture"))
+        session.flush()
+        result = ingest_sec_submissions(session, query(), [index, history], {COMPANY_ID: CIK})
+        session.flush()
+        assert result["documents_imported"] == 1
+        receipt = cast(dict[str, Any], result["reconciliation"])["processed_history_pages"][0]
+        assert receipt["index_payload_sha256"] == index.payload_sha256
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == {source_id}
+        batch_id = UUID(str(result["batch_id"]))
+        session.execute(
+            update(ExternalRawPayload)
+            .where(
+                ExternalRawPayload.source_document_batch_id == batch_id,
+                ExternalRawPayload.source_record_id == index.source_record_id,
+            )
+            .values(payload_bytes=gzip.compress(b"{}"))
+        )
+        assert known_processed_sec_history(session, {COMPANY_ID: CIK}) == set()
+
+
 def test_sec_provider_fetches_index_and_linked_full_history_files(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -322,12 +460,13 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
             "files": [{"name": f"CIK{CIK}-submissions-001.json"}],
         },
     }
-    history = columnar(
+    history_wrapped = columnar(
         ["20-F", "6-K"],
         ["0000000001-20-000001", "0000000001-20-000002"],
         ["2020-01-01", "2020-02-01"],
         ["2019-12-31", ""],
     )
+    history = cast(dict[str, Any], history_wrapped["filings"])["recent"]
     responses = {
         f"{SEC_SUBMISSIONS_BASE}/CIK{CIK}.json": json.dumps(main).encode(),
         f"{SEC_SUBMISSIONS_BASE}/CIK{CIK}-submissions-001.json": json.dumps(history).encode(),
@@ -358,7 +497,7 @@ def test_sec_provider_fetches_index_and_linked_full_history_files(
     assert requested == list(responses)
     assert delays == [0.15]
     assert records[1].source_record_id == f"CIK{CIK}:HISTORY:CIK{CIK}-submissions-001.json"
-    normalized = SecSubmissionsNormalizer().normalize(records[1], COMPANY_ID, CIK)
+    normalized = SecSubmissionsNormalizer().normalize(records[1], COMPANY_ID, CIK, records[0])
     assert normalized.observation is not None
     assert [item.document_type.value for item in normalized.observation.documents] == [
         "20-F",

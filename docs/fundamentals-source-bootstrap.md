@@ -104,8 +104,11 @@ not proof that SEC still serves the same content. Legacy raw-only pages remain
 unknown. Rejected, malformed, conflicting or otherwise unresolved pages block the
 bootstrap instead of making a partial import look complete; review the checkpoint
 before preparing a new run. Older prepared bootstrap or incremental refresh scopes
-do not silently switch to the new normalizer. CIK-less historical payloads remain
-unsupported until bound to a validated issuer index.
+do not silently switch to the new normalizer. A CIK-less historical page is accepted
+only with its exact filename in the validated, earlier issuer index in the same
+retained batch. The receipt binds both raw digests; both payloads and their issuer,
+URLs and timestamps are checked again before a page can be skipped. Missing,
+unaligned or conflicting evidence remains unresolved. SEC redirects are rejected.
 
 Receipt scans cap returned rows at 4,096, candidate pages at 256, compressed input
 at 8 MiB per page and 64 MiB total, and decompression at 16 MiB per page and 64 MiB
