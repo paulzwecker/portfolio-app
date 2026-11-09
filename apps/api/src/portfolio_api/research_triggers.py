@@ -14,10 +14,10 @@ from sqlalchemy.orm import Session
 from portfolio_api.attention import attention_feed
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
+from portfolio_api.domain.lifecycle_history import lifecycle_events_at
 from portfolio_api.domain.models import (
     Company,
     ConsensusEstimateObservation,
-    CurrentLifecycle,
     FinancialModelRevision,
     InvestmentThesisClaim,
     InvestmentThesisEvidence,
@@ -302,18 +302,15 @@ def _fundamental_correction_candidates(
     cutoff: datetime,
     company_id: UUID | None,
 ) -> list[TriggerCandidate]:
-    query = (
-        select(ReportedFundamentalObservation)
-        .join(
-            CurrentLifecycle,
-            CurrentLifecycle.company_id == ReportedFundamentalObservation.company_id,
-        )
-        .join(LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id)
-        .where(
-            LifecycleEvent.new_state.in_(ACTIVE_LIFECYCLES),
-            ReportedFundamentalObservation.revision_context.in_(CORRECTION_CONTEXTS),
-            ReportedFundamentalObservation.recorded_at <= as_of,
-        )
+    active_company_ids = [
+        company.id
+        for company, event in lifecycle_events_at(session, as_of)
+        if event.new_state in ACTIVE_LIFECYCLES
+    ]
+    query = select(ReportedFundamentalObservation).where(
+        ReportedFundamentalObservation.company_id.in_(active_company_ids),
+        ReportedFundamentalObservation.revision_context.in_(CORRECTION_CONTEXTS),
+        ReportedFundamentalObservation.recorded_at <= as_of,
     )
     if company_id is not None:
         query = query.where(ReportedFundamentalObservation.company_id == company_id)
@@ -376,13 +373,17 @@ def _thesis_evidence_candidates(
     cutoff: datetime,
     company_id: UUID | None,
 ) -> list[TriggerCandidate]:
+    active_company_ids = [
+        company.id
+        for company, event in lifecycle_events_at(session, as_of)
+        if event.new_state in ACTIVE_LIFECYCLES
+    ]
     revision_query = (
         select(InvestmentThesisRevision)
-        .join(CurrentLifecycle, CurrentLifecycle.company_id == InvestmentThesisRevision.company_id)
-        .join(LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id)
         .where(
-            LifecycleEvent.new_state.in_(ACTIVE_LIFECYCLES),
+            InvestmentThesisRevision.company_id.in_(active_company_ids),
             InvestmentThesisRevision.recorded_at <= as_of,
+            InvestmentThesisRevision.observed_at <= as_of,
         )
         .order_by(
             InvestmentThesisRevision.company_id,
@@ -544,7 +545,7 @@ def _current_lifecycle(
             LifecycleEvent.effective_at <= as_of,
             LifecycleEvent.recorded_at <= as_of,
         )
-        .order_by(LifecycleEvent.effective_at.desc(), LifecycleEvent.recorded_at.desc())
+        .order_by(LifecycleEvent.sequence.desc())
         .limit(1)
     ).first()
     return (row[0], row[1]) if row else (None, None)
@@ -552,7 +553,7 @@ def _current_lifecycle(
 
 def _company_read(session: Session, company_id: UUID, as_of: datetime) -> s.CompanyRead | None:
     company = session.get(Company, company_id)
-    if company is None:
+    if company is None or company.created_at > as_of:
         return None
     lifecycle, event_id = _current_lifecycle(session, company_id, as_of)
     return s.CompanyRead(

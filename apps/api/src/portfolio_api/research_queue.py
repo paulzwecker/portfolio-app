@@ -16,13 +16,12 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
+from portfolio_api.domain.lifecycle_history import lifecycle_events_at
 from portfolio_api.domain.models import (
     CandidatePipelineEvidence,
     CandidatePipelineGateAssessment,
     CandidatePipelineRevision,
-    Company,
     ConsensusEstimateObservation,
-    CurrentLifecycle,
     FinancialModel,
     FinancialModelMigrationAssessment,
     FinancialModelOutput,
@@ -32,7 +31,6 @@ from portfolio_api.domain.models import (
     InvestmentThesisEvidence,
     InvestmentThesisRevision,
     Lifecycle,
-    LifecycleEvent,
     RankingDefinition,
     RankingEntry,
     RankingRun,
@@ -345,13 +343,11 @@ def _known_document_citations(
 def _derive_tasks(
     session: Session, cutoff: datetime
 ) -> tuple[list[s.ResearchQueueTask], dict[UUID, s.CompanyRead]]:
-    rows = session.execute(
-        select(Company, LifecycleEvent)
-        .join(CurrentLifecycle, CurrentLifecycle.company_id == Company.id)
-        .join(LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id)
-        .where(LifecycleEvent.new_state.in_([item.value for item in ACTIVE_LIFECYCLES]))
-        .order_by(Company.name, Company.id)
-    ).all()
+    rows = [
+        (company, event)
+        for company, event in lifecycle_events_at(session, cutoff)
+        if event.new_state in {item.value for item in ACTIVE_LIFECYCLES}
+    ]
     companies = {
         company.id: s.CompanyRead(
             id=company.id,

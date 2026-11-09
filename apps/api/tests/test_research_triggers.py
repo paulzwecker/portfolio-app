@@ -15,10 +15,12 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     Actor,
     Company,
+    CurrentLifecycle,
     InvestmentThesisClaim,
     InvestmentThesisEvidence,
     InvestmentThesisRevision,
     Lifecycle,
+    LifecycleEvent,
     ReportedFundamentalBatch,
     ReportedFundamentalObservation,
     ResearchQueueCompletion,
@@ -138,10 +140,32 @@ def test_as_of_cutoff_requires_timezone_information() -> None:
         normalize_trigger_cutoff(datetime(2026, 10, 15, 9))
 
 
-def _active_company(session: Session, name: str) -> UUID:
-    company = Company(name=name, reporting_currency="USD", is_demo=False)
+def _active_company(session: Session, name: str, *, known_since: datetime | None = None) -> UUID:
+    company = Company(
+        name=name,
+        reporting_currency="USD",
+        is_demo=False,
+        **({"created_at": known_since} if known_since is not None else {}),
+    )
     session.add(company)
     session.flush()
+    if known_since is not None:
+        event = LifecycleEvent(
+            company_id=company.id,
+            sequence=1,
+            previous_state=None,
+            new_state="WATCHLIST",
+            effective_at=known_since,
+            recorded_at=known_since,
+            actor="LOCAL_USER",
+            reason="Historical fixture",
+            source="test_research_triggers",
+        )
+        session.add(event)
+        session.flush()
+        session.add(CurrentLifecycle(company_id=company.id, event_id=event.id))
+        session.flush()
+        return company.id
     transition_lifecycle(
         session,
         company.id,
@@ -244,7 +268,7 @@ def _reported_fact(
 def test_filing_trigger_is_idempotent_temporally_honest_and_queue_linked(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger filing issuer")
         document = _source_document(
@@ -747,7 +771,7 @@ def test_sec_warning_changes_agent_delivery_identity_once_for_safety(
 
 @pytest.mark.integration
 def test_open_trigger_offset_pages_after_derived_state_filter(postgres_engine: Engine) -> None:
-    cutoff = datetime.now(UTC).replace(microsecond=0)
+    cutoff = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger page issuer")
         rows = []
@@ -789,7 +813,7 @@ def test_open_trigger_offset_pages_after_derived_state_filter(postgres_engine: E
 def test_reported_fundamental_corrections_append_and_supersede_prior_trigger(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger corrected fact issuer")
         batch = ReportedFundamentalBatch(
@@ -854,10 +878,12 @@ def test_reported_fundamental_corrections_append_and_supersede_prior_trigger(
 def test_backfilled_future_record_is_excluded_from_historical_trigger_refresh(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     historical_cutoff = now - timedelta(days=2)
     with Session(postgres_engine) as session, session.begin():
-        company_id = _active_company(session, "Trigger as-of issuer")
+        company_id = _active_company(
+            session, "Trigger as-of issuer", known_since=historical_cutoff - timedelta(days=2)
+        )
         document = _source_document(
             session,
             company_id,
@@ -893,7 +919,7 @@ def test_backfilled_future_record_is_excluded_from_historical_trigger_refresh(
 def test_superseding_filing_keeps_history_and_removes_old_open_trigger(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger superseding filing issuer")
         original = _source_document(

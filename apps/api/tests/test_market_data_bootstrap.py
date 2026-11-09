@@ -206,9 +206,15 @@ def _crosswalk(mapping: YahooListingMapping) -> tuple[YahooListingCrosswalk, str
     return crosswalk, digest
 
 
-def _seed_canonical_scope(session: Session) -> tuple[Company, Security, Listing]:
+def _seed_canonical_scope(
+    session: Session, *, known_at: datetime | None = None
+) -> tuple[Company, Security, Listing]:
     company_id, security_id, listing_id = uuid4(), uuid4(), uuid4()
-    company = Company(id=company_id, name="Synthetic Example Corporation")
+    company = Company(
+        id=company_id,
+        name="Synthetic Example Corporation",
+        **({"created_at": known_at} if known_at is not None else {}),
+    )
     security = Security(
         id=security_id,
         company_id=company_id,
@@ -232,6 +238,7 @@ def _seed_canonical_scope(session: Session) -> tuple[Company, Security, Listing]
         actor="IMPORT",
         reason="Synthetic integration fixture",
         source="synthetic-test",
+        **({"recorded_at": known_at} if known_at is not None else {}),
     )
     portfolio = Portfolio(id=uuid4(), name="Synthetic Portfolio", base_currency="EUR")
     snapshot = HoldingSnapshot(

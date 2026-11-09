@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.consensus_policy import select_consensus_source
+from portfolio_api.domain.lifecycle_history import lifecycle_events_at
 from portfolio_api.domain.models import (
     Company,
     ConsensusEstimateObservation,
     ConsensusEstimateProviderMapping,
-    CurrentLifecycle,
     ExecutionPaceDecision,
     ExecutionPaceRun,
     FinancialModel,
@@ -23,7 +23,6 @@ from portfolio_api.domain.models import (
     FinancialModelRevision,
     GoogleSheetsResearchSyncCandidate,
     Lifecycle,
-    LifecycleEvent,
     Listing,
     ModelOutputSnapshot,
     PriceObservation,
@@ -153,25 +152,15 @@ def attention_feed(
         now = now.replace(tzinfo=UTC)
     now = now.astimezone(UTC)
     cutoff = now - timedelta(days=lookback_days)
-    states = dict(
-        session.execute(
-            select(CurrentLifecycle.company_id, LifecycleEvent.new_state).join(
-                LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id
-            )
-        ).all()
-    )
+    lifecycle_rows = lifecycle_events_at(session, now)
+    states = {company.id: event.new_state for company, event in lifecycle_rows}
     if lifecycle:
         company_ids = {key for key, value in states.items() if value == lifecycle.value}
     else:
         company_ids = {key for key, value in states.items() if value != Lifecycle.DROP.value}
-    issuers = (
-        {
-            issuer.id: issuer
-            for issuer in session.scalars(select(Company).where(Company.id.in_(company_ids))).all()
-        }
-        if company_ids
-        else {}
-    )
+    issuers = {
+        company.id: company for company, _event in lifecycle_rows if company.id in company_ids
+    }
     if company_id:
         company_ids.intersection_update({company_id})
         issuers = {key: value for key, value in issuers.items() if key == company_id}

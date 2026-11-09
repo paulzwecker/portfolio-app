@@ -78,6 +78,10 @@ stays null; the record time is retained. A historical refresh excludes source
 rows recorded after its `as_of` cutoff, even when their effective date was
 backdated. Queue completion is also filtered by its recorded completion time.
 Document selection and supersession also exclude retrievals after the cutoff.
+Attention, the queue and trigger detectors select the latest lifecycle event by
+sequence among events effective and recorded by that cutoff. Companies not yet
+recorded and lifecycle states not yet known are excluded; a later DROP cannot hide
+an earlier active state.
 The queue counts a citation only after its parent revision's applicable observed,
 effective, publication, acceptance and recorded times, and checks the company link.
 Portfolio-wide risk citations remain supported. Other queue inputs still use current
