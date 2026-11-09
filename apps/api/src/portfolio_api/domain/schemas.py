@@ -1823,11 +1823,13 @@ class SourceDocumentRead(Contract):
     data_quality: SourceDocumentQuality
     quality_reason: str | None
     actor: Actor
+    sec_issuer_attribution: Literal["UNVERIFIED", "NOT_SEC"] | None = None
 
 
 class CompanySourceDocumentsRead(Contract):
     company_id: UUID
     sec_identity_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS"]
+    sec_identity_issue: str | None = None
     source_count: int
     as_of: date | None
     known_at: datetime | None

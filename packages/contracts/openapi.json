@@ -3754,6 +3754,17 @@
             ],
             "title": "Known At"
           },
+          "sec_identity_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Identity Issue"
+          },
           "sec_identity_status": {
             "enum": [
               "MAPPED",
@@ -33134,6 +33145,21 @@
               }
             ],
             "title": "Retrieved At"
+          },
+          "sec_issuer_attribution": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UNVERIFIED",
+                  "NOT_SEC"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Issuer Attribution"
           },
           "security_id": {
             "anyOf": [

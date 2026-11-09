@@ -4541,6 +4541,11 @@ export function isSourceDocument(v: unknown): v is SourceDocument {
     (v.security_id === null || uuid(v.security_id)) &&
     (v.batch_id === null || uuid(v.batch_id)) &&
     string(v.provider_id) &&
+    (v.sec_issuer_attribution === undefined ||
+      v.sec_issuer_attribution === null ||
+      (v.provider_id === "sec_edgar"
+        ? v.sec_issuer_attribution === "UNVERIFIED"
+        : v.sec_issuer_attribution === "NOT_SEC")) &&
     string(v.source_name) &&
     nullableString(v.source_jurisdiction) &&
     string(v.external_identifier) &&
@@ -4579,6 +4584,8 @@ export function isCompanySourceDocuments(
     ["MAPPED", "UNMAPPED", "AMBIGUOUS"].includes(
       v.sec_identity_status as string,
     ) &&
+    (v.sec_identity_issue === undefined ||
+      nullableString(v.sec_identity_issue)) &&
     Number.isInteger(v.source_count) &&
     (v.as_of === null || (string(v.as_of) && dateOnly(v.as_of))) &&
     (v.known_at === null || timestamp(v.known_at)) &&

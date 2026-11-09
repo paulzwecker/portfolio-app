@@ -1274,7 +1274,7 @@ test("model outputs keep missing values visible across responsive universe and c
 
 test("Company Explorer composes canonical company context at desktop and mobile widths", async ({
   page,
-}) => {
+}, testInfo) => {
   const securityId = "77777777-7777-4777-8777-777777777777";
   const listingId = "88888888-8888-4888-8888-888888888888";
   const portfolioId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -3227,7 +3227,15 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     const documents = page.getByRole("region", {
       name: "Filings & source documents",
     });
-    await expect(documents.getByText("SEC identity · mapped")).toBeVisible();
+    await expect(
+      documents.getByText("Recorded SEC mapping · mapped"),
+    ).toBeVisible();
+    await expect(
+      documents.getByText("Issuer attribution unverified").first(),
+    ).toBeVisible();
+    await documents.screenshot({
+      path: testInfo.outputPath(`filing-attribution-${width}.png`),
+    });
     await expect(
       documents.getByText("2025 annual report amendment"),
     ).toBeVisible();
@@ -3240,6 +3248,14 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       documents.getByRole("link", { name: "Open source" }).first(),
     ).toHaveAttribute("href", /https:\/\/www\.sec\.gov\/Archives/);
+    await documents
+      .getByRole("button", { name: "Inspect metadata" })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("dialog").getByText(/Issuer attribution unverified/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
     await expect(
       page.getByRole("heading", {
         name: "Accepted qualitative risk assessments",

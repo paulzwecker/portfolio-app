@@ -3646,6 +3646,8 @@ export interface components {
             documents: components["schemas"]["SourceDocumentRead"][];
             /** Known At */
             known_at: string | null;
+            /** Sec Identity Issue */
+            sec_identity_issue?: string | null;
             /**
              * Sec Identity Status
              * @enum {string}
@@ -12567,6 +12569,8 @@ export interface components {
             reporting_period: string | null;
             /** Retrieved At */
             retrieved_at: string | null;
+            /** Sec Issuer Attribution */
+            sec_issuer_attribution?: ("UNVERIFIED" | "NOT_SEC") | null;
             /** Security Id */
             security_id: string | null;
             /** Source Form */

@@ -11,9 +11,12 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from browser_server import fixture_application, fixture_read_engine, fixture_settings
+from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from test_cloud_market_refresh import table_counts
 
 from portfolio_api.domain.models import (
     Actor,
@@ -334,10 +337,13 @@ def test_sec_import_is_idempotent_links_amendments_and_respects_as_of(
         at_filing = company_source_documents(session, COMPANY_ID, as_of=date(2026, 2, 20))
         assert at_filing.source_count == 1
         assert at_filing.documents[0].external_identifier == ACCESSION
+        assert at_filing.sec_identity_status == "UNMAPPED"
+        assert at_filing.documents[0].sec_issuer_attribution == "UNVERIFIED"
         before_import = company_source_documents(
             session, COMPANY_ID, known_at=datetime(2020, 1, 1, tzinfo=UTC)
         )
         assert before_import.documents == []
+        assert before_import.sec_identity_status == "UNMAPPED"
 
     with Session(postgres_engine) as session, session.begin():
         document = session.scalar(
@@ -387,6 +393,8 @@ def test_company_source_reference_is_link_only_and_idempotent(postgres_engine: E
         assert repeated.retrieved_at is None
         assert repeated.batch_id is None
         assert repeated.canonical_url == "https://ir.example.test/reports/2025.pdf"
+        readback = company_source_documents(session, COMPANY_ID)
+        assert readback.documents[0].sec_issuer_attribution == "NOT_SEC"
         session.add(
             Company(
                 id=SECOND_COMPANY_ID,
@@ -406,6 +414,132 @@ def test_company_source_reference_is_link_only_and_idempotent(postgres_engine: E
             ),
         )
         assert other_company_source.id != first.id
+
+
+@pytest.mark.integration
+def test_filing_mapping_status_respects_effective_and_knowledge_time(
+    postgres_engine: Engine,
+) -> None:
+    before = datetime(2024, 6, 1, tzinfo=UTC)
+    after = datetime(2025, 6, 1, tzinfo=UTC)
+    future = datetime(2026, 1, 1, tzinfo=UTC)
+    with Session(postgres_engine) as session, session.begin():
+        session.add(Company(id=COMPANY_ID, name="Temporal filing fixture"))
+        session.flush()
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                identifier_type="SEC_CIK",
+                identifier_value=CIK,
+                provider_company_name="Fixture issuer",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=1",
+                effective_at=datetime(2020, 1, 1, tzinfo=UTC),
+                recorded_at=after,
+                actor=Actor.IMPORT.value,
+            )
+        )
+        session.add(
+            SourceDocument(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                source_name="SEC",
+                external_identifier=ACCESSION,
+                document_type="10-K",
+                title="Fixture filing",
+                published_at=date(2023, 12, 1),
+                filed_at=date(2023, 12, 1),
+                canonical_url="https://www.sec.gov/fixture",
+                recorded_at=before,
+                data_quality="PASS",
+                actor=Actor.IMPORT.value,
+            )
+        )
+        session.flush()
+        historical = company_source_documents(session, COMPANY_ID, known_at=before)
+        assert historical.sec_identity_status == "UNMAPPED"
+        assert historical.source_count == 1
+        assert historical.documents[0].sec_issuer_attribution == "UNVERIFIED"
+        assert (
+            company_source_documents(
+                session, COMPANY_ID, as_of=date(2024, 12, 31)
+            ).sec_identity_status
+            == "MAPPED"
+        )
+        assert (
+            company_source_documents(session, COMPANY_ID, known_at=after).sec_identity_status
+            == "MAPPED"
+        )
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                identifier_type="SEC_CIK",
+                identifier_value="0000000002",
+                provider_company_name="Different fixture",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=2",
+                effective_at=future,
+                recorded_at=future,
+                actor=Actor.IMPORT.value,
+            )
+        )
+        session.flush()
+        assert (
+            company_source_documents(session, COMPANY_ID, known_at=after).sec_identity_status
+            == "MAPPED"
+        )
+        assert (
+            company_source_documents(
+                session, COMPANY_ID, as_of=date(2024, 12, 31)
+            ).sec_identity_status
+            == "MAPPED"
+        )
+        assert company_source_documents(session, COMPANY_ID).sec_identity_status == "AMBIGUOUS"
+        assert not session.dirty
+    before_counts = table_counts(postgres_engine)
+    with postgres_engine.connect() as connection:
+        from sqlalchemy import text
+
+        schema = str(connection.scalar(text("SELECT current_schema()")))
+    settings = fixture_settings()
+    reader = fixture_read_engine(postgres_engine.url, schema, settings)
+    try:
+        with TestClient(fixture_application(reader, settings)) as client:
+            response = client.get(
+                f"/v1/companies/{COMPANY_ID}/source-documents",
+                params={"known_at": "2024-06-01T00:00:00Z"},
+            )
+            assert response.status_code == 200
+            assert response.json()["sec_identity_status"] == "UNMAPPED"
+            assert response.json()["documents"][0]["sec_issuer_attribution"] == "UNVERIFIED"
+    finally:
+        reader.dispose()
+    assert table_counts(postgres_engine) == before_counts
+
+
+@pytest.mark.integration
+def test_filing_mapping_discloses_invalid_recorded_evidence(postgres_engine: Engine) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        session.add(Company(id=COMPANY_ID, name="Invalid identity fixture"))
+        session.flush()
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                identifier_type="SEC_CIK",
+                identifier_value=CIK,
+                provider_company_name="Fixture issuer",
+                evidence_source="https://example.test/?CIK=1",
+                effective_at=datetime(2020, 1, 1, tzinfo=UTC),
+                recorded_at=datetime(2020, 1, 1, tzinfo=UTC),
+                actor=Actor.IMPORT.value,
+            )
+        )
+        session.flush()
+        readback = company_source_documents(session, COMPANY_ID)
+        assert readback.sec_identity_status == "MAPPED"
+        assert readback.sec_identity_issue is not None
+        assert not session.dirty
 
 
 def test_manual_source_reference_requires_https_and_explicit_missing_dates() -> None:

@@ -131,6 +131,14 @@ listing coverage is recorded in the dated [issuer identity and international fil
 reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md);
 issuer facts, legal reporting entities and trading listings remain separate.
 
+SEC source-document batches may contain multiple issuers and do not bind each
+filing to an individual raw response. Their retained issuer attribution is
+unverified; a company mapping, accession prefix or generated URL does not prove
+it. The source catalog exposes this limitation and applies effective/knowledge
+cutoffs to mapping status. Non-SEC references remain separate. Existing attention
+and research-queue filing selection still uses stored metadata and is not an issuer
+verification gate.
+
 ## Consensus estimates
 
 `ConsensusEstimateProviderMapping` records evidence-backed provider-symbol and

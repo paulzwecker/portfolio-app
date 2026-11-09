@@ -1234,6 +1234,15 @@ def company_source_documents(
             )
         )
     )
+    effective_identity_cutoff = (
+        datetime.combine(as_of, time.max, UTC) if as_of is not None else known_at or now()
+    )
+    identity_known_at = known_at or now()
+    identifiers = [
+        item
+        for item in identifiers
+        if mapping_known_at(item, effective_identity_cutoff, identity_known_at)
+    ]
     if not identifiers:
         identity_status = "UNMAPPED"
     elif len(identifiers) == 1:
@@ -1270,10 +1279,24 @@ def company_source_documents(
     return s.CompanySourceDocumentsRead(
         company_id=company_id,
         sec_identity_status=identity_status,
+        sec_identity_issue=(
+            "The recorded SEC mapping has invalid issuer identity evidence."
+            if len(identifiers) == 1 and reviewed_cik(identifiers[0]) is None
+            else None
+        ),
         source_count=len(documents),
         as_of=as_of,
         known_at=known_at,
-        documents=[s.SourceDocumentRead.model_validate(item) for item in documents],
+        documents=[
+            s.SourceDocumentRead.model_validate(item).model_copy(
+                update={
+                    "sec_issuer_attribution": "UNVERIFIED"
+                    if item.provider_id == "sec_edgar"
+                    else "NOT_SEC"
+                }
+            )
+            for item in documents
+        ],
     )
 
 

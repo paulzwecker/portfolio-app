@@ -32,6 +32,7 @@ from portfolio_api.domain.models import (
     SourceDocument,
     SourceDocumentBatch,
 )
+from portfolio_api.domain.queries import company_source_documents
 from portfolio_api.external_data import (
     CanonicalSubjectKind,
     CanonicalSubjectRef,
@@ -115,6 +116,18 @@ def _outcome(result: dict[str, Any], company_id: UUID) -> tuple[str, int | None]
         domain="SOURCE_DOCUMENTS", status="PARTIAL", report={"provider_result": result}
     )
     return _issuer_result(run, company_id, {str(item) for item in IDENTIFIERS})
+
+
+@pytest.mark.integration
+def test_multi_issuer_batch_does_not_imply_per_filing_identity(postgres_engine: Engine) -> None:
+    _companies(postgres_engine)
+    _ingest(postgres_engine, [_record(COMPANY_ID), _record(SECOND_COMPANY_ID)])
+    with Session(postgres_engine) as session:
+        for company_id in IDENTIFIERS:
+            result = company_source_documents(session, company_id)
+            assert result.sec_identity_status == "MAPPED"
+            assert len(result.documents) == 1
+            assert result.documents[0].sec_issuer_attribution == "UNVERIFIED"
 
 
 @pytest.mark.integration

@@ -891,6 +891,45 @@ describe("source document contracts", () => {
       quality_reason: null,
       actor: "LOCAL_USER",
     };
+    const envelope = {
+      company_id: id,
+      sec_identity_status: "MAPPED",
+      source_count: 1,
+      as_of: null,
+      known_at: null,
+    };
+    expect(
+      isCompanySourceDocuments({
+        ...envelope,
+        sec_identity_issue: null,
+        documents: [
+          {
+            ...document,
+            provider_id: "sec_edgar",
+            sec_issuer_attribution: "UNVERIFIED",
+          },
+        ],
+      }),
+    ).toBe(true);
+    expect(
+      isCompanySourceDocuments({
+        ...envelope,
+        documents: [
+          {
+            ...document,
+            provider_id: "sec_edgar",
+            sec_issuer_attribution: "NOT_SEC",
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      isCompanySourceDocuments({
+        ...envelope,
+        sec_identity_issue: { unsafe: true },
+        documents: [document],
+      }),
+    ).toBe(false);
     expect(
       isCompanySourceDocuments({
         company_id: id,
