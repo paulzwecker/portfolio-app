@@ -3,7 +3,8 @@
 ## C3.1 SEC provenance — INTEGRATE
 
 The [frozen milestone](sec-provenance-integration.md) is isolated on
-`codex/sec-provenance-integration` from `main` `2dfef5b` (merged PR #30).
+`codex/sec-provenance-integration` from `main` `2dfef5b` (merged PR #30),
+with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) awaiting review.
 It adds issuer and filing provenance warnings, evidence-time boundaries, and
 fail-closed Sheets publication. It introduces no migrations. The original
 `codex/sec-coverage-readiness` retains all deferred refresh ownership, Sheets

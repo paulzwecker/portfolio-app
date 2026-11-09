@@ -9,9 +9,9 @@ Updated 2026-11-09. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Field                       | Current value                                                                                                                      |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | C3.1 SEC provenance — INTEGRATE. [Frozen acceptance](docs/sec-provenance-integration.md) and [handoff](docs/ACTIVE_WORKSTREAM.md). |
-| Branch / PR                 | `codex/sec-provenance-integration`; PR pending. PR #30 merged into `main` as `2dfef5b`.                                            |
+| Branch / PR                 | `codex/sec-provenance-integration`; [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32). PR #30 merged as `2dfef5b`.    |
 | Implementation              | SEC issuer identity, evidence-time boundaries and research warnings; incomplete Sheets publication disabled.                       |
-| Next ready substantial task | Verify and review this milestone; then prepare bounded historical prices/FX and useful fundamentals.                               |
+| Next ready substantial task | Await PR #32 review; then prepare bounded historical prices/FX and useful fundamentals.                                            |
 | Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                      |
 | Production boundary         | No ingestion, migration, deployment or financial decision without separate owner authorization.                                    |
 
