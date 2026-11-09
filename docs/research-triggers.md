@@ -78,8 +78,10 @@ stays null; the record time is retained. A historical refresh excludes source
 rows recorded after its `as_of` cutoff, even when their effective date was
 backdated. Queue completion is also filtered by its recorded completion time.
 Document selection and supersession also exclude retrievals after the cutoff.
-Historical queue citation checks can still reflect later-linked evidence, and agent
-trigger context currently uses current context even for historical work requests;
+The queue counts a citation only after its parent revision's applicable observed,
+effective, publication, acceptance and recorded times, and checks the company link.
+Portfolio-wide risk citations remain supported. Other queue inputs still use current
+state, and agent trigger context uses current context for historical work requests;
 neither path is a complete point-in-time reconstruction.
 
 `processing_state` is derived from the trigger version and its linked

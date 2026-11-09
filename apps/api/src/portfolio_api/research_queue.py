@@ -260,6 +260,88 @@ def research_queue_history(
     return results
 
 
+def _known_document_citations(
+    session: Session, documents: list[SourceDocument], cutoff: datetime
+) -> set[UUID]:
+    """Find citations whose parent evidence was effective and recorded by the cutoff.
+
+    This preserves the existing policy that any known historical citation counts;
+    it does not imply that a citation is current or independently verified.
+    """
+    ids = [document.id for document in documents]
+    if not ids:
+        return set()
+    thesis = (
+        select(InvestmentThesisEvidence.source_document_id)
+        .join(InvestmentThesisClaim, InvestmentThesisClaim.id == InvestmentThesisEvidence.claim_id)
+        .join(
+            InvestmentThesisRevision,
+            InvestmentThesisRevision.id == InvestmentThesisClaim.revision_id,
+        )
+        .join(SourceDocument, SourceDocument.id == InvestmentThesisEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            InvestmentThesisRevision.company_id == SourceDocument.company_id,
+            InvestmentThesisRevision.observed_at <= cutoff,
+            InvestmentThesisRevision.recorded_at <= cutoff,
+        )
+    )
+    research = (
+        select(ResearchEvidence.source_document_id)
+        .join(ResearchRevision, ResearchRevision.id == ResearchEvidence.revision_id)
+        .join(SourceDocument, SourceDocument.id == ResearchEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            ResearchRevision.company_id == SourceDocument.company_id,
+            ResearchRevision.observed_at <= cutoff,
+            ResearchRevision.recorded_at <= cutoff,
+        )
+    )
+    candidate = (
+        select(CandidatePipelineEvidence.source_document_id)
+        .join(
+            CandidatePipelineGateAssessment,
+            CandidatePipelineGateAssessment.id == CandidatePipelineEvidence.gate_assessment_id,
+        )
+        .join(
+            CandidatePipelineRevision,
+            CandidatePipelineRevision.id == CandidatePipelineGateAssessment.revision_id,
+        )
+        .join(SourceDocument, SourceDocument.id == CandidatePipelineEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            CandidatePipelineRevision.company_id == SourceDocument.company_id,
+            CandidatePipelineRevision.effective_at <= cutoff,
+            CandidatePipelineRevision.recorded_at <= cutoff,
+        )
+    )
+    risk = (
+        select(RiskAssessmentEvidence.source_document_id)
+        .join(RiskAssessmentFinding, RiskAssessmentFinding.id == RiskAssessmentEvidence.finding_id)
+        .join(
+            RiskAssessmentRevision, RiskAssessmentRevision.id == RiskAssessmentFinding.revision_id
+        )
+        .join(SourceDocument, SourceDocument.id == RiskAssessmentEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            or_(
+                RiskAssessmentFinding.company_id.is_(None),
+                RiskAssessmentFinding.company_id == SourceDocument.company_id,
+            ),
+            RiskAssessmentRevision.authored_at <= cutoff,
+            RiskAssessmentRevision.published_at <= cutoff,
+            RiskAssessmentRevision.accepted_at <= cutoff,
+            RiskAssessmentRevision.recorded_at <= cutoff,
+        )
+    )
+    return {
+        citation
+        for statement in (thesis, research, candidate, risk)
+        for citation in session.scalars(statement)
+        if citation is not None
+    }
+
+
 def _derive_tasks(
     session: Session, cutoff: datetime
 ) -> tuple[list[s.ResearchQueueTask], dict[UUID, s.CompanyRead]]:
@@ -527,21 +609,7 @@ def _derive_tasks(
         ).all()
     )
     docs = [item for item in docs if item.id not in superseded_document_ids]
-    referenced_document_ids: set[UUID] = set()
-    for evidence_model in (
-        InvestmentThesisEvidence,
-        ResearchEvidence,
-        CandidatePipelineEvidence,
-        RiskAssessmentEvidence,
-    ):
-        referenced_document_ids.update(
-            session.scalars(
-                select(evidence_model.source_document_id).where(
-                    evidence_model.source_document_id.is_not(None),
-                    evidence_model.source_document_id.in_([document.id for document in docs]),
-                )
-            )
-        )
+    referenced_document_ids = _known_document_citations(session, docs, cutoff)
 
     research_evidence = (
         list(
