@@ -6,8 +6,9 @@ import { StatusIndicator } from "@/components/app/status-indicator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { sortedByWeight } from "@/components/features/portfolio/decision-components";
+import { ValuationFxEvidence } from "@/components/features/portfolio/valuation-fx-evidence";
 import type { Overview } from "@/lib/domain-contracts";
-import { dateTime, statusLabel } from "@/lib/display";
+import { dateTime, marketDate, statusLabel } from "@/lib/display";
 import {
   countNote,
   currency,
@@ -55,25 +56,33 @@ export function PortfolioOverviewSection({
           }
         />
         <MetricCard
-          label="Security positions"
-          value={String(overview.snapshot?.positions.length ?? rows.length)}
+          label="Recorded security positions"
+          value={
+            overview.snapshot
+              ? String(overview.snapshot.positions.length)
+              : "Unavailable"
+          }
           note={
             overview.snapshot
-              ? `Positions as of ${dateTime(overview.snapshot.effective_at)}`
+              ? `Snapshot ${statusLabel(overview.snapshot.completeness).toLowerCase()} · effective ${dateTime(overview.snapshot.effective_at)}`
               : "No accepted holdings snapshot"
           }
         />
         <MetricCard
           label="Cash exposure"
           value={
-            cashCount > 0
-              ? countNote(cashCount, "currency")
-              : "No cash recorded"
+            !overview.snapshot
+              ? "Unavailable"
+              : cashCount > 0
+                ? countNote(cashCount, "currency")
+                : "No cash recorded"
           }
           note={
-            cashCount > 0
-              ? "Balances are shown by original currency below; no unsupported total is inferred."
-              : "Cash balances are not present in the accepted snapshot."
+            !overview.snapshot
+              ? "No accepted holdings snapshot"
+              : cashCount > 0
+                ? "Balances are shown by original currency below; no unsupported total is inferred."
+                : "Cash balances are not present in the accepted snapshot."
           }
         />
         <MetricCard
@@ -101,7 +110,8 @@ export function PortfolioOverviewSection({
                 (overview.snapshot ? "UNKNOWN" : "NO_DATA")
               }
               observedAt={overview.snapshot?.effective_at}
-              source="Holdings confirmation"
+              source="Holdings snapshot"
+              timeLabel="Effective"
               detail={
                 overview.holdings_age_days === undefined ||
                 overview.holdings_age_days === null
@@ -112,13 +122,20 @@ export function PortfolioOverviewSection({
             <DataFreshnessIndicator
               state={overview.market_data_through ? "AVAILABLE" : "UNAVAILABLE"}
               observedAt={overview.market_data_through}
-              source="Market data through"
+              source="Latest selected price"
+              timeLabel="Session date"
+              timeKind="market-date"
             />
             <DataFreshnessIndicator
               state={overview.fx_data_through ? "AVAILABLE" : "UNAVAILABLE"}
               observedAt={overview.fx_data_through}
-              source="FX data through"
+              source="Latest selected FX"
+              timeLabel="Effective"
             />
+            <p className="text-xs text-muted-foreground">
+              Latest selected dates do not establish complete or current
+              coverage for every position.
+            </p>
             <Button asChild variant="outline" size="sm">
               <Link href="/operations#market-data-refresh">
                 Review prices and FX
@@ -150,12 +167,19 @@ export function PortfolioOverviewSection({
                 value and weights remain unavailable.
               </p>
             )}
+            {overview.snapshot &&
+              overview.snapshot.completeness !== "COMPLETE" && (
+                <p className="rounded-md border border-warning/35 bg-warning/10 p-3 text-warning">
+                  This snapshot is incomplete; recorded positions may not
+                  include all holdings.
+                </p>
+              )}
             {staleHolding && (
               <p className="rounded-md border border-warning/35 bg-warning/10 p-3 text-warning">
                 {overview.holdings_age_days === null ||
                 overview.holdings_age_days === undefined
-                  ? "Holdings confirmation age is unknown."
-                  : `Holdings confirmation is ${overview.holdings_age_days} days old.`}{" "}
+                  ? "Holdings snapshot age is unknown."
+                  : `Holdings snapshot is ${overview.holdings_age_days} days old.`}{" "}
                 Current marks may be useful for context, while rank and
                 Execution Pace can remain in review.
               </p>
@@ -178,9 +202,9 @@ export function PortfolioOverviewSection({
                   {unresolvedCount === 1 ? "" : "s"} unresolved
                 </p>
                 <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
-                  {overview.valuation_gaps.slice(0, 4).map((gap) => (
+                  {overview.valuation_gaps.slice(0, 4).map((gap, index) => (
                     <li
-                      key={`${gap.identity}-${gap.reason}`}
+                      key={`${gap.identity}-${gap.reason}-${index}`}
                       className="flex justify-between gap-2"
                     >
                       <span>{gap.identity}</span>
@@ -190,9 +214,35 @@ export function PortfolioOverviewSection({
                     </li>
                   ))}
                 </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Market status in Operations is global, not specific to a
+                  listing. Opening review does not start a refresh.
+                </p>
+                {overview.valuation_gaps.length > 4 && (
+                  <details className="mt-2 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer font-medium">
+                      Show remaining {overview.valuation_gaps.length - 4}{" "}
+                      valuation inputs
+                    </summary>
+                    <ul className="mt-1 space-y-1">
+                      {overview.valuation_gaps.slice(4).map((gap, index) => (
+                        <li
+                          key={`${gap.identity}-${gap.reason}-${index}`}
+                          className="flex justify-between gap-2"
+                        >
+                          <span>{gap.identity}</span>
+                          <span className="text-right">
+                            {statusLabel(gap.reason)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             )}
-            {!staleHolding &&
+            {overview.snapshot?.completeness === "COMPLETE" &&
+              !staleHolding &&
               missingTargets.length === 0 &&
               unresolvedCount === 0 && (
                 <p className="text-xs text-muted-foreground">
@@ -201,14 +251,15 @@ export function PortfolioOverviewSection({
                 </p>
               )}
             <p className="text-xs text-muted-foreground">
-              {
-                rows.filter(
-                  (row) =>
-                    row.priceFreshness !== "FRESH" ||
-                    row.valuationStatus !== "VALUED",
-                ).length
-              }{" "}
-              listing marks need freshness or valuation review.
+              {overview.snapshot
+                ? `${
+                    rows.filter(
+                      (row) =>
+                        row.priceFreshness !== "FRESH" ||
+                        row.valuationStatus !== "VALUED",
+                    ).length
+                  } recorded listing marks need freshness or valuation review.`
+                : "Listing marks cannot be assessed without a holdings snapshot."}
             </p>
           </CardContent>
         </Card>
@@ -224,6 +275,41 @@ export function PortfolioOverviewSection({
               key={cash.currency}
               label={`${cash.currency} cash`}
               value={currency(cash.balance, cash.currency)}
+              detail={
+                <div className="space-y-1">
+                  <ValuationFxEvidence
+                    sourceCurrency={cash.currency}
+                    targetCurrency={overview.valuation_currency}
+                    rate={valuation?.fx_rate ?? null}
+                    effectiveAt={valuation?.fx_effective_at ?? null}
+                  />
+                  {valuation?.valuation_status === "FX_UNAVAILABLE" && (
+                    <Link
+                      href="/operations#market-data-refresh"
+                      aria-label={`Review global price and FX status, from ${cash.currency} cash`}
+                      className="block w-fit text-primary underline underline-offset-2"
+                    >
+                      Review global price and FX status
+                    </Link>
+                  )}
+                  {valuation?.valuation_status === "BALANCE_UNAVAILABLE" && (
+                    <a
+                      href={
+                        overview.holdings_authority?.source ===
+                        "ACCEPTED_LEDGER"
+                          ? "/portfolio/ledger"
+                          : "#holdings-confirmation"
+                      }
+                      aria-label={`Review ${overview.holdings_authority?.source === "ACCEPTED_LEDGER" ? "ledger" : "holdings"} for ${cash.currency} cash`}
+                      className="block w-fit text-primary underline underline-offset-2"
+                    >
+                      {overview.holdings_authority?.source === "ACCEPTED_LEDGER"
+                        ? "Review ledger"
+                        : "Review holdings"}
+                    </a>
+                  )}
+                </div>
+              }
               note={
                 valuation?.valuation_status === "VALUED"
                   ? `${currency(valuation.base_market_value, overview.valuation_currency)} at portfolio valuation · weight ${percent(valuation.portfolio_weight ?? null)}`
@@ -288,10 +374,14 @@ export function PortfolioOverviewSection({
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Market / FX data through</dt>
+            <dt className="text-muted-foreground">
+              Latest selected price session / FX effective time
+            </dt>
             <dd className="mt-1">
-              {dateTime(overview.market_data_through)} /{" "}
-              {dateTime(overview.fx_data_through)}
+              {overview.market_data_through
+                ? marketDate(overview.market_data_through)
+                : "Unavailable"}{" "}
+              / {dateTime(overview.fx_data_through)}
             </dd>
           </div>
           <div>

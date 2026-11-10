@@ -3,9 +3,8 @@
 ## SEC issuer review — INTEGRATE
 
 `codex/sec-issuer-activation` is [draft PR #34](https://github.com/paulzwecker/portfolio-app/pull/34),
-independent of frozen
-[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) and starts from
-main `976fa2b`. Acceptance for this increment: an explicit issuer can be reviewed
+originally based on `976fa2b` and now reconciled with main `715820e`, which
+merged [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33). Acceptance for this increment: an explicit issuer can be reviewed
 without database writes or SEC calls; the existing target and schema checks remain
 mandatory; issuer evidence is consistently checked across mapping and fundamentals
 bootstrap; conflicting mappings and legacy invalid records fail closed. URL syntax
@@ -18,6 +17,8 @@ require READ COMMITTED; canonical reconciliation also rejects legacy ambiguity.
 An isolated synthetic SEC rehearsal covers issuer preview through Company Explorer APIs;
 113 relevant tests passed, including the read-only guard and legacy-identity cases.
 Ruff, focused mypy, documentation checks and both offline schema-gate modes passed.
+After reconciling PR #33, 19 focused issuer, fundamentals and market-scope tests,
+documentation and both offline schema-gate modes passed again.
 Independent review found no additional proven blocker for this narrow slice. No UI
 changed; this is operator preparation, not live-data activation.
 This lock does not constrain older deployed processes or direct SQL; production
@@ -28,6 +29,27 @@ Production backfill and unattended refresh remain conditional on verified recove
 provider terms, reconciliation and the owner's explicitly scoped approvals.
 Release status is BLOCKED pending fresh production schema and provider-control
 verification; the checked-in attestation alone is not live production evidence.
+
+## Previous C2.2 Portfolio valuation evidence
+
+[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) merged as `715820e`; its production deployment is not verified here.
+
+Portfolio now presents per-listing weights, supplied FX details and all valuation
+gaps without calculating financial results in the browser. Operations provides a
+read-only market-scope review: exact selected identities, mapping status, snapshot
+completeness and quantities, with an explicit limit and warning when identities are
+omitted. Missing, zero and partial data remain distinct. The existing multi-portfolio
+selection limitation is disclosed; this milestone does not alter writer selection.
+
+The repository quality check, relevant isolated PostgreSQL suite, managed desktop
+and mobile browser tests and real local API browser journeys passed. Independent
+review findings on snapshot completeness, decimal precision and accessibility were
+fixed. No migration was added. **CONFIGURATION_REQUIRED**: verify current provider
+controls and live revisions; the additive API must be deployed and checked before
+the frontend. A merge is not deployment authorization. Real provider ingestion
+and unattended refresh remain separately gated by source permission, current
+recovery and the approved operational procedure. Sensitive operator evidence stays
+outside this public repository.
 
 ## Previous C3.1 SEC provenance milestone
 

@@ -74,6 +74,13 @@ from portfolio_api.manual_operations import (
     list_job_requests,
     retry_job_request,
 )
+from portfolio_api.market_data_bootstrap import (
+    MarketDataBootstrapError,
+    _load_crosswalk,
+    _validate_date_window,
+    preview_market_data_bootstrap,
+)
+from portfolio_api.market_data_ingestion import CROSSWALK_PATH
 from portfolio_api.model_migration_status import company_model_migration_status
 from portfolio_api.portfolio_sheet_sync import (
     PortfolioSheetPublishError,
@@ -910,6 +917,37 @@ def get_universe_market_summary(
 @router.get("/market-data/status", response_model=s.MarketRefreshStatusRead)
 def get_market_refresh_status(db: Db) -> s.MarketRefreshStatusRead:
     return q.market_refresh_status(db)
+
+
+@router.get("/market-data/bootstrap-scope", response_model=s.MarketBootstrapScopePreviewRead)
+def get_market_bootstrap_scope(
+    request: Request, db: LedgerDb, start_date: date, end_date: date
+) -> s.MarketBootstrapScopePreviewRead:
+    """Preview only; never contact a provider or prepare a run."""
+    settings = cast(Settings, request.app.state.settings)
+    target = settings.database_target_environment
+    if target is None:
+        raise HTTPException(503, "Database target environment is not configured")
+    try:
+        _validate_date_window(start_date, end_date)
+    except MarketDataBootstrapError as error:
+        raise HTTPException(422, str(error)) from None
+    try:
+        crosswalk, digest = _load_crosswalk(CROSSWALK_PATH)
+    except MarketDataBootstrapError:
+        raise HTTPException(503, "Reviewed listing mappings are unavailable") from None
+    report = preview_market_data_bootstrap(
+        db,
+        crosswalk=crosswalk,
+        crosswalk_sha256=digest,
+        start_date=start_date,
+        end_date=end_date,
+        target_environment=target,
+        include_listing_review=True,
+    )
+    return s.MarketBootstrapScopePreviewRead.model_validate(
+        {**report, "checked_at": datetime.now(UTC)}
+    )
 
 
 @router.get("/market-data/historical-bootstrap", response_model=s.HistoricalBootstrapReviewRead)

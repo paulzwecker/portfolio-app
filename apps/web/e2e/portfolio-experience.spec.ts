@@ -57,13 +57,17 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
     });
   }
   await expect(
-    page.getByText("Holdings confirmation is 6 days old."),
+    page.getByText("Holdings snapshot is 6 days old."),
   ).toBeVisible();
   await expect(
     page.getByText("EUR cash", { exact: true }).first(),
   ).toBeVisible();
   await expect(
     page.getByText("USD cash", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByText("1 USD = 0.92 EUR").first()).toBeVisible();
+  await expect(
+    page.getByText("No currency conversion required.").first(),
   ).toBeVisible();
   await expect(
     page.getByText("Strategic targets need investor review"),
@@ -96,6 +100,23 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
       .filter({ visible: true })
       .first(),
   ).toBeVisible();
+  const fxDisclosure = page
+    .getByLabel("FX details for T02 NASDAQ")
+    .filter({ visible: true });
+  await fxDisclosure.click();
+  const fxDetails = fxDisclosure.locator("..");
+  await expect(fxDetails.getByText("1 USD = 0.92 EUR")).toBeVisible();
+  await expect(
+    fxDetails.getByText("FX effective and quote observation times differ."),
+  ).toBeVisible();
+  if (process.env.DESIGN_REVIEW_SCREENSHOTS) {
+    await fxDetails.screenshot({
+      path: path.join(
+        process.env.DESIGN_REVIEW_SCREENSHOTS,
+        `fx-details-${testInfo.project.name}.png`,
+      ),
+    });
+  }
   await page.getByLabel("Sort holdings by").selectOption("company");
   await expect(page.getByText("Fixture issuer 01").first()).toBeVisible();
   const search = page.getByRole("searchbox", { name: "Find a position" });

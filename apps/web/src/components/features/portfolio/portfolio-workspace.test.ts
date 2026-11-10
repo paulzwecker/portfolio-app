@@ -111,6 +111,40 @@ describe("Portfolio presentation data", () => {
     });
   });
 
+  it("uses each listing's own weight, never the company aggregate", () => {
+    const overview = fixture(3);
+    const company = overview.companies[0];
+    const first = company.positions[0];
+    const snapshot = overview.snapshot;
+    if (!snapshot) throw new Error("Synthetic snapshot required");
+    const second: typeof first = {
+      ...first,
+      listing_id: uuid(444),
+      ticker: "SECOND",
+      portfolio_weight: "0.03",
+    };
+    company.current_weight = "0.10";
+    first.portfolio_weight = "0.07";
+    company.positions.push(second);
+    snapshot.positions.push({
+      listing_id: second.listing_id,
+      quantity: "2",
+    } as (typeof snapshot.positions)[number]);
+    const rows = portfolioHoldingRows(overview);
+    expect(
+      rows.find((row) => row.listingId === first.listing_id)?.portfolioWeight,
+    ).toBe("0.07");
+    expect(
+      rows.find((row) => row.listingId === second.listing_id)?.portfolioWeight,
+    ).toBe("0.03");
+    second.portfolio_weight = null;
+    expect(
+      portfolioHoldingRows(overview).find(
+        (row) => row.listingId === second.listing_id,
+      )?.portfolioWeight,
+    ).toBeNull();
+  });
+
   it("preserves stale and missing valuation states while sorting available API values", () => {
     const rows = portfolioHoldingRows(fixture());
     expect(rows[1].priceFreshness).toBe("STALE");

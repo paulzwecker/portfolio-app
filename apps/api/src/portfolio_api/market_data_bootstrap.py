@@ -42,6 +42,8 @@ from portfolio_api.domain.models import (
     CurrentLifecycle,
     ExternalRawPayload,
     FxObservation,
+    HoldingPosition,
+    HoldingSnapshot,
     LifecycleEvent,
     Listing,
     MarketDataBatch,
@@ -82,6 +84,7 @@ from portfolio_api.yahoo_finance import (
 
 BOOTSTRAP_VERSION = "historical-market-bootstrap-v1"
 MAX_HISTORY_DAYS = 3650
+SCOPE_REVIEW_LISTING_LIMIT = 50
 MAX_CHECKPOINTS_PER_INVOCATION = 10
 DEFAULT_CHECKPOINTS_PER_INVOCATION = 5
 MAX_CHECKPOINT_ATTEMPTS = 3
@@ -262,17 +265,40 @@ def preview_market_data_bootstrap(
     end_date: date,
     target_environment: str,
     company_id: UUID | None = None,
+    include_listing_review: bool = False,
 ) -> dict[str, Any]:
     """Build a data-free request inventory without calling the provider or writing rows."""
     _validate_date_window(start_date, end_date)
     if target_environment not in {"development", "rehearsal", "production"}:
         raise MarketDataBootstrapError("The requested market bootstrap target is unsupported.")
     company_scope = {company_id} if company_id is not None else None
-    selected_rows, held_ids = active_market_listings(session, company_scope)
+    latest_snapshot = None
+    quantities: dict[UUID, str | None] = {}
+    if include_listing_review:
+        latest_snapshot = session.scalar(
+            select(HoldingSnapshot)
+            .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
+            .limit(1)
+        )
+        if latest_snapshot is not None:
+            quantities = {
+                listing_id: format(quantity, "f") if quantity is not None else None
+                for listing_id, quantity in session.execute(
+                    select(HoldingPosition.listing_id, HoldingPosition.quantity).where(
+                        HoldingPosition.snapshot_id == latest_snapshot.id
+                    )
+                )
+            }
+        selected_rows, held_ids = active_market_listings(
+            session, company_scope, latest_snapshot=latest_snapshot
+        )
+    else:
+        selected_rows, held_ids = active_market_listings(session, company_scope)
     lifecycle = _lifecycle_by_company(session)
     selected = _priority_ordered_listings(selected_rows, held_ids, lifecycle)
     mapped = 0
     blocked: list[dict[str, str]] = []
+    listing_review: list[dict[str, Any]] = []
     listing_rows: list[tuple[Listing, Security, Company | None]] = []
     for listing, security, company in selected:
         listing_rows.append((listing, security, company))
@@ -283,9 +309,10 @@ def preview_market_data_bootstrap(
             currency=listing.currency,
             security_type=security.security_type,
         )
-        if mapping is None or not _mapping_matches_canonical_identity(
+        mapping_verified = mapping is not None and _mapping_matches_canonical_identity(
             mapping, listing, security, company
-        ):
+        )
+        if not mapping_verified:
             blocked.append(
                 {
                     "subject_kind": "LISTING",
@@ -295,12 +322,31 @@ def preview_market_data_bootstrap(
             )
         else:
             mapped += 1
+        if include_listing_review and len(listing_review) < SCOPE_REVIEW_LISTING_LIMIT:
+            listing_review.append(
+                {
+                    "listing_id": str(listing.id),
+                    "security_id": str(security.id),
+                    "company_id": str(company.id) if company else None,
+                    "company_name": company.name if company else None,
+                    "venue": listing.venue,
+                    "ticker": listing.ticker,
+                    "currency": listing.currency,
+                    "security_type": security.security_type,
+                    "priority": _listing_priority_tier(listing, company, held_ids, lifecycle),
+                    "held_quantity": quantities.get(listing.id),
+                    "mapping_verified": mapping_verified,
+                    "provider_symbol": mapping.provider_symbol
+                    if mapping_verified and mapping
+                    else None,
+                }
+            )
     base_currency, required_fx_pairs = _fx_scope(session, listing_rows, company_id=company_id)
     canonical_import = (
         canonical_import_readiness(session) if target_environment == "production" else None
     )
     fx_unmapped = sorted(pair for pair in required_fx_pairs if pair not in FX_SYMBOLS)
-    return {
+    report = {
         "status": (
             "BLOCKED_CANONICAL_IMPORT"
             if canonical_import is not None and not canonical_import["ready"]
@@ -342,6 +388,21 @@ def preview_market_data_bootstrap(
             for state in ("PORTFOLIO", "WATCHLIST")
         },
     }
+    if include_listing_review:
+        report["holdings_snapshot"] = (
+            {
+                "id": str(latest_snapshot.id),
+                "portfolio_id": str(latest_snapshot.portfolio_id),
+                "completeness": latest_snapshot.completeness,
+                "effective_at": latest_snapshot.effective_at.isoformat(),
+                "recorded_at": latest_snapshot.recorded_at.isoformat(),
+            }
+            if latest_snapshot is not None
+            else None
+        )
+        report["listing_review"] = listing_review
+        report["omitted_listing_count"] = len(selected) - len(listing_review)
+    return report
 
 
 def prepare_market_data_bootstrap(

@@ -76,6 +76,155 @@ function operationsFixture(): RecurringOperationsStatus {
   };
 }
 
+test("Market history scope can be reviewed without starting work", async ({
+  page,
+}, testInfo) => {
+  const { writes } = await installRoutes(page, operationsFixture());
+  let requests = 0;
+  await page.route("**/api/research/market-data/bootstrap-scope*", (route) => {
+    requests += 1;
+    return route.fulfill({
+      json: {
+        status: "READY",
+        checked_at: iso,
+        provider_id: "YAHOO_FINANCE",
+        provider_schema_version: "yahoo-chart-v8",
+        crosswalk_sha256: "a".repeat(64),
+        target_environment: "development",
+        date_window: { start: "2024-02-01", end: "2024-11-30" },
+        listing_scope: "held and active listings",
+        holdings_snapshot: {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          portfolio_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          completeness: "PARTIAL",
+          effective_at: iso,
+          recorded_at: iso,
+        },
+        company_scope: null,
+        canonical_import_readiness: null,
+        listing_priority_counts: {
+          HELD: 3,
+          PORTFOLIO: 0,
+          WATCHLIST: 0,
+          OTHER: 0,
+        },
+        selected_listing_count: 3,
+        listing_review: Array.from({ length: 3 }, (_, index) => ({
+          listing_id: `11111111-1111-4111-8111-${String(index + 1).padStart(12, "0")}`,
+          security_id: `22222222-2222-4222-8222-${String(index + 1).padStart(12, "0")}`,
+          company_id: null,
+          company_name: null,
+          ticker: `SYN${index + 1}`,
+          venue: "NASDAQ",
+          currency: "USD",
+          security_type: "ETF",
+          priority: "HELD",
+          held_quantity:
+            index === 0 ? "0.0000000000" : index === 1 ? null : "2.5000000000",
+          mapping_verified: true,
+          provider_symbol: `SYN${index + 1}`,
+        })),
+        omitted_listing_count: 0,
+        verified_listing_mapping_count: 3,
+        unresolved_listings: [],
+        portfolio_base_currency: "EUR",
+        required_fx_pairs: ["GBP/EUR", "USD/EUR"],
+        allowlisted_fx_pairs: ["GBP/EUR", "USD/EUR"],
+        unmapped_fx_pairs: [],
+        provider_requests_planned: 5,
+        database_writes: 0,
+        provider_requests: 0,
+        lifecycle_counts: { PORTFOLIO: 0, WATCHLIST: 0 },
+      },
+    });
+  });
+  await page.goto("/operations");
+  await expect(
+    page.getByRole("heading", { name: "Review historical data scope" }),
+  ).toBeVisible();
+  expect(requests).toBe(0);
+  await page.getByLabel("Start date").fill("2024-02-01");
+  await page.getByLabel("End date").fill("2024-11-30");
+  await page.getByRole("button", { name: "Review scope" }).click();
+  await expect(
+    page.getByText("Mappings available; holdings need review"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("The holdings snapshot is incomplete or unavailable", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Required FX: GBP/EUR, USD/EUR", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("This review does not verify the database target", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page.getByText("Review 3 selected listings").click();
+  await expect(
+    page.getByText("SYN1 · NASDAQ · USD").filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Verified: SYN1", { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText("HELD · quantity 0.0000000000", { exact: true })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText("HELD · quantity unknown", { exact: true })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Canonical IDs for SYN1 on NASDAQ")
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("mapping SHA-256:", { exact: false }),
+  ).toBeVisible();
+  await page
+    .getByRole("heading", { name: "Review historical data scope" })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath("scope-review.png"),
+    scale: "css",
+  });
+  await page
+    .getByText("The holdings snapshot is incomplete or unavailable", {
+      exact: false,
+    })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: testInfo.outputPath("scope-review-detail.png"),
+    scale: "css",
+  });
+  await page.getByLabel("Start date").fill("2024-02-02");
+  await expect(
+    page.getByText("Mappings available; holdings need review"),
+  ).toHaveCount(0);
+  expect(requests).toBe(1);
+  expect(writes).toEqual([]);
+});
+
+test("Market scope review remains available when worker status fails", async ({
+  page,
+}) => {
+  await installRoutes(page, operationsFixture());
+  await page.route("**/api/research/recurring-operations/status", (route) =>
+    route.fulfill({ status: 503, json: { detail: "Unavailable" } }),
+  );
+  await page.goto("/operations");
+  await expect(
+    page.getByRole("heading", { name: "Review historical data scope" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Start date")).toBeVisible();
+});
+
 async function installRoutes(
   page: Page,
   operations: RecurringOperationsStatus,
@@ -84,7 +233,16 @@ async function installRoutes(
   const overview = portfolioFixture();
   overview.base_market_value = null;
   overview.valuation_status = "INCOMPLETE_FX_COVERAGE";
-  overview.valuation_gaps = [{ identity: "USD/EUR", reason: "FX_MISSING" }];
+  overview.valuation_gaps = [
+    ...[
+      "NASDAQ:T02",
+      "NASDAQ:T04",
+      "NASDAQ:T06",
+      "NASDAQ:T08",
+      "NASDAQ:T10",
+    ].map((identity) => ({ identity, reason: "FX_UNAVAILABLE" })),
+    { identity: "cash:USD", reason: "FX_UNAVAILABLE" },
+  ];
   overview.fx_data_through = null;
   for (const company of overview.companies) {
     company.current_weight = null;
@@ -164,6 +322,34 @@ test("Portfolio data investigation reaches Operations without writes", async ({
   await expect(
     page.getByText("Portfolio total incomplete fx coverage"),
   ).toBeVisible();
+  await expect(
+    page.getByText("Latest selected price", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Latest selected dates do not establish complete or current coverage for every position.",
+    ),
+  ).toBeVisible();
+  await page.getByText("Show remaining 2 valuation inputs").click();
+  await expect(
+    page
+      .getByRole("region", { name: "Portfolio at a glance" })
+      .getByText("cash:USD", { exact: true }),
+  ).toBeVisible();
+  const holding = page
+    .getByText("T02 · NASDAQ · USD")
+    .filter({ visible: true })
+    .first()
+    .locator(
+      testInfo.project.name === "mobile"
+        ? "xpath=ancestor::dl[1]"
+        : "xpath=ancestor::tr[1]",
+    );
+  await expect(
+    holding.getByRole("link", {
+      name: "Review global price and FX status, from T02 NASDAQ",
+    }),
+  ).toHaveAttribute("href", "/operations#market-data-refresh");
   await page.screenshot({
     path: testInfo.outputPath("portfolio-data-after.png"),
     scale: "css",

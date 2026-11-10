@@ -854,6 +854,78 @@ class ScheduledSessionReviewRead(Contract):
     selected_unscheduled_dates: list[date]
 
 
+class MarketBootstrapWindowRead(Contract):
+    start: date
+    end: date
+
+
+class MarketBootstrapUnresolvedListingRead(Contract):
+    subject_kind: Literal["LISTING"]
+    subject_key: UUID
+    code: str
+
+
+class MarketBootstrapCanonicalReadinessRead(Contract):
+    ready: bool
+    status: str
+    run_id: UUID | None
+    bootstrap_status: str | None
+    reconciliation_status: str | None
+    source_gap_count: int | None
+    recorded_at: datetime | None
+
+
+class MarketBootstrapScopeListingRead(Contract):
+    listing_id: UUID
+    security_id: UUID
+    company_id: UUID | None
+    company_name: str | None
+    venue: str
+    ticker: str
+    currency: str | None
+    security_type: str
+    priority: Literal["HELD", "PORTFOLIO", "WATCHLIST", "OTHER"]
+    held_quantity: str | None
+    mapping_verified: bool
+    provider_symbol: str | None
+
+
+class MarketBootstrapHoldingsSnapshotRead(Contract):
+    id: UUID
+    portfolio_id: UUID
+    completeness: Literal["COMPLETE", "PARTIAL", "UNAVAILABLE"]
+    effective_at: datetime
+    recorded_at: datetime
+
+
+class MarketBootstrapScopePreviewRead(Contract):
+    status: Literal["READY", "BLOCKED", "BLOCKED_CANONICAL_IMPORT"]
+    checked_at: datetime
+    provider_id: str
+    provider_schema_version: str
+    crosswalk_sha256: str
+    target_environment: Literal["development", "rehearsal", "production"]
+    date_window: MarketBootstrapWindowRead
+    listing_scope: str
+    holdings_snapshot: MarketBootstrapHoldingsSnapshotRead | None
+    company_scope: UUID | None
+    canonical_import_readiness: MarketBootstrapCanonicalReadinessRead | None
+    listing_priority_counts: dict[str, int]
+    selected_listing_count: int
+    listing_review: list[MarketBootstrapScopeListingRead]
+    omitted_listing_count: int
+    verified_listing_mapping_count: int
+    unresolved_listings: list[MarketBootstrapUnresolvedListingRead]
+    portfolio_base_currency: str | None
+    required_fx_pairs: list[str]
+    allowlisted_fx_pairs: list[str]
+    unmapped_fx_pairs: list[str]
+    provider_requests_planned: int
+    database_writes: Literal[0]
+    provider_requests: Literal[0]
+    lifecycle_counts: dict[str, int]
+
+
 class HistoricalBootstrapCheckpointDiagnosticsRead(Contract):
     failure_kind: Literal["NO_PROVIDER_DATA", "OTHER", "NONE"]
     raw_response_count: int | None
