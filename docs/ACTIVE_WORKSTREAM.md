@@ -2,7 +2,8 @@
 
 ## Company refresh continuity — INTEGRATE
 
-`codex/company-refresh-continuity` starts independently from main `715820e`.
+`codex/company-refresh-continuity` is [draft PR #35](https://github.com/paulzwecker/portfolio-app/pull/35),
+independently based on main `715820e`.
 Company Explorer restores queued and running company jobs after navigation and
 reload, displays multiple active requests and the latest completed outcome, and
 continues polling the existing durable operations pipeline. A bounded, read-only
