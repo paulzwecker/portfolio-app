@@ -8,7 +8,7 @@ Updated 2026-11-11. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                                                                                                   |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Financial statements availability — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                                                            |
+| Active checkpoint           | Financial statements availability — frozen [PR #36](https://github.com/paulzwecker/portfolio-app/pull/36). [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                |
 | Branch / PR                 | `codex/financial-statements-availability` from main `715820e`; [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) and [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35) remain frozen. |
 | Implementation              | Financials hides unsupported empty controls, selects an available chart series and counts only displayed-period coverage while retaining source and quality evidence.                                           |
 | Next ready substantial task | Complete a source-backed Financials workflow; restore prices/FX after approved recovery and source access.                                                                                                      |

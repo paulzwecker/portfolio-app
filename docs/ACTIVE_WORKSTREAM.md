@@ -1,8 +1,8 @@
 # Active workstream
 
-## Financial statements availability — INTEGRATE
+## Financial statements availability — frozen for review
 
-`codex/financial-statements-availability` starts from main `715820e`, independently
+`codex/financial-statements-availability` ([PR #36](https://github.com/paulzwecker/portfolio-app/pull/36)) starts from main `715820e`, independently
 of frozen [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) and
 [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35). Company Financials
 now hides the unsupported growth/ratios category and suppresses empty chart controls
