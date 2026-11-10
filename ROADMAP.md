@@ -6,14 +6,14 @@ Updated 2026-11-10. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.2 Portfolio valuation evidence — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                |
-| Branch / PR                 | `codex/portfolio-valuation-integration`; [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) awaiting review and checks. |
-| Implementation              | Portfolio valuation evidence and read-only market scope review verified locally.                                                    |
-| Next ready substantial task | Verify release controls and prepare permitted historical prices/FX and durable recovery before activation.                          |
-| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                       |
-| Production boundary         | Production actions require the exact owner's authorization and all applicable safeguards.                                           |
+| Field                       | Current value                                                                                                                          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Company refresh continuity — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                              |
+| Branch / PR                 | `codex/company-refresh-continuity` from main `715820e`; [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) remains frozen. |
+| Implementation              | Restore company-scoped refresh status after navigation using the existing durable job requests.                                        |
+| Next ready substantial task | Complete integration and verify API-first compatibility; restore real historical prices/FX after approved recovery and source access.  |
+| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                          |
+| Production boundary         | Production actions require the exact owner's authorization and all applicable safeguards.                                              |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

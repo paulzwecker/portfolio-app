@@ -1,8 +1,29 @@
 # Active workstream
 
-## C2.2 Portfolio valuation evidence — INTEGRATE
+## Company refresh continuity — BUILD
 
-[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) is awaiting owner review and CI.
+`codex/company-refresh-continuity` starts independently from main `715820e`.
+Company Explorer restores queued and running company jobs after navigation and
+reload, displays multiple active requests and the latest completed outcome, and
+continues polling the existing durable operations pipeline. A bounded, read-only
+API filters by exact company before limiting and prioritizes active jobs. Mismatched,
+unavailable or timed-out history keeps actions disabled with a retry. Existing
+worker, admission, deduplication and production activation controls are unchanged.
+
+Local evidence: eight isolated manual-operations tests, 16 focused web tests and
+eight synthetic desktop/mobile browser journeys covering reload, multiple active
+jobs, timeout/retry, older APIs and a completed job beyond the bounded history;
+two more browser checks verify a recovered result survives subsequent polls.
+Desktop/mobile screenshots were inspected. Independent review informed the timeout,
+cooldown and missing-job recovery fixes. No migration or production action.
+Older APIs do not expose the new route, so deploy and verify the API before any
+frontend release; until then controls fail closed. Next perform milestone integration
+checks and verify current production release controls; preserve the independent PR #34.
+
+## Previous C2.2 Portfolio valuation evidence
+
+[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) merged as `715820e`;
+its production deployment is not verified here.
 
 Portfolio now presents per-listing weights, supplied FX details and all valuation
 gaps without calculating financial results in the browser. Operations provides a
