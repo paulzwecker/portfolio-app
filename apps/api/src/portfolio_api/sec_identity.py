@@ -5,9 +5,24 @@ from datetime import datetime
 from urllib.parse import parse_qsl, urlsplit
 from uuid import UUID
 
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from portfolio_api.domain.models import CompanyProviderIdentifier, ReportedFundamentalBatch
 
 SEC_PROVIDER_ID = "sec_edgar"
+
+
+def lock_sec_mapping_writes(session: Session) -> None:
+    """Fail closed if another supported issuer mapping writer is active."""
+    if session.scalar(text("SELECT current_setting('transaction_isolation')")) != "read committed":
+        raise ValueError("SEC issuer mapping writes require READ COMMITTED isolation")
+    acquired = session.scalar(
+        text("SELECT pg_try_advisory_xact_lock(:namespace, :key)"),
+        {"namespace": 1397048137, "key": 1128876801},
+    )
+    if not acquired:
+        raise ValueError("Another SEC issuer mapping write is in progress; retry after it finishes")
 
 
 def sec_evidence_matches_cik(cik: str, evidence_source: str) -> bool:

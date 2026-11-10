@@ -54,7 +54,7 @@ from portfolio_api.external_data import (
     RawProviderRecord,
     raw_batch_fingerprint,
 )
-from portfolio_api.sec_identity import reviewed_cik
+from portfolio_api.sec_identity import lock_sec_mapping_writes, reviewed_cik
 from portfolio_api.settings import Settings
 
 SEC_PROVIDER_ID = "sec_edgar"
@@ -1188,6 +1188,7 @@ def record_cik_mapping(
     provider_company_name: str,
     evidence_source: str,
 ) -> CompanyProviderIdentifier:
+    lock_sec_mapping_writes(session)
     _, existing = _inspect_cik_mapping(
         session, company_id, cik, provider_company_name, evidence_source
     )

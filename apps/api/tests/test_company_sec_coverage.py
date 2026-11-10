@@ -373,20 +373,46 @@ def test_invalid_identity_evidence_never_becomes_a_source_link(
 ) -> None:
     source = _source(postgres_engine)
     with Session(postgres_engine) as session, session.begin():
-        record_cik_mapping(
-            session,
-            source.unmapped_company_id,
-            "0000000090",
-            "Invalid fixture",
-            "javascript:invalid",
-        )
-        if ambiguous:
+        with pytest.raises(ValueError, match="SEC.gov issuer URL"):
             record_cik_mapping(
                 session,
                 source.unmapped_company_id,
-                "0000000091",
-                "Other fixture",
-                "https://www.sec.gov/edgar/browse/?CIK=91",
+                "0000000090",
+                "Invalid fixture",
+                "javascript:invalid",
+            )
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=source.unmapped_company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value="0000000090",
+                provider_company_name="Invalid fixture",
+                evidence_source="javascript:invalid",
+                effective_at=datetime(2026, 1, 1, tzinfo=UTC),
+                actor="IMPORT",
+            )
+        )
+        if ambiguous:
+            with pytest.raises(ValueError, match="different SEC CIK"):
+                record_cik_mapping(
+                    session,
+                    source.unmapped_company_id,
+                    "0000000091",
+                    "Other fixture",
+                    "https://www.sec.gov/edgar/browse/?CIK=91",
+                )
+            session.add(
+                CompanyProviderIdentifier(
+                    company_id=source.unmapped_company_id,
+                    provider_id="sec_edgar",
+                    identifier_type="SEC_CIK",
+                    identifier_value="0000000091",
+                    provider_company_name="Other fixture",
+                    evidence_source="https://www.sec.gov/edgar/browse/?CIK=91",
+                    effective_at=datetime(2026, 1, 1, tzinfo=UTC),
+                    actor="IMPORT",
+                )
             )
         status = company_sec_coverage(session, source.unmapped_company_id)
         assert status.mapping_status == ("AMBIGUOUS" if ambiguous else "INVALID")
@@ -419,12 +445,22 @@ def test_manual_source_link_does_not_claim_an_sec_retrieval(postgres_engine: Eng
 def test_identity_evidence_with_embedded_credentials_is_withheld(postgres_engine: Engine) -> None:
     source = _source(postgres_engine)
     with Session(postgres_engine) as session, session.begin():
-        record_cik_mapping(
-            session,
-            source.unmapped_company_id,
-            "0000000090",
-            "Synthetic issuer",
-            "https://fixture:synthetic@www.sec.gov/edgar/browse/?CIK=90",
+        evidence = "https://fixture:synthetic@www.sec.gov/edgar/browse/?CIK=90"
+        with pytest.raises(ValueError, match="SEC.gov issuer URL"):
+            record_cik_mapping(
+                session, source.unmapped_company_id, "0000000090", "Synthetic issuer", evidence
+            )
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=source.unmapped_company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value="0000000090",
+                provider_company_name="Synthetic issuer",
+                evidence_source=evidence,
+                effective_at=datetime(2026, 1, 1, tzinfo=UTC),
+                actor="IMPORT",
+            )
         )
         coverage = company_sec_coverage(session, source.unmapped_company_id)
         assert coverage.mapping_status == "INVALID"

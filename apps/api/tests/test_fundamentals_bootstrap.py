@@ -46,7 +46,11 @@ from portfolio_api.fundamentals_bootstrap import (
     reconcile_fundamentals_bootstrap,
 )
 from portfolio_api.main import create_app
-from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID, record_cik_mapping
+from portfolio_api.reported_fundamentals import (
+    SEC_PROVIDER_ID,
+    preview_cik_mapping,
+    record_cik_mapping,
+)
 from portfolio_api.settings import Settings
 from portfolio_api.source_documents import SEC_SUBMISSIONS_BASE
 
@@ -272,12 +276,19 @@ def _prepare_run(engine: Engine) -> UUID:
             )
         )
         session.flush()
+        evidence = "https://www.sec.gov/edgar/browse/?CIK=0000000001"
+        assert (
+            preview_cik_mapping(session, COMPANY_ID, CIK, "Synthetic Holdings Inc.", evidence)[
+                "status"
+            ]
+            == "PROPOSED"
+        )
         record_cik_mapping(
             session,
             COMPANY_ID,
             CIK,
             "Synthetic Holdings Inc.",
-            "https://www.sec.gov/edgar/browse/?CIK=1",
+            evidence,
         )
         run = prepare_fundamentals_bootstrap(session, target_environment="rehearsal")
         session.commit()

@@ -12,9 +12,15 @@ is not proof of issuer identity. No schema or production configuration changed.
 
 The preview and sequential conflict checks passed 25 focused checks against synthetic
 PostgreSQL data, including target mismatch and zero writes; focused Ruff checks pass.
-Concurrent mapping writers require review before any production mapping operation; do not claim those
-are serialized. Continue with that narrow question and an isolated end-to-end SEC
-rehearsal. A contact-bearing SEC user agent is needed for live source requests.
+Both supported mapping writers now take the same nonblocking transaction lock and
+require READ COMMITTED; canonical reconciliation also rejects legacy ambiguity.
+An isolated synthetic SEC rehearsal covers issuer preview through Company Explorer APIs;
+26 focused tests passed after the concurrency change, including the read-only guard
+and legacy-identity cases independently identified in review.
+This lock does not constrain older deployed processes or direct SQL; production
+mapping remains disabled until those writers are drained and the updated paths are
+separately released. A contact-bearing SEC user agent is needed for live source
+requests. Next verify real issuer evidence read-only and complete integration review.
 Production backfill and unattended refresh remain conditional on verified recovery,
 provider terms, reconciliation and the owner's explicitly scoped approvals.
 

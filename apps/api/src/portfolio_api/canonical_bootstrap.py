@@ -44,12 +44,12 @@ from portfolio_api.domain.models import (
     now,
 )
 from portfolio_api.legacy_import import ImportPlan
-from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID
+from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID, _inspect_cik_mapping
 from portfolio_api.research_priority_import import (
     import_research_priority_inputs,
     research_priority_rows,
 )
-from portfolio_api.sec_identity import sec_evidence_matches_cik
+from portfolio_api.sec_identity import lock_sec_mapping_writes, sec_evidence_matches_cik
 from portfolio_api.settings import REPOSITORY_PATH, Settings
 from portfolio_api.workbook_semantics import SEMANTIC_FINGERPRINT_VERSION, semantic_fingerprint
 from portfolio_api.workbook_source_bundle import (
@@ -859,6 +859,7 @@ def _apply_provider_identifiers(
 ) -> dict[str, int]:
     if provider_plan is None:
         return {"inserted": 0, "already_present": 0}
+    lock_sec_mapping_writes(session)
     inserted = 0
     already_present = 0
     for mapping in provider_plan.mappings:
@@ -867,36 +868,19 @@ def _apply_provider_identifiers(
             raise CanonicalBootstrapError(
                 "A reviewed provider mapping has no imported company identity."
             )
-        same_identifier = session.scalar(
-            select(CompanyProviderIdentifier).where(
-                CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
-                CompanyProviderIdentifier.identifier_type == "SEC_CIK",
-                CompanyProviderIdentifier.identifier_value == mapping.identifier_value,
+        try:
+            _, existing = _inspect_cik_mapping(
+                session,
+                company_id,
+                mapping.identifier_value,
+                mapping.provider_company_name,
+                mapping.evidence_source,
             )
-        )
-        identity = (company_id, mapping.provider_company_name, mapping.evidence_source)
-        if same_identifier is not None:
-            if (
-                same_identifier.company_id,
-                same_identifier.provider_company_name,
-                same_identifier.evidence_source,
-            ) != identity:
-                raise CanonicalBootstrapError(
-                    "An SEC CIK is already assigned to a conflicting company identity."
-                )
+        except ValueError as error:
+            raise CanonicalBootstrapError(str(error)) from error
+        if existing is not None:
             already_present += 1
             continue
-        prior_for_company = session.scalar(
-            select(CompanyProviderIdentifier).where(
-                CompanyProviderIdentifier.company_id == company_id,
-                CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
-                CompanyProviderIdentifier.identifier_type == "SEC_CIK",
-            )
-        )
-        if prior_for_company is not None:
-            raise CanonicalBootstrapError(
-                "A company already has a different reviewed SEC CIK; it will not be overwritten."
-            )
         session.add(
             CompanyProviderIdentifier(
                 id=legacy_import._stable_id(
@@ -978,18 +962,19 @@ def _provider_reconciliation(
     matched = 0
     for mapping in provider_plan.mappings:
         company_id = company_ids.get(mapping.canonical_ticker)
-        record = session.scalar(
-            select(CompanyProviderIdentifier).where(
-                CompanyProviderIdentifier.company_id == company_id,
-                CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
-                CompanyProviderIdentifier.identifier_type == "SEC_CIK",
-                CompanyProviderIdentifier.identifier_value == mapping.identifier_value,
+        try:
+            if company_id is None:
+                raise ValueError("Missing canonical company")
+            _, record = _inspect_cik_mapping(
+                session,
+                company_id,
+                mapping.identifier_value,
+                mapping.provider_company_name,
+                mapping.evidence_source,
             )
-        )
-        if record is None or (
-            record.provider_company_name,
-            record.evidence_source,
-        ) != (mapping.provider_company_name, mapping.evidence_source):
+        except ValueError:
+            record = None
+        if record is None:
             mismatches.append("A reviewed SEC company identifier differs from its frozen mapping.")
         else:
             matched += 1

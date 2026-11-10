@@ -59,7 +59,13 @@ npm run db:sync-reported-fundamentals -- map-preview `
 The target must match the configured database target and migration head. Preview
 checks URL structure only: it does not fetch or authenticate evidence, establish
 the issuer's identity, or write a mapping. Review the SEC source independently;
-keep outputs containing private portfolio information out of public artifacts.
+keep outputs containing private portfolio information out of public artifacts. A
+preview can become stale; the write rechecks identity under a transaction lock.
+Mapping writes require PostgreSQL READ COMMITTED isolation. If another mapping
+writer is active, the command fails without waiting; retry only after it finishes.
+The lock protects only updated cooperating writers, not older deployments or direct
+SQL. Keep production mapping writes disabled until old writers have been drained
+and updated paths deployed under a separately approved release.
 After review, the existing separately guarded commands are:
 
 ```powershell
