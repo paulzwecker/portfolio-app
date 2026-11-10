@@ -11,14 +11,16 @@ and quality-checked cells stay accessible; zero remains a valid chartable value.
 Source filters can hide and restore the chart without hiding their own controls.
 Retained flagged values now announce their status to screen readers.
 
-Local evidence: 14 focused web tests, lint/typecheck and a synthetic Company Explorer
-journey covering empty placeholder rows, conflicts, source toggles and populated data
-at mobile and desktop widths. Two additional browser checks used the real isolated
-empty API response and verified source access and unchanged protected state; screenshots
-were inspected. Independent review caught the real API's placeholder rows and an
-accessible-label gap; both were fixed. No schema, financial calculation, provider or
-production changes. Next perform milestone integration checks; production data remains
-separately gated.
+Local evidence: all 475 web tests, lint/typecheck, frontend production build, 22
+deployment/documentation checks and both offline schema gates passed. A synthetic
+Company Explorer journey covers placeholder rows, conflicts, source toggles and
+populated data at mobile and desktop widths. Two browser checks used the real
+isolated empty API response, verified source access and unchanged protected state,
+and were inspected in light and dark themes. Independent review found no remaining
+concrete blocker. No schema, financial calculation, provider or production changes.
+This is a focused BUILD increment, not a major milestone PR; production data remains
+separately gated. Next complete a useful source-backed Financials workflow alongside
+the approved recovery and source-access prerequisites for actual observations.
 
 ## Previous C2.2 Portfolio valuation evidence
 

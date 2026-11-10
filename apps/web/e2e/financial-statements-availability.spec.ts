@@ -52,6 +52,12 @@ test("placeholder-only statements keep source coverage without empty chart contr
     path: info.outputPath("real-empty-financials.png"),
     scale: "css",
   });
+  await page.getByLabel("Appearance").selectOption("dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await section.screenshot({
+    path: info.outputPath("real-empty-financials-dark.png"),
+    scale: "css",
+  });
   await section.getByRole("button", { name: "Sources & alignment" }).click();
   await expect(
     page.getByRole("dialog", { name: "Financial sources & limitations" }),
