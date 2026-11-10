@@ -11,6 +11,14 @@ and quality-checked cells stay accessible; zero remains a valid chartable value.
 Source filters can hide and restore the chart without hiding their own controls.
 Retained flagged values now announce their status to screen readers.
 
+The next BUILD increment defaults the chart to another eligible reported metric,
+or an eligible forecast if no reported metric can be charted. An explicit empty
+selection stays empty. Coverage counts and source messages now use displayed
+periods, and out-of-window observations cannot enable a chart checkbox. Seventeen
+focused web tests, lint/typecheck and a synthetic Company Explorer journey at
+desktop and mobile widths passed; independent review identified these issues and
+confirmed that a suspected consensus mapping issue is not currently reachable.
+
 Local evidence: all 475 web tests, lint/typecheck, frontend production build, 22
 deployment/documentation checks and both offline schema gates passed. A synthetic
 Company Explorer journey covers placeholder rows, conflicts, source toggles and

@@ -2758,7 +2758,8 @@ test("Company Explorer composes canonical company context at desktop and mobile 
 
   let marketDataRequestCount = 0;
   let incompatibleHistory = false;
-  let statementMode: "populated" | "empty" | "conflict" = "populated";
+  let statementMode: "populated" | "empty" | "conflict" | "other-metric" =
+    "populated";
   await page.route(/\/api\/research\//, (route) => {
     const pathname = new URL(route.request().url()).pathname.replace(
       "/api/research/",
@@ -2983,6 +2984,20 @@ test("Company Explorer composes canonical company context at desktop and mobile 
           },
         ],
       };
+      if (statementMode === "other-metric")
+        return route.fulfill({
+          json: {
+            ...statementResponse,
+            rows: [
+              {
+                ...statementResponse.rows[0],
+                id: "REPORTED_ACTUAL::NET_INCOME::USD::currency",
+                metric: "NET_INCOME",
+                label: "Net income",
+              },
+            ],
+          },
+        });
       if (statementMode === "empty")
         return route.fulfill({
           json: {
@@ -3149,6 +3164,19 @@ test("Company Explorer composes canonical company context at desktop and mobile 
   });
 
   for (const width of [390, 1440]) {
+    statementMode = "other-metric";
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`/company/${id}?view=financials`);
+    const netIncome = page.getByLabel("Chart Net income · Reported actuals");
+    await expect(netIncome).toBeChecked();
+    await netIncome.uncheck();
+    await expect(
+      page.getByText("Select a metric row to explore its history."),
+    ).toBeVisible();
+    await netIncome.check();
+    await expect(
+      page.getByText("Select a metric row to explore its history."),
+    ).toHaveCount(0);
     statementMode = "populated";
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto(`/company/${id}`);

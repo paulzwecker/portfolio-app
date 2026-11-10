@@ -15,7 +15,9 @@ vi.mock("./financial-source-drawer", () => ({
   FinancialSourceDrawer: () => null,
 }));
 vi.mock("./financial-series-chart", () => ({
-  FinancialSeriesChart: () => <div>Chart is available</div>,
+  FinancialSeriesChart: ({ rows }: { rows: { label: string }[] }) => (
+    <div>Chart is available: {rows.map((item) => item.label).join(", ")}</div>
+  ),
 }));
 
 const period = {
@@ -138,4 +140,55 @@ it("does not chart an observation without its aligned period", () => {
   expect(html).toContain("No aligned financial periods");
   expect(html).toContain("Sources &amp; alignment");
   expect(html).not.toContain("Chart is available");
+});
+
+it("charts an available reported metric when the preferred defaults are absent", () => {
+  state.data = {
+    ...base,
+    periods: [period],
+    rows: [
+      { ...row("AVAILABLE", "0"), metric: "NET_INCOME", label: "Net income" },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <FinancialStatementsWorkspace companyId={base.company_id} />,
+  );
+  expect(html).toContain("Chart is available: Net income");
+});
+
+it("defaults to an eligible forecast when no reported metric can be charted", () => {
+  state.data = {
+    ...base,
+    periods: [period],
+    rows: [{ ...row("AVAILABLE", "10"), source_kind: "CONSENSUS" }],
+  };
+  const html = renderToStaticMarkup(
+    <FinancialStatementsWorkspace companyId={base.company_id} />,
+  );
+  expect(html).toContain("Chart is available: Revenue");
+});
+
+it("does not claim an out-of-window forecast is aligned or chartable", () => {
+  state.data = {
+    ...base,
+    periods: [period],
+    rows: [
+      row("AVAILABLE", "10"),
+      {
+        ...row("AVAILABLE", "20"),
+        id: "old-forecast",
+        source_kind: "CONSENSUS",
+        cells: [
+          { ...row("AVAILABLE", "20").cells[0], period_end: "2024-12-31" },
+        ],
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <FinancialStatementsWorkspace companyId={base.company_id} />,
+  );
+  expect(html).toContain("No eligible aligned analyst consensus.");
+  expect(html).not.toContain("Consensus uses the selected provider only.");
+  expect(html).toMatch(/Forward rows<\/[^>]+>.*?>0<\/[^>]+>/);
+  expect(html).toMatch(/<input[^>]*disabled=""[^>]*aria-label="Chart Revenue/);
 });

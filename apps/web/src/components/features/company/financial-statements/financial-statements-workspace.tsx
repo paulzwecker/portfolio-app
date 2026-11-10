@@ -91,33 +91,36 @@ export function FinancialStatementsWorkspace({
         a.source_kind.localeCompare(b.source_kind) ||
         a.id.localeCompare(b.id),
     );
-  const selected =
-    selection ??
-    allRows
-      .filter(
-        (row) =>
-          row.source_kind === "REPORTED_ACTUAL" &&
-          ["REVENUE", "OPERATING_INCOME"].includes(row.metric) &&
-          row.cells.some((cell) => cell.status === "AVAILABLE"),
-      )
-      .map((row) => row.id)
-      .slice(0, 2);
   const periodEnds = new Set(
     (data?.periods ?? []).map((period) => period.period_end),
   );
+  const chartable = (row: FinancialStatementRow) =>
+    row.cells.some(
+      (cell) =>
+        periodEnds.has(cell.period_end) &&
+        cell.status === "AVAILABLE" &&
+        cell.value !== null,
+    );
+  const defaultRows = allRows.filter(
+    (row) => row.source_kind === "REPORTED_ACTUAL" && chartable(row),
+  );
+  const preferredRows = defaultRows.filter((row) =>
+    ["REVENUE", "OPERATING_INCOME"].includes(row.metric),
+  );
+  const fallbackRows = defaultRows.length
+    ? defaultRows
+    : allRows.filter(chartable);
+  const selected =
+    selection ??
+    (preferredRows.length ? preferredRows : fallbackRows)
+      .map((row) => row.id)
+      .slice(0, 2);
   const hasAlignedCells = allRows.some((row) =>
     row.cells.some((cell) => periodEnds.has(cell.period_end)),
   );
   const chartAvailable = allRows
     .filter((row) => sources.includes(row.source_kind))
-    .some((row) =>
-      row.cells.some(
-        (cell) =>
-          periodEnds.has(cell.period_end) &&
-          cell.status === "AVAILABLE" &&
-          cell.value !== null,
-      ),
-    );
+    .some(chartable);
   const visibleRows = allRows.filter((row) => {
     if (!sources.includes(row.source_kind)) return false;
     if (statement === "ESTIMATES") return row.source_kind !== "REPORTED_ACTUAL";
@@ -131,18 +134,20 @@ export function FinancialStatementsWorkspace({
   );
   const canCompare = chartRows.length > 1 && chartBases.size > 1;
   const availableActualRows = allRows.filter(
-    (row) =>
-      row.source_kind === "REPORTED_ACTUAL" &&
-      row.cells.some(
-        (cell) => cell.status === "AVAILABLE" && cell.value !== null,
-      ),
+    (row) => row.source_kind === "REPORTED_ACTUAL" && chartable(row),
   ).length;
   const forecastRows = allRows.filter(
-    (row) => row.source_kind !== "REPORTED_ACTUAL",
+    (row) =>
+      row.source_kind !== "REPORTED_ACTUAL" &&
+      row.cells.some((cell) => periodEnds.has(cell.period_end)),
   ).length;
   const qualityCheckedCells = allRows.reduce(
     (count, row) =>
-      count + row.cells.filter((cell) => cell.status !== "AVAILABLE").length,
+      count +
+      row.cells.filter(
+        (cell) =>
+          periodEnds.has(cell.period_end) && cell.status !== "AVAILABLE",
+      ).length,
     0,
   );
   const toggle = (id: string) => {
@@ -322,11 +327,18 @@ export function FinancialStatementsWorkspace({
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  {data.rows.filter((row) => row.source_kind === "CONSENSUS")
-                    .length
+                  {allRows.some(
+                    (row) =>
+                      row.source_kind === "CONSENSUS" &&
+                      row.cells.some((cell) => periodEnds.has(cell.period_end)),
+                  )
                     ? "Consensus uses the selected provider only."
                     : "No eligible aligned analyst consensus."}{" "}
-                  {data.rows.some((row) => row.source_kind === "AGENT_FORECAST")
+                  {allRows.some(
+                    (row) =>
+                      row.source_kind === "AGENT_FORECAST" &&
+                      row.cells.some((cell) => periodEnds.has(cell.period_end)),
+                  )
                     ? "Agent forecasts retain separate author/scenario rows."
                     : "No eligible aligned agent forecasts."}{" "}
                   Model projections require a verified fiscal anchor; inspect

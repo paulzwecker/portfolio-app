@@ -77,7 +77,12 @@ export function FinancialStatementsTable({
           <tbody>
             {rows.map((row) => {
               const available = row.cells.some(
-                (cell) => cell.status === "AVAILABLE" && cell.value !== null,
+                (cell) =>
+                  data.periods.some(
+                    (period) => period.period_end === cell.period_end,
+                  ) &&
+                  cell.status === "AVAILABLE" &&
+                  cell.value !== null,
               );
               const RowLabel = chartAvailable ? "label" : "div";
               return (
