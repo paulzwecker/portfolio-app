@@ -58,8 +58,9 @@ npm run db:sync-reported-fundamentals -- map-preview `
 
 The target must match the configured database target and migration head. Preview
 checks URL structure only: it does not fetch or authenticate evidence, establish
-the issuer's identity, or write a mapping. Review the SEC source independently;
-keep outputs containing private portfolio information out of public artifacts. A
+the issuer's identity, or write a mapping. Remote target verification can contact
+the Neon control plane. Review the SEC source independently and keep outputs
+containing private portfolio information out of public artifacts. A
 preview can become stale; the write rechecks identity under a transaction lock.
 Mapping writes require PostgreSQL READ COMMITTED isolation. If another mapping
 writer is active, the command fails without waiting; retry only after it finishes.

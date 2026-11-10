@@ -272,7 +272,7 @@ def test_explicit_issuer_review_and_recording_fail_closed_on_conflicts(
         assert proposed["canonical_company_name"] == "Synthetic canonical issuer"
         assert proposed["evidence_validation"] == "URL_STRUCTURE_ONLY"
         assert proposed["review_required"] is True
-        assert proposed["database_writes"] == proposed["provider_requests"] == 0
+        assert proposed["database_writes"] == proposed["sec_requests"] == 0
         assert session.scalar(select(func.count()).select_from(CompanyProviderIdentifier)) == 0
         first = record_cik_mapping(session, issuer_id, cik, name, evidence)
         assert record_cik_mapping(session, issuer_id, cik, name, evidence).id == first.id

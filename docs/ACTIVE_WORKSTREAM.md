@@ -1,6 +1,6 @@
 # Active workstream
 
-## SEC issuer activation — BUILD
+## SEC issuer review — INTEGRATE
 
 `codex/sec-issuer-activation` is independent of frozen
 [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) and starts from
@@ -15,14 +15,18 @@ PostgreSQL data, including target mismatch and zero writes; focused Ruff checks 
 Both supported mapping writers now take the same nonblocking transaction lock and
 require READ COMMITTED; canonical reconciliation also rejects legacy ambiguity.
 An isolated synthetic SEC rehearsal covers issuer preview through Company Explorer APIs;
-26 focused tests passed after the concurrency change, including the read-only guard
-and legacy-identity cases independently identified in review.
+113 relevant tests passed, including the read-only guard and legacy-identity cases.
+Ruff, focused mypy, documentation checks and both offline schema-gate modes passed.
+Independent review found no additional proven blocker for this narrow slice. No UI
+changed; this is operator preparation, not live-data activation.
 This lock does not constrain older deployed processes or direct SQL; production
 mapping remains disabled until those writers are drained and the updated paths are
 separately released. A contact-bearing SEC user agent is needed for live source
-requests. Next verify real issuer evidence read-only and complete integration review.
+requests. Real issuer verification and ingestion are separate follow-on operations.
 Production backfill and unattended refresh remain conditional on verified recovery,
 provider terms, reconciliation and the owner's explicitly scoped approvals.
+Release status is BLOCKED pending fresh production schema and provider-control
+verification; the checked-in attestation alone is not live production evidence.
 
 ## Previous C3.1 SEC provenance milestone
 

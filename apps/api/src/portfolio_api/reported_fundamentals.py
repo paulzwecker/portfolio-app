@@ -1232,7 +1232,7 @@ def preview_cik_mapping(
         "evidence_validation": "URL_STRUCTURE_ONLY",
         "review_required": True,
         "database_writes": 0,
-        "provider_requests": 0,
+        "sec_requests": 0,
     }
 
 
