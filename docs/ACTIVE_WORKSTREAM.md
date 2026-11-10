@@ -2,6 +2,8 @@
 
 ## C2.2 Portfolio valuation evidence — INTEGRATE
 
+[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) is awaiting owner review and CI.
+
 Portfolio now presents per-listing weights, supplied FX details and all valuation
 gaps without calculating financial results in the browser. Operations provides a
 read-only market-scope review: exact selected identities, mapping status, snapshot
