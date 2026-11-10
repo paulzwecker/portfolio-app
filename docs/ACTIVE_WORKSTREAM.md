@@ -1,8 +1,29 @@
 # Active workstream
 
-## C2.2 Portfolio valuation evidence — INTEGRATE
+## Financial statements availability — BUILD
 
-[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) is awaiting owner review and CI.
+`codex/financial-statements-availability` starts from main `715820e`, independently
+of frozen [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) and
+[PR #35](https://github.com/paulzwecker/portfolio-app/pull/35). Company Financials
+now hides the unsupported growth/ratios category and suppresses empty chart controls
+and zero-count cards when no aligned cells exist. Sources, SEC coverage, time filters
+and quality-checked cells stay accessible; zero remains a valid chartable value.
+Source filters can hide and restore the chart without hiding their own controls.
+Retained flagged values now announce their status to screen readers.
+
+Local evidence: 14 focused web tests, lint/typecheck and a synthetic Company Explorer
+journey covering empty placeholder rows, conflicts, source toggles and populated data
+at mobile and desktop widths. Two additional browser checks used the real isolated
+empty API response and verified source access and unchanged protected state; screenshots
+were inspected. Independent review caught the real API's placeholder rows and an
+accessible-label gap; both were fixed. No schema, financial calculation, provider or
+production changes. Next perform milestone integration checks; production data remains
+separately gated.
+
+## Previous C2.2 Portfolio valuation evidence
+
+[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) merged as `715820e`;
+its production deployment is not verified here.
 
 Portfolio now presents per-listing weights, supplied FX details and all valuation
 gaps without calculating financial results in the browser. Operations provides a

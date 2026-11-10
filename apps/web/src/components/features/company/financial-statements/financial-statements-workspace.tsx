@@ -102,10 +102,25 @@ export function FinancialStatementsWorkspace({
       )
       .map((row) => row.id)
       .slice(0, 2);
+  const periodEnds = new Set(
+    (data?.periods ?? []).map((period) => period.period_end),
+  );
+  const hasAlignedCells = allRows.some((row) =>
+    row.cells.some((cell) => periodEnds.has(cell.period_end)),
+  );
+  const chartAvailable = allRows
+    .filter((row) => sources.includes(row.source_kind))
+    .some((row) =>
+      row.cells.some(
+        (cell) =>
+          periodEnds.has(cell.period_end) &&
+          cell.status === "AVAILABLE" &&
+          cell.value !== null,
+      ),
+    );
   const visibleRows = allRows.filter((row) => {
     if (!sources.includes(row.source_kind)) return false;
     if (statement === "ESTIMATES") return row.source_kind !== "REPORTED_ACTUAL";
-    if (statement === "GROWTH_RATIOS") return false;
     return row.statement === statement;
   });
   const chartRows = allRows.filter(
@@ -155,7 +170,11 @@ export function FinancialStatementsWorkspace({
     <section id="reported-fundamentals" className="scroll-mt-5">
       <PageSection
         title="Financial statements"
-        description="Explore reported performance and separately identified forecasts. Select metric rows to chart; select a value to inspect the original evidence."
+        description={
+          chartAvailable
+            ? "Explore reported performance and separately identified forecasts. Select metric rows to chart; select a value to inspect the original evidence."
+            : "Explore reported performance and separately identified forecasts. Review sources and coverage for the available evidence."
+        }
         actions={
           <Button
             size="sm"
@@ -213,134 +232,152 @@ export function FinancialStatementsWorkspace({
                   ? `Known in the app by ${cutoff} · publication cutoff also applied`
                   : "Latest known filings and accepted research"}
               </span>
-              <span>
-                Latest reported observation {dateTime(data.latest_observed_at)}
-              </span>
+              {hasAlignedCells && (
+                <span>
+                  Latest reported observation{" "}
+                  {dateTime(data.latest_observed_at)}
+                </span>
+              )}
             </div>
-            <MetricGroup label="Financial statement coverage" columns={4}>
-              <MetricCard
-                label="Timeline columns"
-                value={data.periods.length}
-                note={`${periodType === "ANNUAL" ? "Annual" : "Quarterly"} view · ${range} period limit`}
-              />
-              <MetricCard
-                label="Reported rows"
-                value={availableActualRows}
-                note="Rows with at least one eligible reported value"
-              />
-              <MetricCard
-                label="Forward rows"
-                value={forecastRows}
-                note="Consensus and agent forecasts remain separate"
-              />
-              <MetricCard
-                label="Quality checks"
-                value={qualityCheckedCells}
-                note={
-                  qualityCheckedCells
-                    ? "Inspect flagged cells for source context"
-                    : "No flagged cells in this period window"
-                }
-                tone={qualityCheckedCells ? "warning" : "default"}
-              />
-            </MetricGroup>
+            {hasAlignedCells && (
+              <MetricGroup label="Financial statement coverage" columns={4}>
+                <MetricCard
+                  label="Timeline columns"
+                  value={data.periods.length}
+                  note={`${periodType === "ANNUAL" ? "Annual" : "Quarterly"} view · ${range} period limit`}
+                />
+                <MetricCard
+                  label="Reported rows"
+                  value={availableActualRows}
+                  note="Rows with at least one eligible reported value"
+                />
+                <MetricCard
+                  label="Forward rows"
+                  value={forecastRows}
+                  note="Consensus and agent forecasts remain separate"
+                />
+                <MetricCard
+                  label="Quality checks"
+                  value={qualityCheckedCells}
+                  note={
+                    qualityCheckedCells
+                      ? "Inspect flagged cells for source context"
+                      : "No flagged cells in this period window"
+                  }
+                  tone={qualityCheckedCells ? "warning" : "default"}
+                />
+              </MetricGroup>
+            )}
             {!data.periods.length && (
               <EmptyState
                 title="No aligned financial periods"
                 description="No eligible facts or forecasts are known at this cutoff. Sources & alignment explains missing coverage; no values are substituted."
               />
             )}
-            <FinancialSeriesChart
-              key={`${periodType}:${range}:${cutoff}`}
-              data={data}
-              rows={chartRows}
-              onInspect={inspect}
-              onRemove={toggle}
-              comparisonMode={comparisonMode}
-            />
-            <FinancialMetricSelector
-              statement={statement}
-              onStatement={setStatement}
-              sources={sources}
-              onSource={(kind) =>
-                setSources(
-                  sources.includes(kind)
-                    ? sources.filter((item) => item !== kind)
-                    : [...sources, kind],
-                )
-              }
-              comparisonMode={comparisonMode}
-              onComparisonMode={setComparisonMode}
-              canCompare={canCompare}
-            />
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>
-                {selected.length} of 6 chart series selected · select a row in
-                the table to add it above
-              </span>
-              {comparisonMode === "INDEXED" && (
-                <span className="font-medium text-primary">
-                  Indexed view · 100 at each series start
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {data.rows.filter((row) => row.source_kind === "CONSENSUS").length
-                ? "Consensus uses the selected provider only."
-                : "No eligible aligned analyst consensus."}{" "}
-              {data.rows.some((row) => row.source_kind === "AGENT_FORECAST")
-                ? "Agent forecasts retain separate author/scenario rows."
-                : "No eligible aligned agent forecasts."}{" "}
-              Model projections require a verified fiscal anchor; inspect their
-              mapping status in Sources & alignment.
-            </p>
-            {notice && (
-              <p role="status" className="text-sm text-warning">
-                {notice}
-              </p>
-            )}
-            {statement === "GROWTH_RATIOS" ? (
+            {data.periods.length > 0 && !hasAlignedCells && (
               <EmptyState
-                title="Growth & ratios are unavailable"
-                description="The canonical API does not yet publish derived growth or ratio observations. Reported facts remain available in the statement tabs; nothing is calculated or substituted in the browser."
-              />
-            ) : visibleRows.length ? (
-              <FinancialStatementsTable
-                data={data}
-                rows={visibleRows}
-                selected={selected}
-                onToggle={toggle}
-                onInspect={inspect}
-              />
-            ) : (
-              <EmptyState
-                title={
-                  statement === "ESTIMATES"
-                    ? "No aligned estimates"
-                    : `No ${statusLabel(statement).toLowerCase()} rows`
-                }
-                description="No canonical observations are available for this section and source filter. Open Sources & alignment for the precise coverage reason."
-                actions={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setInspected(null);
-                      setDrawer(true);
-                    }}
-                  >
-                    Inspect coverage
-                  </Button>
-                }
+                title="No financial statement rows"
+                description="No eligible facts or forecasts are available in these periods. Sources & alignment explains missing coverage."
               />
             )}
-            <p className="text-xs text-muted-foreground">
-              Compact values retain their original currency and units.
-              Parentheses indicate negative values; — means unavailable. No FX
-              conversion, derived ratios, missing quarters or inferred forecasts
-              are calculated here. Accepted model projections remain in
-              Valuation until a verified fiscal anchor is available.
-            </p>
+            {hasAlignedCells && (
+              <>
+                {chartAvailable && (
+                  <FinancialSeriesChart
+                    key={`${periodType}:${range}:${cutoff}`}
+                    data={data}
+                    rows={chartRows}
+                    onInspect={inspect}
+                    onRemove={toggle}
+                    comparisonMode={comparisonMode}
+                  />
+                )}
+                <FinancialMetricSelector
+                  statement={statement}
+                  onStatement={setStatement}
+                  sources={sources}
+                  onSource={(kind) =>
+                    setSources(
+                      sources.includes(kind)
+                        ? sources.filter((item) => item !== kind)
+                        : [...sources, kind],
+                    )
+                  }
+                  comparisonMode={comparisonMode}
+                  onComparisonMode={setComparisonMode}
+                  canCompare={canCompare}
+                  chartAvailable={chartAvailable}
+                />
+                {chartAvailable && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {selected.length} of 6 chart series selected · select a
+                      row in the table to add it above
+                    </span>
+                    {comparisonMode === "INDEXED" && (
+                      <span className="font-medium text-primary">
+                        Indexed view · 100 at each series start
+                      </span>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {data.rows.filter((row) => row.source_kind === "CONSENSUS")
+                    .length
+                    ? "Consensus uses the selected provider only."
+                    : "No eligible aligned analyst consensus."}{" "}
+                  {data.rows.some((row) => row.source_kind === "AGENT_FORECAST")
+                    ? "Agent forecasts retain separate author/scenario rows."
+                    : "No eligible aligned agent forecasts."}{" "}
+                  Model projections require a verified fiscal anchor; inspect
+                  their mapping status in Sources & alignment.
+                </p>
+                {notice && (
+                  <p role="status" className="text-sm text-warning">
+                    {notice}
+                  </p>
+                )}
+                {visibleRows.length ? (
+                  <FinancialStatementsTable
+                    data={data}
+                    rows={visibleRows}
+                    selected={selected}
+                    onToggle={toggle}
+                    onInspect={inspect}
+                    chartAvailable={chartAvailable}
+                  />
+                ) : (
+                  <EmptyState
+                    title={
+                      statement === "ESTIMATES"
+                        ? "No aligned estimates"
+                        : `No ${statusLabel(statement).toLowerCase()} rows`
+                    }
+                    description="No canonical observations are available for this section and source filter. Open Sources & alignment for the precise coverage reason."
+                    actions={
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setInspected(null);
+                          setDrawer(true);
+                        }}
+                      >
+                        Inspect coverage
+                      </Button>
+                    }
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Compact values retain their original currency and units.
+                  Parentheses indicate negative values; — means unavailable. No
+                  FX conversion, derived ratios, missing quarters or inferred
+                  forecasts are calculated here. Accepted model projections
+                  remain in Valuation until a verified fiscal anchor is
+                  available.
+                </p>
+              </>
+            )}
             <FinancialSourceDrawer
               data={data}
               selection={inspected}
