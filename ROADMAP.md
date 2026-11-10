@@ -8,7 +8,7 @@ Updated 2026-11-10. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field                       | Current value                                                                                                                          |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Company refresh continuity — BUILD. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                              |
+| Active checkpoint           | Company refresh continuity — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                          |
 | Branch / PR                 | `codex/company-refresh-continuity` from main `715820e`; [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) remains frozen. |
 | Implementation              | Restore company-scoped refresh status after navigation using the existing durable job requests.                                        |
 | Next ready substantial task | Complete integration and verify API-first compatibility; restore real historical prices/FX after approved recovery and source access.  |

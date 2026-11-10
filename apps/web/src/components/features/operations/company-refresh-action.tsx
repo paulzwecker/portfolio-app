@@ -349,7 +349,8 @@ export function CompanyRefreshAction({
                 index ===
                   requests.findIndex(
                     (candidate) =>
-                      !["QUEUED", "RUNNING"].includes(candidate.status),
+                      !["QUEUED", "RUNNING"].includes(candidate.status) &&
+                      !recoveredIds.includes(candidate.id),
                   ),
             )
             .map((item) => (

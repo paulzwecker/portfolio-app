@@ -1,6 +1,6 @@
 # Active workstream
 
-## Company refresh continuity — BUILD
+## Company refresh continuity — INTEGRATE
 
 `codex/company-refresh-continuity` starts independently from main `715820e`.
 Company Explorer restores queued and running company jobs after navigation and
@@ -10,15 +10,19 @@ API filters by exact company before limiting and prioritizes active jobs. Mismat
 unavailable or timed-out history keeps actions disabled with a retry. Existing
 worker, admission, deduplication and production activation controls are unchanged.
 
-Local evidence: eight isolated manual-operations tests, 16 focused web tests and
-eight synthetic desktop/mobile browser journeys covering reload, multiple active
-jobs, timeout/retry, older APIs and a completed job beyond the bounded history;
-two more browser checks verify a recovered result survives subsequent polls.
-Desktop/mobile screenshots were inspected. Independent review informed the timeout,
-cooldown and missing-job recovery fixes. No migration or production action.
-Older APIs do not expose the new route, so deploy and verify the API before any
-frontend release; until then controls fail closed. Next perform milestone integration
-checks and verify current production release controls; preserve the independent PR #34.
+Local integration evidence: 99 relevant API/database tests, all 471 web tests,
+eight synthetic desktop/mobile browser journeys, full API type and lint checks,
+frontend production build, contract and deployment-gate tests. The journeys cover
+reload, multiple active jobs, timeout/retry, older APIs and retained old and new
+terminal outcomes. Desktop/mobile screenshots were inspected. Independent review
+found and verified a fix for a newer outcome hidden by a recovered older receipt.
+No migration or production action was performed.
+
+Release status: BLOCKED until fresh Neon identity/schema and Render/Vercel release
+controls are verified. Older APIs lack the new route, so deploy and verify the API
+before the frontend; until then controls fail closed. [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34)
+remains independent; shared roadmap/handoff conflicts need reconciliation after
+either PR merges. Production ingestion and scheduler activation remain separately gated.
 
 ## Previous C2.2 Portfolio valuation evidence
 

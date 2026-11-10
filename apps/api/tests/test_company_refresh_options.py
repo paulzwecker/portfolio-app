@@ -307,10 +307,15 @@ def test_options_are_authenticated_read_only_and_disabled_execution_cannot_queue
         with TestClient(fixture_application(reader, settings)) as client:
             path = f"/v1/companies/{COMPANY_ID}/refresh-options"
             assert client.get(path).status_code == 401
+            history = f"/v1/companies/{COMPANY_ID}/job-requests"
+            assert client.get(history).status_code == 401
             headers = {"x-api-access-token": "synthetic-access"}
             result = client.get(path, headers=headers)
             assert result.status_code == 200 and result.json()["execution_mode"] == "DISABLED"
             assert result.json()["holding_snapshot_id"] == str(source.snapshot_id)
+            history_response = client.get(history, headers=headers)
+            assert history_response.status_code == 200
+            assert all(item["company_id"] == str(COMPANY_ID) for item in history_response.json())
             assert (
                 client.get(f"/v1/companies/{uuid4()}/refresh-options", headers=headers).status_code
                 == 404

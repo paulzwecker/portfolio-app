@@ -747,6 +747,7 @@ test("a completed older job is recovered after it leaves the bounded history", a
     finished_at: null,
   };
   let finished = false;
+  let secondFinished = false;
   let pollsAfterFinish = 0;
   await page.route(
     `**/api/research/companies/${fixture.company_id}/job-requests**`,
@@ -754,7 +755,17 @@ test("a completed older job is recovered after it leaves the bounded history", a
       if (finished) pollsAfterFinish += 1;
       return route.fulfill({
         json: finished
-          ? [stillActive, ...newer.slice(0, 29)]
+          ? [
+              secondFinished
+                ? {
+                    ...stillActive,
+                    status: "PARTIAL",
+                    finished_at: at,
+                    error_message: "Newer job needs review.",
+                  }
+                : stillActive,
+              ...newer.slice(0, 29),
+            ]
           : [old, stillActive, ...newer.slice(0, 28)],
       });
     },
@@ -783,6 +794,9 @@ test("a completed older job is recovered after it leaves the bounded history", a
   await expect.poll(() => pollsAfterFinish).toBeGreaterThanOrEqual(2);
   await expect(controls.getByText("Older job failed.")).toBeVisible();
   await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
+  secondFinished = true;
+  await expect(controls.getByText("Newer job needs review.")).toBeVisible();
+  await expect(controls.getByText("Older job failed.")).toBeVisible();
   const after = await (await request.get(`${api}/__test/fixture`)).json();
   expect(after.protected_state_sha256).toBe(fixture.protected_state_sha256);
 });
