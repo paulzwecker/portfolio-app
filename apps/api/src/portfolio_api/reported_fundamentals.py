@@ -25,9 +25,10 @@ from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from portfolio_api.bootstrap_preflight import verify_database_read_only_preflight
 from portfolio_api.database import create_database_engine
 from portfolio_api.domain.models import (
     Company,
@@ -53,6 +54,7 @@ from portfolio_api.external_data import (
     RawProviderRecord,
     raw_batch_fingerprint,
 )
+from portfolio_api.sec_identity import reviewed_cik
 from portfolio_api.settings import Settings
 
 SEC_PROVIDER_ID = "sec_edgar"
@@ -1126,6 +1128,59 @@ async def sync_reported_fundamentals(
     return results
 
 
+def _inspect_cik_mapping(
+    session: Session,
+    company_id: UUID,
+    cik: str,
+    provider_company_name: str,
+    evidence_source: str,
+) -> tuple[Company, CompanyProviderIdentifier | None]:
+    company = session.get(Company, company_id)
+    if company is None:
+        raise ValueError("Canonical company was not found")
+    if not re.fullmatch(r"[0-9]{10}", cik):
+        raise ValueError("SEC CIK must contain ten digits, including leading zeroes")
+    name, source = provider_company_name.strip(), evidence_source.strip()
+    if not name or len(name) > 300 or not source or len(source) > 1000:
+        raise ValueError("Record the SEC issuer name and identity evidence source")
+    proposal = CompanyProviderIdentifier(
+        company_id=company_id,
+        provider_id=SEC_PROVIDER_ID,
+        identifier_type="SEC_CIK",
+        identifier_value=cik,
+        provider_company_name=name,
+        evidence_source=source,
+    )
+    if reviewed_cik(proposal) != cik:
+        raise ValueError("Evidence must be an HTTPS SEC.gov issuer URL identifying the exact CIK")
+    existing = list(
+        session.scalars(
+            select(CompanyProviderIdentifier).where(
+                CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
+                CompanyProviderIdentifier.identifier_type == "SEC_CIK",
+                or_(
+                    CompanyProviderIdentifier.identifier_value == cik,
+                    CompanyProviderIdentifier.company_id == company_id,
+                ),
+            )
+        )
+    )
+    if not existing:
+        return company, None
+    if len(existing) != 1:
+        raise ValueError(
+            "Existing SEC mappings are ambiguous; review them before recording a mapping"
+        )
+    mapping = existing[0]
+    if mapping.company_id != company_id:
+        raise ValueError("This SEC CIK is already mapped to a different canonical company")
+    if mapping.identifier_value != cik:
+        raise ValueError("This company already has a different SEC CIK mapping")
+    if mapping.provider_company_name != name or mapping.evidence_source != source:
+        raise ValueError("Existing SEC mapping evidence differs; review the recorded identity")
+    return company, mapping
+
+
 def record_cik_mapping(
     session: Session,
     company_id: UUID,
@@ -1133,23 +1188,11 @@ def record_cik_mapping(
     provider_company_name: str,
     evidence_source: str,
 ) -> CompanyProviderIdentifier:
-    if session.get(Company, company_id) is None:
-        raise ValueError("Canonical company was not found")
-    if not re.fullmatch(r"\d{10}", cik):
-        raise ValueError("SEC CIK must contain ten digits, including leading zeroes")
-    if not provider_company_name.strip() or not evidence_source.strip():
-        raise ValueError("Record the SEC issuer name and identity evidence source")
-    existing = session.scalar(
-        select(CompanyProviderIdentifier).where(
-            CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
-            CompanyProviderIdentifier.identifier_type == "SEC_CIK",
-            CompanyProviderIdentifier.identifier_value == cik,
-        )
+    _, existing = _inspect_cik_mapping(
+        session, company_id, cik, provider_company_name, evidence_source
     )
     if existing is not None:
-        if existing.company_id == company_id:
-            return existing
-        raise ValueError("This SEC CIK is already mapped to a different canonical company")
+        return existing
     mapping = CompanyProviderIdentifier(
         id=uuid4(),
         company_id=company_id,
@@ -1167,14 +1210,46 @@ def record_cik_mapping(
     return mapping
 
 
+def preview_cik_mapping(
+    session: Session,
+    company_id: UUID,
+    cik: str,
+    provider_company_name: str,
+    evidence_source: str,
+) -> dict[str, Any]:
+    """Review an explicitly identified issuer without writing or contacting a provider."""
+    company, existing = _inspect_cik_mapping(
+        session, company_id, cik, provider_company_name, evidence_source
+    )
+    return {
+        "status": "EXISTING" if existing is not None else "PROPOSED",
+        "company_id": str(company.id),
+        "canonical_company_name": company.name,
+        "cik": cik,
+        "provider_company_name": provider_company_name.strip(),
+        "evidence_source": evidence_source.strip(),
+        "evidence_validation": "URL_STRUCTURE_ONLY",
+        "review_required": True,
+        "database_writes": 0,
+        "provider_requests": 0,
+    }
+
+
 def _run_cli() -> int:
     parser = argparse.ArgumentParser(description="Import canonical reported financial facts")
     commands = parser.add_subparsers(dest="command", required=True)
-    map_parser = commands.add_parser("map", help="record a manually verified SEC issuer identity")
-    map_parser.add_argument("--company-id", type=UUID, required=True)
-    map_parser.add_argument("--cik", required=True, help="ten-digit SEC Central Index Key")
-    map_parser.add_argument("--provider-company-name", required=True)
-    map_parser.add_argument("--evidence-source", required=True, help="SEC issuer or filing URL")
+    for command in ("map", "map-preview"):
+        map_parser = commands.add_parser(command, help="review or record an explicit SEC issuer")
+        map_parser.add_argument("--company-id", type=UUID, required=True)
+        map_parser.add_argument("--cik", required=True, help="ten-digit SEC Central Index Key")
+        map_parser.add_argument("--provider-company-name", required=True)
+        map_parser.add_argument("--evidence-source", required=True, help="SEC issuer or filing URL")
+        if command == "map-preview":
+            map_parser.add_argument(
+                "--target-environment",
+                choices=("development", "rehearsal", "production"),
+                required=True,
+            )
     sync_parser = commands.add_parser("sync", help="fetch and append facts for mapped issuers")
     sync_parser.add_argument("--company-id", type=UUID)
     args = parser.parse_args()
@@ -1183,12 +1258,28 @@ def _run_cli() -> int:
         settings,
         write_operation=f"reported_fundamentals_{args.command}",
         write_operation_kind="ingestion" if args.command == "sync" else "import",
+        read_only=args.command == "map-preview",
     )
     if engine is None:
         parser.error("Set DATABASE_URL before running reported-fundamentals ingestion")
     try:
+        if args.command == "map-preview":
+            verify_database_read_only_preflight(
+                engine,
+                configured_target_environment=settings.database_target_environment,
+                requested_target_environment=args.target_environment,
+            )
         with Session(engine) as session:
-            if args.command == "map":
+            if args.command == "map-preview":
+                preview = preview_cik_mapping(
+                    session,
+                    args.company_id,
+                    args.cik,
+                    args.provider_company_name,
+                    args.evidence_source,
+                )
+                print(json.dumps(preview, indent=2))
+            elif args.command == "map":
                 mapping = record_cik_mapping(
                     session,
                     args.company_id,

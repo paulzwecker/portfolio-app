@@ -1,15 +1,34 @@
 # Active workstream
 
-## C3.1 SEC provenance — INTEGRATE
+## SEC issuer activation — BUILD
+
+`codex/sec-issuer-activation` is independent of frozen
+[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) and starts from
+main `976fa2b`. Acceptance for this increment: an explicit issuer can be reviewed
+without database writes or SEC calls; the existing target and schema checks remain
+mandatory; issuer evidence is consistently checked across mapping and fundamentals
+bootstrap; conflicting mappings and legacy invalid records fail closed. URL syntax
+is not proof of issuer identity. No schema or production configuration changed.
+
+The preview and sequential conflict checks passed 25 focused checks against synthetic
+PostgreSQL data, including target mismatch and zero writes; focused Ruff checks pass.
+Concurrent mapping writers require review before any production mapping operation; do not claim those
+are serialized. Continue with that narrow question and an isolated end-to-end SEC
+rehearsal. A contact-bearing SEC user agent is needed for live source requests.
+Production backfill and unattended refresh remain conditional on verified recovery,
+provider terms, reconciliation and the owner's explicitly scoped approvals.
+
+## Previous C3.1 SEC provenance milestone
 
 The [frozen milestone](sec-provenance-integration.md) is isolated on
 `codex/sec-provenance-integration` from `main` `2dfef5b` (merged PR #30),
-with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) awaiting review.
+with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) merged as
+`976fa2b`.
 It adds issuer and filing provenance warnings, evidence-time boundaries, and
 fail-closed Sheets publication. It introduces no migrations. The original
 `codex/sec-coverage-readiness` retains all deferred refresh ownership, Sheets
 recovery and migration work; it must be reconciled after this milestone merges.
-No production ingestion, publication, migration or deployment is authorized.
+This milestone did not authorize production ingestion, publication, migration or deployment.
 Local verification: `npm run check`, the relevant isolated PostgreSQL suite,
 authenticated publication-denial cases, 42 managed desktop/mobile browser cases
 (12 intentionally skipped), four isolated SEC browser cases, and visual review.

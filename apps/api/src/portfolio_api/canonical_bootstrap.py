@@ -49,6 +49,7 @@ from portfolio_api.research_priority_import import (
     import_research_priority_inputs,
     research_priority_rows,
 )
+from portfolio_api.sec_identity import sec_evidence_matches_cik
 from portfolio_api.settings import REPOSITORY_PATH, Settings
 from portfolio_api.workbook_semantics import SEMANTIC_FINGERPRINT_VERSION, semantic_fingerprint
 from portfolio_api.workbook_source_bundle import (
@@ -398,6 +399,7 @@ def _provider_evidence_url(value: object, cik: str) -> str:
         or port is not None
         or cik not in value
         or ("CIK" in query and cik not in query["CIK"])
+        or not sec_evidence_matches_cik(cik, value)
     ):
         raise CanonicalBootstrapError(
             "Provider identifier evidence must identify the exact CIK on sec.gov."

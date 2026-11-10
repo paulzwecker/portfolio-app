@@ -10,13 +10,12 @@ from portfolio_api.domain.models import CompanyProviderIdentifier, ReportedFunda
 SEC_PROVIDER_ID = "sec_edgar"
 
 
-def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
-    """Validate recorded mapping metadata; this does not authenticate SEC evidence."""
-    cik = mapping.identifier_value
+def sec_evidence_matches_cik(cik: str, evidence_source: str) -> bool:
+    """Check the URL's SEC identity syntax, without authenticating its contents."""
     if not isinstance(cik, str) or not re.fullmatch(r"[0-9]{10}", cik):
-        return None
+        return False
     try:
-        url = urlsplit(mapping.evidence_source)
+        url = urlsplit(evidence_source)
         identifiers = [
             value
             for key, value in parse_qsl(url.query, keep_blank_values=True, max_num_fields=200)
@@ -31,10 +30,7 @@ def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
                 identifiers.append(match.group(1))
         host = url.hostname.casefold().rstrip(".") if url.hostname else ""
         if (
-            mapping.provider_id != SEC_PROVIDER_ID
-            or mapping.identifier_type != "SEC_CIK"
-            or not mapping.provider_company_name.strip()
-            or url.scheme != "https"
+            url.scheme != "https"
             or not (host == "sec.gov" or host.endswith(".sec.gov"))
             or url.username
             or url.password
@@ -45,10 +41,25 @@ def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
                 for value in identifiers
             )
         ):
+            return False
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return True
+
+
+def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
+    """Validate recorded mapping metadata; this does not authenticate SEC evidence."""
+    try:
+        if (
+            mapping.provider_id != SEC_PROVIDER_ID
+            or mapping.identifier_type != "SEC_CIK"
+            or not mapping.provider_company_name.strip()
+            or not sec_evidence_matches_cik(mapping.identifier_value, mapping.evidence_source)
+        ):
             return None
     except (TypeError, ValueError, AttributeError):
         return None
-    return cik
+    return mapping.identifier_value
 
 
 def mapping_known_at(
