@@ -647,9 +647,7 @@ test("imported workbook data appears in the live portfolio and universe flows", 
   await expect(page.getByText("Current portfolio value")).toBeVisible();
   await expect(page.getByText("Published Expected IRR").first()).toBeVisible();
   await expect(page.getByText("VALUED", { exact: true }).first()).toBeVisible();
-  await expect(
-    page.getByText(/Holdings confirmation is 6 days old/),
-  ).toBeVisible();
+  await expect(page.getByText(/Holdings snapshot is 6 days old/)).toBeVisible();
   await expect(page.getByText(/FX 0\.8924 as of/)).toBeVisible();
   await expect(page.getByText("Needs attention")).toBeVisible();
   await expect(page.getByText(/items in the current view/)).toBeVisible();

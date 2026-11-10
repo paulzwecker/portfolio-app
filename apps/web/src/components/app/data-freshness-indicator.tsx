@@ -2,7 +2,7 @@ import {
   StatusIndicator,
   type StatusTone,
 } from "@/components/app/status-indicator";
-import { dateTime } from "@/lib/display";
+import { dateTime, marketDate } from "@/lib/display";
 
 const freshnessTone: Record<string, StatusTone> = {
   AVAILABLE: "positive",
@@ -19,11 +19,15 @@ export function DataFreshnessIndicator({
   observedAt,
   source,
   detail,
+  timeLabel = "Observed",
+  timeKind = "timestamp",
 }: {
   state: string;
   observedAt?: string | null;
   source?: string | null;
   detail?: string | null;
+  timeLabel?: string;
+  timeKind?: "timestamp" | "market-date";
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -34,7 +38,10 @@ export function DataFreshnessIndicator({
       {source && <span className="text-muted-foreground">{source}</span>}
       {observedAt && (
         <time dateTime={observedAt} className="text-muted-foreground">
-          Observed {dateTime(observedAt)}
+          {timeLabel}{" "}
+          {timeKind === "market-date"
+            ? marketDate(observedAt)
+            : dateTime(observedAt)}
         </time>
       )}
       {detail && <span className="text-muted-foreground">{detail}</span>}

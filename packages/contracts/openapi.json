@@ -20956,6 +20956,484 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "MarketBootstrapCanonicalReadinessRead": {
+        "additionalProperties": false,
+        "properties": {
+          "bootstrap_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bootstrap Status"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "reconciliation_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Status"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "source_gap_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Gap Count"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ready",
+          "status",
+          "run_id",
+          "bootstrap_status",
+          "reconciliation_status",
+          "source_gap_count",
+          "recorded_at"
+        ],
+        "title": "MarketBootstrapCanonicalReadinessRead",
+        "type": "object"
+      },
+      "MarketBootstrapHoldingsSnapshotRead": {
+        "additionalProperties": false,
+        "properties": {
+          "completeness": {
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "UNAVAILABLE"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "portfolio_id",
+          "completeness",
+          "effective_at",
+          "recorded_at"
+        ],
+        "title": "MarketBootstrapHoldingsSnapshotRead",
+        "type": "object"
+      },
+      "MarketBootstrapScopeListingRead": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "held_quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Quantity"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "mapping_verified": {
+            "title": "Mapping Verified",
+            "type": "boolean"
+          },
+          "priority": {
+            "enum": [
+              "HELD",
+              "PORTFOLIO",
+              "WATCHLIST",
+              "OTHER"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "provider_symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Symbol"
+          },
+          "security_id": {
+            "format": "uuid",
+            "title": "Security Id",
+            "type": "string"
+          },
+          "security_type": {
+            "title": "Security Type",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "security_id",
+          "company_id",
+          "company_name",
+          "venue",
+          "ticker",
+          "currency",
+          "security_type",
+          "priority",
+          "held_quantity",
+          "mapping_verified",
+          "provider_symbol"
+        ],
+        "title": "MarketBootstrapScopeListingRead",
+        "type": "object"
+      },
+      "MarketBootstrapScopePreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "allowlisted_fx_pairs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowlisted Fx Pairs",
+            "type": "array"
+          },
+          "canonical_import_readiness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketBootstrapCanonicalReadinessRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "company_scope": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Scope"
+          },
+          "crosswalk_sha256": {
+            "title": "Crosswalk Sha256",
+            "type": "string"
+          },
+          "database_writes": {
+            "const": 0,
+            "title": "Database Writes",
+            "type": "integer"
+          },
+          "date_window": {
+            "$ref": "#/components/schemas/MarketBootstrapWindowRead"
+          },
+          "holdings_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketBootstrapHoldingsSnapshotRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lifecycle_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Lifecycle Counts",
+            "type": "object"
+          },
+          "listing_priority_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Listing Priority Counts",
+            "type": "object"
+          },
+          "listing_review": {
+            "items": {
+              "$ref": "#/components/schemas/MarketBootstrapScopeListingRead"
+            },
+            "title": "Listing Review",
+            "type": "array"
+          },
+          "listing_scope": {
+            "title": "Listing Scope",
+            "type": "string"
+          },
+          "omitted_listing_count": {
+            "title": "Omitted Listing Count",
+            "type": "integer"
+          },
+          "portfolio_base_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Base Currency"
+          },
+          "provider_id": {
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "provider_requests": {
+            "const": 0,
+            "title": "Provider Requests",
+            "type": "integer"
+          },
+          "provider_requests_planned": {
+            "title": "Provider Requests Planned",
+            "type": "integer"
+          },
+          "provider_schema_version": {
+            "title": "Provider Schema Version",
+            "type": "string"
+          },
+          "required_fx_pairs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Fx Pairs",
+            "type": "array"
+          },
+          "selected_listing_count": {
+            "title": "Selected Listing Count",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "READY",
+              "BLOCKED",
+              "BLOCKED_CANONICAL_IMPORT"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_environment": {
+            "enum": [
+              "development",
+              "rehearsal",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          },
+          "unmapped_fx_pairs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped Fx Pairs",
+            "type": "array"
+          },
+          "unresolved_listings": {
+            "items": {
+              "$ref": "#/components/schemas/MarketBootstrapUnresolvedListingRead"
+            },
+            "title": "Unresolved Listings",
+            "type": "array"
+          },
+          "verified_listing_mapping_count": {
+            "title": "Verified Listing Mapping Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "checked_at",
+          "provider_id",
+          "provider_schema_version",
+          "crosswalk_sha256",
+          "target_environment",
+          "date_window",
+          "listing_scope",
+          "holdings_snapshot",
+          "company_scope",
+          "canonical_import_readiness",
+          "listing_priority_counts",
+          "selected_listing_count",
+          "listing_review",
+          "omitted_listing_count",
+          "verified_listing_mapping_count",
+          "unresolved_listings",
+          "portfolio_base_currency",
+          "required_fx_pairs",
+          "allowlisted_fx_pairs",
+          "unmapped_fx_pairs",
+          "provider_requests_planned",
+          "database_writes",
+          "provider_requests",
+          "lifecycle_counts"
+        ],
+        "title": "MarketBootstrapScopePreviewRead",
+        "type": "object"
+      },
+      "MarketBootstrapUnresolvedListingRead": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "subject_key": {
+            "format": "uuid",
+            "title": "Subject Key",
+            "type": "string"
+          },
+          "subject_kind": {
+            "const": "LISTING",
+            "title": "Subject Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_kind",
+          "subject_key",
+          "code"
+        ],
+        "title": "MarketBootstrapUnresolvedListingRead",
+        "type": "object"
+      },
+      "MarketBootstrapWindowRead": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "MarketBootstrapWindowRead",
+        "type": "object"
+      },
       "MarketRefreshAttemptRead": {
         "additionalProperties": false,
         "properties": {
@@ -40351,6 +40829,60 @@
           }
         },
         "summary": "Get Listing Market Data",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/market-data/bootstrap-scope": {
+      "get": {
+        "description": "Preview only; never contact a provider or prepare a run.",
+        "operationId": "get_market_bootstrap_scope_v1_market_data_bootstrap_scope_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketBootstrapScopePreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Market Bootstrap Scope",
         "tags": [
           "Portfolio research"
         ]

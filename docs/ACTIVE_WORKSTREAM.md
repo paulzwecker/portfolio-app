@@ -1,10 +1,29 @@
 # Active workstream
 
-## C3.1 SEC provenance — INTEGRATE
+## C2.2 Portfolio valuation evidence — INTEGRATE
+
+Portfolio now presents per-listing weights, supplied FX details and all valuation
+gaps without calculating financial results in the browser. Operations provides a
+read-only market-scope review: exact selected identities, mapping status, snapshot
+completeness and quantities, with an explicit limit and warning when identities are
+omitted. Missing, zero and partial data remain distinct. The existing multi-portfolio
+selection limitation is disclosed; this milestone does not alter writer selection.
+
+The repository quality check, relevant isolated PostgreSQL suite, managed desktop
+and mobile browser tests and real local API browser journeys passed. Independent
+review findings on snapshot completeness, decimal precision and accessibility were
+fixed. No migration was added. **CONFIGURATION_REQUIRED**: verify current provider
+controls and live revisions; the additive API must be deployed and checked before
+the frontend. A merge is not deployment authorization. Real provider ingestion
+and unattended refresh remain separately gated by source permission, current
+recovery and the approved operational procedure. Sensitive operator evidence stays
+outside this public repository.
+
+## Previous C3.1 SEC provenance integration
 
 The [frozen milestone](sec-provenance-integration.md) is isolated on
 `codex/sec-provenance-integration` from `main` `2dfef5b` (merged PR #30),
-with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) awaiting review.
+with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) since merged.
 It adds issuer and filing provenance warnings, evidence-time boundaries, and
 fail-closed Sheets publication. It introduces no migrations. The original
 `codex/sec-coverage-readiness` retains all deferred refresh ownership, Sheets

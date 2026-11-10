@@ -1,19 +1,19 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-09. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-10. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C3.1 SEC provenance — INTEGRATE. [Frozen acceptance](docs/sec-provenance-integration.md) and [handoff](docs/ACTIVE_WORKSTREAM.md). |
-| Branch / PR                 | `codex/sec-provenance-integration`; [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32). PR #30 merged as `2dfef5b`.    |
-| Implementation              | SEC issuer identity, evidence-time boundaries and research warnings; incomplete Sheets publication disabled.                       |
-| Next ready substantial task | Await PR #32 review; then prepare bounded historical prices/FX and useful fundamentals.                                            |
-| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                      |
-| Production boundary         | No ingestion, migration, deployment or financial decision without separate owner authorization.                                    |
+| Field                       | Current value                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C2.2 Portfolio valuation evidence — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md).                          |
+| Branch / PR                 | `codex/portfolio-valuation-integration` based on merged main; one cohesive PR pending.                        |
+| Implementation              | Portfolio valuation evidence and read-only market scope review verified locally.                              |
+| Next ready substantial task | Verify release controls and prepare permitted historical prices/FX and durable recovery before activation.    |
+| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later. |
+| Production boundary         | Production actions require the exact owner's authorization and all applicable safeguards.                     |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

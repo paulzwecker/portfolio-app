@@ -4380,9 +4380,7 @@ test("portfolio dashboard composes canonical posture, ranks and missing states r
   ).toBeVisible();
   await expect(page.getByText("$1,100.00", { exact: true })).toBeVisible();
   await expect(page.getByText(/Current mark-to-market/)).toBeVisible();
-  await expect(
-    page.getByText(/Holdings confirmation is 6 days old/),
-  ).toBeVisible();
+  await expect(page.getByText(/Holdings snapshot is 6 days old/)).toBeVisible();
   await expect(
     page
       .getByText(/quote observed/)

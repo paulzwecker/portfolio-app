@@ -322,6 +322,8 @@ export type MarketRefreshStatus =
   components["schemas"]["MarketRefreshStatusRead"];
 export type HistoricalBootstrapReview =
   components["schemas"]["HistoricalBootstrapReviewRead"];
+export type MarketBootstrapScopePreview =
+  components["schemas"]["MarketBootstrapScopePreviewRead"];
 export type HistoricalBootstrapReconciliation =
   components["schemas"]["HistoricalBootstrapReconciliationRead"];
 export type MarketRefreshRun = components["schemas"]["MarketRefreshRunRead"];
@@ -925,6 +927,189 @@ function isScheduledSessionReview(v: unknown): boolean {
     (v.scheduled_count as number) >= 0 &&
     array(v.absent_scheduled_dates, dateOnly) &&
     array(v.selected_unscheduled_dates, dateOnly)
+  );
+}
+
+export function isMarketBootstrapScopePreview(
+  v: unknown,
+): v is MarketBootstrapScopePreview {
+  const count = (value: unknown) =>
+    typeof value === "number" && Number.isInteger(value) && value >= 0;
+  const pair = (value: unknown) =>
+    typeof value === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(value);
+  if (
+    !isRecord(v) ||
+    !["READY", "BLOCKED", "BLOCKED_CANONICAL_IMPORT"].includes(
+      v.status as string,
+    ) ||
+    !timestamp(v.checked_at) ||
+    !string(v.provider_id) ||
+    !string(v.provider_schema_version) ||
+    !string(v.crosswalk_sha256) ||
+    !/^[a-f0-9]{64}$/.test(v.crosswalk_sha256 as string) ||
+    !["development", "rehearsal", "production"].includes(
+      v.target_environment as string,
+    ) ||
+    !isRecord(v.date_window) ||
+    !dateOnly(v.date_window.start) ||
+    !dateOnly(v.date_window.end) ||
+    (v.date_window.start as string) > (v.date_window.end as string) ||
+    !string(v.listing_scope) ||
+    !nullableUuid(v.company_scope) ||
+    !isRecord(v.listing_priority_counts) ||
+    !["HELD", "PORTFOLIO", "WATCHLIST", "OTHER"].every((key) =>
+      count((v.listing_priority_counts as Record<string, unknown>)[key]),
+    ) ||
+    !count(v.selected_listing_count) ||
+    !count(v.omitted_listing_count) ||
+    !Array.isArray(v.listing_review) ||
+    v.listing_review.length > 50 ||
+    !array(
+      v.listing_review,
+      (row) =>
+        isRecord(row) &&
+        uuid(row.listing_id) &&
+        uuid(row.security_id) &&
+        nullableUuid(row.company_id) &&
+        (row.company_id === null
+          ? row.company_name === null
+          : string(row.company_name)) &&
+        string(row.venue) &&
+        string(row.ticker) &&
+        (row.currency === null ||
+          (string(row.currency) &&
+            /^[A-Z]{3}$/.test(row.currency as string))) &&
+        ["COMMON_STOCK", "ADR", "PREFERRED", "ETF"].includes(
+          row.security_type as string,
+        ) &&
+        ["HELD", "PORTFOLIO", "WATCHLIST", "OTHER"].includes(
+          row.priority as string,
+        ) &&
+        (row.priority === "HELD"
+          ? row.held_quantity === null || decimal(row.held_quantity)
+          : row.held_quantity === null) &&
+        typeof row.mapping_verified === "boolean" &&
+        (row.mapping_verified
+          ? typeof row.provider_symbol === "string" &&
+            row.provider_symbol.length > 0
+          : row.provider_symbol === null),
+    ) ||
+    !count(v.verified_listing_mapping_count) ||
+    !array(
+      v.unresolved_listings,
+      (row) =>
+        isRecord(row) &&
+        row.subject_kind === "LISTING" &&
+        uuid(row.subject_key) &&
+        string(row.code),
+    ) ||
+    !(
+      v.portfolio_base_currency === null ||
+      (string(v.portfolio_base_currency) &&
+        /^[A-Z]{3}$/.test(v.portfolio_base_currency as string))
+    ) ||
+    !array(v.required_fx_pairs, pair) ||
+    !array(v.allowlisted_fx_pairs, pair) ||
+    !array(v.unmapped_fx_pairs, pair) ||
+    !count(v.provider_requests_planned) ||
+    v.database_writes !== 0 ||
+    v.provider_requests !== 0 ||
+    !isRecord(v.lifecycle_counts) ||
+    !["PORTFOLIO", "WATCHLIST"].every((key) =>
+      count((v.lifecycle_counts as Record<string, unknown>)[key]),
+    )
+  )
+    return false;
+  const readiness = v.canonical_import_readiness;
+  const snapshot = v.holdings_snapshot;
+  if (!(
+    snapshot === null ||
+    (isRecord(snapshot) &&
+      uuid(snapshot.id) &&
+      uuid(snapshot.portfolio_id) &&
+      ["COMPLETE", "PARTIAL", "UNAVAILABLE"].includes(
+        snapshot.completeness as string,
+      ) &&
+      timestamp(snapshot.effective_at) &&
+      timestamp(snapshot.recorded_at))
+  ))
+    return false;
+  const validReadiness =
+    readiness === null ||
+    (isRecord(readiness) &&
+      typeof readiness.ready === "boolean" &&
+      string(readiness.status) &&
+      nullableUuid(readiness.run_id) &&
+      nullableString(readiness.bootstrap_status) &&
+      nullableString(readiness.reconciliation_status) &&
+      (readiness.source_gap_count === null ||
+        count(readiness.source_gap_count)) &&
+      (readiness.recorded_at === null || timestamp(readiness.recorded_at)));
+  if (
+    !validReadiness ||
+    (v.target_environment === "production" && readiness === null)
+  )
+    return false;
+  if (
+    isRecord(readiness) &&
+    readiness.ready === true &&
+    (readiness.status !== "RECONCILED" ||
+      !uuid(readiness.run_id) ||
+      !timestamp(readiness.recorded_at) ||
+      readiness.reconciliation_status !== "MATCHED" ||
+      !["APPLIED", "APPLIED_WITH_GAPS"].includes(
+        readiness.bootstrap_status as string,
+      ))
+  )
+    return false;
+  const priorities = v.listing_priority_counts as Record<string, number>;
+  const required = v.required_fx_pairs as string[];
+  const allowlisted = v.allowlisted_fx_pairs as string[];
+  const unmapped = v.unmapped_fx_pairs as string[];
+  const unresolved = v.unresolved_listings as { subject_key: string }[];
+  const rows =
+    v.listing_review as MarketBootstrapScopePreview["listing_review"];
+  const unresolvedIds = new Set(
+    unresolved.map((item) => item.subject_key.toLowerCase()),
+  );
+  return (
+    (snapshot !== null || priorities.HELD === 0) &&
+    priorities.HELD +
+      priorities.PORTFOLIO +
+      priorities.WATCHLIST +
+      priorities.OTHER ===
+      v.selected_listing_count &&
+    rows.length + (v.omitted_listing_count as number) ===
+      v.selected_listing_count &&
+    new Set(rows.map((row) => row.listing_id.toLowerCase())).size ===
+      rows.length &&
+    unresolvedIds.size === unresolved.length &&
+    rows.every(
+      (row) =>
+        row.mapping_verified !==
+        unresolvedIds.has(row.listing_id.toLowerCase()),
+    ) &&
+    ["HELD", "PORTFOLIO", "WATCHLIST", "OTHER"].every((tier) => {
+      const visible = rows.filter((row) => row.priority === tier).length;
+      return (
+        visible <= priorities[tier] &&
+        (v.omitted_listing_count !== 0 || visible === priorities[tier])
+      );
+    }) &&
+    (v.verified_listing_mapping_count as number) + unresolved.length ===
+      v.selected_listing_count &&
+    new Set(required).size === required.length &&
+    allowlisted.length + unmapped.length === required.length &&
+    new Set([...allowlisted, ...unmapped]).size === required.length &&
+    [...allowlisted, ...unmapped].every((item) => required.includes(item)) &&
+    (v.verified_listing_mapping_count as number) + allowlisted.length ===
+      v.provider_requests_planned &&
+    (v.status !== "READY" ||
+      (unresolved.length === 0 &&
+        unmapped.length === 0 &&
+        ((v.selected_listing_count as number) > 0 || required.length > 0) &&
+        (readiness === null ||
+          (isRecord(readiness) && readiness.ready === true))))
   );
 }
 
