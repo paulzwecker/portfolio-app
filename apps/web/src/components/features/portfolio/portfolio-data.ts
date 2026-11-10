@@ -18,6 +18,8 @@ export type PortfolioHoldingRow = {
   priceDate: string | null;
   priceObservedAt: string | null;
   priceFreshness: string;
+  fxRate: string | null;
+  fxEffectiveAt: string | null;
   valuationStatus: string;
   valuationSyncStatus: string;
   baseMarketValue: string | null;
@@ -69,11 +71,12 @@ export function portfolioHoldingRows(
       priceDate: position?.price_date ?? null,
       priceObservedAt: position?.price_observed_at ?? null,
       priceFreshness: position?.price_freshness ?? "NO_DATA",
-      valuationStatus: position?.valuation_status ?? "PRICE_UNAVAILABLE",
+      fxRate: position?.fx_rate ?? null,
+      fxEffectiveAt: position?.fx_effective_at ?? null,
+      valuationStatus: position?.valuation_status ?? "UNAVAILABLE",
       valuationSyncStatus: position?.valuation_sync_status ?? "UNAVAILABLE",
       baseMarketValue: position?.base_market_value ?? null,
-      portfolioWeight:
-        context?.company?.current_weight ?? position?.portfolio_weight ?? null,
+      portfolioWeight: position?.portfolio_weight ?? null,
       targetWeight: context?.company?.target_weight ?? null,
       allocationGap: context?.company?.allocation_gap ?? null,
       allocationStatus: context?.company?.allocation_status ?? null,
@@ -125,7 +128,8 @@ export function percent(value: string | null) {
 }
 
 export function countNote(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+  const plural = noun === "currency" ? "currencies" : `${noun}s`;
+  return `${count} ${count === 1 ? noun : plural}`;
 }
 
 export function portfolioCoverageTone(status: string) {

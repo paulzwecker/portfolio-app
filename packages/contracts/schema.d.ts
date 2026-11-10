@@ -1568,6 +1568,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/market-data/bootstrap-scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Bootstrap Scope
+         * @description Preview only; never contact a provider or prepare a run.
+         */
+        get: operations["get_market_bootstrap_scope_v1_market_data_bootstrap_scope_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/market-data/historical-bootstrap": {
         parameters: {
             query?: never;
@@ -8801,6 +8821,184 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** MarketBootstrapCanonicalReadinessRead */
+        MarketBootstrapCanonicalReadinessRead: {
+            /** Bootstrap Status */
+            bootstrap_status: string | null;
+            /** Ready */
+            ready: boolean;
+            /** Reconciliation Status */
+            reconciliation_status: string | null;
+            /** Recorded At */
+            recorded_at: string | null;
+            /** Run Id */
+            run_id: string | null;
+            /** Source Gap Count */
+            source_gap_count: number | null;
+            /** Status */
+            status: string;
+        };
+        /** MarketBootstrapHoldingsSnapshotRead */
+        MarketBootstrapHoldingsSnapshotRead: {
+            /**
+             * Completeness
+             * @enum {string}
+             */
+            completeness: "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+        };
+        /** MarketBootstrapScopeListingRead */
+        MarketBootstrapScopeListingRead: {
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Held Quantity */
+            held_quantity: string | null;
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Mapping Verified */
+            mapping_verified: boolean;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "HELD" | "PORTFOLIO" | "WATCHLIST" | "OTHER";
+            /** Provider Symbol */
+            provider_symbol: string | null;
+            /**
+             * Security Id
+             * Format: uuid
+             */
+            security_id: string;
+            /** Security Type */
+            security_type: string;
+            /** Ticker */
+            ticker: string;
+            /** Venue */
+            venue: string;
+        };
+        /** MarketBootstrapScopePreviewRead */
+        MarketBootstrapScopePreviewRead: {
+            /** Allowlisted Fx Pairs */
+            allowlisted_fx_pairs: string[];
+            canonical_import_readiness: components["schemas"]["MarketBootstrapCanonicalReadinessRead"] | null;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Company Scope */
+            company_scope: string | null;
+            /** Crosswalk Sha256 */
+            crosswalk_sha256: string;
+            /**
+             * Database Writes
+             * @constant
+             */
+            database_writes: 0;
+            date_window: components["schemas"]["MarketBootstrapWindowRead"];
+            holdings_snapshot: components["schemas"]["MarketBootstrapHoldingsSnapshotRead"] | null;
+            /** Lifecycle Counts */
+            lifecycle_counts: {
+                [key: string]: number;
+            };
+            /** Listing Priority Counts */
+            listing_priority_counts: {
+                [key: string]: number;
+            };
+            /** Listing Review */
+            listing_review: components["schemas"]["MarketBootstrapScopeListingRead"][];
+            /** Listing Scope */
+            listing_scope: string;
+            /** Omitted Listing Count */
+            omitted_listing_count: number;
+            /** Portfolio Base Currency */
+            portfolio_base_currency: string | null;
+            /** Provider Id */
+            provider_id: string;
+            /**
+             * Provider Requests
+             * @constant
+             */
+            provider_requests: 0;
+            /** Provider Requests Planned */
+            provider_requests_planned: number;
+            /** Provider Schema Version */
+            provider_schema_version: string;
+            /** Required Fx Pairs */
+            required_fx_pairs: string[];
+            /** Selected Listing Count */
+            selected_listing_count: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "READY" | "BLOCKED" | "BLOCKED_CANONICAL_IMPORT";
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "development" | "rehearsal" | "production";
+            /** Unmapped Fx Pairs */
+            unmapped_fx_pairs: string[];
+            /** Unresolved Listings */
+            unresolved_listings: components["schemas"]["MarketBootstrapUnresolvedListingRead"][];
+            /** Verified Listing Mapping Count */
+            verified_listing_mapping_count: number;
+        };
+        /** MarketBootstrapUnresolvedListingRead */
+        MarketBootstrapUnresolvedListingRead: {
+            /** Code */
+            code: string;
+            /**
+             * Subject Key
+             * Format: uuid
+             */
+            subject_key: string;
+            /**
+             * Subject Kind
+             * @constant
+             */
+            subject_kind: "LISTING";
+        };
+        /** MarketBootstrapWindowRead */
+        MarketBootstrapWindowRead: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /** MarketRefreshAttemptRead */
         MarketRefreshAttemptRead: {
@@ -16123,6 +16321,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListingMarketData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_bootstrap_scope_v1_market_data_bootstrap_scope_get: {
+        parameters: {
+            query: {
+                start_date: string;
+                end_date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketBootstrapScopePreviewRead"];
                 };
             };
             /** @description Validation Error */

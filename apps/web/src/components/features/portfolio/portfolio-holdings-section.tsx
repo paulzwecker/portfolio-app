@@ -8,6 +8,7 @@ import { TableSearch } from "@/components/app/table-search";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HoldingsConfirmation } from "@/components/features/portfolio/holdings-confirmation";
+import { ValuationFxEvidence } from "@/components/features/portfolio/valuation-fx-evidence";
 import type { Overview } from "@/lib/domain-contracts";
 import { dateTime, marketDate, quantity, statusLabel } from "@/lib/display";
 import {
@@ -84,7 +85,7 @@ export function PortfolioHoldingsSection({
                 : "time unknown"}{" "}
               · {statusLabel(row.priceFreshness)}
               {row.valuationSyncStatus === "NON_SYNCHRONOUS"
-                ? " · non-synchronous close"
+                ? " · FX and quote observation times differ"
                 : ""}
             </p>
           )}
@@ -108,18 +109,78 @@ export function PortfolioHoldingsSection({
       id: "value",
       header: `Market value · ${overview.valuation_currency}`,
       className: "w-[16%] text-right tabular-nums",
-      render: (row: PortfolioHoldingRow) =>
-        currency(row.baseMarketValue, overview.valuation_currency),
+      render: (row: PortfolioHoldingRow) => (
+        <div>
+          {currency(row.baseMarketValue, overview.valuation_currency)}
+          {row.valuationStatus !== "VALUED" && (
+            <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+              <p>{statusLabel(row.valuationStatus)}</p>
+              {row.valuationStatus === "PRICE_UNAVAILABLE" && row.companyId && (
+                <Link
+                  href={`/company/${row.companyId}?view=history`}
+                  aria-label={`Review company prices, from ${row.ticker ?? "listing"} ${row.venue ?? row.listingId}`}
+                  className="inline-block text-primary underline underline-offset-2"
+                >
+                  Review company prices
+                </Link>
+              )}
+              {(row.valuationStatus === "FX_UNAVAILABLE" ||
+                (row.valuationStatus === "PRICE_UNAVAILABLE" &&
+                  !row.companyId)) && (
+                <Link
+                  href="/operations#market-data-refresh"
+                  aria-label={`Review global price and FX status, from ${row.ticker ?? "listing"} ${row.venue ?? row.listingId}`}
+                  className="inline-block text-primary underline underline-offset-2"
+                >
+                  Review global price and FX status
+                </Link>
+              )}
+              {row.valuationStatus === "QUANTITY_UNAVAILABLE" && (
+                <a
+                  href={
+                    overview.holdings_authority?.source === "ACCEPTED_LEDGER"
+                      ? "/portfolio/ledger"
+                      : "#holdings-confirmation"
+                  }
+                  aria-label={`Review ${overview.holdings_authority?.source === "ACCEPTED_LEDGER" ? "ledger" : "holdings"} for ${row.ticker ?? "listing"} ${row.venue ?? row.listingId}`}
+                  className="inline-block text-primary underline underline-offset-2"
+                >
+                  {overview.holdings_authority?.source === "ACCEPTED_LEDGER"
+                    ? "Review ledger"
+                    : "Review holdings"}
+                </a>
+              )}
+            </div>
+          )}
+          <details className="mt-1 text-xs text-muted-foreground">
+            <summary
+              aria-label={`FX details for ${row.ticker ?? "listing"} ${row.venue ?? row.listingId}`}
+              className="cursor-pointer"
+            >
+              FX details
+            </summary>
+            <div className="mt-1 break-words">
+              <ValuationFxEvidence
+                sourceCurrency={row.listingCurrency}
+                targetCurrency={overview.valuation_currency}
+                rate={row.fxRate}
+                effectiveAt={row.fxEffectiveAt}
+                syncStatus={row.valuationSyncStatus}
+              />
+            </div>
+          </details>
+        </div>
+      ),
     },
     {
       id: "weight",
-      header: "Current weight",
+      header: "Listing weight",
       className: "w-[12%] text-right tabular-nums",
       render: (row: PortfolioHoldingRow) => percent(row.portfolioWeight),
     },
     {
       id: "target",
-      header: "Target / gap",
+      header: "Company target / gap",
       className: "w-[14%] text-right tabular-nums",
       render: (row: PortfolioHoldingRow) => (
         <span>
@@ -158,7 +219,8 @@ export function PortfolioHoldingsSection({
             <CardTitle className="text-base">Current positions</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
               {countNote(rows.length, "listing position")} · listing identity
-              includes venue, currency and canonical ID.
+              includes venue, currency and canonical ID. Targets and gaps apply
+              to the company, not an individual listing.
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs">

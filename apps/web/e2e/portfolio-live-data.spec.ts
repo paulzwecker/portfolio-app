@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  isMarketBootstrapScopePreview,
   isOverview,
   isRecurringOperationsStatus,
 } from "../src/lib/domain-contracts";
@@ -8,6 +9,83 @@ test.skip(
   process.env.E2E_REAL_API !== "1",
   "Requires the isolated portfolio-data API fixture.",
 );
+
+test("real API and browser review exact selected identities without writes", async ({
+  page,
+  request,
+}) => {
+  const port = process.env.BROWSER_API_PORT ?? "8011";
+  if (
+    !/^\d+$/.test(port) ||
+    process.env.API_BASE_URL?.replace(/\/$/, "") !== `http://127.0.0.1:${port}`
+  )
+    throw new Error("Use the explicit loopback fixture API.");
+  const api = `http://127.0.0.1:${port}`;
+  const beforeResponse = await request.get(`${api}/__test/fixture`);
+  const before = await beforeResponse.json();
+  expect(before.test_only).toBe("portfolio-data-v1");
+  expect(before.schema).toMatch(/^test_browser_[a-f0-9]{32}$/);
+  expect(before.scenario).toBe("unpriced");
+  expect(before.provider_request_count).toBe(0);
+  const query = "start_date=2024-02-01&end_date=2024-11-30";
+  const direct = await request.get(
+    `${api}/v1/market-data/bootstrap-scope?${query}`,
+  );
+  expect(direct.status()).toBe(200);
+  const expected: unknown = await direct.json();
+  if (!isMarketBootstrapScopePreview(expected))
+    throw new Error("Invalid direct scope preview");
+  expect(expected.omitted_listing_count).toBe(0);
+  expect(expected.listing_review.length).toBeGreaterThan(0);
+  const proxied = await request.get(
+    `/api/research/market-data/bootstrap-scope?${query}`,
+  );
+  expect(proxied.status()).toBe(200);
+  const observed: unknown = await proxied.json();
+  if (!isMarketBootstrapScopePreview(observed))
+    throw new Error("Invalid proxied scope preview");
+  expect(observed.listing_review).toEqual(expected.listing_review);
+  const writes: string[] = [];
+  page.on("request", (req) => {
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method()))
+      writes.push(req.method());
+  });
+  await page.goto("/operations");
+  await page.getByLabel("Start date").fill("2024-02-01");
+  await page.getByLabel("End date").fill("2024-11-30");
+  await page.getByRole("button", { name: "Review scope" }).click();
+  await page
+    .getByText(`Review ${expected.listing_review.length} selected listings`)
+    .click();
+  const first = expected.listing_review[0];
+  await expect(
+    page
+      .getByText(
+        `${first.ticker} · ${first.venue} · ${first.currency ?? "Currency unavailable"}`,
+      )
+      .filter({ visible: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText(
+        first.mapping_verified
+          ? `Verified: ${first.provider_symbol}`
+          : "Needs review",
+        { exact: true },
+      )
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const after = await (await request.get(`${api}/__test/fixture`)).json();
+  expect(after.protected_state_sha256).toBe(before.protected_state_sha256);
+  expect(after.provider_request_count).toBe(0);
+  expect(writes).toEqual([]);
+});
 
 test("real importer, proxy and browser preserve the portfolio baseline", async ({
   page,

@@ -68,6 +68,8 @@ INSERT_CHUNK_SIZE = 1000
 def active_market_listings(
     session: Session,
     company_ids: set[UUID] | None = None,
+    *,
+    latest_snapshot: HoldingSnapshot | None = None,
 ) -> tuple[list[tuple[Listing, Security, Company]], set[UUID]]:
     lifecycle = {
         event.company_id: event.new_state
@@ -77,11 +79,12 @@ def active_market_listings(
             )
         )
     }
-    latest_snapshot = session.scalar(
-        select(HoldingSnapshot)
-        .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
-        .limit(1)
-    )
+    if latest_snapshot is None:
+        latest_snapshot = session.scalar(
+            select(HoldingSnapshot)
+            .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
+            .limit(1)
+        )
     held_ids = (
         set(
             session.scalars(
