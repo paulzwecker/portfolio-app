@@ -1,6 +1,6 @@
 # Active workstream
 
-## Financial statements availability — BUILD
+## Financial statements availability — INTEGRATE
 
 `codex/financial-statements-availability` starts from main `715820e`, independently
 of frozen [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) and
@@ -26,9 +26,15 @@ populated data at mobile and desktop widths. Two browser checks used the real
 isolated empty API response, verified source access and unchanged protected state,
 and were inspected in light and dark themes. Independent review found no remaining
 concrete blocker. No schema, financial calculation, provider or production changes.
-This is a focused BUILD increment, not a major milestone PR; production data remains
-separately gated. Next complete a useful source-backed Financials workflow alongside
-the approved recovery and source-access prerequisites for actual observations.
+Frozen acceptance: suppress unsupported empty controls; retain source and quality
+evidence; chart only aligned eligible values, including zero; preserve explicit
+selection. The full 478-test web suite, lint, production build, documentation and
+deployment checks passed. Desktop/mobile journeys passed with synthetic data and
+with the isolated API; empty-state light/dark layouts were inspected. Independent
+review found no blocker. A pre-existing selection that persists after a period or
+source change is deferred. This slice creates no financial observations. Live
+production schema and automatic deployment controls remain unverified; merge/release
+is BLOCKED until checked. Source access and recovery gates for real data are separate.
 
 ## Previous C2.2 Portfolio valuation evidence
 
