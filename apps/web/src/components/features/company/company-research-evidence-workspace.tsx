@@ -126,6 +126,14 @@ function uniqueRevisions(revisions: ResearchRevision[]) {
   });
 }
 
+function documentSummary(document: SourceDocument): string {
+  return `${statusLabel(document.document_type)} · ${document.source_name}${
+    document.provider_id === "sec_edgar"
+      ? " · Issuer attribution unverified"
+      : ""
+  }`;
+}
+
 export function buildResearchActivity(input: {
   documents: SourceDocument[];
   researchRevisions: ResearchRevision[];
@@ -136,7 +144,7 @@ export function buildResearchActivity(input: {
     id: `document:${document.id}`,
     category: "FILINGS",
     title: document.title,
-    summary: `${statusLabel(document.document_type)} · ${document.source_name}`,
+    summary: documentSummary(document),
     effectiveAt: document.filed_at ?? document.published_at,
     recordedAt: document.recorded_at,
     sourceLabel: "Reported source",
@@ -228,7 +236,25 @@ function dateLabel(value: string | null | undefined) {
   return value.length <= 10 ? dateOnly(value) : dateTime(value);
 }
 
-function SourceDocumentDetail({ document }: { document: SourceDocument }) {
+function SecFilingAttributionWarning({
+  document,
+}: {
+  document: SourceDocument;
+}) {
+  if (document.provider_id !== "sec_edgar") return null;
+  return (
+    <p className="text-xs text-warning">
+      Issuer attribution unverified. This filing has no retained per-document
+      link to its SEC response. Review issuer attribution before relying on it.
+    </p>
+  );
+}
+
+export function SourceDocumentDetail({
+  document,
+}: {
+  document: SourceDocument;
+}) {
   return (
     <div className="space-y-5 text-sm">
       <div className="flex flex-wrap items-center gap-2">
@@ -279,6 +305,7 @@ function SourceDocumentDetail({ document }: { document: SourceDocument }) {
           {document.quality_reason}
         </p>
       )}
+      <SecFilingAttributionWarning document={document} />
       <SourceReference
         label="Open original source"
         href={document.canonical_url}
@@ -896,7 +923,7 @@ function ActivityList({
   );
 }
 
-function SourceDocumentsSection({
+export function SourceDocumentsSection({
   state,
   recency,
   onInspect,
@@ -936,7 +963,7 @@ function SourceDocumentsSection({
               : "secondary"
           }
         >
-          SEC identity · {state.data.sec_identity_status.toLowerCase()}
+          Recorded SEC mapping · {state.data.sec_identity_status.toLowerCase()}
         </Badge>
         <span className="text-xs text-muted-foreground">
           {state.data.source_count} source{" "}
@@ -944,6 +971,9 @@ function SourceDocumentsSection({
           {state.data.as_of ? ` · as of ${dateOnly(state.data.as_of)}` : ""}
         </span>
       </div>
+      {state.data.sec_identity_issue && (
+        <p className="text-sm text-warning">{state.data.sec_identity_issue}</p>
+      )}
       {documents.length === 0 ? (
         <EmptyState
           title={
@@ -955,7 +985,7 @@ function SourceDocumentsSection({
             state.data.documents.length === 0
               ? state.data.sec_identity_status === "MAPPED"
                 ? "No supported filing or issuer-source metadata has been captured yet."
-                : "Source documents require an explicitly reviewed issuer identity; no mapping is inferred from ticker or company name."
+                : "SEC ingestion requires a reviewed issuer identity; company-source references remain separate."
               : "Broaden the evidence recency filter to inspect older filings."
           }
         />
@@ -971,7 +1001,7 @@ function SourceDocumentsSection({
               id: `document:${document.id}`,
               category: "FILINGS",
               title: document.title,
-              summary: `${statusLabel(document.document_type)} · ${document.source_name}`,
+              summary: documentSummary(document),
               effectiveAt: document.filed_at ?? document.published_at,
               recordedAt: document.recorded_at,
               sourceLabel: "Reported source",
@@ -998,6 +1028,11 @@ function SourceDocumentsSection({
                       {document.data_quality === "DATA_CHECK" && (
                         <Badge variant="destructive">Data check</Badge>
                       )}
+                      {document.provider_id === "sec_edgar" && (
+                        <Badge variant="secondary">
+                          Issuer attribution unverified
+                        </Badge>
+                      )}
                     </div>
                     <h3 className="break-words text-sm font-semibold">
                       {document.title}
@@ -1008,6 +1043,7 @@ function SourceDocumentsSection({
                         ? ` · ${document.source_jurisdiction}`
                         : " · Jurisdiction unknown"}
                     </p>
+                    <SecFilingAttributionWarning document={document} />
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>
                         {document.filed_at

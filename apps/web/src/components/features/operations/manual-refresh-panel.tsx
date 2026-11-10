@@ -26,7 +26,6 @@ const refreshActions: { name: OperationalJobName; label: string }[] = [
     name: "DECISION_RECOMPUTE",
     label: "Recompute rankings and Execution Pace",
   },
-  { name: "AGENT_WORK_FEED", label: "Publish agent work feed" },
 ];
 
 export function ManualRefreshPanel({

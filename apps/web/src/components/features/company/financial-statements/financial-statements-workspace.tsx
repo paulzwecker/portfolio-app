@@ -192,6 +192,12 @@ export function FinancialStatementsWorkspace({
           onCutoff={setCutoff}
         />
         {!cutoff && <CompanySecCoveragePanel companyId={companyId} />}
+        {cutoff && (
+          <p role="note" className="text-sm text-warning">
+            Historical issuer attribution has not been verified for this cutoff.
+            Review source identities before relying on reported values.
+          </p>
+        )}
         <p className="text-xs leading-4 text-muted-foreground">
           Columns use the reported period end. Fiscal-year and quarter labels
           appear only when the canonical filing evidence supports them; an

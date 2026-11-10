@@ -63,7 +63,10 @@ from portfolio_api.market_data_startup import (
 )
 from portfolio_api.migrations import expected_heads
 from portfolio_api.networking import bypass_known_local_port_nine_proxy
-from portfolio_api.portfolio_sheet_sync import PortfolioSheetPublishError
+from portfolio_api.portfolio_sheet_sync import (
+    PortfolioSheetPublishError,
+    require_sheet_publication_available,
+)
 from portfolio_api.research_agent_operations import (
     ResearchAgentOperationError,
     deliver_agent_work,
@@ -75,7 +78,11 @@ from portfolio_api.research_queue import get_research_queue
 from portfolio_api.research_sheet_sync import run_research_sync_check
 from portfolio_api.research_triggers import refresh_research_triggers
 from portfolio_api.risk_assessments import run_risk_sync_check
-from portfolio_api.sec_refresh_scope import SEC_SCOPE_VERSION, SecRefreshScopeError
+from portfolio_api.sec_refresh_scope import (
+    LEGACY_SEC_SCOPE_VERSIONS,
+    SEC_SCOPE_VERSION,
+    SecRefreshScopeError,
+)
 from portfolio_api.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -364,8 +371,9 @@ def _run_sec_domain(
         portfolio_scope = session.scalar(select(Portfolio.id).limit(1)) is not None
         scope_conditions = (
             [
-                ExternalIngestionRun.request_scope["sec_scope_version"].as_string()
-                == SEC_SCOPE_VERSION,
+                ExternalIngestionRun.request_scope["sec_scope_version"]
+                .as_string()
+                .in_([*LEGACY_SEC_SCOPE_VERSIONS, SEC_SCOPE_VERSION]),
                 ExternalIngestionRun.request_scope["operational_request_id"].as_string().is_(None),
                 ExternalIngestionRun.request_scope["scope_date"].as_string()
                 == now_utc.date().isoformat(),
@@ -563,6 +571,10 @@ def _run_trigger_scan(
 
 
 def _publish_agent_feeds(engine: Engine, settings: Settings, now_at: datetime) -> dict[str, object]:
+    try:
+        require_sheet_publication_available()
+    except PortfolioSheetPublishError as error:
+        return {"status": "BLOCKED", "failure_code": error.code, "failure_message": str(error)}
     if not settings.google_sheets_spreadsheet_id or not settings.google_sheets_service_account_file:
         return {
             "status": "BLOCKED",

@@ -1,6 +1,28 @@
 # Active workstream
 
-## C2.3 guided ledger onboarding — INTEGRATE / BLOCKED release
+## C3.1 SEC provenance — INTEGRATE
+
+The [frozen milestone](sec-provenance-integration.md) is isolated on
+`codex/sec-provenance-integration` from `main` `2dfef5b` (merged PR #30),
+with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) awaiting review.
+It adds issuer and filing provenance warnings, evidence-time boundaries, and
+fail-closed Sheets publication. It introduces no migrations. The original
+`codex/sec-coverage-readiness` retains all deferred refresh ownership, Sheets
+recovery and migration work; it must be reconciled after this milestone merges.
+No production ingestion, publication, migration or deployment is authorized.
+Local verification: `npm run check`, the relevant isolated PostgreSQL suite,
+authenticated publication-denial cases, 42 managed desktop/mobile browser cases
+(12 intentionally skipped), four isolated SEC browser cases, and visual review.
+The repository schema gate matches the recorded `b59f16c8a203` attestation; this
+is not fresh production evidence. Release classification: CONFIGURATION_REQUIRED
+until current schema, both providers' live revisions/controls and safe API/frontend
+ordering are verified. New publication is disabled; drain older processes before
+any separately authorized rollout. Exact Sheets outcome resolution and all refresh
+ownership extensions remain deferred on the original branch.
+
+## Previous guided ledger onboarding evidence
+
+Historical snapshot: PR #30 has since merged.
 
 Branch `codex/ledger-opening-onboarding` contains implementation `18f1f15` and
 merge `813651e` from updated main `e070406` ([merged PR #29](https://github.com/paulzwecker/portfolio-app/pull/29)).

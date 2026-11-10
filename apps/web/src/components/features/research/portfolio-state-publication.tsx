@@ -80,9 +80,8 @@ export function PortfolioStatePublication() {
       <CardHeader>
         <CardTitle>Publish canonical portfolio state</CardTitle>
         <CardDescription>
-          Manually publish the selected portfolio snapshot and current valuation
-          context to the application-owned Sheets tab. This is a read-only
-          handoff; Sheets cannot change holdings or targets.
+          Sheets publication is temporarily unavailable while recovery is being
+          completed.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -114,10 +113,7 @@ export function PortfolioStatePublication() {
                 ))}
               </select>
             </label>
-            <Button
-              disabled={busy || !portfolioId}
-              onClick={() => void publish()}
-            >
+            <Button disabled onClick={() => void publish()}>
               {busy ? "Publishing…" : "Publish current state"}
             </Button>
           </div>

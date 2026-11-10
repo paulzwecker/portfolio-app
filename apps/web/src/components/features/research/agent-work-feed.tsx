@@ -82,9 +82,8 @@ export function GoogleSheetsAgentWorkFeed({
       <CardHeader>
         <CardTitle>Publish agent work feed</CardTitle>
         <CardDescription>
-          Manually deliver up to ten bounded work items to the application-owned
-          Sheets tab. The delivery is recorded only after the write passes
-          read-back verification.
+          Sheets publication is temporarily unavailable while recovery is being
+          completed.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -121,7 +120,7 @@ export function GoogleSheetsAgentWorkFeed({
               aria-label="Agent work page offset"
             />
           </label>
-          <Button disabled={busy} onClick={() => void publish()}>
+          <Button disabled onClick={() => void publish()}>
             <CloudDownload aria-hidden="true" />
             {busy ? "Publishing…" : "Publish work"}
           </Button>

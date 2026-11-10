@@ -2,6 +2,7 @@
 
 import copy
 import json
+from datetime import timedelta
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -32,6 +33,7 @@ from portfolio_api.domain.models import (
     SourceDocument,
     SourceDocumentBatch,
 )
+from portfolio_api.domain.queries import company_source_documents
 from portfolio_api.external_data import (
     CanonicalSubjectKind,
     CanonicalSubjectRef,
@@ -46,6 +48,8 @@ from portfolio_api.source_documents import (
     SEC_SUBMISSIONS_BASE,
     SecIssuerFilingReconciliation,
     ingest_sec_submissions,
+    known_processed_sec_history,
+    unresolved_sec_history,
 )
 
 IDENTIFIERS = {COMPANY_ID: CIK, SECOND_COMPANY_ID: "0000000002"}
@@ -90,7 +94,11 @@ def _record(
     return submissions_record(
         payload,
         source_record_id=f"CIK{cik}{suffix}",
-        source_url=f"{SEC_SUBMISSIONS_BASE}/CIK{cik}.json",
+        source_url=(
+            f"{SEC_SUBMISSIONS_BASE}/CIK{cik}-submissions-001.json"
+            if history
+            else f"{SEC_SUBMISSIONS_BASE}/CIK{cik}.json"
+        ),
     )
 
 
@@ -115,6 +123,45 @@ def _outcome(result: dict[str, Any], company_id: UUID) -> tuple[str, int | None]
         domain="SOURCE_DOCUMENTS", status="PARTIAL", report={"provider_result": result}
     )
     return _issuer_result(run, company_id, {str(item) for item in IDENTIFIERS})
+
+
+@pytest.mark.integration
+def test_multi_issuer_batch_does_not_imply_per_filing_identity(postgres_engine: Engine) -> None:
+    _companies(postgres_engine)
+    _ingest(postgres_engine, [_record(COMPANY_ID), _record(SECOND_COMPANY_ID)])
+    with Session(postgres_engine) as session:
+        for company_id in IDENTIFIERS:
+            result = company_source_documents(session, company_id)
+            assert result.sec_identity_status == "MAPPED"
+            assert len(result.documents) == 1
+            assert result.documents[0].sec_issuer_attribution == "UNVERIFIED"
+
+
+@pytest.mark.integration
+def test_history_receipts_are_per_page_and_newer_rejection_invalidates_prior_success(
+    postgres_engine: Engine,
+) -> None:
+    _companies(postgres_engine)
+    good = _record(COMPANY_ID, history=True)
+    bad = _record(SECOND_COMPANY_ID, {"filings": {}}, history=True)
+    result = _ingest(postgres_engine, [good, bad])
+    assert result["reconciliation"]["rejected_payloads"] == 1
+    with Session(postgres_engine) as session:
+        assert known_processed_sec_history(session, IDENTIFIERS) == {good.source_record_id}
+    later_bad = _record(COMPANY_ID, {"filings": {}}, history=True).model_copy(
+        update={"retrieved_at": RETRIEVED_AT + timedelta(days=1)}
+    )
+    _ingest(postgres_engine, [later_bad], {COMPANY_ID: CIK})
+    with Session(postgres_engine) as session:
+        assert known_processed_sec_history(session, IDENTIFIERS) == set()
+        same_content = good.model_copy(update={"retrieved_at": RETRIEVED_AT + timedelta(days=2)})
+        replay = ingest_sec_submissions(
+            session, _query(IDENTIFIERS), [same_content, bad], IDENTIFIERS
+        )
+        assert replay["status"] == "ALREADY_IMPORTED"
+        assert unresolved_sec_history(session, [same_content], {COMPANY_ID: CIK}) == [
+            good.source_record_id
+        ]
 
 
 @pytest.mark.integration
@@ -416,6 +463,18 @@ def test_history_deferral_is_attributed_only_to_its_issuer_and_verified_totals()
     assert _outcome(result, SECOND_COMPANY_ID) == ("NOT_REPORTED", None)
     del result["issuer_history_files_deferred"]
     assert _outcome(result, COMPANY_ID) == ("NOT_REPORTED", None)
+
+
+def test_unresolved_history_is_attributed_only_with_verified_issuer_totals() -> None:
+    result = _typed_result()
+    result.update(
+        history_files_unresolved=1,
+        issuer_history_files_unresolved={str(COMPANY_ID): 1, str(SECOND_COMPANY_ID): 0},
+    )
+    assert _outcome(result, COMPANY_ID) == ("DATA_CHECK", 1)
+    assert _outcome(result, SECOND_COMPANY_ID) == ("REPORTED", 1)
+    result["issuer_history_files_unresolved"][str(COMPANY_ID)] = 0
+    assert _outcome(result, SECOND_COMPANY_ID) == ("NOT_REPORTED", None)
 
 
 def test_receipt_requires_response_evidence_and_strict_nonnegative_counts() -> None:

@@ -3493,6 +3493,17 @@
             "title": "Periods",
             "type": "array"
           },
+          "provider_identity_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Identity Issue"
+          },
           "provider_identity_status": {
             "enum": [
               "MAPPED",
@@ -3629,6 +3640,16 @@
           "filings": {
             "$ref": "#/components/schemas/SecDomainCoverageRead"
           },
+          "fundamental_identity_counts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecFundamentalIdentityCountsRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "fundamentals": {
             "$ref": "#/components/schemas/SecDomainCoverageRead"
           },
@@ -3732,6 +3753,17 @@
               }
             ],
             "title": "Known At"
+          },
+          "sec_identity_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Identity Issue"
           },
           "sec_identity_status": {
             "enum": [
@@ -26692,6 +26724,17 @@
             ],
             "title": "Fiscal Year"
           },
+          "identity_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Issue"
+          },
           "metric": {
             "$ref": "#/components/schemas/FundamentalMetric"
           },
@@ -32071,6 +32114,16 @@
             ],
             "title": "Finished At"
           },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecIssuerIdentityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "next_attempt_at": {
             "anyOf": [
               {
@@ -32236,6 +32289,66 @@
         "title": "SecDomainCoverageRead",
         "type": "object"
       },
+      "SecFundamentalIdentityCountsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "matching_cik": {
+            "minimum": 0.0,
+            "title": "Matching Cik",
+            "type": "integer"
+          },
+          "other_cik": {
+            "minimum": 0.0,
+            "title": "Other Cik",
+            "type": "integer"
+          },
+          "unverified": {
+            "minimum": 0.0,
+            "title": "Unverified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matching_cik",
+          "other_cik",
+          "unverified"
+        ],
+        "title": "SecFundamentalIdentityCountsRead",
+        "type": "object"
+      },
+      "SecIssuerIdentityRead": {
+        "additionalProperties": false,
+        "properties": {
+          "frozen_cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frozen Cik"
+          },
+          "status": {
+            "enum": [
+              "MATCHED",
+              "CHANGED",
+              "UNMAPPED_IN_SCOPE",
+              "CURRENT_UNAVAILABLE",
+              "UNVERIFIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "frozen_cik"
+        ],
+        "title": "SecIssuerIdentityRead",
+        "type": "object"
+      },
       "SecRefreshRead": {
         "additionalProperties": false,
         "properties": {
@@ -32291,6 +32404,16 @@
               }
             ],
             "title": "Finished At"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecIssuerIdentityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "issuer_outcome": {
             "enum": [
@@ -33022,6 +33145,21 @@
               }
             ],
             "title": "Retrieved At"
+          },
+          "sec_issuer_attribution": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UNVERIFIED",
+                  "NOT_SEC"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Issuer Attribution"
           },
           "security_id": {
             "anyOf": [

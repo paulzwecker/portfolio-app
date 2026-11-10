@@ -516,6 +516,17 @@ def _actual_value(
         if item.metric == FundamentalMetric.REVENUE and item.fiscal_year == fiscal_year
     ]
     if not matches:
+        if any(
+            item.identity_issue
+            for item in facts.periods
+            if item.metric == FundamentalMetric.REVENUE
+        ):
+            result = _empty_value("DATA_CHECK")
+            result.quality_reason = (
+                "Retained revenue has unverified issuer attribution; its fiscal period "
+                "cannot be established safely."
+            )
+            return result
         return _empty_value("NOT_REPORTED")
     if len(matches) > 1:
         return _empty_value("AMBIGUOUS_FISCAL_PERIOD")

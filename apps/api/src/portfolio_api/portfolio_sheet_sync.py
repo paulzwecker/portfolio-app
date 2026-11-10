@@ -88,6 +88,15 @@ class PortfolioSheetPublishError(Exception):
         self.status = status
 
 
+def require_sheet_publication_available() -> None:
+    """Keep incomplete external publication disabled until its recovery is reviewed."""
+    raise PortfolioSheetPublishError(
+        "PUBLICATION_UNAVAILABLE",
+        "Sheets publication is temporarily unavailable while recovery is being completed.",
+        status=503,
+    )
+
+
 @dataclass(frozen=True)
 class SheetConnection:
     title: str
@@ -333,6 +342,7 @@ class GoogleSheetsPortfolioPublisher:
     """Google Sheets writer base used by fixed, allowlisted application publishers."""
 
     def __init__(self, settings: Settings, session: Any | None = None) -> None:
+        require_sheet_publication_available()
         if not settings.google_sheets_spreadsheet_id:
             raise PortfolioSheetPublishError(
                 "NOT_CONFIGURED", "Set GOOGLE_SHEETS_SPREADSHEET_ID", status=503
@@ -748,6 +758,7 @@ def publish_portfolio_state(
     settings: Settings,
     publisher: GoogleSheetsPortfolioPublisher | None = None,
 ) -> PublishedPortfolioState:
+    require_sheet_publication_available()
     overview = q.overview(session, portfolio_id)
     writer = publisher or GoogleSheetsPortfolioPublisher(settings)
     return writer.publish(overview)

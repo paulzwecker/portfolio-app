@@ -56,6 +56,14 @@ version and retains the earlier capture. A new corrected observation has its
 own canonical record identity and remains linked to the observation it
 supersedes.
 
+SEC filing issuer attribution is currently unverified. Attention, queue and trigger
+reads warn reviewers to check the original source; missing or cross-company source
+references are also disclosed. This annotation is projected at read time, without
+changing captured trigger or queue-completion fingerprints. Trigger context sent to
+research agents and the Thesis Watch contract includes the warning. Its changed
+context fingerprint can redeliver previously acknowledged agent work and can change
+the next published feed fingerprint; review those effects before enabling delivery.
+
 For source documents and consensus or reported-fundamental observations, an
 explicit canonical supersession marks the earlier trigger `SUPERSEDED` and
 removes its open queue task. The earlier trigger and any review completion stay
@@ -69,6 +77,16 @@ The capture preserves source `effective_at`, `source_observed_at`, and
 stays null; the record time is retained. A historical refresh excludes source
 rows recorded after its `as_of` cutoff, even when their effective date was
 backdated. Queue completion is also filtered by its recorded completion time.
+Document selection and supersession also exclude retrievals after the cutoff.
+Attention, the queue and trigger detectors select the latest lifecycle event by
+sequence among events effective and recorded by that cutoff. Companies not yet
+recorded and lifecycle states not yet known are excluded; a later DROP cannot hide
+an earlier active state.
+The queue counts a citation only after its parent revision's applicable observed,
+effective, publication, acceptance and recorded times, and checks the company link.
+Portfolio-wide risk citations remain supported. Other queue inputs still use current
+state, and agent trigger context uses current context for historical work requests;
+neither path is a complete point-in-time reconstruction.
 
 `processing_state` is derived from the trigger version and its linked
 ResearchQueue completion:

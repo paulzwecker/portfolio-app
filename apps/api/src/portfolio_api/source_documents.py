@@ -11,19 +11,21 @@ import argparse
 import asyncio
 import gzip
 import hashlib
+import io
 import json
 import re
+import zlib
 from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from typing import Annotated, Any, cast
 from urllib.parse import quote
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import UUID, uuid4
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy.orm import Session, aliased
 
 from portfolio_api.database import create_database_engine
 from portfolio_api.domain.models import (
@@ -58,8 +60,15 @@ SEC_SOURCE_NAME = "U.S. Securities and Exchange Commission · EDGAR"
 SEC_SUBMISSIONS_BASE = "https://data.sec.gov/submissions"
 SEC_ARCHIVES_BASE = "https://www.sec.gov/Archives/edgar/data"
 SEC_SUBMISSIONS_VERSION = "submissions-v1"
-SEC_DOCUMENT_NORMALIZER_VERSION = "sec-edgar-filings-v1"
+SEC_DOCUMENT_NORMALIZER_VERSION = "sec-edgar-filings-v3"
 SEC_ISSUER_RECONCILIATION_VERSION = "sec-issuer-filings-v1"
+SEC_HISTORY_RECEIPT_VERSION = "sec-history-page-v2"
+MAX_HISTORY_RECEIPT_PAYLOAD_BYTES = 16 * 1024 * 1024
+MAX_HISTORY_RECEIPT_COMPRESSED_BYTES = 8 * 1024 * 1024
+MAX_HISTORY_RECEIPT_SCAN_ROWS = 4096
+MAX_HISTORY_RECEIPT_VERIFY_PAGES = 256
+MAX_HISTORY_RECEIPT_VERIFY_BYTES = 64 * 1024 * 1024
+MAX_HISTORY_RECEIPT_DECOMPRESSED_BYTES = 64 * 1024 * 1024
 COMPANY_REFERENCE_PROVIDER_ID = "company_source"
 SUPPORTED_FORMS: dict[str, SourceDocumentType] = {
     "10-K": SourceDocumentType.TEN_K,
@@ -69,7 +78,10 @@ SUPPORTED_FORMS: dict[str, SourceDocumentType] = {
     "6-K": SourceDocumentType.SIX_K,
 }
 _ACCESSION_PATTERN = re.compile(r"^\d{10}-\d{2}-\d{6}$")
-_HISTORY_FILE_PATTERN = re.compile(r"^CIK\d{10}-submissions-\d+\.json$")
+_HISTORY_FILE_PATTERN = re.compile(r"^CIK[0-9]{10}-submissions-[0-9]+\.json$")
+_HISTORY_RECORD_PATTERN = re.compile(
+    r"CIK(?P<cik>[0-9]{10}):HISTORY:(?P<name>CIK(?P=cik)-submissions-[0-9]+\.json)"
+)
 
 
 class CanonicalSourceDocument(BaseModel):
@@ -206,6 +218,13 @@ class SecSubmissionsProvider:
                     retrieved_at,
                 )
             )
+            # Do not follow history links from an index whose issuer or shape
+            # failed the same checks used by the importer.
+            if (
+                SecSubmissionsNormalizer().normalize(records[-1], _company_id, cik).disposition
+                == NormalizationDisposition.REJECTED
+            ):
+                continue
             data = _json_object(payload)
             filings = data.get("filings", {}) if data is not None else {}
             files = filings.get("files", []) if isinstance(filings, dict) else []
@@ -264,6 +283,7 @@ class SecSubmissionsNormalizer:
         record: RawProviderRecord,
         company_id: UUID,
         expected_cik: str,
+        index_record: RawProviderRecord | None = None,
     ) -> NormalizationResult[SecSubmissionNormalization]:
         payload = _json_object(record.payload)
         if payload is None:
@@ -286,7 +306,11 @@ class SecSubmissionsNormalizer:
                 observed_cik = str(int(raw_cik)).zfill(10)
             except ValueError:
                 observed_cik = ""
-        if observed_cik != expected_cik:
+        if observed_cik != expected_cik and not (
+            "cik" not in payload
+            and isinstance(payload.get("form"), list)
+            and _verified_history_index(record, index_record, company_id, expected_cik)
+        ):
             return NormalizationResult(
                 disposition=NormalizationDisposition.REJECTED,
                 observation=None,
@@ -319,10 +343,10 @@ class SecSubmissionsNormalizer:
                 ),
             )
 
-        forms = rows.get("form", [])
-        accessions = rows.get("accessionNumber", [])
-        dates = rows.get("filingDate", [])
-        report_dates = rows.get("reportDate", [])
+        forms = rows.get("form")
+        accessions = rows.get("accessionNumber")
+        dates = rows.get("filingDate")
+        report_dates = rows.get("reportDate")
         descriptions = rows.get("primaryDocDescription", [])
         if not isinstance(descriptions, list):
             descriptions = []
@@ -336,6 +360,18 @@ class SecSubmissionsNormalizer:
                     NormalizationIssue(
                         code="SEC_SUBMISSIONS_COLUMNS_MISSING",
                         message="The SEC response is missing one or more expected filing columns.",
+                        severity="ERROR",
+                    ),
+                ),
+            )
+        if len(set(lengths)) != 1:
+            return NormalizationResult(
+                disposition=NormalizationDisposition.REJECTED,
+                observation=None,
+                issues=(
+                    NormalizationIssue(
+                        code="SEC_SUBMISSIONS_COLUMNS_UNALIGNED",
+                        message="The SEC response filing columns have different lengths.",
                         severity="ERROR",
                     ),
                 ),
@@ -411,6 +447,11 @@ class SecSubmissionsNormalizer:
         )
 
 
+class _NoSecRedirects(HTTPRedirectHandler):
+    def redirect_request(self, *args: Any, **kwargs: Any) -> Request | None:
+        return None
+
+
 def _download_sec_json(url: str, user_agent: str) -> bytes:
     if not url.startswith((SEC_SUBMISSIONS_BASE + "/", SEC_SUBMISSIONS_BASE + "?")):
         raise ValueError("SEC submissions adapter may request only SEC data.sec.gov endpoints")
@@ -422,7 +463,7 @@ def _download_sec_json(url: str, user_agent: str) -> bytes:
             "Accept-Encoding": "identity",
         },
     )
-    with urlopen(request, timeout=30) as response:  # noqa: S310 -- fixed SEC HTTPS host
+    with build_opener(_NoSecRedirects()).open(request, timeout=30) as response:
         if response.status != 200:
             raise RuntimeError(f"SEC submissions returned HTTP {response.status}")
         return cast(bytes, response.read())
@@ -502,6 +543,407 @@ def _record_company(
         )
     cik = match.group(1)
     return identifiers_by_cik[cik], cik
+
+
+def _history_record_parts(source_record_id: str | None) -> tuple[str, str] | None:
+    match = _HISTORY_RECORD_PATTERN.fullmatch(source_record_id or "")
+    return (match.group("cik"), match.group("name")) if match else None
+
+
+def _verified_history_index(
+    record: RawProviderRecord,
+    index: RawProviderRecord | None,
+    company_id: UUID,
+    cik: str,
+) -> bool:
+    """Bind a CIK-less page to the issuer's earlier, validated SEC index."""
+    parts = _history_record_parts(record.source_record_id)
+    if (
+        index is None
+        or parts is None
+        or parts[0] != cik
+        or record.provider_id != SEC_PROVIDER_ID
+        or record.domain != ExternalDataDomain.SOURCE_DOCUMENTS
+        or str(record.source_url) != f"{SEC_SUBMISSIONS_BASE}/{parts[1]}"
+        or index.provider_id != SEC_PROVIDER_ID
+        or index.domain != ExternalDataDomain.SOURCE_DOCUMENTS
+        or index.source_record_id != f"CIK{cik}"
+        or str(index.source_url) != f"{SEC_SUBMISSIONS_BASE}/CIK{cik}.json"
+        or index.retrieved_at > record.retrieved_at
+    ):
+        return False
+    payload = _json_object(index.payload)
+    filings = payload.get("filings") if payload else None
+    files = filings.get("files") if isinstance(filings, dict) else None
+    if (
+        not isinstance(files, list)
+        or sum(isinstance(item, dict) and item.get("name") == parts[1] for item in files) != 1
+    ):
+        return False
+    result = SecSubmissionsNormalizer().normalize(index, company_id, cik)
+    return bool(
+        result.disposition == NormalizationDisposition.ACCEPTED
+        and result.observation is not None
+        and result.observation.malformed_record_count == 0
+    )
+
+
+def _decode_retained_payload(
+    encoding: str,
+    stored: bytes,
+    digest: str,
+    remaining: int,
+) -> tuple[bytes | None, int]:
+    """Bound decompression and verify the immutable uncompressed digest."""
+    payload = bytearray()
+    try:
+        stream: io.BufferedIOBase | gzip.GzipFile
+        if encoding == "gzip":
+            stream = gzip.GzipFile(fileobj=io.BytesIO(stored))
+        elif encoding == "identity":
+            stream = io.BytesIO(stored)
+        else:
+            return None, 0
+        with stream:
+            while chunk := stream.read(1024 * 1024):
+                payload.extend(chunk)
+                if len(payload) > remaining:
+                    raise ValueError(
+                        "SEC history decompression exceeds its bounded budget; narrow the scope."
+                    )
+                if len(payload) > MAX_HISTORY_RECEIPT_PAYLOAD_BYTES:
+                    return None, len(payload)
+    except (OSError, EOFError, zlib.error):
+        return None, len(payload)
+    content = bytes(payload)
+    if hashlib.sha256(content).hexdigest() != digest:
+        return None, len(payload)
+    return content, len(payload)
+
+
+def _retained_payload_matches(
+    encoding: str,
+    stored: bytes,
+    digest: str,
+    remaining: int,
+    company_id: UUID,
+    cik: str,
+    retrieved_at: datetime,
+    source_id: str,
+    source_url: str,
+    index_record: RawProviderRecord | None,
+) -> tuple[bool, int, set[str]]:
+    content, consumed = _decode_retained_payload(encoding, stored, digest, remaining)
+    if content is None:
+        return False, consumed, set()
+    record = RawProviderRecord(
+        domain=ExternalDataDomain.SOURCE_DOCUMENTS,
+        provider_id=SEC_PROVIDER_ID,
+        media_type="application/json",
+        retrieved_at=retrieved_at,
+        payload=content,
+        payload_sha256=digest,
+        source_record_id=source_id,
+        source_url=AnyHttpUrl(source_url),
+    )
+    result = SecSubmissionsNormalizer().normalize(record, company_id, cik, index_record)
+    return (
+        result.disposition == NormalizationDisposition.ACCEPTED
+        and result.observation is not None
+        and result.observation.malformed_record_count == 0,
+        consumed,
+        {item.external_identifier for item in result.observation.documents}
+        if result.observation is not None
+        else set(),
+    )
+
+
+def known_processed_sec_history(session: Session, identifiers: dict[UUID, str]) -> set[str]:
+    """Return only pages with a matching immutable processing receipt and raw metadata.
+
+    A filename match is not a check that the remote content is still unchanged.
+    Legacy batches without page-level evidence remain unknown.
+    """
+    if not identifiers:
+        return set()
+    ciks = {cik for cik in identifiers.values() if re.fullmatch(r"[0-9]{10}", cik)}
+    if not ciks:
+        return set()
+    expected = {str(company_id): cik for company_id, cik in identifiers.items()}
+    raw = ExternalRawPayload
+    index_raw = aliased(ExternalRawPayload)
+    batch = SourceDocumentBatch
+    stored_if_bounded = case(
+        (
+            and_(
+                batch.normalizer_version == SEC_DOCUMENT_NORMALIZER_VERSION,
+                func.octet_length(raw.payload_bytes) <= MAX_HISTORY_RECEIPT_COMPRESSED_BYTES,
+            ),
+            raw.payload_bytes,
+        ),
+        else_=None,
+    )
+    rows = session.execute(
+        select(
+            raw.source_record_id,
+            raw.payload_sha256,
+            raw.source_url,
+            raw.provider_id,
+            raw.domain,
+            raw.retrieved_at,
+            raw.content_encoding,
+            stored_if_bounded,
+            batch.provider_id,
+            batch.domain,
+            batch.normalizer_version,
+            batch.recorded_at,
+            batch.query_scope,
+            batch.reconciliation,
+            index_raw.source_record_id,
+            index_raw.payload_sha256,
+            index_raw.source_url,
+            index_raw.provider_id,
+            index_raw.domain,
+            index_raw.retrieved_at,
+            index_raw.content_encoding,
+            case(
+                (
+                    and_(
+                        batch.normalizer_version == SEC_DOCUMENT_NORMALIZER_VERSION,
+                        func.octet_length(index_raw.payload_bytes)
+                        <= MAX_HISTORY_RECEIPT_COMPRESSED_BYTES,
+                    ),
+                    index_raw.payload_bytes,
+                ),
+                else_=None,
+            ),
+        )
+        .join(
+            batch,
+            batch.id == raw.source_document_batch_id,
+        )
+        .outerjoin(
+            index_raw,
+            and_(
+                index_raw.source_document_batch_id == batch.id,
+                index_raw.source_record_id == func.substr(raw.source_record_id, 1, 13),
+            ),
+        )
+        .where(
+            or_(*(raw.source_record_id.like(f"CIK{cik}:HISTORY:%") for cik in ciks)),
+        )
+        .limit(MAX_HISTORY_RECEIPT_SCAN_ROWS + 1)
+    ).yield_per(1)
+    candidates: dict[str, list[tuple[datetime, datetime, bool]]] = {}
+    scanned = 0
+    total_bytes = 0
+    decompressed_bytes = 0
+    verified_pages = 0
+    for row in rows:
+        (
+            source_id,
+            digest,
+            source_url,
+            provider,
+            domain,
+            retrieved_at,
+            encoding,
+            stored,
+            batch_provider,
+            batch_domain,
+            normalizer,
+            batch_at,
+            scope,
+            receipt,
+            index_id,
+            index_digest,
+            index_url,
+            index_provider,
+            index_domain,
+            index_retrieved_at,
+            index_encoding,
+            index_stored,
+        ) = cast(
+            tuple[
+                str,
+                str,
+                str | None,
+                str,
+                str,
+                datetime,
+                str,
+                bytes | None,
+                str,
+                str,
+                str,
+                datetime,
+                object,
+                object,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                datetime | None,
+                str | None,
+                bytes | None,
+            ],
+            tuple(row),
+        )
+        scanned += 1
+        if scanned > MAX_HISTORY_RECEIPT_SCAN_ROWS:
+            raise ValueError(
+                "SEC history receipt scan exceeds its bounded budget; narrow the scope."
+            )
+        parts = _history_record_parts(source_id)
+        if not parts:
+            continue
+        cik, name = parts
+        if stored is not None:
+            total_bytes += len(stored)
+        if index_stored is not None:
+            total_bytes += len(index_stored)
+        if total_bytes > MAX_HISTORY_RECEIPT_VERIFY_BYTES:
+            raise ValueError(
+                "SEC history receipt verification exceeds its bounded budget; narrow the scope."
+            )
+        scope_ids = scope.get("company_ids") if isinstance(scope, dict) else None
+        entries = receipt.get("processed_history_pages") if isinstance(receipt, dict) else None
+        issues = receipt.get("issues") if isinstance(receipt, dict) else None
+        matches = (
+            [
+                entry
+                for entry in entries
+                if isinstance(entry, dict) and entry.get("source_record_id") == source_id
+            ]
+            if isinstance(entries, list)
+            else []
+        )
+        entry = matches[0] if len(matches) == 1 else {}
+        company_id = entry.get("company_id")
+        valid = bool(
+            provider == batch_provider == SEC_PROVIDER_ID
+            and domain == batch_domain == ExternalDataDomain.SOURCE_DOCUMENTS.value
+            and normalizer == SEC_DOCUMENT_NORMALIZER_VERSION
+            and isinstance(receipt, dict)
+            and receipt.get("history_receipt_version") == SEC_HISTORY_RECEIPT_VERSION
+            and isinstance(issues, list)
+            and all(
+                isinstance(issue, dict) and isinstance(issue.get("code"), str) for issue in issues
+            )
+            and source_url == f"{SEC_SUBMISSIONS_BASE}/{name}"
+            and isinstance(scope_ids, list)
+            and isinstance(company_id, str)
+            and expected.get(company_id) == cik
+            and company_id in scope_ids
+            and entry.get("cik") == cik
+            and entry.get("payload_sha256") == digest
+            and re.fullmatch(r"[0-9a-f]{64}", digest)
+            and stored is not None
+        )
+        if valid:
+            verified_pages += 1
+            if verified_pages > MAX_HISTORY_RECEIPT_VERIFY_PAGES:
+                raise ValueError(
+                    "SEC history receipt verification exceeds its bounded budget; narrow the scope."
+                )
+            assert stored is not None and isinstance(company_id, str) and isinstance(issues, list)
+            assert source_url is not None
+            index_record = None
+            if "index_source_record_id" in entry or "index_payload_sha256" in entry:
+                index_valid = bool(
+                    index_id == entry.get("index_source_record_id") == f"CIK{cik}"
+                    and index_digest == entry.get("index_payload_sha256")
+                    and isinstance(index_digest, str)
+                    and re.fullmatch(r"[0-9a-f]{64}", index_digest)
+                    and index_url == f"{SEC_SUBMISSIONS_BASE}/CIK{cik}.json"
+                    and index_provider == SEC_PROVIDER_ID
+                    and index_domain == ExternalDataDomain.SOURCE_DOCUMENTS.value
+                    and index_retrieved_at is not None
+                    and index_encoding is not None
+                    and index_stored is not None
+                )
+                if index_valid:
+                    assert index_encoding is not None and index_stored is not None
+                    assert index_digest is not None and index_retrieved_at is not None
+                    assert index_url is not None
+                    index_content, consumed = _decode_retained_payload(
+                        index_encoding,
+                        index_stored,
+                        index_digest,
+                        MAX_HISTORY_RECEIPT_DECOMPRESSED_BYTES - decompressed_bytes,
+                    )
+                    decompressed_bytes += consumed
+                    if index_content is not None:
+                        index_record = RawProviderRecord(
+                            domain=ExternalDataDomain.SOURCE_DOCUMENTS,
+                            provider_id=SEC_PROVIDER_ID,
+                            media_type="application/json",
+                            retrieved_at=index_retrieved_at,
+                            payload=index_content,
+                            payload_sha256=index_digest,
+                            source_record_id=index_id,
+                            source_url=AnyHttpUrl(index_url),
+                        )
+                if index_record is None:
+                    valid = False
+            page_valid, consumed, document_ids = _retained_payload_matches(
+                encoding,
+                stored,
+                digest,
+                MAX_HISTORY_RECEIPT_DECOMPRESSED_BYTES - decompressed_bytes,
+                UUID(company_id),
+                cik,
+                retrieved_at,
+                source_id,
+                source_url,
+                index_record,
+            )
+            valid = valid and page_valid
+            decompressed_bytes += consumed
+            conflicts = [
+                issue.get("source_record_id")
+                for issue in issues
+                if issue.get("code")
+                in {"DUPLICATE_ACCESSION_METADATA_CONFLICT", "EXISTING_ACCESSION_METADATA_CHANGED"}
+            ]
+            if any(not isinstance(item, str) for item in conflicts) or document_ids.intersection(
+                item for item in conflicts if isinstance(item, str)
+            ):
+                valid = False
+        candidates.setdefault(source_id, []).append((retrieved_at, batch_at, valid))
+    accepted: set[str] = set()
+    for source_id, items in candidates.items():
+        # A later receipt and retrieval must both dominate earlier evidence; ties
+        # or conflicting orderings remain unresolved rather than picking a winner.
+        latest = [
+            item
+            for item in items
+            if not any(
+                other[0] >= item[0]
+                and other[1] >= item[1]
+                and (other[0] > item[0] or other[1] > item[1])
+                for other in items
+            )
+        ]
+        if len(latest) == 1 and latest[0][2]:
+            accepted.add(source_id)
+    return accepted
+
+
+def unresolved_sec_history(
+    session: Session, records: Sequence[RawProviderRecord], identifiers: dict[UUID, str]
+) -> list[str]:
+    """Expose pages whose latest retained observation still lacks valid evidence."""
+    fetched = {
+        record.source_record_id
+        for record in records
+        if record.source_record_id and ":HISTORY:" in record.source_record_id
+    }
+    if not fetched:
+        return []
+    session.flush()
+    return sorted(fetched - known_processed_sec_history(session, identifiers))
 
 
 def _document_fields(document: CanonicalSourceDocument) -> dict[str, object]:
@@ -589,6 +1031,13 @@ def ingest_sec_submissions(
     identifiers_by_cik = {cik: company_id for company_id, cik in identifiers.items()}
     for record in records:
         _record_company(record, identifiers_by_cik)
+    indexes: dict[str, RawProviderRecord] = {}
+    for record in records:
+        if record.source_record_id in {f"CIK{cik}" for cik in identifiers_by_cik}:
+            assert record.source_record_id is not None
+            if record.source_record_id in indexes:
+                raise ValueError("SEC submissions batch contains duplicate issuer indexes")
+            indexes[record.source_record_id] = record
     digest = raw_batch_fingerprint(SEC_PROVIDER_ID, query, records)
     existing_batch = session.scalar(
         select(SourceDocumentBatch).where(
@@ -608,11 +1057,31 @@ def ingest_sec_submissions(
     counters: Counter[str] = Counter()
     issuer_counts: dict[UUID, Counter[str]] = {company_id: Counter() for company_id in identifiers}
     issues: list[dict[str, object]] = []
+    accepted_history: list[tuple[dict[str, str], set[tuple[str, str]]]] = []
     normalizer = SecSubmissionsNormalizer()
     for record in records:
         company_id, cik = _record_company(record, identifiers_by_cik)
         issuer_counts[company_id]["response_record_count"] += 1
-        result = normalizer.normalize(record, company_id, cik)
+        is_history = record.source_record_id != f"CIK{cik}"
+        parts = _history_record_parts(record.source_record_id) if is_history else None
+        if is_history and (
+            parts is None
+            or parts[0] != cik
+            or str(record.source_url) != f"{SEC_SUBMISSIONS_BASE}/{parts[1]}"
+        ):
+            issues.append(
+                {
+                    "code": "SEC_HISTORY_IDENTITY_UNVERIFIED",
+                    "severity": "ERROR",
+                    "company_id": str(company_id),
+                    "message": "Historical page identity or SEC source URL is invalid.",
+                }
+            )
+            counters["rejected_payloads"] += 1
+            issuer_counts[company_id]["rejected_payloads"] += 1
+            continue
+        index_record = indexes.get(f"CIK{cik}") if is_history else None
+        result = normalizer.normalize(record, company_id, cik, index_record)
         if result.disposition == NormalizationDisposition.REJECTED:
             issues.extend(issue.model_dump(mode="json") for issue in result.issues)
             counters["rejected_payloads"] += 1
@@ -620,6 +1089,30 @@ def ingest_sec_submissions(
             continue
         observation = result.observation
         assert observation is not None
+        if is_history and observation.malformed_record_count == 0:
+            assert record.source_record_id is not None
+            history_receipt = {
+                "company_id": str(company_id),
+                "cik": cik,
+                "source_record_id": record.source_record_id,
+                "payload_sha256": record.payload_sha256,
+            }
+            history_payload = _json_object(record.payload)
+            if history_payload is not None and "cik" not in history_payload:
+                assert index_record is not None and index_record.source_record_id is not None
+                history_receipt.update(
+                    index_source_record_id=index_record.source_record_id,
+                    index_payload_sha256=index_record.payload_sha256,
+                )
+            accepted_history.append(
+                (
+                    history_receipt,
+                    {
+                        (item.provider_id, item.external_identifier)
+                        for item in observation.documents
+                    },
+                )
+            )
         normalized.extend(observation.documents)
         counters["provider_filings_seen"] += len(observation.documents)
         counters["unsupported_forms"] += observation.unsupported_form_count
@@ -688,6 +1181,7 @@ def ingest_sec_submissions(
     inserted = 0
     reused = 0
     metadata_conflicts = 0
+    metadata_conflict_keys: set[tuple[str, str]] = set()
     linked = 0
     unlinked = 0
     batch_id = uuid4()
@@ -713,6 +1207,7 @@ def ingest_sec_submissions(
                     issuer_counts[document.company_id]["data_check_documents"] += 1
             else:
                 metadata_conflicts += 1
+                metadata_conflict_keys.add(key)
                 issuer_counts[document.company_id]["existing_metadata_conflicts"] += 1
                 issues.append(
                     {
@@ -821,6 +1316,12 @@ def ingest_sec_submissions(
         "amendments_linked": linked,
         "amendments_unlinked": unlinked,
         "issues": issues,
+        "history_receipt_version": SEC_HISTORY_RECEIPT_VERSION,
+        "processed_history_pages": [
+            receipt
+            for receipt, keys in accepted_history
+            if not keys.intersection(conflicting_accessions | metadata_conflict_keys)
+        ],
         "issuer_results_version": SEC_ISSUER_RECONCILIATION_VERSION,
         "issuer_results": [
             SecIssuerFilingReconciliation(
@@ -910,18 +1411,7 @@ async def sync_sec_source_documents(
         ),
         requested_at=datetime.now(UTC),
     )
-    known_history = set(
-        session.scalars(
-            select(ExternalRawPayload.source_record_id)
-            .where(
-                ExternalRawPayload.source_document_batch_id.is_not(None),
-                ExternalRawPayload.provider_id == SEC_PROVIDER_ID,
-                ExternalRawPayload.domain == ExternalDataDomain.SOURCE_DOCUMENTS.value,
-                ExternalRawPayload.source_record_id.like("CIK%:HISTORY:%"),
-            )
-            .distinct()
-        )
-    )
+    known_history = known_processed_sec_history(session, identifiers)
     provider = SecSubmissionsProvider(
         identifiers,
         settings.sec_user_agent,
@@ -930,7 +1420,14 @@ async def sync_sec_source_documents(
     )
     records = await provider.fetch(query)
     result = ingest_sec_submissions(session, query, records, identifiers)
-    result["history_files_skipped_as_unchanged"] = provider.skipped_history_files
+    unresolved = unresolved_sec_history(session, records, identifiers)
+    result["unresolved_history_file_ids"] = unresolved
+    result["history_files_unresolved"] = len(unresolved)
+    unresolved_by_cik = Counter(item.split(":", 1)[0] for item in unresolved)
+    result["issuer_history_files_unresolved"] = {
+        str(company_id): unresolved_by_cik[f"CIK{cik}"] for company_id, cik in identifiers.items()
+    }
+    result["history_files_skipped_previously_processed"] = provider.skipped_history_files
     result["history_files_deferred"] = provider.deferred_history_files
     deferred_by_cik = Counter(item.split(":", 1)[0] for item in provider.deferred_history_file_ids)
     result["issuer_history_files_deferred"] = {

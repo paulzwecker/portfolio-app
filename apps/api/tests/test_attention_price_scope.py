@@ -38,7 +38,7 @@ def test_price_move_requires_known_unambiguous_compatible_closes(
 ) -> None:
     as_of = datetime(2026, 10, 6, 12, tzinfo=UTC)
     with Session(postgres_engine) as session, session.begin():
-        company, _, listing = _seed_canonical_scope(session)
+        company, _, listing = _seed_canonical_scope(session, known_at=as_of - timedelta(days=5))
         company_id = company.id
 
         def observation(day: int, close: str, *, suffix: str) -> PriceObservation:
@@ -104,7 +104,7 @@ def test_future_correction_cannot_change_earlier_feed_or_bridge_corrected_day(
 ) -> None:
     as_of = datetime(2026, 10, 6, 12, tzinfo=UTC)
     with Session(postgres_engine) as session, session.begin():
-        company, _, listing = _seed_canonical_scope(session)
+        company, _, listing = _seed_canonical_scope(session, known_at=as_of - timedelta(days=5))
         company_id = company.id
 
         def observation(day: int, close: str, recorded: datetime) -> PriceObservation:

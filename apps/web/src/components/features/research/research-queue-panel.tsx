@@ -664,11 +664,15 @@ function PublishTriggerPage() {
     <div className="grid gap-1">
       <Button
         variant="outline"
-        disabled={pending}
+        disabled
+        title="Sheets publication is temporarily unavailable"
         onClick={() => void publish()}
       >
         {pending ? "Publishing…" : "Publish trigger page to Sheets"}
       </Button>
+      <span className="text-xs text-muted-foreground">
+        Sheets publication is temporarily unavailable.
+      </span>
       {message && (
         <span role="status" className="text-xs text-muted-foreground">
           {message}

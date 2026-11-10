@@ -16,6 +16,7 @@ from portfolio_api.portfolio_sheet_sync import (
     GoogleSheetsPortfolioPublisher,
     PortfolioSheetPublishError,
     _column_name,
+    require_sheet_publication_available,
 )
 from portfolio_api.research_triggers import list_research_triggers, research_trigger_context
 from portfolio_api.settings import Settings
@@ -396,6 +397,7 @@ def publish_thesis_watch_feed(
     offset: int = 0,
     publisher: GoogleSheetsThesisWatchPublisher | None = None,
 ) -> s.GoogleSheetsThesisWatchPublishRead:
+    require_sheet_publication_available()
     writer = publisher or GoogleSheetsThesisWatchPublisher(settings)
     # Serialize app instances publishing to the same workbook. A retry then reads the
     # prior completed append and returns UNCHANGED instead of racing on the same rows.

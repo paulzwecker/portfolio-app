@@ -112,12 +112,32 @@ future normalized-provider observations remain separate and conflict-visible.
 
 Missing metrics stay `NOT_IMPORTED`; potential changed comparative filings are
 appended as `POTENTIAL_RESTATEMENT` with `DATA_CHECK`. `known_at` queries limit facts
-to what the application had observed and recorded by that time. Free cash flow is
+to what the application had observed and recorded by that time.
+
+The SEC resolver also requires a single eligible reviewed mapping and matching
+observation/batch company and CIK metadata. A mapping must be effective at the
+effective cutoff and recorded by `known_at`; its batch must also have been observed
+and recorded by `known_at`. Without an explicit knowledge cutoff the current time
+applies. Ambiguous or inconsistent issuer identity produces `DATA_CHECK` with no
+selected value or source; retained observations remain inspectable. Unsafe periods
+cannot supply fiscal-label anchors to other periods. Matching metadata does not
+authenticate the source payload or validate the financial interpretation.
+The legacy `MAPPED` identity status means one mapping record exists, not that
+its evidence passed validation; `provider_identity_issue` reports invalid metadata.
+Free cash flow is
 declared as a derived analytic but is not computed here; total debt, growth and
 ratios are also outside the reported-fact layer. Current reviewed SEC and exact
 listing coverage is recorded in the dated [issuer identity and international filing
 reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md);
 issuer facts, legal reporting entities and trading listings remain separate.
+
+SEC source-document batches may contain multiple issuers and do not bind each
+filing to an individual raw response. Their retained issuer attribution is
+unverified; a company mapping, accession prefix or generated URL does not prove
+it. The source catalog exposes this limitation and applies effective/knowledge
+cutoffs to mapping status. Non-SEC references remain separate. Existing attention
+and research-queue filing selection still uses stored metadata and is not an issuer
+verification gate.
 
 ## Consensus estimates
 

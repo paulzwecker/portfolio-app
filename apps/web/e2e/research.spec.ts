@@ -1274,7 +1274,7 @@ test("model outputs keep missing values visible across responsive universe and c
 
 test("Company Explorer composes canonical company context at desktop and mobile widths", async ({
   page,
-}) => {
+}, testInfo) => {
   const securityId = "77777777-7777-4777-8777-777777777777";
   const listingId = "88888888-8888-4888-8888-888888888888";
   const portfolioId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -3227,7 +3227,15 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     const documents = page.getByRole("region", {
       name: "Filings & source documents",
     });
-    await expect(documents.getByText("SEC identity · mapped")).toBeVisible();
+    await expect(
+      documents.getByText("Recorded SEC mapping · mapped"),
+    ).toBeVisible();
+    await expect(
+      documents.getByText("Issuer attribution unverified").first(),
+    ).toBeVisible();
+    await documents.screenshot({
+      path: testInfo.outputPath(`filing-attribution-${width}.png`),
+    });
     await expect(
       documents.getByText("2025 annual report amendment"),
     ).toBeVisible();
@@ -3240,6 +3248,14 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       documents.getByRole("link", { name: "Open source" }).first(),
     ).toHaveAttribute("href", /https:\/\/www\.sec\.gov\/Archives/);
+    await documents
+      .getByRole("button", { name: "Inspect metadata" })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("dialog").getByText(/Issuer attribution unverified/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
     await expect(
       page.getByRole("heading", {
         name: "Accepted qualitative risk assessments",
@@ -5126,10 +5142,16 @@ test("portfolio state publication is explicit and preserves incomplete valuation
   await expect(
     page.getByText("Publish canonical portfolio state", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Publish current state" }).click();
-  await expect(page.getByText(/PUBLISHED ·/)).toBeVisible();
-  await expect(page.getByText("INCOMPLETE_PRICE_COVERAGE")).toBeVisible();
-  await expect(page.getByText("sha256:fixture")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Publish current state" }),
+  ).toBeDisabled();
+  await expect(
+    page
+      .getByText(
+        "Sheets publication is temporarily unavailable while recovery is being completed.",
+      )
+      .first(),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -5275,13 +5297,16 @@ test("agent work feed publishes a bounded role and offset to Sheets responsively
     .getByLabel("Research agent role")
     .selectOption("PORTFOLIO_THESIS_SENTINEL");
   await page.getByLabel("Agent work page offset").fill("10");
-  await page.getByRole("button", { name: "Publish work" }).click();
   await expect(
-    page.getByText(
-      "Published five new items and verified the feed by read-back.",
-    ),
+    page.getByRole("button", { name: "Publish work" }),
+  ).toBeDisabled();
+  await expect(
+    page
+      .getByText(
+        "Sheets publication is temporarily unavailable while recovery is being completed.",
+      )
+      .first(),
   ).toBeVisible();
-  await expect(page.getByText("PUBLISHED", { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -5567,13 +5592,10 @@ test("Research Queue explains source conditions and records review history", asy
     page.getByText("0 new triggers captured; 2 exact replays skipped."),
   ).toBeVisible();
   expect(refreshCalls).toBe(1);
-  await page
-    .getByRole("button", { name: "Publish trigger page to Sheets" })
-    .click();
   await expect(
-    page.getByText("Published one new trigger context row."),
-  ).toBeVisible();
-  expect(thesisFeedCalls).toBe(1);
+    page.getByRole("button", { name: "Publish trigger page to Sheets" }),
+  ).toBeDisabled();
+  expect(thesisFeedCalls).toBe(0);
   await page.getByRole("button", { name: "Complete review" }).click();
   await page
     .getByLabel("Review note")

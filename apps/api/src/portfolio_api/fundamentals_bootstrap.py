@@ -77,6 +77,8 @@ from portfolio_api.source_documents import (
     SEC_SUBMISSIONS_VERSION,
     SecSubmissionsProvider,
     ingest_sec_submissions,
+    known_processed_sec_history,
+    unresolved_sec_history,
 )
 
 BOOTSTRAP_VERSION = "sec-fundamentals-source-bootstrap-v1"
@@ -607,17 +609,8 @@ def _query_for_checkpoint(checkpoint: FundamentalsBootstrapCheckpoint) -> Provid
     )
 
 
-def _known_history_records(session: Session, cik: str) -> set[str]:
-    return set(
-        session.scalars(
-            select(ExternalRawPayload.source_record_id).where(
-                ExternalRawPayload.source_document_batch_id.is_not(None),
-                ExternalRawPayload.provider_id == SEC_PROVIDER_ID,
-                ExternalRawPayload.domain == ExternalDataDomain.SOURCE_DOCUMENTS.value,
-                ExternalRawPayload.source_record_id.like(f"CIK{cik}:HISTORY:%"),
-            )
-        )
-    )
+def _known_history_records(session: Session, company_id: UUID, cik: str) -> set[str]:
+    return known_processed_sec_history(session, {company_id: cik})
 
 
 def _retry_delay(failure_count: int) -> int:
@@ -936,9 +929,18 @@ def _process_checkpoint(
     query = _query_for_checkpoint(checkpoint)
     try:
         if checkpoint.stage == "SOURCE_DOCUMENTS":
-            known_history = _known_history_records(session, checkpoint.cik)
+            known_history = _known_history_records(session, checkpoint.company_id, checkpoint.cik)
         else:
             known_history = set()
+    except ValueError:
+        checkpoint.status = "BLOCKED"
+        checkpoint.failure_code = "SEC_HISTORY_RECEIPT_BUDGET"
+        checkpoint.failure_message = "SEC history receipt verification exceeded its bounded budget."
+        checkpoint.retryable = False
+        checkpoint.finished_at = _now()
+        session.commit()
+        return
+    try:
         result = asyncio.run(
             provider.fetch(
                 stage=checkpoint.stage,
@@ -1002,7 +1004,7 @@ def _process_checkpoint(
     )
     checkpoint_report["last_payload_sha256"] = sorted(record.payload_sha256 for record in records)
     checkpoint_report["last_retrieved_at"] = [record.retrieved_at.isoformat() for record in records]
-    checkpoint_report["history_files_skipped_as_unchanged"] = result.skipped_history_files
+    checkpoint_report["history_files_skipped_previously_processed"] = result.skipped_history_files
 
     try:
         if not records:
@@ -1030,6 +1032,11 @@ def _process_checkpoint(
                 records,
                 {checkpoint.company_id: checkpoint.cik},
             )
+            unresolved = unresolved_sec_history(
+                session, records, {checkpoint.company_id: checkpoint.cik}
+            )
+            import_result["unresolved_history_file_ids"] = unresolved
+            import_result["history_files_unresolved"] = len(unresolved)
             _append_result_batch(session, checkpoint, checkpoint.stage, records, import_result)
         else:
             raise ValueError("Unsupported SEC bootstrap checkpoint stage.")
@@ -1065,6 +1072,20 @@ def _process_checkpoint(
         checkpoint_report["batches"] = committed_batches
     checkpoint_report["last_import_result"] = import_result
     deferred = result.deferred_history_file_ids
+    reconciliation = import_result.get("reconciliation")
+    reconciliation = reconciliation if isinstance(reconciliation, dict) else {}
+    issues = reconciliation.get("issues")
+    source_error = checkpoint.stage == "SOURCE_DOCUMENTS" and (
+        bool(import_result.get("history_files_unresolved"))
+        or bool(reconciliation.get("malformed_filing_rows"))
+        or bool(reconciliation.get("rejected_payloads"))
+        or bool(reconciliation.get("conflicting_accessions"))
+        or bool(reconciliation.get("existing_metadata_conflicts"))
+        or (
+            isinstance(issues, list)
+            and any(isinstance(item, dict) and item.get("severity") == "ERROR" for item in issues)
+        )
+    )
     if deferred:
         checkpoint_report["deferred_history_file_ids"] = list(deferred)
     else:
@@ -1075,12 +1096,18 @@ def _process_checkpoint(
     checkpoint.retryable = False
     checkpoint.next_attempt_at = None
 
-    if deferred:
+    if source_error:
+        checkpoint.status = "BLOCKED"
+        checkpoint.failure_code = "SEC_FILINGS_REQUIRE_REVIEW"
+        checkpoint.failure_message = (
+            "SEC filing pages contain rejected, malformed or conflicting data; "
+            "review before resuming."
+        )
+        checkpoint.finished_at = _now()
+    elif deferred:
         checkpoint.status = "PENDING"
         checkpoint.finished_at = None
     else:
-        reconciliation = import_result.get("reconciliation")
-        reconciliation = reconciliation if isinstance(reconciliation, dict) else {}
         if import_result.get("status") == "NO_PROVIDER_RECORDS":
             checkpoint.status = "UNAVAILABLE"
             checkpoint.failure_code = "SEC_EMPTY_RESPONSE"
@@ -1159,6 +1186,21 @@ def execute_fundamentals_bootstrap(
             report = _run_report(session, run)
             report["status"] = run.status
             return report
+        if (
+            run.scope.get("company_facts_normalizer_version") != SEC_NORMALIZER_VERSION
+            or run.scope.get("submissions_normalizer_version") != SEC_DOCUMENT_NORMALIZER_VERSION
+        ):
+            run.status = "BLOCKED"
+            run.finished_at = _now()
+            run.report = {
+                "status": "BLOCKED",
+                "failure_code": "SOURCE_CONTRACT_VERSION_CHANGED",
+                "message": (
+                    "Prepare a new reviewed bootstrap scope for the current source contracts."
+                ),
+            }
+            session.commit()
+            return run.report
         try:
             current_mappings = _load_reviewed_cik_mappings(session)
         except FundamentalsBootstrapError:

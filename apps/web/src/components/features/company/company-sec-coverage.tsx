@@ -30,6 +30,7 @@ function retainedTime(value: string | null) {
 }
 
 type SecRefresh = NonNullable<CompanySecCoverage["fundamentals"]["refresh"]>;
+type SecIdentity = NonNullable<SecRefresh["identity"]>;
 const issuerOutcomeLabels: Record<SecRefresh["issuer_outcome"], string> = {
   REPORTED: "Source response reported",
   DATA_CHECK: "Source response needs review",
@@ -37,6 +38,24 @@ const issuerOutcomeLabels: Record<SecRefresh["issuer_outcome"], string> = {
   UNMAPPED: "Unmapped in this frozen scope",
   NOT_REPORTED: "No issuer-specific result recorded",
 };
+
+function identityGuidance(
+  identity: SecIdentity | null | undefined,
+  source: "refresh" | "bootstrap",
+): string {
+  switch (identity?.status) {
+    case "MATCHED":
+      return `${source === "refresh" ? "Refresh" : "Bootstrap"} issuer identity matches the current reviewed mapping; freshness is separate.`;
+    case "CHANGED":
+      return `Issuer mapping or recorded issuer details changed since this ${source}. Any result is historical, not evidence for the current identity.`;
+    case "UNMAPPED_IN_SCOPE":
+      return `This issuer was not mapped in the ${source} scope.`;
+    case "CURRENT_UNAVAILABLE":
+      return `Current reviewed issuer identity is unavailable; this historical ${source} cannot verify it.`;
+    default:
+      return `The ${source} issuer identity could not be verified from retained scope evidence.`;
+  }
+}
 
 function SecRefreshDetails({
   refresh,
@@ -62,6 +81,17 @@ function SecRefreshDetails({
           ` · ${refresh.mapped_company_count} mapped SEC ${refresh.mapped_company_count === 1 ? "issuer" : "issuers"}`}
       </p>
       <p>Issuer result · {issuerOutcomeLabels[refresh.issuer_outcome]}</p>
+      <p
+        className={
+          refresh.identity?.status === "MATCHED"
+            ? "text-xs text-muted-foreground"
+            : "text-sm text-warning"
+        }
+      >
+        {identityGuidance(refresh.identity, "refresh")}
+        {refresh.identity?.frozen_cik &&
+          ` Frozen refresh CIK ${refresh.identity.frozen_cik}.`}
+      </p>
       {refresh.source_record_count !== null && (
         <p>
           {filings
@@ -199,6 +229,31 @@ export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
                 <dd>{retainedTime(domain.latest_recorded_at)}</dd>
               </div>
             </dl>
+            {key === "fundamentals" && data.fundamental_identity_counts && (
+              <div className="space-y-1 border-t pt-3 text-sm">
+                <h4 className="font-medium">
+                  Recorded issuer CIK on retained facts
+                </h4>
+                <p>
+                  {data.fundamental_identity_counts.matching_cik} matching ·{" "}
+                  {data.fundamental_identity_counts.other_cik} different ·{" "}
+                  {data.fundamental_identity_counts.unverified} unverifiable
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Counts compare saved observation and batch metadata with the
+                  current reviewed CIK. They do not verify source bytes,
+                  historical mapping, economic validity or freshness. Filing
+                  records are separate.
+                </p>
+                {(data.fundamental_identity_counts.other_cik > 0 ||
+                  data.fundamental_identity_counts.unverified > 0) && (
+                  <p className="text-warning">
+                    Review issuer attribution before relying on reported
+                    financial statements.
+                  </p>
+                )}
+              </div>
+            )}
             {domain.refresh ? (
               <SecRefreshDetails
                 refresh={domain.refresh}
@@ -221,6 +276,17 @@ export function SecCoverageDetails({ data }: { data: CompanySecCoverage }) {
                   Prepared {dateTime(attempt.prepared_at)} · Finished{" "}
                   {dateTime(attempt.finished_at)} ·{" "}
                   {attempt.provider_request_count} provider requests
+                </p>
+                <p
+                  className={
+                    attempt.identity?.status === "MATCHED"
+                      ? "text-xs text-muted-foreground"
+                      : "text-sm text-warning"
+                  }
+                >
+                  {identityGuidance(attempt.identity, "bootstrap")}
+                  {attempt.identity?.frozen_cik &&
+                    ` Frozen bootstrap CIK ${attempt.identity.frozen_cik}.`}
                 </p>
                 {attempt.failure_code && (
                   <p className="break-words text-warning">
@@ -331,13 +397,40 @@ export function CompanySecCoveragePanel({
       </CardHeader>
       <CardContent className="space-y-3">
         {!data ? (
-          <PendingOrError {...state} />
+          <>
+            <PendingOrError {...state} />
+            <p className="text-sm text-warning">
+              Retained issuer attribution has not been checked. Review source
+              identities before relying on reported statements.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-sm">
               {data.metrics_present.length} reported metric types ·{" "}
               {data.filings.record_count} retained filings
             </p>
+            <p className="text-xs text-muted-foreground">
+              Retained counts can include earlier runs; the latest identity
+              checks do not verify every historical record.
+            </p>
+            {!data.fundamental_identity_counts &&
+              data.fundamentals.record_count > 0 && (
+                <p className="text-sm text-warning">
+                  This API version does not report retained issuer attribution.
+                  Review source identities before relying on reported
+                  statements.
+                </p>
+              )}
+            {data.fundamental_identity_counts &&
+              (data.fundamental_identity_counts.other_cik > 0 ||
+                data.fundamental_identity_counts.unverified > 0) && (
+                <p role="alert" className="text-sm text-warning">
+                  Retained facts include different or unverifiable issuer CIK
+                  metadata. Review attribution before relying on financial
+                  statements.
+                </p>
+              )}
             <p className="text-xs text-muted-foreground">
               Latest fact retrieval{" "}
               {retainedTime(data.fundamentals.latest_retrieved_at)} · Latest
@@ -377,21 +470,45 @@ export function CompanySecCoveragePanel({
                     <span className="text-muted-foreground">
                       {issuerOutcomeLabels[refresh.issuer_outcome]}
                     </span>
+                    {refresh.identity?.status !== "MATCHED" && (
+                      <span className="text-warning">
+                        {identityGuidance(refresh.identity, "refresh")}
+                      </span>
+                    )}
+                    {checkpoint &&
+                      checkpoint.identity?.status !== "MATCHED" && (
+                        <span className="text-warning">
+                          Other recorded bootstrap:{" "}
+                          {identityGuidance(checkpoint.identity, "bootstrap")}
+                        </span>
+                      )}
                   </p>
                 );
               return checkpoint &&
-                [
+                ([
                   "FAILED",
                   "BLOCKED",
                   "UNAVAILABLE",
                   "RUNNING",
                   "PENDING",
-                ].includes(checkpoint.status) ? (
+                ].includes(checkpoint.status) ||
+                  checkpoint.identity?.status !== "MATCHED" ||
+                  (refresh && refresh.identity?.status !== "MATCHED")) ? (
                 <p key={key} className="break-words text-sm text-warning">
                   {label} bootstrap · {statusLabel(checkpoint.status)}
                   {checkpoint.failure_code
                     ? ` · ${checkpoint.failure_code}`
                     : ""}
+                  {checkpoint.identity?.status !== "MATCHED" && (
+                    <> · {identityGuidance(checkpoint.identity, "bootstrap")}</>
+                  )}
+                  {refresh && refresh.identity?.status !== "MATCHED" && (
+                    <>
+                      {" "}
+                      · Other recorded refresh:{" "}
+                      {identityGuidance(refresh.identity, "refresh")}
+                    </>
+                  )}
                 </p>
               ) : null;
             })}

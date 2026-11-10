@@ -38,6 +38,13 @@ for target gating, bounded execution and historical coverage caveats.
   workbook consensus cells, calls FMP, recalculates financial models, or creates
   accepted decisions.
 
+Company SEC coverage compares frozen, fingerprinted refresh and bootstrap issuer
+scopes with the current reviewed mapping. A changed mapping or issuer detail, an
+unmapped historical scope, or missing scope evidence stays visible alongside the
+historical result. Latest-run checks do not establish the identity of every record
+in aggregate history. A matching identity does not establish current filing or fact
+freshness.
+
 `COMPLETE` means every mapped checkpoint completed without availability or review
 flags. `PARTIAL` means data was fetched but there are unavailable checkpoints,
 unsupported forms/concepts, or quality checks to review. A partial run is not a
@@ -90,6 +97,27 @@ Retry cooldowns preserve that dependency. An issuer with unavailable filings may
 continue with explicit evidence gaps. Other eligible issuers can progress while a
 failed issuer waits. Failure/retry history and exact source batches remain in the
 existing checkpoint ledger.
+
+Historical pages are skipped only when a versioned receipt matches the exact issuer,
+page, retained bytes and normalization result. A previously processed filename is
+not proof that SEC still serves the same content. Legacy raw-only pages remain
+unknown. Rejected, malformed, conflicting or otherwise unresolved pages block the
+bootstrap instead of making a partial import look complete; review the checkpoint
+before preparing a new run. Older prepared bootstrap or incremental refresh scopes
+do not silently switch to the new normalizer. A CIK-less historical page is accepted
+only with its exact filename in the validated, earlier issuer index in the same
+retained batch. The receipt binds both raw digests; both payloads and their issuer,
+URLs and timestamps are checked again before a page can be skipped. Missing,
+unaligned or conflicting evidence remains unresolved. SEC redirects are rejected.
+
+Receipt scans cap returned rows at 4,096, candidate pages at 256, compressed input
+at 8 MiB per page and 64 MiB total, and decompression at 16 MiB per page and 64 MiB
+total. Exceeding a cap requires operator review; a single issuer may itself exceed
+these limits. The underlying database may still scan more rows because history IDs
+have no dedicated index. An accepted page followed by a rejected response and then
+the identical accepted bytes remains unresolved: batch deduplication does not retain
+the later re-observation. Do not delete or rewrite retained evidence to clear it.
+These checks assume append-only receipts and do not authenticate SEC as the source.
 
 ### Run the reviewed checkpoints
 

@@ -16,8 +16,10 @@ from portfolio_api.fundamentals_bootstrap import (
     _load_reviewed_cik_mappings,
     _portfolio_research_selection,
 )
+from portfolio_api.source_documents import SEC_DOCUMENT_NORMALIZER_VERSION
 
-SEC_SCOPE_VERSION = "sec-issuer-refresh-v1"
+SEC_SCOPE_VERSION = "sec-issuer-refresh-v3"
+LEGACY_SEC_SCOPE_VERSIONS = ("sec-issuer-refresh-v1", "sec-issuer-refresh-v2")
 MAX_SEC_ISSUERS = 30
 MAX_SEC_HISTORY_FILES = 5
 
@@ -84,6 +86,7 @@ def capture_sec_refresh_scope(
     return {
         "scope": "sec_issuer_refresh",
         "sec_scope_version": SEC_SCOPE_VERSION,
+        "source_document_normalizer_version": SEC_DOCUMENT_NORMALIZER_VERSION,
         "scope_date": run_date.isoformat(),
         "operational_request_id": str(request_id) if request_id else None,
         "company_ids": ordered_ids,
@@ -106,6 +109,7 @@ def validate_sec_refresh_scope(session: Session, scope: dict[str, Any]) -> list[
         if (
             scope["scope"] != "sec_issuer_refresh"
             or scope["sec_scope_version"] != SEC_SCOPE_VERSION
+            or scope["source_document_normalizer_version"] != SEC_DOCUMENT_NORMALIZER_VERSION
             or scope["max_mapped_issuers"] != MAX_SEC_ISSUERS
             or scope["max_new_history_files"] != MAX_SEC_HISTORY_FILES
             or not isinstance(raw_ids, list)

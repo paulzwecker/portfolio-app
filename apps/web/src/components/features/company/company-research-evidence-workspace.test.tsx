@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   buildResearchActivity,
   filterResearchActivity,
   researchActivityIsRecent,
+  SourceDocumentsSection,
+  SourceDocumentDetail,
   type ResearchActivityItem,
 } from "./company-research-evidence-workspace";
 
@@ -108,7 +111,8 @@ describe("company research evidence activity", () => {
         {
           id: "44444444-4444-4444-8444-444444444444",
           title: "New filing",
-          reason: "Review it",
+          reason:
+            "SEC issuer attribution is unverified. Confirm the company against the original source before relying on this filing.",
           effective_at: "2026-10-07T00:00:00Z",
           source_recorded_at: "2026-10-07T01:00:00Z",
           detected_at: "2026-10-07T01:00:00Z",
@@ -129,5 +133,74 @@ describe("company research evidence activity", () => {
       "Accepted qualitative risk",
       "Deterministic evidence trigger",
     ]);
+    expect(
+      activity.find((record) => record.category === "TRIGGERS")?.summary,
+    ).toContain("SEC issuer attribution is unverified");
+  });
+  it("warns for SEC filing attribution in both activity and the source catalog, including older APIs", () => {
+    const document = {
+      id: "11111111-1111-4111-8111-111111111111",
+      title: "Fixture filing",
+      document_type: "10-K",
+      provider_id: "sec_edgar",
+      source_name: "SEC",
+      filed_at: "2026-10-10",
+      published_at: "2026-10-10",
+      period_end: "2025-12-31",
+      recorded_at: "2026-10-11T00:00:00Z",
+      canonical_url: "https://www.sec.gov/fixture",
+      data_quality: "PASS",
+      is_amendment: false,
+    };
+    const input = {
+      documents: [document] as never[],
+      researchRevisions: [],
+      riskRevisions: [],
+      triggers: [],
+    };
+    expect(buildResearchActivity(input)[0].summary).toContain(
+      "Issuer attribution unverified",
+    );
+    const html = renderToStaticMarkup(
+      <SourceDocumentsSection
+        state={
+          {
+            data: {
+              documents: [document],
+              sec_identity_status: "MAPPED",
+              source_count: 1,
+              as_of: null,
+            },
+          } as never
+        }
+        recency="ALL"
+        onInspect={() => {}}
+      />,
+    );
+    expect(html).toContain("Issuer attribution unverified");
+    expect(html).toContain("no retained per-document link");
+    expect(html).toContain("Recorded SEC mapping");
+    const details = renderToStaticMarkup(
+      <SourceDocumentDetail document={document as never} />,
+    );
+    expect(details).toContain("Issuer attribution unverified");
+    expect(details).toContain("Open original source");
+    const empty = renderToStaticMarkup(
+      <SourceDocumentsSection
+        state={
+          {
+            data: {
+              documents: [],
+              sec_identity_status: "UNMAPPED",
+              source_count: 0,
+              as_of: null,
+            },
+          } as never
+        }
+        recency="ALL"
+        onInspect={() => {}}
+      />,
+    );
+    expect(empty).toContain("company-source references remain separate");
   });
 });

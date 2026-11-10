@@ -78,6 +78,7 @@ from portfolio_api.model_migration_status import company_model_migration_status
 from portfolio_api.portfolio_sheet_sync import (
     PortfolioSheetPublishError,
     publish_portfolio_state,
+    require_sheet_publication_available,
 )
 from portfolio_api.recurring_operations import recurring_operations_status
 from portfolio_api.reported_fundamentals import METRIC_DEFINITIONS
@@ -164,6 +165,13 @@ def session_for(request: Request) -> Iterator[Session]:
 
 
 Db = Annotated[Session, Depends(session_for, scope="function")]
+
+
+def reject_unavailable_sheet_publication() -> None:
+    try:
+        require_sheet_publication_available()
+    except PortfolioSheetPublishError as error:
+        raise HTTPException(error.status, f"{error.code}: {error}") from None
 
 
 def ledger_session_for(request: Request) -> Iterator[Session]:
@@ -413,6 +421,7 @@ def post_google_sheets_risk_candidate_reject(
 def post_google_sheets_portfolio_state_publish(
     value: s.GoogleSheetsPortfolioStatePublishRequest, db: Db
 ) -> s.GoogleSheetsPortfolioStatePublishRead | JSONResponse:
+    reject_unavailable_sheet_publication()
     try:
         result = publish_portfolio_state(db, value.portfolio_id, Settings())
         response = s.GoogleSheetsPortfolioStatePublishRead.model_validate(result.__dict__)
@@ -441,6 +450,7 @@ def post_google_sheets_portfolio_state_publish(
 def post_google_sheets_thesis_watch_publish(
     value: s.GoogleSheetsThesisWatchPublishRequest, db: Db
 ) -> s.GoogleSheetsThesisWatchPublishRead | JSONResponse:
+    reject_unavailable_sheet_publication()
     try:
         result = publish_thesis_watch_feed(db, Settings(), limit=value.limit, offset=value.offset)
         record_thesis_sheet_deliveries(db, result)
@@ -746,6 +756,7 @@ def post_google_sheets_agent_work_publish(
     value: s.GoogleSheetsAgentWorkPublishRequest,
     db: Db,
 ) -> s.GoogleSheetsAgentWorkPublishRead | JSONResponse:
+    reject_unavailable_sheet_publication()
     work_request = s.ResearchAgentWorkRequest(
         as_of=value.as_of,
         limit=value.limit,

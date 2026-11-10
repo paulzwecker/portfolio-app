@@ -3569,6 +3569,8 @@ export interface components {
             latest_observed_at: string | null;
             /** Periods */
             periods: components["schemas"]["ReportedFundamentalPeriodRead"][];
+            /** Provider Identity Issue */
+            provider_identity_issue?: string | null;
             /**
              * Provider Identity Status
              * @enum {string}
@@ -3615,6 +3617,7 @@ export interface components {
             /** Company Name */
             company_name: string;
             filings: components["schemas"]["SecDomainCoverageRead"];
+            fundamental_identity_counts?: components["schemas"]["SecFundamentalIdentityCountsRead"] | null;
             fundamentals: components["schemas"]["SecDomainCoverageRead"];
             /** Identity Evidence Url */
             identity_evidence_url: string | null;
@@ -3643,6 +3646,8 @@ export interface components {
             documents: components["schemas"]["SourceDocumentRead"][];
             /** Known At */
             known_at: string | null;
+            /** Sec Identity Issue */
+            sec_identity_issue?: string | null;
             /**
              * Sec Identity Status
              * @enum {string}
@@ -10480,6 +10485,8 @@ export interface components {
             fiscal_period: string | null;
             /** Fiscal Year */
             fiscal_year: number | null;
+            /** Identity Issue */
+            identity_issue?: string | null;
             metric: components["schemas"]["FundamentalMetric"];
             /** Observations */
             observations: components["schemas"]["ReportedFundamentalObservationRead"][];
@@ -12244,6 +12251,7 @@ export interface components {
             failure_code: string | null;
             /** Finished At */
             finished_at: string | null;
+            identity?: components["schemas"]["SecIssuerIdentityRead"] | null;
             /** Next Attempt At */
             next_attempt_at: string | null;
             /**
@@ -12285,6 +12293,25 @@ export interface components {
             record_count: number;
             refresh?: components["schemas"]["SecRefreshRead"] | null;
         };
+        /** SecFundamentalIdentityCountsRead */
+        SecFundamentalIdentityCountsRead: {
+            /** Matching Cik */
+            matching_cik: number;
+            /** Other Cik */
+            other_cik: number;
+            /** Unverified */
+            unverified: number;
+        };
+        /** SecIssuerIdentityRead */
+        SecIssuerIdentityRead: {
+            /** Frozen Cik */
+            frozen_cik: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MATCHED" | "CHANGED" | "UNMAPPED_IN_SCOPE" | "CURRENT_UNAVAILABLE" | "UNVERIFIED";
+        };
         /** SecRefreshRead */
         SecRefreshRead: {
             /** Attempt Count */
@@ -12300,6 +12327,7 @@ export interface components {
             failure_code: string | null;
             /** Finished At */
             finished_at: string | null;
+            identity?: components["schemas"]["SecIssuerIdentityRead"] | null;
             /**
              * Issuer Outcome
              * @enum {string}
@@ -12541,6 +12569,8 @@ export interface components {
             reporting_period: string | null;
             /** Retrieved At */
             retrieved_at: string | null;
+            /** Sec Issuer Attribution */
+            sec_issuer_attribution?: ("UNVERIFIED" | "NOT_SEC") | null;
             /** Security Id */
             security_id: string | null;
             /** Source Form */

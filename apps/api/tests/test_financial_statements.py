@@ -6,13 +6,18 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
-from portfolio_api.domain.models import Company, ReportedFundamentalObservation
+from portfolio_api.domain.models import (
+    Company,
+    CompanyProviderIdentifier,
+    ReportedFundamentalBatch,
+    ReportedFundamentalObservation,
+)
 from portfolio_api.external_data import ExternalDataDomain, RawProviderRecord
 from portfolio_api.financial_statements import company_financial_statements
 from portfolio_api.main import create_app
@@ -62,6 +67,253 @@ def _record(*, fy: int, value: int, filed: str, observed: datetime) -> RawProvid
 
 
 @pytest.mark.integration
+def test_sec_identity_guard_preserves_evidence_and_knowledge_cutoffs(
+    postgres_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    company_id = uuid4()
+    mapping_at = datetime(2020, 1, 1, tzinfo=UTC)
+    retrieved_at = datetime(2026, 1, 1, tzinfo=UTC)
+    later = datetime(2027, 1, 1, tzinfo=UTC)
+    monkeypatch.setattr("portfolio_api.reported_fundamentals.now", lambda: mapping_at)
+    monkeypatch.setattr(
+        "portfolio_api.domain.queries.now", lambda: datetime(2030, 1, 1, tzinfo=UTC)
+    )
+    with Session(postgres_engine) as session:
+        session.add(Company(id=company_id, name="Identity fixture"))
+        session.flush()
+        record_cik_mapping(
+            session,
+            company_id,
+            "0000000001",
+            "Statement Fixture Inc.",
+            "https://www.sec.gov/edgar/browse/?CIK=1",
+        )
+        monkeypatch.setattr("portfolio_api.reported_fundamentals.now", lambda: retrieved_at)
+        ingest_sec_company_facts(
+            session,
+            company_id,
+            "0000000001",
+            _record(fy=2023, value=100, filed="2023-07-27", observed=retrieved_at),
+        )
+        session.commit()
+        first = q.company_reported_fundamentals(session, company_id, known_at=retrieved_at)
+        assert first.periods[0].selection_status == "AVAILABLE"
+        assert first.periods[0].value == Decimal(100)
+        too_early = q.company_reported_fundamentals(
+            session, company_id, as_of=date(2019, 12, 31), known_at=retrieved_at
+        )
+        assert too_early.provider_ids == []
+
+        fact = session.scalars(select(ReportedFundamentalObservation)).one()
+        original_batch = session.get(ReportedFundamentalBatch, fact.batch_id)
+        assert original_batch is not None
+        # An observation cannot use batch identity evidence recorded later than its cutoff.
+        batch_id = original_batch.id
+        session.execute(
+            update(ReportedFundamentalBatch)
+            .where(ReportedFundamentalBatch.id == batch_id)
+            .values(recorded_at=later)
+        )
+        session.commit()
+        before_receipt = q.company_reported_fundamentals(session, company_id, known_at=retrieved_at)
+        assert before_receipt.periods[0].selection_status == "DATA_CHECK"
+        assert before_receipt.periods[0].value is None
+        session.execute(
+            update(ReportedFundamentalBatch)
+            .where(ReportedFundamentalBatch.id == batch_id)
+            .values(recorded_at=retrieved_at, observed_at=later)
+        )
+        session.commit()
+        before_observation = q.company_reported_fundamentals(
+            session, company_id, known_at=retrieved_at
+        )
+        assert before_observation.periods[0].selection_status == "DATA_CHECK"
+        session.execute(
+            update(ReportedFundamentalBatch)
+            .where(ReportedFundamentalBatch.id == batch_id)
+            .values(observed_at=retrieved_at)
+        )
+        session.commit()
+        original_batch = session.get(ReportedFundamentalBatch, batch_id)
+        assert original_batch is not None
+        batch_values = {
+            column.name: getattr(original_batch, column.name)
+            for column in ReportedFundamentalBatch.__table__.columns
+        }
+        batch_values.update(
+            id=uuid4(),
+            source_digest="9" * 64,
+            query_scope={"company_id": str(company_id), "cik": "0000000002"},
+        )
+        foreign_batch = ReportedFundamentalBatch(**batch_values)
+        session.add(foreign_batch)
+        session.flush()
+        fact_values = {
+            column.name: getattr(fact, column.name)
+            for column in ReportedFundamentalObservation.__table__.columns
+        }
+        fact_values.update(
+            id=uuid4(),
+            batch_id=foreign_batch.id,
+            provider_entity_id="0000000002",
+            source_record_id="synthetic-other-cik",
+            observation_fingerprint="8" * 64,
+        )
+        foreign = ReportedFundamentalObservation(**fact_values)
+        session.add(foreign)
+        fact_values.update(
+            id=uuid4(),
+            source_record_id="synthetic-disjoint-other-cik",
+            observation_fingerprint="7" * 64,
+            period_end=datetime(2024, 6, 30, tzinfo=UTC),
+        )
+        session.add(ReportedFundamentalObservation(**fact_values))
+        # A safe quarter may not derive its fiscal label from a mixed-identity annual group.
+        safe_quarter_values = {
+            column.name: getattr(fact, column.name)
+            for column in ReportedFundamentalObservation.__table__.columns
+        }
+        safe_quarter_values.update(
+            id=uuid4(),
+            period_type="QUARTERLY",
+            period_start=datetime(2023, 4, 1, tzinfo=UTC),
+            fiscal_year=None,
+            fiscal_period=None,
+            source_record_id="synthetic-safe-quarter",
+            observation_fingerprint="6" * 64,
+        )
+        session.add(ReportedFundamentalObservation(**safe_quarter_values))
+        non_sec_values = dict(safe_quarter_values)
+        non_sec_values.update(
+            id=uuid4(),
+            provider_id="fixture_vendor",
+            provider_entity_id="fixture",
+            period_end=datetime(2023, 3, 31, tzinfo=UTC),
+            period_start=datetime(2023, 1, 1, tzinfo=UTC),
+            source_record_id="synthetic-non-sec",
+            observation_fingerprint="5" * 64,
+        )
+        session.add(ReportedFundamentalObservation(**non_sec_values))
+        session.commit()
+        periods = q.company_reported_fundamentals(session, company_id).periods
+        assert len(periods) == 4
+        sec_annual = [p for p in periods if p.period_type == "ANNUAL"]
+        assert all(p.selection_status == "DATA_CHECK" and p.value is None for p in sec_annual)
+        quarters = [p for p in periods if p.period_type == "QUARTERLY"]
+        assert all(p.selection_status == "AVAILABLE" for p in quarters)
+        assert (
+            next(p for p in quarters if p.period_end.date() == date(2023, 6, 30)).fiscal_period
+            is None
+        )
+        period = next(p for p in periods if len(p.observations) == 2)
+        assert period.selection_status == "DATA_CHECK"
+        assert period.value is None and period.selected_observation is None
+        assert period.identity_issue and len(period.observations) == 2
+        assert period.fiscal_year is None and period.fiscal_period is None
+        statement = company_financial_statements(session, company_id)
+        cell = next(
+            cell
+            for row in statement.rows
+            if row.metric == "REVENUE"
+            for cell in row.cells
+            if len(cell.source_ids) == 2
+        )
+        assert (
+            cell.status == "DATA_CHECK" and cell.value is None and cell.selected_source_id is None
+        )
+        assert cell.reason and "issuer identity" in cell.reason and len(cell.source_ids) == 2
+
+        monkeypatch.setattr("portfolio_api.reported_fundamentals.now", lambda: later)
+        record_cik_mapping(
+            session,
+            company_id,
+            "0000000002",
+            "Other fixture",
+            "https://www.sec.gov/edgar/browse/?CIK=2",
+        )
+        session.commit()
+        historical = q.company_reported_fundamentals(session, company_id, known_at=retrieved_at)
+        assert historical.provider_ids == ["0000000001"]
+        assert (
+            next(p for p in historical.periods if p.period_type == "ANNUAL").selection_status
+            == "DATA_CHECK"
+        )
+        current = q.company_reported_fundamentals(session, company_id)
+        assert current.provider_identity_status == "AMBIGUOUS"
+        assert current.periods[0].value is None
+        assert (
+            next(
+                p for p in current.periods if p.period_end.date() == date(2023, 3, 31)
+            ).selection_status
+            == "AVAILABLE"
+        )
+
+
+@pytest.mark.integration
+def test_late_mapping_cannot_verify_earlier_known_fact(
+    postgres_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    company_id = uuid4()
+    mapping_at = datetime(2025, 1, 1, tzinfo=UTC)
+    fact_at = datetime(2024, 1, 1, tzinfo=UTC)
+    monkeypatch.setattr("portfolio_api.reported_fundamentals.now", lambda: mapping_at)
+    with Session(postgres_engine) as session:
+        session.add(Company(id=company_id, name="Late identity fixture"))
+        session.flush()
+        record_cik_mapping(
+            session,
+            company_id,
+            "0000000001",
+            "Statement Fixture Inc.",
+            "https://www.sec.gov/edgar/browse/?CIK=1",
+        )
+        monkeypatch.setattr("portfolio_api.reported_fundamentals.now", lambda: fact_at)
+        ingest_sec_company_facts(
+            session,
+            company_id,
+            "0000000001",
+            _record(fy=2023, value=100, filed="2023-07-27", observed=fact_at),
+        )
+        session.commit()
+        historical = q.company_reported_fundamentals(
+            session, company_id, as_of=date(2024, 12, 31), known_at=fact_at
+        )
+        assert historical.provider_ids == [] and historical.provider_identity_status == "UNMAPPED"
+        assert len(historical.periods) == 1
+        assert historical.periods[0].selection_status == "DATA_CHECK"
+        assert historical.periods[0].value is None and historical.periods[0].identity_issue
+        assert len(historical.periods[0].observations) == 1
+        # Effective and knowledge times are separate; this fixture-only backdate
+        # represents evidence that became known after its effective date.
+        session.execute(
+            update(CompanyProviderIdentifier)
+            .where(CompanyProviderIdentifier.company_id == company_id)
+            .values(effective_at=datetime(2020, 1, 1, tzinfo=UTC))
+        )
+        session.commit()
+        current_knowledge = q.company_reported_fundamentals(
+            session, company_id, as_of=date(2024, 12, 31)
+        )
+        assert current_knowledge.periods[0].selection_status == "AVAILABLE"
+        historical = q.company_reported_fundamentals(
+            session, company_id, as_of=date(2024, 12, 31), known_at=fact_at
+        )
+        assert historical.periods[0].selection_status == "DATA_CHECK"
+        assert historical.provider_ids == []
+        session.execute(
+            update(CompanyProviderIdentifier)
+            .where(CompanyProviderIdentifier.company_id == company_id)
+            .values(evidence_source="https://example.test/?CIK=1")
+        )
+        session.commit()
+        invalid = q.company_reported_fundamentals(session, company_id)
+        assert invalid.provider_identity_status == "MAPPED" and invalid.provider_identity_issue
+        assert invalid.periods[0].value is None and invalid.periods[0].identity_issue
+
+
+@pytest.mark.integration
 def test_filing_context_does_not_duplicate_period_or_relabel_comparatives(
     postgres_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,
@@ -69,6 +321,9 @@ def test_filing_context_does_not_duplicate_period_or_relabel_comparatives(
     company_id = uuid4()
     first_known = datetime(2026, 10, 5, 12, tzinfo=UTC)
     second_known = datetime(2026, 10, 6, 12, tzinfo=UTC)
+    monkeypatch.setattr(
+        "portfolio_api.reported_fundamentals.now", lambda: datetime(2020, 1, 1, tzinfo=UTC)
+    )
     with Session(postgres_engine) as session:
         session.add(Company(id=company_id, name="Statement fixture", reporting_currency="USD"))
         session.flush()

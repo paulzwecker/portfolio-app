@@ -998,6 +998,7 @@ def ingest_sec_company_facts(
         source_digest=source_digest,
         query_scope={"company_id": str(company_id), "cik": cik},
         observed_at=record.retrieved_at,
+        recorded_at=now(),
         provider_summary={"entity_name": sec_name, **counters},
         reconciliation=reconciliation,
     )

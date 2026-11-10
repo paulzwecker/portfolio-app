@@ -1,19 +1,19 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-08. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-09. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | C2.3 guided ledger onboarding — INTEGRATE; release BLOCKED. [Handoff](docs/ACTIVE_WORKSTREAM.md)                 |
-| Branch / PR                 | `codex/ledger-opening-onboarding`; [draft PR #30](https://github.com/paulzwecker/portfolio-app/pull/30)          |
-| Implementation              | Guided opening, activity and ending reconciliation LOCAL_VERIFIED                                                |
-| Next ready substantial task | Complete provider-control verification and coordinated release review                                            |
-| Parallel owner gate         | Release recovery, deployment unfreeze, provider activation and financial decisions retain separate approvals     |
-| Integration rule            | Freeze completed PRs; continue independent work from main or track stacked dependencies; preserve all local work |
+| Field                       | Current value                                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | C3.1 SEC provenance — INTEGRATE. [Frozen acceptance](docs/sec-provenance-integration.md) and [handoff](docs/ACTIVE_WORKSTREAM.md). |
+| Branch / PR                 | `codex/sec-provenance-integration`; [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32). PR #30 merged as `2dfef5b`.    |
+| Implementation              | SEC issuer identity, evidence-time boundaries and research warnings; incomplete Sheets publication disabled.                       |
+| Next ready substantial task | Await PR #32 review; then prepare bounded historical prices/FX and useful fundamentals.                                            |
+| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                      |
+| Production boundary         | No ingestion, migration, deployment or financial decision without separate owner authorization.                                    |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

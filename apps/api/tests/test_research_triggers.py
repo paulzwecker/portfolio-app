@@ -10,28 +10,43 @@ from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from portfolio_api.attention import attention_feed
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     Actor,
     Company,
+    CurrentLifecycle,
+    InvestmentThesisClaim,
+    InvestmentThesisEvidence,
+    InvestmentThesisRevision,
     Lifecycle,
+    LifecycleEvent,
     ReportedFundamentalBatch,
     ReportedFundamentalObservation,
     ResearchQueueCompletion,
     ResearchTrigger,
     ResearchTriggerType,
     SourceDocument,
+    SourceDocumentBatch,
 )
 from portfolio_api.domain.services import DomainError, transition_lifecycle
+from portfolio_api.research_agent_operations import deliver_agent_work, record_agent_acknowledgment
 from portfolio_api.research_queue import complete_research_queue_task, get_research_queue
 from portfolio_api.research_triggers import (
     TriggerCandidate,
     _processing_state,
     _snapshot_fingerprint,
     _superseded_source_ids,
+    _thesis_evidence_candidates,
     list_research_triggers,
     normalize_trigger_cutoff,
     refresh_research_triggers,
+    research_trigger_context,
+)
+from portfolio_api.source_document_provenance import (
+    SEC_ISSUER_WARNING,
+    SOURCE_MISMATCH_WARNING,
+    SOURCE_UNAVAILABLE_WARNING,
 )
 
 
@@ -125,10 +140,32 @@ def test_as_of_cutoff_requires_timezone_information() -> None:
         normalize_trigger_cutoff(datetime(2026, 10, 15, 9))
 
 
-def _active_company(session: Session, name: str) -> UUID:
-    company = Company(name=name, reporting_currency="USD", is_demo=False)
+def _active_company(session: Session, name: str, *, known_since: datetime | None = None) -> UUID:
+    company = Company(
+        name=name,
+        reporting_currency="USD",
+        is_demo=False,
+        **({"created_at": known_since} if known_since is not None else {}),
+    )
     session.add(company)
     session.flush()
+    if known_since is not None:
+        event = LifecycleEvent(
+            company_id=company.id,
+            sequence=1,
+            previous_state=None,
+            new_state="WATCHLIST",
+            effective_at=known_since,
+            recorded_at=known_since,
+            actor="LOCAL_USER",
+            reason="Historical fixture",
+            source="test_research_triggers",
+        )
+        session.add(event)
+        session.flush()
+        session.add(CurrentLifecycle(company_id=company.id, event_id=event.id))
+        session.flush()
+        return company.id
     transition_lifecycle(
         session,
         company.id,
@@ -153,10 +190,11 @@ def _source_document(
     published_at: date | None,
     recorded_at: datetime,
     supersedes_document_id: UUID | None = None,
+    provider_id: str = "test-primary-source",
 ) -> SourceDocument:
     row = SourceDocument(
         company_id=company_id,
-        provider_id="test-primary-source",
+        provider_id=provider_id,
         source_name="Test issuer source",
         source_jurisdiction="US",
         external_identifier=f"test-{uuid4()}",
@@ -230,7 +268,7 @@ def _reported_fact(
 def test_filing_trigger_is_idempotent_temporally_honest_and_queue_linked(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger filing issuer")
         document = _source_document(
@@ -325,8 +363,415 @@ def test_filing_trigger_is_idempotent_temporally_honest_and_queue_linked(
 
 
 @pytest.mark.integration
+def test_unverified_sec_filing_is_disclosed_across_existing_research_workflows(
+    postgres_engine: Engine,
+) -> None:
+    now = datetime.now(UTC) + timedelta(seconds=1)
+    with Session(postgres_engine) as session, session.begin():
+        company_id = _active_company(session, "SEC disclosure issuer")
+        sec = _source_document(
+            session,
+            company_id,
+            now=now,
+            title="SEC result",
+            published_at=now.date(),
+            recorded_at=now - timedelta(hours=2),
+            provider_id="sec_edgar",
+        )
+        other = _source_document(
+            session,
+            company_id,
+            now=now,
+            title="Issuer result",
+            published_at=now.date(),
+            recorded_at=now - timedelta(hours=2),
+        )
+        session.flush()
+        events = attention_feed(session, as_of=now, company_id=company_id).events
+        sec_event = next(item for item in events if item.source_id == str(sec.id))
+        other_event = next(item for item in events if item.source_id == str(other.id))
+        assert SEC_ISSUER_WARNING in sec_event.explanation
+        assert SEC_ISSUER_WARNING not in other_event.explanation
+
+        first = refresh_research_triggers(session, as_of=now, lookback_days=30)
+        trigger = session.scalar(
+            select(ResearchTrigger).where(ResearchTrigger.source_record_id == str(sec.id))
+        )
+        assert trigger is not None
+        assert SEC_ISSUER_WARNING not in trigger.reason  # Immutable fingerprint input.
+        trigger_id, fingerprint = trigger.id, trigger.fingerprint
+        listed = list_research_triggers(session, company_id=company_id, as_of=now)
+        assert SEC_ISSUER_WARNING in next(
+            item.reason for item in listed.triggers if item.id == trigger_id
+        )
+        assert SEC_ISSUER_WARNING in research_trigger_context(session, trigger_id).trigger.reason
+
+        queue = get_research_queue(session, as_of=now)
+        task = next(
+            item
+            for item in queue.tasks
+            if item.task_type == "MATERIAL_EVIDENCE"
+            and item.sources[0].source_record_id == str(sec.id)
+        )
+        other_task = next(
+            item
+            for item in queue.tasks
+            if item.task_type == "MATERIAL_EVIDENCE"
+            and item.sources[0].source_record_id == str(other.id)
+        )
+        assert SEC_ISSUER_WARNING in task.reason
+        assert SEC_ISSUER_WARNING not in other_task.reason
+        completed, result = complete_research_queue_task(
+            session,
+            task.task_id,
+            s.ResearchQueueCompletionCreate(
+                condition_fingerprint=task.condition_fingerprint,
+                completed_by="reviewer",
+                completion_note="Checked the original source.",
+            ),
+            as_of=now,
+        )
+        assert result == "COMPLETED" and completed.status == "COMPLETE"
+        replay = refresh_research_triggers(session, as_of=now, lookback_days=30)
+        assert first.created == 2 and replay.created == 0 and replay.replayed == 2
+        assert trigger.id == trigger_id and trigger.fingerprint == fingerprint
+        completed_again = next(
+            item
+            for item in get_research_queue(
+                session,
+                as_of=now,
+                include_complete=True,
+            ).tasks
+            if item.task_id == task.task_id
+        )
+        assert completed_again.status == "COMPLETE"
+        assert completed_again.condition_fingerprint == task.condition_fingerprint
+
+
+@pytest.mark.integration
+def test_old_thesis_and_missing_document_triggers_disclose_source_limits(
+    postgres_engine: Engine,
+) -> None:
+    now = datetime.now(UTC) + timedelta(seconds=1)
+    with Session(postgres_engine) as session, session.begin():
+        company_id = _active_company(session, "Trigger source issuer")
+        other_company = _active_company(session, "Other issuer")
+        sec = _source_document(
+            session,
+            company_id,
+            now=now,
+            title="Old SEC source",
+            published_at=None,
+            recorded_at=now - timedelta(hours=1),
+            provider_id="sec_edgar",
+        )
+        wrong_company_doc = _source_document(
+            session,
+            other_company,
+            now=now,
+            title="Other source",
+            published_at=None,
+            recorded_at=now - timedelta(hours=1),
+        )
+        cases = [
+            (str(sec.id), SEC_ISSUER_WARNING),
+            (str(wrong_company_doc.id), SOURCE_MISMATCH_WARNING),
+            ("not-a-uuid", SOURCE_UNAVAILABLE_WARNING),
+            (str(uuid4()), SOURCE_UNAVAILABLE_WARNING),
+        ]
+        rows = []
+        for index, (source_id, _) in enumerate(cases):
+            row = ResearchTrigger(
+                company_id=company_id,
+                event_key=f"legacy-evidence-{index}",
+                version=1,
+                fingerprint=f"{index + 1:x}" * 64,
+                trigger_type="THESIS_EVIDENCE_LINKED",
+                title="Existing evidence",
+                reason="Previously recorded reason.",
+                source_domain="source_document",
+                source_record_id=source_id,
+                source_recorded_at=now - timedelta(minutes=1),
+                detected_at=now - timedelta(minutes=1),
+                source_snapshot={},
+            )
+            rows.append(row)
+            session.add(row)
+        session.flush()
+        listed = {
+            item.id: item
+            for item in list_research_triggers(
+                session,
+                company_id=company_id,
+                as_of=now,
+            ).triggers
+        }
+        queue = get_research_queue(session, as_of=now)
+        for row, (_, warning) in zip(rows, cases, strict=True):
+            assert warning in listed[row.id].reason
+            assert warning in research_trigger_context(session, row.id).trigger.reason
+            task = next(
+                item
+                for item in queue.tasks
+                if item.task_type == "RESEARCH_TRIGGER"
+                and item.sources[0].source_record_id == str(row.id)
+            )
+            assert warning in task.reason
+            assert row.reason == "Previously recorded reason."
+
+
+@pytest.mark.integration
+def test_later_filing_and_supersession_do_not_leak_into_historical_workflows(
+    postgres_engine: Engine,
+) -> None:
+    cutoff = datetime.now(UTC) + timedelta(seconds=1)
+    with Session(postgres_engine) as session, session.begin():
+        company_id = _active_company(session, "Historical source issuer")
+        original = _source_document(
+            session,
+            company_id,
+            now=cutoff,
+            title="Original filing",
+            published_at=(cutoff - timedelta(days=2)).date(),
+            recorded_at=cutoff - timedelta(days=1),
+        )
+        later = _source_document(
+            session,
+            company_id,
+            now=cutoff,
+            title="Later correction",
+            published_at=(cutoff - timedelta(days=1)).date(),
+            recorded_at=cutoff + timedelta(days=1),
+            supersedes_document_id=original.id,
+        )
+        past_events = attention_feed(session, as_of=cutoff, company_id=company_id).events
+        past_sources = {item.source_id for item in past_events}
+        assert str(original.id) in past_sources and str(later.id) not in past_sources
+        past_tasks = get_research_queue(session, as_of=cutoff).tasks
+        past_task_sources = {
+            source.source_record_id for item in past_tasks for source in item.sources
+        }
+        assert str(original.id) in past_task_sources and str(later.id) not in past_task_sources
+        future = cutoff + timedelta(days=2)
+        future_sources = {
+            item.source_id
+            for item in attention_feed(
+                session,
+                as_of=future,
+                company_id=company_id,
+            ).events
+        }
+        assert str(original.id) not in future_sources and str(later.id) in future_sources
+        future_tasks = get_research_queue(session, as_of=future).tasks
+        future_task_sources = {
+            source.source_record_id for item in future_tasks for source in item.sources
+        }
+        assert str(original.id) not in future_task_sources and str(later.id) in future_task_sources
+
+
+@pytest.mark.integration
+def test_later_retrieval_is_not_visible_to_historical_filing_workflows(
+    postgres_engine: Engine,
+) -> None:
+    cutoff = datetime.now(UTC) + timedelta(seconds=1)
+    with Session(postgres_engine) as session, session.begin():
+        company_id = _active_company(session, "Late observation issuer")
+        batch = SourceDocumentBatch(
+            provider_id="sec_edgar",
+            normalizer_version="fixture",
+            domain="SOURCE_DOCUMENTS",
+            source_digest="a" * 64,
+            query_scope={},
+            observed_at=cutoff + timedelta(days=1),
+            recorded_at=cutoff - timedelta(hours=1),
+            provider_summary={},
+            reconciliation={},
+        )
+        session.add(batch)
+        session.flush()
+        doc = SourceDocument(
+            company_id=company_id,
+            batch_id=batch.id,
+            provider_id="sec_edgar",
+            source_name="SEC",
+            external_identifier="late-retrieval",
+            document_type="10-Q",
+            title="Later observed filing",
+            canonical_url="https://www.sec.gov/example",
+            published_at=(cutoff - timedelta(days=2)).date(),
+            data_quality="PASS",
+            recorded_at=cutoff - timedelta(hours=1),
+            retrieved_at=cutoff + timedelta(days=1),
+            actor="IMPORT",
+        )
+        session.add(doc)
+        session.flush()
+        trigger = ResearchTrigger(
+            company_id=company_id,
+            event_key="late-source-trigger",
+            version=1,
+            fingerprint="f" * 64,
+            trigger_type="THESIS_EVIDENCE_LINKED",
+            title="Existing source",
+            reason="Previously recorded reason.",
+            source_domain="source_document",
+            source_record_id=str(doc.id),
+            source_recorded_at=cutoff - timedelta(minutes=1),
+            detected_at=cutoff - timedelta(minutes=1),
+            source_snapshot={},
+        )
+        session.add(trigger)
+        session.flush()
+        assert str(doc.id) not in {
+            item.source_id
+            for item in attention_feed(
+                session,
+                as_of=cutoff,
+                company_id=company_id,
+            ).events
+        }
+        queue = get_research_queue(session, as_of=cutoff)
+        assert not any(
+            item.task_type == "MATERIAL_EVIDENCE"
+            and any(source.source_record_id == str(doc.id) for source in item.sources)
+            for item in queue.tasks
+        )
+        task = next(
+            item
+            for item in queue.tasks
+            if item.task_type == "RESEARCH_TRIGGER"
+            and item.sources[0].source_record_id == str(trigger.id)
+        )
+        assert SOURCE_UNAVAILABLE_WARNING in task.reason
+        listed = list_research_triggers(session, company_id=company_id, as_of=cutoff)
+        assert SOURCE_UNAVAILABLE_WARNING in next(
+            item.reason for item in listed.triggers if item.id == trigger.id
+        )
+        thesis = InvestmentThesisRevision(
+            company_id=company_id,
+            stream_key="main",
+            revision_number=1,
+            contract_version="1.0.0",
+            external_revision_id="late-evidence",
+            author_id="analyst",
+            source_id="fixture",
+            source_reference="https://issuer.example",
+            observed_at=cutoff - timedelta(hours=2),
+            recorded_at=cutoff - timedelta(hours=1),
+            status="PUBLISHED",
+            thesis_statement="A research thesis.",
+            confidence="MEDIUM",
+            rationale="Review source evidence.",
+            content_fingerprint="c" * 64,
+        )
+        session.add(thesis)
+        session.flush()
+        claim = InvestmentThesisClaim(
+            revision_id=thesis.id,
+            claim_key="risk",
+            claim_type="PRINCIPAL_RISK",
+            status="ACTIVE",
+            statement="A research risk.",
+            confidence="MEDIUM",
+        )
+        session.add(claim)
+        session.flush()
+        evidence = InvestmentThesisEvidence(
+            claim_id=claim.id,
+            relationship="CONTEXT",
+            source_document_id=doc.id,
+            source_name="SEC",
+        )
+        session.add(evidence)
+        session.flush()
+        assert (
+            _thesis_evidence_candidates(
+                session, as_of=cutoff, cutoff=cutoff - timedelta(days=30), company_id=company_id
+            )
+            == []
+        )
+        later = cutoff + timedelta(days=2)
+        candidates = _thesis_evidence_candidates(
+            session, as_of=later, cutoff=cutoff - timedelta(days=30), company_id=company_id
+        )
+        assert len(candidates) == 1 and candidates[0].source_record_id == str(doc.id)
+
+
+@pytest.mark.integration
+def test_sec_warning_changes_agent_delivery_identity_once_for_safety(
+    postgres_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    now = datetime.now(UTC) + timedelta(seconds=1)
+    with Session(postgres_engine) as session, session.begin():
+        company_id = _active_company(session, "Agent warning issuer")
+        doc = _source_document(
+            session,
+            company_id,
+            now=now,
+            title="Undated SEC filing",
+            published_at=None,
+            recorded_at=now - timedelta(hours=1),
+            provider_id="sec_edgar",
+        )
+        refresh_research_triggers(session, as_of=now, company_id=company_id)
+        request = s.ResearchAgentWorkRequest(as_of=now, limit=50)
+        import portfolio_api.research_triggers as trigger_module
+        from portfolio_api.source_document_provenance import trigger_document_warnings as original
+
+        monkeypatch.setattr(trigger_module, "trigger_document_warnings", lambda *args: {})
+        old = next(
+            item
+            for item in deliver_agent_work(
+                session,
+                "PORTFOLIO_THESIS_SENTINEL",
+                request,
+            ).items
+            if item.work_type == "TRIGGER"
+        )
+        record_agent_acknowledgment(
+            session,
+            s.ResearchAgentAcknowledgmentContractV1(
+                agent_role="PORTFOLIO_THESIS_SENTINEL",
+                work_type="TRIGGER",
+                work_key=old.work_key,
+                work_fingerprint=old.work_fingerprint,
+                external_update_id="old-completion",
+                agent_run_id="old-run",
+                actor_id="agent",
+                status="COMPLETED",
+                observed_at=datetime.now(UTC),
+                delivery_channel="API",
+            ),
+        )
+        monkeypatch.setattr(trigger_module, "trigger_document_warnings", original)
+        new = next(
+            item
+            for item in deliver_agent_work(
+                session,
+                "PORTFOLIO_THESIS_SENTINEL",
+                request,
+            ).items
+            if item.work_type == "TRIGGER"
+        )
+        assert new.work_key == old.work_key and new.work_fingerprint != old.work_fingerprint
+        assert SEC_ISSUER_WARNING in str(new.payload)
+        repeated = next(
+            item
+            for item in deliver_agent_work(
+                session,
+                "PORTFOLIO_THESIS_SENTINEL",
+                request,
+            ).items
+            if item.work_type == "TRIGGER"
+        )
+        assert repeated.delivery_id == new.delivery_id
+        assert str(doc.id) in str(new.payload)
+
+
+@pytest.mark.integration
 def test_open_trigger_offset_pages_after_derived_state_filter(postgres_engine: Engine) -> None:
-    cutoff = datetime.now(UTC).replace(microsecond=0)
+    cutoff = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger page issuer")
         rows = []
@@ -368,7 +813,7 @@ def test_open_trigger_offset_pages_after_derived_state_filter(postgres_engine: E
 def test_reported_fundamental_corrections_append_and_supersede_prior_trigger(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger corrected fact issuer")
         batch = ReportedFundamentalBatch(
@@ -433,10 +878,12 @@ def test_reported_fundamental_corrections_append_and_supersede_prior_trigger(
 def test_backfilled_future_record_is_excluded_from_historical_trigger_refresh(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     historical_cutoff = now - timedelta(days=2)
     with Session(postgres_engine) as session, session.begin():
-        company_id = _active_company(session, "Trigger as-of issuer")
+        company_id = _active_company(
+            session, "Trigger as-of issuer", known_since=historical_cutoff - timedelta(days=2)
+        )
         document = _source_document(
             session,
             company_id,
@@ -472,7 +919,7 @@ def test_backfilled_future_record_is_excluded_from_historical_trigger_refresh(
 def test_superseding_filing_keeps_history_and_removes_old_open_trigger(
     postgres_engine: Engine,
 ) -> None:
-    now = datetime.now(UTC).replace(microsecond=0)
+    now = (datetime.now(UTC) + timedelta(seconds=1)).replace(microsecond=0)
     with Session(postgres_engine) as session, session.begin():
         company_id = _active_company(session, "Trigger superseding filing issuer")
         original = _source_document(

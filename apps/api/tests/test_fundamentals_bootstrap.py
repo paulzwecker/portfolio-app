@@ -35,6 +35,7 @@ from portfolio_api.fundamentals_bootstrap import (
     FundamentalsBootstrapError,
     ProviderFetchResult,
     SecBootstrapProvider,
+    _known_history_records,
     _parser,
     _report_exit_code,
     _verify_target,
@@ -241,6 +242,23 @@ class SyntheticSecProvider:
             return ProviderFetchResult((MAIN_SUBMISSIONS,))
         assert stage == "REPORTED_FUNDAMENTALS"
         return ProviderFetchResult((_facts_record(),), request_count=1)
+
+
+class RejectedHistoryProvider(SyntheticSecProvider):
+    async def fetch(
+        self,
+        *,
+        stage: str,
+        company_id: UUID,
+        cik: str,
+        query: Any,
+        known_source_record_ids: set[str],
+    ) -> ProviderFetchResult:
+        self.calls.append((stage, company_id, set(known_source_record_ids)))
+        rejected = _document_record(
+            HISTORY_ONE, {"form": []}, history_file=f"CIK{CIK}-submissions-001.json"
+        )
+        return ProviderFetchResult((MAIN_SUBMISSIONS, rejected), (HISTORY_TWO,), request_count=2)
 
 
 def _prepare_run(engine: Engine) -> UUID:
@@ -511,6 +529,45 @@ def test_ci_has_no_sec_contact_or_licensed_provider_credentials() -> None:
     assert "SEC_USER_AGENT" not in text
     assert "FMP_API_KEY" not in text
     assert "NEON_DATABASE_URL" not in text
+
+
+@pytest.mark.integration
+def test_bootstrap_blocks_a_prepared_outdated_source_contract_before_fetch(
+    postgres_engine: Engine,
+) -> None:
+    run_id = _prepare_run(postgres_engine)
+    with Session(postgres_engine) as session, session.begin():
+        run = session.get(FundamentalsBootstrapRun, run_id)
+        assert run is not None
+        run.scope = {**run.scope, "submissions_normalizer_version": "sec-edgar-filings-v1"}
+    provider = SyntheticSecProvider()
+    result = _execute(postgres_engine, run_id, provider, max_checkpoints=1)
+    assert result["status"] == "BLOCKED"
+    assert result["failure_code"] == "SOURCE_CONTRACT_VERSION_CHANGED"
+    assert provider.calls == []
+
+
+@pytest.mark.integration
+def test_rejected_history_blocks_bootstrap_even_with_valid_filings_and_deferred_pages(
+    postgres_engine: Engine,
+) -> None:
+    run_id = _prepare_run(postgres_engine)
+    provider = RejectedHistoryProvider()
+    result = _execute(postgres_engine, run_id, provider, max_checkpoints=1)
+    assert result["status"] == "BLOCKED"
+    assert result["blocked_checkpoints"] == 1
+    with Session(postgres_engine) as session:
+        checkpoint = session.scalar(
+            select(FundamentalsBootstrapCheckpoint).where(
+                FundamentalsBootstrapCheckpoint.run_id == run_id,
+                FundamentalsBootstrapCheckpoint.stage == "SOURCE_DOCUMENTS",
+            )
+        )
+        assert checkpoint is not None and checkpoint.failure_code == "SEC_FILINGS_REQUIRE_REVIEW"
+        assert checkpoint.report["deferred_history_file_ids"] == [HISTORY_TWO]
+        assert _known_history_records(session, COMPANY_ID, CIK) == set()
+    again = _execute(postgres_engine, run_id, provider, max_checkpoints=1)
+    assert again["status"] == "BLOCKED" and len(provider.calls) == 1
 
 
 @pytest.mark.integration

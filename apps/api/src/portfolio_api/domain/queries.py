@@ -61,6 +61,7 @@ from portfolio_api.domain.models import (
     RankingEntry,
     RankingRun,
     RankingType,
+    ReportedFundamentalBatch,
     ReportedFundamentalObservation,
     ResidualIncomeAssumptions,
     ResidualIncomeProjection,
@@ -84,6 +85,7 @@ from portfolio_api.model_revision_evidence import (
     stored_evidence_reference,
 )
 from portfolio_api.reported_fundamentals import fiscal_period_identity, resolve_fundamental_period
+from portfolio_api.sec_identity import fact_cik_matches, mapping_known_at, reviewed_cik
 
 FRESH_DAYS = 5
 
@@ -1016,11 +1018,21 @@ def company_reported_fundamentals(
             )
         )
     )
-    sec_ids = [
-        item.identifier_value
+    effective_identity_cutoff = (
+        (effective_cutoff or datetime.combine(as_of, time.max, UTC))
+        if as_of is not None
+        else known_at or now()
+    )
+    # as_of limits effective time; only known_at limits what was recorded.
+    identity_known_at = known_at or now()
+    sec_mappings = [
+        item
         for item in identifiers
-        if item.provider_id == "sec_edgar" and item.identifier_type == "SEC_CIK"
+        if item.provider_id == "sec_edgar"
+        and item.identifier_type == "SEC_CIK"
+        and mapping_known_at(item, effective_identity_cutoff, identity_known_at)
     ]
+    sec_ids = [item.identifier_value for item in sec_mappings]
     if not sec_ids:
         identity_status = "UNMAPPED"
     elif len(sec_ids) == 1:
@@ -1054,6 +1066,30 @@ def company_reported_fundamentals(
         )
     )
 
+    sec_cik = reviewed_cik(sec_mappings[0]) if len(sec_mappings) == 1 else None
+    batch_ids = {item.batch_id for item in observations if item.provider_id == "sec_edgar"}
+    batches = (
+        {
+            item.id: item
+            for item in session.scalars(
+                select(ReportedFundamentalBatch).where(ReportedFundamentalBatch.id.in_(batch_ids))
+            )
+        }
+        if batch_ids
+        else {}
+    )
+
+    def identity_safe(item: ReportedFundamentalObservation) -> bool:
+        if item.provider_id != "sec_edgar":
+            return True
+        batch = batches.get(item.batch_id)
+        return (
+            batch is not None
+            and batch.recorded_at <= identity_known_at
+            and batch.observed_at <= identity_known_at
+            and fact_cik_matches(company_id, sec_cik, item.provider_entity_id, batch)
+        )
+
     groups: dict[tuple[Any, ...], list[ReportedFundamentalObservation]] = {}
     for item in observations:
         key = (
@@ -1067,12 +1103,29 @@ def company_reported_fundamentals(
         )
         groups.setdefault(key, []).append(item)
 
+    # A period made unsafe by mixed identities cannot anchor another period's
+    # fiscal label, even if one observation within that period matches.
+    safe_observations = [
+        item
+        for group in groups.values()
+        if all(identity_safe(item) for item in group)
+        for item in group
+    ]
+
     period_reads: list[s.ReportedFundamentalPeriodRead] = []
     for key, history in groups.items():
         if period_type is not None and key[2] != period_type:
             continue
         resolution = resolve_fundamental_period(history)
-        fiscal_year, fiscal_period = fiscal_period_identity(history, observations)
+        identity_issue = (
+            "SEC issuer identity could not be established for every retained observation "
+            "at the requested effective and knowledge times."
+            if any(not identity_safe(item) for item in history)
+            else None
+        )
+        fiscal_year, fiscal_period = (
+            (None, None) if identity_issue else fiscal_period_identity(history, safe_observations)
+        )
         history.sort(
             key=lambda item: (
                 item.filed_at or datetime.min.replace(tzinfo=UTC),
@@ -1092,11 +1145,14 @@ def company_reported_fundamentals(
                 fiscal_period=fiscal_period,
                 currency=key[5],
                 unit=key[6],
-                value=resolution.selected.value if resolution.selected is not None else None,
-                selection_status=resolution.status,
+                value=resolution.selected.value
+                if resolution.selected is not None and not identity_issue
+                else None,
+                selection_status="DATA_CHECK" if identity_issue else resolution.status,
+                identity_issue=identity_issue,
                 selected_observation=(
                     s.ReportedFundamentalObservationRead.model_validate(resolution.selected)
-                    if resolution.selected is not None
+                    if resolution.selected is not None and not identity_issue
                     else None
                 ),
                 observations=[
@@ -1144,6 +1200,11 @@ def company_reported_fundamentals(
     return s.CompanyReportedFundamentalsRead(
         company_id=company_id,
         provider_identity_status=identity_status,
+        provider_identity_issue=(
+            "The recorded SEC mapping has invalid issuer identity evidence."
+            if len(sec_mappings) == 1 and sec_cik is None
+            else None
+        ),
         provider_ids=sorted(set(sec_ids)),
         coverage=coverage,
         periods=period_reads,
@@ -1173,6 +1234,15 @@ def company_source_documents(
             )
         )
     )
+    effective_identity_cutoff = (
+        datetime.combine(as_of, time.max, UTC) if as_of is not None else known_at or now()
+    )
+    identity_known_at = known_at or now()
+    identifiers = [
+        item
+        for item in identifiers
+        if mapping_known_at(item, effective_identity_cutoff, identity_known_at)
+    ]
     if not identifiers:
         identity_status = "UNMAPPED"
     elif len(identifiers) == 1:
@@ -1209,10 +1279,24 @@ def company_source_documents(
     return s.CompanySourceDocumentsRead(
         company_id=company_id,
         sec_identity_status=identity_status,
+        sec_identity_issue=(
+            "The recorded SEC mapping has invalid issuer identity evidence."
+            if len(identifiers) == 1 and reviewed_cik(identifiers[0]) is None
+            else None
+        ),
         source_count=len(documents),
         as_of=as_of,
         known_at=known_at,
-        documents=[s.SourceDocumentRead.model_validate(item) for item in documents],
+        documents=[
+            s.SourceDocumentRead.model_validate(item).model_copy(
+                update={
+                    "sec_issuer_attribution": "UNVERIFIED"
+                    if item.provider_id == "sec_edgar"
+                    else "NOT_SEC"
+                }
+            )
+            for item in documents
+        ],
     )
 
 

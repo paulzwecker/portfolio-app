@@ -102,6 +102,93 @@ afterEach(() => {
 });
 
 describe("Company SEC coverage", () => {
+  it("retains older identity warnings beside a newer matched execution", () => {
+    const matched = { status: "MATCHED" as const, frozen_cik: "0000000001" };
+    const changed = { status: "CHANGED" as const, frozen_cik: "0000000002" };
+    coverageState.data = {
+      ...data,
+      filings: {
+        ...data.filings,
+        refresh: { ...refresh, identity: matched },
+        bootstrap: {
+          ...data.filings.bootstrap!,
+          status: "COMPLETE",
+          identity: changed,
+        },
+      },
+    };
+    const newerRefresh = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    ).split("<dialog")[0];
+    expect(newerRefresh).toContain("Other recorded bootstrap:");
+    expect(newerRefresh).toContain(
+      "issuer details changed since this bootstrap",
+    );
+    coverageState.data = {
+      ...data,
+      filings: {
+        ...data.filings,
+        refresh: {
+          ...refresh,
+          requested_at: "2026-10-18T09:00:00Z",
+          started_at: "2026-10-18T09:00:00Z",
+          finished_at: "2026-10-18T09:01:00Z",
+          identity: changed,
+        },
+        bootstrap: {
+          ...data.filings.bootstrap!,
+          status: "COMPLETE",
+          identity: matched,
+        },
+      },
+    };
+    const newerBootstrap = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    ).split("<dialog")[0];
+    expect(newerBootstrap).toContain("Other recorded refresh:");
+    expect(newerBootstrap).toContain(
+      "issuer details changed since this refresh",
+    );
+  });
+  it("surfaces a changed bootstrap issuer even when its checkpoint completed", () => {
+    const bootstrap = {
+      ...data.filings.bootstrap!,
+      status: "COMPLETE" as const,
+      identity: { status: "CHANGED" as const, frozen_cik: "0000000002" },
+    };
+    coverageState.data = { ...data, filings: { ...data.filings, bootstrap } };
+    expect(isCompanySecCoverage(coverageState.data)).toBe(true);
+    const panel = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(panel).toContain("Filings bootstrap");
+    expect(panel).toContain("issuer details changed since this bootstrap");
+    const details = renderToStaticMarkup(
+      <SecCoverageDetails data={coverageState.data} />,
+    );
+    expect(details).toContain("Frozen bootstrap CIK 0000000002");
+    expect(details).toContain(
+      "historical, not evidence for the current identity",
+    );
+  });
+  it("handles old and malformed bootstrap identity evidence conservatively", () => {
+    expect(isCompanySecCoverage(data)).toBe(true);
+    const bad = {
+      ...data,
+      filings: {
+        ...data.filings,
+        bootstrap: {
+          ...data.filings.bootstrap!,
+          identity: { status: "MATCHED", frozen_cik: null },
+        },
+      },
+    };
+    expect(isCompanySecCoverage(bad)).toBe(false);
+    coverageState.data = data;
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("bootstrap issuer identity could not be verified");
+  });
   it("keeps a newer bootstrap warning visible over older incremental success", () => {
     coverageState.data = {
       ...data,
@@ -146,6 +233,92 @@ describe("Company SEC coverage", () => {
         }),
       ),
     ).toBe(true);
+  });
+  it("distinguishes frozen issuer identities and rejects contradictory evidence", () => {
+    for (const status of ["MATCHED", "CHANGED", "CURRENT_UNAVAILABLE"]) {
+      expect(
+        isCompanySecCoverage(
+          withRefresh({
+            ...refresh,
+            identity: { status, frozen_cik: "0000000001" },
+          }),
+        ),
+      ).toBe(true);
+      expect(
+        isCompanySecCoverage(
+          withRefresh({ ...refresh, identity: { status, frozen_cik: null } }),
+        ),
+      ).toBe(false);
+    }
+    for (const status of ["UNMAPPED_IN_SCOPE", "UNVERIFIED"]) {
+      expect(
+        isCompanySecCoverage(
+          withRefresh({ ...refresh, identity: { status, frozen_cik: null } }),
+        ),
+      ).toBe(true);
+      expect(
+        isCompanySecCoverage(
+          withRefresh({
+            ...refresh,
+            identity: { status, frozen_cik: "0000000001" },
+          }),
+        ),
+      ).toBe(false);
+    }
+    expect(
+      isCompanySecCoverage(
+        withRefresh({
+          ...refresh,
+          identity: { status: "MATCHED", frozen_cik: "bad" },
+        }),
+      ),
+    ).toBe(false);
+  });
+  it("warns when a refresh belongs to a different reviewed issuer identity", () => {
+    const changed = {
+      ...refresh,
+      identity: { status: "CHANGED" as const, frozen_cik: "0000000002" },
+    };
+    coverageState.data = {
+      ...data,
+      fundamentals: { ...data.fundamentals, refresh: changed },
+    };
+    const panel = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(panel).toContain(
+      "Issuer mapping or recorded issuer details changed since this refresh",
+    );
+    const detail = renderToStaticMarkup(
+      <SecCoverageDetails data={coverageState.data} />,
+    );
+    expect(detail).toContain("Frozen refresh CIK 0000000002");
+    expect(detail).toContain(
+      "historical, not evidence for the current identity",
+    );
+  });
+  it("keeps older API refreshes explicitly unverified", () => {
+    coverageState.data = {
+      ...data,
+      fundamentals: { ...data.fundamentals, refresh },
+    };
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("issuer identity could not be verified");
+    const matched = {
+      ...refresh,
+      identity: { status: "MATCHED" as const, frozen_cik: "0000000001" },
+    };
+    expect(
+      renderToStaticMarkup(
+        <SecCoverageDetails
+          data={{
+            ...data,
+            fundamentals: { ...data.fundamentals, refresh: matched },
+          }}
+        />,
+      ),
+    ).toContain("freshness is separate");
   });
   it.each([
     { ...refresh, scope_company_count: 0 },
@@ -251,6 +424,45 @@ describe("Company SEC coverage", () => {
     expect(html).toContain("SEC_NETWORK_ERROR");
     expect(html).toContain("Next attempt after");
     expect(html).not.toContain("Fresh");
+  });
+  it("validates exhaustive recorded CIK counts and warns about retained facts", () => {
+    const counts = { matching_cik: 0, other_cik: 1, unverified: 0 };
+    const withCounts = { ...data, fundamental_identity_counts: counts };
+    expect(isCompanySecCoverage(withCounts)).toBe(true);
+    expect(
+      isCompanySecCoverage({
+        ...data,
+        fundamental_identity_counts: { ...counts, other_cik: 2 },
+      }),
+    ).toBe(false);
+    expect(
+      isCompanySecCoverage({
+        ...data,
+        fundamental_identity_counts: { ...counts, unverified: -1 },
+      }),
+    ).toBe(false);
+    coverageState.data = withCounts;
+    const panel = renderToStaticMarkup(
+      <CompanySecCoveragePanel companyId={id} />,
+    );
+    expect(panel).toContain(
+      "Review attribution before relying on financial statements",
+    );
+    const details = renderToStaticMarkup(
+      <SecCoverageDetails data={withCounts} />,
+    );
+    expect(details).toContain("Recorded issuer CIK on retained facts");
+    expect(details).toContain("They do not verify source bytes");
+  });
+  it("does not imply attribution is checked when coverage is absent or from an older API", () => {
+    coverageState.data = null;
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("Retained issuer attribution has not been checked");
+    coverageState.data = data;
+    expect(
+      renderToStaticMarkup(<CompanySecCoveragePanel companyId={id} />),
+    ).toContain("This API version does not report retained issuer attribution");
   });
   it("keeps absent coverage and missing identity explicit", () => {
     const html = renderToStaticMarkup(

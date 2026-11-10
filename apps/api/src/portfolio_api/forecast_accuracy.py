@@ -679,6 +679,16 @@ def _actual_for_candidate(
         if candidate.period_end is not None and candidate.period_end > outcome_known_at.date():
             reason = "The forecast period has not ended by the selected outcome cutoff."
             return _actual_read_empty("PERIOD_NOT_ENDED", reason), "PERIOD_NOT_ENDED", reason
+        if any(
+            period.identity_issue
+            for period in facts.periods
+            if period.metric == FundamentalMetric.REVENUE
+        ):
+            reason = (
+                "Retained revenue has unverified issuer attribution; its fiscal period "
+                "cannot be established safely."
+            )
+            return _actual_read_empty("DATA_CHECK", reason), "ACTUAL_DATA_CHECK", reason
         reason = (
             "No canonical reported Revenue fact is available for this fiscal period "
             "by the outcome cutoff."

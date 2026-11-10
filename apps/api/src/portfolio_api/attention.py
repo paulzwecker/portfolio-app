@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.consensus_policy import select_consensus_source
+from portfolio_api.domain.lifecycle_history import lifecycle_events_at
 from portfolio_api.domain.models import (
     Company,
     ConsensusEstimateObservation,
     ConsensusEstimateProviderMapping,
-    CurrentLifecycle,
     ExecutionPaceDecision,
     ExecutionPaceRun,
     FinancialModel,
@@ -23,7 +23,6 @@ from portfolio_api.domain.models import (
     FinancialModelRevision,
     GoogleSheetsResearchSyncCandidate,
     Lifecycle,
-    LifecycleEvent,
     Listing,
     ModelOutputSnapshot,
     PriceObservation,
@@ -35,6 +34,7 @@ from portfolio_api.domain.models import (
     Security,
     SourceDocument,
 )
+from portfolio_api.source_document_provenance import append_source_warning, document_warning
 
 PRICE_FRESH_DAYS = 5  # documented current-quote freshness window
 EXPECTED_IRR_MOVE = Decimal("0.05")  # conservative feed threshold, not an investment rule
@@ -144,6 +144,7 @@ def attention_feed(
     severity: str | None = None,
     status: str | None = None,
     limit: int = 50,
+    include_source_warnings: bool = True,
 ) -> s.AttentionFeedRead:
     """Compose recent material changes and current missing/stale states from source records."""
     now = as_of or datetime.now(UTC)
@@ -151,25 +152,15 @@ def attention_feed(
         now = now.replace(tzinfo=UTC)
     now = now.astimezone(UTC)
     cutoff = now - timedelta(days=lookback_days)
-    states = dict(
-        session.execute(
-            select(CurrentLifecycle.company_id, LifecycleEvent.new_state).join(
-                LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id
-            )
-        ).all()
-    )
+    lifecycle_rows = lifecycle_events_at(session, now)
+    states = {company.id: event.new_state for company, event in lifecycle_rows}
     if lifecycle:
         company_ids = {key for key, value in states.items() if value == lifecycle.value}
     else:
         company_ids = {key for key, value in states.items() if value != Lifecycle.DROP.value}
-    issuers = (
-        {
-            issuer.id: issuer
-            for issuer in session.scalars(select(Company).where(Company.id.in_(company_ids))).all()
-        }
-        if company_ids
-        else {}
-    )
+    issuers = {
+        company.id: company for company, _event in lifecycle_rows if company.id in company_ids
+    }
     if company_id:
         company_ids.intersection_update({company_id})
         issuers = {key: value for key, value in issuers.items() if key == company_id}
@@ -516,7 +507,9 @@ def attention_feed(
     replaced_docs = set(
         session.scalars(
             select(SourceDocument.supersedes_document_id).where(
-                SourceDocument.supersedes_document_id.is_not(None)
+                SourceDocument.supersedes_document_id.is_not(None),
+                SourceDocument.recorded_at <= now,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= now),
             )
         ).all()
     )
@@ -524,6 +517,8 @@ def attention_feed(
         session.scalars(
             select(SourceDocument).where(
                 SourceDocument.company_id.in_(company_ids),
+                SourceDocument.recorded_at <= now,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= now),
             )
         ).all()
         if company_ids
@@ -542,9 +537,10 @@ def attention_feed(
             event_type="NEW_FILING",
             severity="MEDIUM",
             title=f"New {document.document_type}: {document.title}",
-            explanation=(
+            explanation=append_source_warning(
                 f"{document.source_name} · "
-                f"{document.reporting_period or 'reporting period unavailable'}."
+                f"{document.reporting_period or 'reporting period unavailable'}.",
+                document_warning(document) if include_source_warnings else None,
             ),
             effective_at=document.published_at or document.filed_at,
             recorded_at=document.recorded_at,

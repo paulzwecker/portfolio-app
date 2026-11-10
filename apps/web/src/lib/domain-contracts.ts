@@ -4227,9 +4227,31 @@ export type CompanySecCoverage =
 type SecDomainCoverage = CompanySecCoverage["fundamentals"];
 type SecRefresh = NonNullable<SecDomainCoverage["refresh"]>;
 
+function isSecIssuerIdentity(identity: unknown): boolean {
+  return (
+    identity === undefined ||
+    identity === null ||
+    (isRecord(identity) &&
+      [
+        "MATCHED",
+        "CHANGED",
+        "UNMAPPED_IN_SCOPE",
+        "CURRENT_UNAVAILABLE",
+        "UNVERIFIED",
+      ].includes(identity.status as string) &&
+      (["MATCHED", "CHANGED", "CURRENT_UNAVAILABLE"].includes(
+        identity.status as string,
+      )
+        ? typeof identity.frozen_cik === "string" &&
+          /^[0-9]{10}$/.test(identity.frozen_cik)
+        : identity.frozen_cik === null))
+  );
+}
+
 function isSecRefresh(value: unknown): value is SecRefresh {
   if (!isRecord(value)) return false;
   return (
+    isSecIssuerIdentity(value.identity) &&
     uuid(value.run_id) &&
     (value.attempt_id === null || uuid(value.attempt_id)) &&
     (value.request_id === null || uuid(value.request_id)) &&
@@ -4295,6 +4317,7 @@ function isSecDomainCoverage(value: unknown): value is SecDomainCoverage {
       timestamp(value.latest_recorded_at)) &&
     (bootstrap === null ||
       (isRecord(bootstrap) &&
+        isSecIssuerIdentity(bootstrap.identity) &&
         uuid(bootstrap.run_id) &&
         uuid(bootstrap.checkpoint_id) &&
         [
@@ -4341,6 +4364,21 @@ export function isCompanySecCoverage(
     !isRecord(value) ||
     !Array.isArray(value.metrics_present) ||
     !Array.isArray(value.metrics_missing)
+  )
+    return false;
+  const identity = value.fundamental_identity_counts;
+  if (
+    identity !== undefined &&
+    identity !== null &&
+    (!isRecord(identity) ||
+      ![identity.matching_cik, identity.other_cik, identity.unverified].every(
+        (count) => Number.isSafeInteger(count) && Number(count) >= 0,
+      ) ||
+      !isRecord(value.fundamentals) ||
+      Number(identity.matching_cik) +
+        Number(identity.other_cik) +
+        Number(identity.unverified) !==
+        value.fundamentals.record_count)
   )
     return false;
   const metric = (item: unknown) =>
@@ -4503,6 +4541,11 @@ export function isSourceDocument(v: unknown): v is SourceDocument {
     (v.security_id === null || uuid(v.security_id)) &&
     (v.batch_id === null || uuid(v.batch_id)) &&
     string(v.provider_id) &&
+    (v.sec_issuer_attribution === undefined ||
+      v.sec_issuer_attribution === null ||
+      (v.provider_id === "sec_edgar"
+        ? v.sec_issuer_attribution === "UNVERIFIED"
+        : v.sec_issuer_attribution === "NOT_SEC")) &&
     string(v.source_name) &&
     nullableString(v.source_jurisdiction) &&
     string(v.external_identifier) &&
@@ -4541,6 +4584,8 @@ export function isCompanySourceDocuments(
     ["MAPPED", "UNMAPPED", "AMBIGUOUS"].includes(
       v.sec_identity_status as string,
     ) &&
+    (v.sec_identity_issue === undefined ||
+      nullableString(v.sec_identity_issue)) &&
     Number.isInteger(v.source_count) &&
     (v.as_of === null || (string(v.as_of) && dateOnly(v.as_of))) &&
     (v.known_at === null || timestamp(v.known_at)) &&

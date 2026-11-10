@@ -12,17 +12,16 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
+from portfolio_api.domain.lifecycle_history import lifecycle_events_at
 from portfolio_api.domain.models import (
     CandidatePipelineEvidence,
     CandidatePipelineGateAssessment,
     CandidatePipelineRevision,
-    Company,
     ConsensusEstimateObservation,
-    CurrentLifecycle,
     FinancialModel,
     FinancialModelMigrationAssessment,
     FinancialModelOutput,
@@ -32,7 +31,6 @@ from portfolio_api.domain.models import (
     InvestmentThesisEvidence,
     InvestmentThesisRevision,
     Lifecycle,
-    LifecycleEvent,
     RankingDefinition,
     RankingEntry,
     RankingRun,
@@ -57,6 +55,11 @@ from portfolio_api.domain.models import (
     ThesisWatchClassification,
 )
 from portfolio_api.domain.services import DomainError
+from portfolio_api.source_document_provenance import (
+    append_source_warning,
+    document_warning,
+    trigger_document_warnings,
+)
 
 THESIS_REVIEW_DAYS = 365
 SOURCE_DOCUMENT_LOOKBACK_DAYS = 30
@@ -255,16 +258,96 @@ def research_queue_history(
     return results
 
 
+def _known_document_citations(
+    session: Session, documents: list[SourceDocument], cutoff: datetime
+) -> set[UUID]:
+    """Find citations whose parent evidence was effective and recorded by the cutoff.
+
+    This preserves the existing policy that any known historical citation counts;
+    it does not imply that a citation is current or independently verified.
+    """
+    ids = [document.id for document in documents]
+    if not ids:
+        return set()
+    thesis = (
+        select(InvestmentThesisEvidence.source_document_id)
+        .join(InvestmentThesisClaim, InvestmentThesisClaim.id == InvestmentThesisEvidence.claim_id)
+        .join(
+            InvestmentThesisRevision,
+            InvestmentThesisRevision.id == InvestmentThesisClaim.revision_id,
+        )
+        .join(SourceDocument, SourceDocument.id == InvestmentThesisEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            InvestmentThesisRevision.company_id == SourceDocument.company_id,
+            InvestmentThesisRevision.observed_at <= cutoff,
+            InvestmentThesisRevision.recorded_at <= cutoff,
+        )
+    )
+    research = (
+        select(ResearchEvidence.source_document_id)
+        .join(ResearchRevision, ResearchRevision.id == ResearchEvidence.revision_id)
+        .join(SourceDocument, SourceDocument.id == ResearchEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            ResearchRevision.company_id == SourceDocument.company_id,
+            ResearchRevision.observed_at <= cutoff,
+            ResearchRevision.recorded_at <= cutoff,
+        )
+    )
+    candidate = (
+        select(CandidatePipelineEvidence.source_document_id)
+        .join(
+            CandidatePipelineGateAssessment,
+            CandidatePipelineGateAssessment.id == CandidatePipelineEvidence.gate_assessment_id,
+        )
+        .join(
+            CandidatePipelineRevision,
+            CandidatePipelineRevision.id == CandidatePipelineGateAssessment.revision_id,
+        )
+        .join(SourceDocument, SourceDocument.id == CandidatePipelineEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            CandidatePipelineRevision.company_id == SourceDocument.company_id,
+            CandidatePipelineRevision.effective_at <= cutoff,
+            CandidatePipelineRevision.recorded_at <= cutoff,
+        )
+    )
+    risk = (
+        select(RiskAssessmentEvidence.source_document_id)
+        .join(RiskAssessmentFinding, RiskAssessmentFinding.id == RiskAssessmentEvidence.finding_id)
+        .join(
+            RiskAssessmentRevision, RiskAssessmentRevision.id == RiskAssessmentFinding.revision_id
+        )
+        .join(SourceDocument, SourceDocument.id == RiskAssessmentEvidence.source_document_id)
+        .where(
+            SourceDocument.id.in_(ids),
+            or_(
+                RiskAssessmentFinding.company_id.is_(None),
+                RiskAssessmentFinding.company_id == SourceDocument.company_id,
+            ),
+            RiskAssessmentRevision.authored_at <= cutoff,
+            RiskAssessmentRevision.published_at <= cutoff,
+            RiskAssessmentRevision.accepted_at <= cutoff,
+            RiskAssessmentRevision.recorded_at <= cutoff,
+        )
+    )
+    return {
+        citation
+        for statement in (thesis, research, candidate, risk)
+        for citation in session.scalars(statement)
+        if citation is not None
+    }
+
+
 def _derive_tasks(
     session: Session, cutoff: datetime
 ) -> tuple[list[s.ResearchQueueTask], dict[UUID, s.CompanyRead]]:
-    rows = session.execute(
-        select(Company, LifecycleEvent)
-        .join(CurrentLifecycle, CurrentLifecycle.company_id == Company.id)
-        .join(LifecycleEvent, LifecycleEvent.id == CurrentLifecycle.event_id)
-        .where(LifecycleEvent.new_state.in_([item.value for item in ACTIVE_LIFECYCLES]))
-        .order_by(Company.name, Company.id)
-    ).all()
+    rows = [
+        (company, event)
+        for company, event in lifecycle_events_at(session, cutoff)
+        if event.new_state in {item.value for item in ACTIVE_LIFECYCLES}
+    ]
     companies = {
         company.id: s.CompanyRead(
             id=company.id,
@@ -491,13 +574,17 @@ def _derive_tasks(
                 SourceDocument.company_id.in_(company_ids),
                 SourceDocument.document_type != "OTHER",
                 SourceDocument.data_quality == "PASS",
+                SourceDocument.recorded_at <= cutoff,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= cutoff),
             )
         )
     )
     superseded_document_ids = set(
         session.scalars(
             select(SourceDocument.supersedes_document_id).where(
-                SourceDocument.supersedes_document_id.is_not(None)
+                SourceDocument.supersedes_document_id.is_not(None),
+                SourceDocument.recorded_at <= cutoff,
+                or_(SourceDocument.retrieved_at.is_(None), SourceDocument.retrieved_at <= cutoff),
             )
         ).all()
     )
@@ -518,21 +605,7 @@ def _derive_tasks(
         ).all()
     )
     docs = [item for item in docs if item.id not in superseded_document_ids]
-    referenced_document_ids: set[UUID] = set()
-    for evidence_model in (
-        InvestmentThesisEvidence,
-        ResearchEvidence,
-        CandidatePipelineEvidence,
-        RiskAssessmentEvidence,
-    ):
-        referenced_document_ids.update(
-            session.scalars(
-                select(evidence_model.source_document_id).where(
-                    evidence_model.source_document_id.is_not(None),
-                    evidence_model.source_document_id.in_([document.id for document in docs]),
-                )
-            )
-        )
+    referenced_document_ids = _known_document_citations(session, docs, cutoff)
 
     research_evidence = (
         list(
@@ -838,9 +911,10 @@ def _derive_tasks(
                 "canonical_url": document.canonical_url,
             },
             title="Review a new primary source",
-            reason=(
+            reason=append_source_warning(
                 f"{document.document_type} '{document.title}' is not linked to a canonical "
-                "research, thesis, Candidate-gate, or risk assessment."
+                "research, thesis, Candidate-gate, or risk assessment.",
+                document_warning(document),
             ),
             trigger_rule=(
                 "Unreferenced PASS-quality source published within "
@@ -1296,6 +1370,7 @@ def _derive_tasks(
     latest_triggers: dict[str, ResearchTrigger] = {}
     for trigger in trigger_rows:
         latest_triggers.setdefault(trigger.event_key, trigger)
+    trigger_warnings = trigger_document_warnings(session, list(latest_triggers.values()), cutoff)
     for trigger in latest_triggers.values():
         if trigger.company_id not in companies:
             continue
@@ -1324,7 +1399,7 @@ def _derive_tasks(
             f"research-trigger:{trigger.id}",
             {"trigger_id": trigger.id, "fingerprint": trigger.fingerprint},
             title=trigger.title,
-            reason=trigger.reason,
+            reason=append_source_warning(trigger.reason, trigger_warnings.get(trigger.id)),
             trigger_rule=(
                 f"Canonical {trigger.trigger_type.replace('_', ' ').lower()} event; "
                 "review the linked source and record an explicit completion."

@@ -1194,6 +1194,7 @@ class ReportedFundamentalPeriodRead(Contract):
     unit: str
     value: FixedDecimal | None
     selection_status: Literal["AVAILABLE", "CONFLICT", "DATA_CHECK"]
+    identity_issue: str | None = None
     selected_observation: ReportedFundamentalObservationRead | None
     observations: list[ReportedFundamentalObservationRead]
 
@@ -1218,12 +1219,18 @@ class ReportedFundamentalDefinitionRead(Contract):
 class CompanyReportedFundamentalsRead(Contract):
     company_id: UUID
     provider_identity_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS"]
+    provider_identity_issue: str | None = None
     provider_ids: list[str]
     coverage: list[ReportedFundamentalCoverageRead]
     periods: list[ReportedFundamentalPeriodRead]
     as_of: date | None
     known_at: datetime | None
     latest_observed_at: datetime | None
+
+
+class SecIssuerIdentityRead(Contract):
+    status: Literal["MATCHED", "CHANGED", "UNMAPPED_IN_SCOPE", "CURRENT_UNAVAILABLE", "UNVERIFIED"]
+    frozen_cik: str | None
 
 
 class SecBootstrapCheckpointRead(Contract):
@@ -1237,6 +1244,7 @@ class SecBootstrapCheckpointRead(Contract):
     retryable: bool
     next_attempt_at: datetime | None
     provider_request_count: Annotated[int, Field(ge=0)]
+    identity: SecIssuerIdentityRead | None = None
 
 
 class SecRefreshRead(Contract):
@@ -1255,6 +1263,7 @@ class SecRefreshRead(Contract):
     mapped_company_count: Annotated[int, Field(ge=0)] | None
     issuer_outcome: Literal["REPORTED", "DATA_CHECK", "UNAVAILABLE", "UNMAPPED", "NOT_REPORTED"]
     source_record_count: Annotated[int, Field(ge=0)] | None
+    identity: SecIssuerIdentityRead | None = None
 
 
 class SecDomainCoverageRead(Contract):
@@ -1268,9 +1277,16 @@ class SecDomainCoverageRead(Contract):
     refresh: SecRefreshRead | None = None
 
 
+class SecFundamentalIdentityCountsRead(Contract):
+    matching_cik: Annotated[int, Field(ge=0)]
+    other_cik: Annotated[int, Field(ge=0)]
+    unverified: Annotated[int, Field(ge=0)]
+
+
 class CompanySecCoverageRead(Contract):
     company_id: UUID
     company_name: str
+    fundamental_identity_counts: SecFundamentalIdentityCountsRead | None = None
     mapping_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS", "INVALID"]
     cik: str | None
     provider_company_name: str | None
@@ -1807,11 +1823,13 @@ class SourceDocumentRead(Contract):
     data_quality: SourceDocumentQuality
     quality_reason: str | None
     actor: Actor
+    sec_issuer_attribution: Literal["UNVERIFIED", "NOT_SEC"] | None = None
 
 
 class CompanySourceDocumentsRead(Contract):
     company_id: UUID
     sec_identity_status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS"]
+    sec_identity_issue: str | None = None
     source_count: int
     as_of: date | None
     known_at: datetime | None
