@@ -9,7 +9,7 @@ Updated 2026-11-10. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Field                       | Current value                                                                                                                      |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | SEC issuer review — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md). |
-| Branch / PR                 | `codex/sec-issuer-activation` from main; independent [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) remains frozen for owner review. |
+| Branch / PR                 | [Draft PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) from main; independent [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) remains frozen for owner review. |
 | Implementation              | Read-only issuer review, consistent identity checks and serialized cooperating mapping writers. |
 | Next ready substantial task | Restore operational historical prices/FX after verified recovery and provider access; do not infer identities. |
 | Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later. |

@@ -2,7 +2,8 @@
 
 ## SEC issuer review — INTEGRATE
 
-`codex/sec-issuer-activation` is independent of frozen
+`codex/sec-issuer-activation` is [draft PR #34](https://github.com/paulzwecker/portfolio-app/pull/34),
+independent of frozen
 [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) and starts from
 main `976fa2b`. Acceptance for this increment: an explicit issuer can be reviewed
 without database writes or SEC calls; the existing target and schema checks remain
