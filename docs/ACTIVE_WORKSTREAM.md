@@ -1,9 +1,11 @@
 # Active workstream
 
-## Company refresh continuity — INTEGRATE
+## Company refresh continuity — preliminary integration
 
 `codex/company-refresh-continuity` is [draft PR #35](https://github.com/paulzwecker/portfolio-app/pull/35),
-independently based on main `715820e`.
+integrating main `387ec6d` with merged PR #34. Reconcile again after the owner merges
+[PR #36](https://github.com/paulzwecker/portfolio-app/pull/36) before treating the
+branch as ready for review.
 Company Explorer restores queued and running company jobs after navigation and
 reload, displays multiple active requests and the latest completed outcome, and
 continues polling the existing durable operations pipeline. A bounded, read-only
@@ -19,16 +21,53 @@ terminal outcomes. Desktop/mobile screenshots were inspected. Independent review
 found and verified a fix for a newer outcome hidden by a recovered older receipt.
 No migration or production action was performed.
 
-Release status: BLOCKED until fresh Neon identity/schema and Render/Vercel release
-controls are verified. Older APIs lack the new route, so deploy and verify the API
-before the frontend; until then controls fail closed. [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34)
-remains independent; shared roadmap/handoff conflicts need reconciliation after
-either PR merges. Production ingestion and scheduler activation remain separately gated.
+After the preliminary integration of `387ec6d`, 471 web tests, 21 isolated
+company-refresh/API tests, contract comparisons, both offline schema gates,
+21 deployment tests and documentation checks passed. Eight synthetic
+desktop/mobile refresh journeys passed against the isolated API; the active
+request layouts were inspected. These checks must be repeated as appropriate
+after #36 is merged and reconciled.
+
+Release status: BLOCKED pending fresh Neon identity/schema and deployed-commit
+verification. The owner reports deployment controls verified. Older APIs lack the
+new route, so freeze Vercel production builds and deploy and verify the API before
+the frontend; until then controls fail closed. Reconcile the shared roadmap and
+handoff again after #36 merges. Production ingestion and scheduler activation remain
+separately gated.
+
+## Previous SEC issuer review — merged
+
+[PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) merged into main
+as `387ec6d`. Acceptance for this increment: an explicit issuer can be reviewed
+without database writes or SEC calls; the existing target and schema checks remain
+mandatory; issuer evidence is consistently checked across mapping and fundamentals
+bootstrap; conflicting mappings and legacy invalid records fail closed. URL syntax
+is not proof of issuer identity. No schema or production configuration changed.
+
+The preview and sequential conflict checks passed 25 focused checks against synthetic
+PostgreSQL data, including target mismatch and zero writes; focused Ruff checks pass.
+Both supported mapping writers now take the same nonblocking transaction lock and
+require READ COMMITTED; canonical reconciliation also rejects legacy ambiguity.
+An isolated synthetic SEC rehearsal covers issuer preview through Company Explorer APIs;
+113 relevant tests passed, including the read-only guard and legacy-identity cases.
+Ruff, focused mypy, documentation checks and both offline schema-gate modes passed.
+After reconciling PR #33, 19 focused issuer, fundamentals and market-scope tests,
+documentation and both offline schema-gate modes passed again.
+Independent review found no additional proven blocker for this narrow slice. No UI
+changed; this is operator preparation, not live-data activation.
+This lock does not constrain older deployed processes or direct SQL; production
+mapping remains disabled until those writers are drained and the updated paths are
+separately released. A contact-bearing SEC user agent is needed for live source
+requests. Real issuer verification and ingestion are separate follow-on operations.
+Production backfill and unattended refresh remain conditional on verified recovery,
+provider terms, reconciliation and the owner's explicitly scoped approvals.
+The owner reports verifying deployment controls. Production release remains BLOCKED
+pending fresh schema and deployed-commit verification; the checked-in attestation
+alone is not live production evidence.
 
 ## Previous C2.2 Portfolio valuation evidence
 
-[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) merged as `715820e`;
-its production deployment is not verified here.
+[PR #33](https://github.com/paulzwecker/portfolio-app/pull/33) merged as `715820e`; its production deployment is not verified here.
 
 Portfolio now presents per-listing weights, supplied FX details and all valuation
 gaps without calculating financial results in the browser. Operations provides a
@@ -47,16 +86,17 @@ and unattended refresh remain separately gated by source permission, current
 recovery and the approved operational procedure. Sensitive operator evidence stays
 outside this public repository.
 
-## Previous C3.1 SEC provenance integration
+## Previous C3.1 SEC provenance milestone
 
 The [frozen milestone](sec-provenance-integration.md) is isolated on
 `codex/sec-provenance-integration` from `main` `2dfef5b` (merged PR #30),
-with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) since merged.
+with [PR #32](https://github.com/paulzwecker/portfolio-app/pull/32) merged as
+`976fa2b`.
 It adds issuer and filing provenance warnings, evidence-time boundaries, and
 fail-closed Sheets publication. It introduces no migrations. The original
 `codex/sec-coverage-readiness` retains all deferred refresh ownership, Sheets
 recovery and migration work; it must be reconciled after this milestone merges.
-No production ingestion, publication, migration or deployment is authorized.
+This milestone did not authorize production ingestion, publication, migration or deployment.
 Local verification: `npm run check`, the relevant isolated PostgreSQL suite,
 authenticated publication-denial cases, 42 managed desktop/mobile browser cases
 (12 intentionally skipped), four isolated SEC browser cases, and visual review.

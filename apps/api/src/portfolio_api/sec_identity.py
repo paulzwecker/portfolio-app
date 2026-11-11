@@ -5,18 +5,32 @@ from datetime import datetime
 from urllib.parse import parse_qsl, urlsplit
 from uuid import UUID
 
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from portfolio_api.domain.models import CompanyProviderIdentifier, ReportedFundamentalBatch
 
 SEC_PROVIDER_ID = "sec_edgar"
 
 
-def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
-    """Validate recorded mapping metadata; this does not authenticate SEC evidence."""
-    cik = mapping.identifier_value
+def lock_sec_mapping_writes(session: Session) -> None:
+    """Fail closed if another supported issuer mapping writer is active."""
+    if session.scalar(text("SELECT current_setting('transaction_isolation')")) != "read committed":
+        raise ValueError("SEC issuer mapping writes require READ COMMITTED isolation")
+    acquired = session.scalar(
+        text("SELECT pg_try_advisory_xact_lock(:namespace, :key)"),
+        {"namespace": 1397048137, "key": 1128876801},
+    )
+    if not acquired:
+        raise ValueError("Another SEC issuer mapping write is in progress; retry after it finishes")
+
+
+def sec_evidence_matches_cik(cik: str, evidence_source: str) -> bool:
+    """Check the URL's SEC identity syntax, without authenticating its contents."""
     if not isinstance(cik, str) or not re.fullmatch(r"[0-9]{10}", cik):
-        return None
+        return False
     try:
-        url = urlsplit(mapping.evidence_source)
+        url = urlsplit(evidence_source)
         identifiers = [
             value
             for key, value in parse_qsl(url.query, keep_blank_values=True, max_num_fields=200)
@@ -31,10 +45,7 @@ def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
                 identifiers.append(match.group(1))
         host = url.hostname.casefold().rstrip(".") if url.hostname else ""
         if (
-            mapping.provider_id != SEC_PROVIDER_ID
-            or mapping.identifier_type != "SEC_CIK"
-            or not mapping.provider_company_name.strip()
-            or url.scheme != "https"
+            url.scheme != "https"
             or not (host == "sec.gov" or host.endswith(".sec.gov"))
             or url.username
             or url.password
@@ -45,10 +56,25 @@ def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
                 for value in identifiers
             )
         ):
+            return False
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return True
+
+
+def reviewed_cik(mapping: CompanyProviderIdentifier) -> str | None:
+    """Validate recorded mapping metadata; this does not authenticate SEC evidence."""
+    try:
+        if (
+            mapping.provider_id != SEC_PROVIDER_ID
+            or mapping.identifier_type != "SEC_CIK"
+            or not mapping.provider_company_name.strip()
+            or not sec_evidence_matches_cik(mapping.identifier_value, mapping.evidence_source)
+        ):
             return None
     except (TypeError, ValueError, AttributeError):
         return None
-    return cik
+    return mapping.identifier_value
 
 
 def mapping_known_at(

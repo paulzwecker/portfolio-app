@@ -1,19 +1,19 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-10. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-11. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | Company refresh continuity — INTEGRATE. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                            |
-| Branch / PR                 | [Draft PR #35](https://github.com/paulzwecker/portfolio-app/pull/35) from main `715820e`; [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) remains frozen. |
-| Implementation              | Restore company-scoped refresh status after navigation using the existing durable job requests.                                                                          |
-| Next ready substantial task | Complete integration and verify API-first compatibility; restore real historical prices/FX after approved recovery and source access.                                    |
-| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                                                            |
-| Production boundary         | Production actions require the exact owner's authorization and all applicable safeguards.                                                                                |
+| Field                       | Current value                                                                                                                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | Company refresh continuity — [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35), preliminary integration. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                        |
+| Branch / PR                 | PR #35 integrates main `387ec6d` and merged [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34); reconcile again after the owner merges [PR #36](https://github.com/paulzwecker/portfolio-app/pull/36). |
+| Implementation              | Restore company-scoped refresh status after navigation using existing durable job requests.                                                                                                                        |
+| Next ready substantial task | Complete integration after #36 and verify API-first compatibility; restore historical prices/FX after approved recovery and source access.                                                                         |
+| Deferred work               | Refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`; preserve and reconcile later.                                                                                                      |
+| Production boundary         | Production ingestion remains gated on provider terms, independently verified recovery and the owner's scoped conditions. No migration, deployment or financial decision without authorization.                     |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

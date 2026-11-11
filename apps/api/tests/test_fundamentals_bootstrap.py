@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from portfolio_api.domain.models import (
     CanonicalBootstrapRun,
     Company,
+    CompanyProviderIdentifier,
     ConsensusEstimateBatch,
     CurrentLifecycle,
     FundamentalsBootstrapCheckpoint,
@@ -45,7 +46,11 @@ from portfolio_api.fundamentals_bootstrap import (
     reconcile_fundamentals_bootstrap,
 )
 from portfolio_api.main import create_app
-from portfolio_api.reported_fundamentals import SEC_PROVIDER_ID, record_cik_mapping
+from portfolio_api.reported_fundamentals import (
+    SEC_PROVIDER_ID,
+    preview_cik_mapping,
+    record_cik_mapping,
+)
 from portfolio_api.settings import Settings
 from portfolio_api.source_documents import SEC_SUBMISSIONS_BASE
 
@@ -271,12 +276,19 @@ def _prepare_run(engine: Engine) -> UUID:
             )
         )
         session.flush()
+        evidence = "https://www.sec.gov/edgar/browse/?CIK=0000000001"
+        assert (
+            preview_cik_mapping(session, COMPANY_ID, CIK, "Synthetic Holdings Inc.", evidence)[
+                "status"
+            ]
+            == "PROPOSED"
+        )
         record_cik_mapping(
             session,
             COMPANY_ID,
             CIK,
             "Synthetic Holdings Inc.",
-            "https://www.sec.gov/edgar/browse/?CIK=1",
+            evidence,
         )
         run = prepare_fundamentals_bootstrap(session, target_environment="rehearsal")
         session.commit()
@@ -736,12 +748,27 @@ def test_bootstrap_blocks_new_ambiguous_mapping_before_provider_access(
 ) -> None:
     run_id = _prepare_run(postgres_engine)
     with Session(postgres_engine) as session:
-        record_cik_mapping(
-            session,
-            COMPANY_ID,
-            "0000000002",
-            "Another synthetic issuer",
-            "https://www.sec.gov/edgar/browse/?CIK=2",
+        with pytest.raises(ValueError, match="different SEC CIK"):
+            record_cik_mapping(
+                session,
+                COMPANY_ID,
+                "0000000002",
+                "Another synthetic issuer",
+                "https://www.sec.gov/edgar/browse/?CIK=2",
+            )
+        # A legacy writer may have persisted ambiguity before the current guard.
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                identifier_type="SEC_CIK",
+                identifier_value="0000000002",
+                provider_company_name="Another synthetic issuer",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=2",
+                effective_at=RETRIEVED_AT,
+                recorded_at=RETRIEVED_AT,
+                actor="IMPORT",
+            )
         )
         session.commit()
     provider = SyntheticSecProvider()
@@ -780,12 +807,27 @@ def test_bootstrap_rejects_missing_and_ambiguous_reviewed_cik_mappings(
             "Synthetic Holdings Inc.",
             "https://www.sec.gov/edgar/browse/?CIK=1",
         )
-        record_cik_mapping(
-            session,
-            COMPANY_ID,
-            "0000000002",
-            "Another synthetic issuer",
-            "https://www.sec.gov/edgar/browse/?CIK=2",
+        with pytest.raises(ValueError, match="different SEC CIK"):
+            record_cik_mapping(
+                session,
+                COMPANY_ID,
+                "0000000002",
+                "Another synthetic issuer",
+                "https://www.sec.gov/edgar/browse/?CIK=2",
+            )
+        # Previously persisted ambiguity must still block the bootstrap.
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                identifier_type="SEC_CIK",
+                identifier_value="0000000002",
+                provider_company_name="Another synthetic issuer",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=2",
+                effective_at=RETRIEVED_AT,
+                recorded_at=RETRIEVED_AT,
+                actor="IMPORT",
+            )
         )
         session.commit()
         with pytest.raises(FundamentalsBootstrapError, match="ambiguous"):
@@ -813,13 +855,23 @@ def test_bootstrap_requires_cik_specific_sec_evidence_url(
             )
         )
         session.flush()
-        record_cik_mapping(
-            session,
-            COMPANY_ID,
-            CIK,
-            "Synthetic Holdings Inc.",
-            evidence_source,
+        with pytest.raises(ValueError, match="SEC.gov issuer URL"):
+            record_cik_mapping(session, COMPANY_ID, CIK, "Synthetic Holdings Inc.", evidence_source)
+        # Preserve coverage of invalid mappings retained from older imports.
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=COMPANY_ID,
+                provider_id=SEC_PROVIDER_ID,
+                identifier_type="SEC_CIK",
+                identifier_value=CIK,
+                provider_company_name="Synthetic Holdings Inc.",
+                evidence_source=evidence_source,
+                effective_at=RETRIEVED_AT,
+                recorded_at=RETRIEVED_AT,
+                actor="IMPORT",
+            )
         )
+        session.flush()
         with pytest.raises(FundamentalsBootstrapError, match="SEC.gov evidence URL"):
             preview_fundamentals_bootstrap(session, target_environment="rehearsal")
 
