@@ -225,12 +225,27 @@ def test_sec_identity_guard_preserves_evidence_and_knowledge_cutoffs(
         assert cell.reason and "issuer identity" in cell.reason and len(cell.source_ids) == 2
 
         monkeypatch.setattr("portfolio_api.reported_fundamentals.now", lambda: later)
-        record_cik_mapping(
-            session,
-            company_id,
-            "0000000002",
-            "Other fixture",
-            "https://www.sec.gov/edgar/browse/?CIK=2",
+        with pytest.raises(ValueError, match="different SEC CIK"):
+            record_cik_mapping(
+                session,
+                company_id,
+                "0000000002",
+                "Other fixture",
+                "https://www.sec.gov/edgar/browse/?CIK=2",
+            )
+        # Reproduce an ambiguous mapping that an older writer could have stored.
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value="0000000002",
+                provider_company_name="Other fixture",
+                evidence_source="https://www.sec.gov/edgar/browse/?CIK=2",
+                effective_at=later,
+                recorded_at=later,
+                actor="IMPORT",
+            )
         )
         session.commit()
         historical = q.company_reported_fundamentals(session, company_id, known_at=retrieved_at)

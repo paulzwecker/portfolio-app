@@ -6,14 +6,14 @@ Updated 2026-11-11. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                                                   |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Financial statements availability — frozen [PR #36](https://github.com/paulzwecker/portfolio-app/pull/36). [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                |
-| Branch / PR                 | `codex/financial-statements-availability` from main `715820e`; [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) and [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35) remain frozen. |
-| Implementation              | Financials hides unsupported empty controls, selects an available chart series and counts only displayed-period coverage while retaining source and quality evidence.                                           |
-| Next ready substantial task | Complete a source-backed Financials workflow; restore prices/FX after approved recovery and source access.                                                                                                      |
-| Deferred work               | Chart selection cleanup after filter changes; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                   |
-| Production boundary         | Production actions require the exact owner's authorization and all applicable safeguards.                                                                                                                       |
+| Field                       | Current value                                                                                                                                                                                                               |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Financial statements availability — [PR #36](https://github.com/paulzwecker/portfolio-app/pull/36) reconciled for review. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                             |
+| Branch / PR                 | `codex/financial-statements-availability` integrates main `387ec6d` with merged [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34); [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35) follows #36. |
+| Implementation              | Financials hides unsupported empty controls, selects an available chart series and counts only displayed-period coverage while retaining source and quality evidence.                                                       |
+| Next ready substantial task | Restore operational historical prices/FX after verified recovery and provider access; do not infer identities.                                                                                                              |
+| Deferred work               | Chart selection cleanup after filter changes; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                               |
+| Production boundary         | Production ingestion remains gated on provider terms, independently verified recovery and the owner's scoped conditions. No migration, deployment or financial decision without authorization.                              |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

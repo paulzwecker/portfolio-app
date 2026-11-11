@@ -26,7 +26,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select, text
@@ -71,6 +70,7 @@ from portfolio_api.reported_fundamentals import (
     SecCompanyFactsProvider,
     ingest_sec_company_facts,
 )
+from portfolio_api.sec_identity import reviewed_cik
 from portfolio_api.settings import Settings
 from portfolio_api.source_documents import (
     SEC_DOCUMENT_NORMALIZER_VERSION,
@@ -266,17 +266,7 @@ def _load_reviewed_cik_mappings(
             raise FundamentalsBootstrapError(
                 "A reviewed SEC CIK must contain exactly ten digits, including leading zeroes."
             )
-        evidence = urlsplit(mapping.evidence_source)
-        evidence_host = evidence.hostname.casefold().rstrip(".") if evidence.hostname else ""
-        cik_number = str(int(mapping.identifier_value))
-        evidence_reference = f"{evidence.path}?{evidence.query}"
-        if (
-            not mapping.provider_company_name
-            or not mapping.provider_company_name.strip()
-            or evidence.scheme != "https"
-            or not (evidence_host == "sec.gov" or evidence_host.endswith(".sec.gov"))
-            or re.search(rf"(?<![0-9]){re.escape(cik_number)}(?![0-9])", evidence_reference) is None
-        ):
+        if reviewed_cik(mapping) != mapping.identifier_value:
             raise FundamentalsBootstrapError(
                 "Each reviewed SEC CIK mapping needs an issuer name and an HTTPS SEC.gov "
                 "evidence URL containing that exact CIK."
