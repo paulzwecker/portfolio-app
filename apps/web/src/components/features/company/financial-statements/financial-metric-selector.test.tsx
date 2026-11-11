@@ -13,11 +13,12 @@ describe("financial metric selector", () => {
         comparisonMode="SEPARATE"
         onComparisonMode={vi.fn()}
         canCompare
+        chartAvailable
       />,
     );
     expect(html).toContain("Income Statement");
     expect(html).toContain("Estimates");
-    expect(html).toContain("Growth &amp; Ratios");
+    expect(html).not.toContain("Growth &amp; Ratios");
     expect(html).toContain("Separate scales");
     expect(html).toContain("Indexed comparison");
     expect(html).toContain("visual trend comparison, not a return");
@@ -33,9 +34,29 @@ describe("financial metric selector", () => {
         comparisonMode="SEPARATE"
         onComparisonMode={vi.fn()}
         canCompare={false}
+        chartAvailable
       />,
     );
     expect(html).toContain('disabled=""');
     expect(html).toContain("Select at least two available rows");
+  });
+
+  it("keeps section and evidence navigation without unsupported chart controls", () => {
+    const html = renderToStaticMarkup(
+      <FinancialMetricSelector
+        statement="INCOME_STATEMENT"
+        onStatement={vi.fn()}
+        sources={["REPORTED_ACTUAL"]}
+        onSource={vi.fn()}
+        comparisonMode="SEPARATE"
+        onComparisonMode={vi.fn()}
+        canCompare={false}
+        chartAvailable={false}
+      />,
+    );
+    expect(html).toContain("Income Statement");
+    expect(html).toContain("inspect its evidence");
+    expect(html).not.toContain("Chart scale");
+    expect(html).not.toContain("Indexed comparison");
   });
 });

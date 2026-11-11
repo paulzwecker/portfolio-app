@@ -1,10 +1,51 @@
 # Active workstream
 
-## SEC issuer review — INTEGRATE
+## Financial statements availability — integration
 
-`codex/sec-issuer-activation` is [draft PR #34](https://github.com/paulzwecker/portfolio-app/pull/34),
-originally based on `976fa2b` and now reconciled with main `715820e`, which
-merged [PR #33](https://github.com/paulzwecker/portfolio-app/pull/33). Acceptance for this increment: an explicit issuer can be reviewed
+`codex/financial-statements-availability` ([PR #36](https://github.com/paulzwecker/portfolio-app/pull/36)) integrates main `387ec6d`, including merged
+[PR #34](https://github.com/paulzwecker/portfolio-app/pull/34). [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35) follows #36. Company Financials
+now hides the unsupported growth/ratios category and suppresses empty chart controls
+and zero-count cards when no aligned cells exist. Sources, SEC coverage, time filters
+and quality-checked cells stay accessible; zero remains a valid chartable value.
+Source filters can hide and restore the chart without hiding their own controls.
+Retained flagged values now announce their status to screen readers.
+
+The next BUILD increment defaults the chart to another eligible reported metric,
+or an eligible forecast if no reported metric can be charted. An explicit empty
+selection stays empty. Coverage counts and source messages now use displayed
+periods, and out-of-window observations cannot enable a chart checkbox. Seventeen
+focused web tests, lint/typecheck and a synthetic Company Explorer journey at
+desktop and mobile widths passed; independent review identified these issues and
+confirmed that a suspected consensus mapping issue is not currently reachable.
+
+Local evidence: all 475 web tests, lint/typecheck, frontend production build, 22
+deployment/documentation checks and both offline schema gates passed. A synthetic
+Company Explorer journey covers placeholder rows, conflicts, source toggles and
+populated data at mobile and desktop widths. Two browser checks used the real
+isolated empty API response, verified source access and unchanged protected state,
+and were inspected in light and dark themes. Independent review found no remaining
+concrete blocker. No schema, financial calculation, provider or production changes.
+Frozen acceptance: suppress unsupported empty controls; retain source and quality
+evidence; chart only aligned eligible values, including zero; preserve explicit
+selection. The full 478-test web suite, lint, production build, documentation and
+deployment checks passed. Desktop/mobile journeys passed with synthetic data and
+with the isolated API; empty-state light/dark layouts were inspected. Independent
+review found no blocker. A pre-existing selection that persists after a period or
+source change is deferred. This slice creates no financial observations. The owner
+reports the deployment controls verified; the live schema and deployment commits
+remain independently unverified. Production release remains BLOCKED until checked.
+Source access and recovery gates for real data are separate.
+
+After integrating `387ec6d`, the 478 web tests, lint, frontend build, contract
+comparisons, both offline schema gates, 21 deployment checks and documentation
+check passed. The Company Explorer synthetic desktop/mobile journey and the two
+isolated-API desktop/mobile empty-state journeys also passed. The owner-reported
+deployment-control verification does not establish the current live schema or SHA.
+
+## Previous SEC issuer review — merged
+
+[PR #34](https://github.com/paulzwecker/portfolio-app/pull/34) merged into main
+as `387ec6d`. Acceptance for this increment: an explicit issuer can be reviewed
 without database writes or SEC calls; the existing target and schema checks remain
 mandatory; issuer evidence is consistently checked across mapping and fundamentals
 bootstrap; conflicting mappings and legacy invalid records fail closed. URL syntax
@@ -27,8 +68,9 @@ separately released. A contact-bearing SEC user agent is needed for live source
 requests. Real issuer verification and ingestion are separate follow-on operations.
 Production backfill and unattended refresh remain conditional on verified recovery,
 provider terms, reconciliation and the owner's explicitly scoped approvals.
-Release status is BLOCKED pending fresh production schema and provider-control
-verification; the checked-in attestation alone is not live production evidence.
+The owner reports verifying deployment controls. Production release remains BLOCKED
+pending fresh schema and deployed-commit verification; the checked-in attestation
+alone is not live production evidence.
 
 ## Previous C2.2 Portfolio valuation evidence
 
