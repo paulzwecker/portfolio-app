@@ -43,7 +43,31 @@ are included in batch reconciliation counters/issues.
 
 For local use, set `SEC_USER_AGENT` to an application label and contact email, for
 example `Portfolio Research App analyst@example.com`. Review an SEC issuer page or
-filing and record its official name and evidence URL for each mapping. Then run:
+filing and record its official name and evidence URL for each mapping. Before any
+separately authorized write, review an explicit proposal against the selected,
+read-only database target:
+
+```powershell
+npm run db:sync-reported-fundamentals -- map-preview `
+  --target-environment development `
+  --company-id <canonical-company-uuid> `
+  --cik <10-digit-cik> `
+  --provider-company-name "<SEC issuer name>" `
+  --evidence-source "<SEC issuer or filing URL>"
+```
+
+The target must match the configured database target and migration head. Preview
+checks URL structure only: it does not fetch or authenticate evidence, establish
+the issuer's identity, or write a mapping. Remote target verification can contact
+the Neon control plane. Review the SEC source independently and keep outputs
+containing private portfolio information out of public artifacts. A
+preview can become stale; the write rechecks identity under a transaction lock.
+Mapping writes require PostgreSQL READ COMMITTED isolation. If another mapping
+writer is active, the command fails without waiting; retry only after it finishes.
+The lock protects only updated cooperating writers, not older deployments or direct
+SQL. Keep production mapping writes disabled until old writers have been drained
+and updated paths deployed under a separately approved release.
+After review, the existing separately guarded commands are:
 
 ```powershell
 npm run db:sync-reported-fundamentals -- map `
