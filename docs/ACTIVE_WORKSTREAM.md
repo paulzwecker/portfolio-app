@@ -20,7 +20,8 @@ Acceptance for this milestone:
 - Relevant integration checks and one cohesive PR. No production writes,
   deployment, migrations, scheduler activation or financial acceptance.
 
-Implementation is complete; scope is frozen for owner review. Exact listing and
+Implementation is complete; [PR #38](https://github.com/paulzwecker/portfolio-app/pull/38)
+is frozen for owner review, with latest-head CI required before merge. Exact listing and
 portfolio origin survive tabs, reload and same-company overview/evidence/source
 links. Missing market history never substitutes another listing. Coverage labels
 replace successfully empty optional cards; source errors and partial/conflicting
