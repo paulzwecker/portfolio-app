@@ -6,17 +6,23 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                         |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Investment return hurdle explorer; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                         |
-| Branch / PR                 | `codex/investment-decision-cockpit` from main `866723e`; independent PR #39 stays frozen. Preserve this branch for later integration.                 |
-| Implementation              | Discovery complete: connect accepted native cash flows to an explicit hypothetical return target and entry price, without changing model assumptions. |
-| Next ready substantial task | Complete backend math, focused Valuation workflow and real read-only API/browser proof.                                                               |
-| Deferred                    | New ranking dashboards, fiscal mapping, operating-driver solver, consensus/provider activation and broad infrastructure.                              |
-| Production boundary         | No writes, migrations, deployment, configuration changes or investment acceptance. New API requires coordinated API-first release.                    |
+| Field                       | Current value                                                                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Investment return hurdle explorer complete; scope frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                           |
+| Branch / PR                 | `codex/investment-decision-cockpit` from main `866723e`; preserved for later integration while independent PR #39 remains frozen.                           |
+| Implementation              | Accepted DCF/H-model, owner cash flow and residual income -> explicit return target/entry price -> native IRR, scenario/PV explanation and source evidence. |
+| Next ready substantial task | Review/integrate after PR #39; resume production financial-data activation once recovery and source prerequisites pass.                                     |
+| Deferred                    | New ranking dashboards, fiscal mapping, operating-driver solver, consensus/provider activation and broad infrastructure.                                    |
+| Production boundary         | No writes, migrations, deployment, configuration changes or investment acceptance. New API requires coordinated API-first release.                          |
 
 PR #38 is owner-merged. PR #39's SEC refresh slice is locally verified and frozen
 for review; this independent investment-intelligence work does not change it.
+Return-hurdle evidence: 997 backend units (two platform skips), 513 web tests,
+98 relevant model/API/fixture cases including 19 PostgreSQL tests, 157 managed
+production-build browser cases (53 opt-in skips), and four additional real API/UI
+journeys pass. Independent financial/security/visual reviews found no A blocker.
+No migrations or new dependencies. Schema gates match the existing attestation;
+current hosted state still needs owner verification for the API-first release.
 November 14 production evidence remains schema `b59f16c8a203`, 22 accepted positions
 and zero prices/FX/facts/filings/consensus. Recovery and source prerequisites still
 gate production activation. No fictional test values are production observations.

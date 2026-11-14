@@ -971,6 +971,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/financial-models/{model_id}/return-hurdle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Return Hurdle */
+        get: operations["get_return_hurdle_v1_financial_models__model_id__return_hurdle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/financial-models/{model_id}/revisions": {
         parameters: {
             query?: never;
@@ -12006,6 +12023,136 @@ export interface components {
              */
             status: "DIRECT" | "CONDITIONAL_EQUITY" | "NOT_COMPARABLE_PERSPECTIVE" | "NOT_COMPARABLE_METHOD" | "NOT_COMPARABLE_VERSION" | "UNKNOWN_METHOD";
         };
+        /** ReturnHurdleCashFlowRead */
+        ReturnHurdleCashFlowRead: {
+            /** Annual Cash Flow Per Share */
+            annual_cash_flow_per_share: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /** Terminal Cash Flow Per Share */
+            terminal_cash_flow_per_share: string;
+        };
+        /** ReturnHurdleContributionsRead */
+        ReturnHurdleContributionsRead: {
+            /** Annual Cash Flow Pv Per Share */
+            annual_cash_flow_pv_per_share: string;
+            /** Opening Balance Sheet Per Share */
+            opening_balance_sheet_per_share: string;
+            /** Terminal Pv Per Share */
+            terminal_pv_per_share: string;
+        };
+        /** ReturnHurdleRead */
+        ReturnHurdleRead: {
+            /** Accepted Hurdle */
+            accepted_hurdle: string;
+            /**
+             * Calculated At
+             * Format: date-time
+             */
+            calculated_at: string;
+            /**
+             * Calculation Version
+             * @constant
+             */
+            calculation_version: "native-return-hurdle-v1";
+            /** Cash Flows */
+            cash_flows: components["schemas"]["ReturnHurdleCashFlowRead"][];
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            contributions: components["schemas"]["ReturnHurdleContributionsRead"] | null;
+            /** Current Expected Irr */
+            current_expected_irr: string | null;
+            /** Current Price */
+            current_price: string | null;
+            /** Current Price Gap To Required */
+            current_price_gap_to_required: string | null;
+            /**
+             * Effective At
+             * Format: date-time
+             */
+            effective_at: string;
+            /** Hypothetical Entry Price */
+            hypothetical_entry_price: string | null;
+            /** Hypothetical Expected Irr */
+            hypothetical_expected_irr: string | null;
+            /**
+             * Hypothetical Status
+             * @enum {string}
+             */
+            hypothetical_status: "NOT_REQUESTED" | "AVAILABLE" | "UNAVAILABLE";
+            /** Hypothetical Unavailable Reason */
+            hypothetical_unavailable_reason: string | null;
+            market_price: components["schemas"]["ExpectedReturnMarketPriceRead"];
+            /** Methodology Version */
+            methodology_version: string;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Model Name */
+            model_name: string;
+            model_type: components["schemas"]["FinancialModelType"];
+            /** Reconciled Irr */
+            reconciled_irr: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Required Return */
+            required_return: string;
+            return_methodology: components["schemas"]["ReturnMethodologyRead"];
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Scenarios */
+            scenarios: components["schemas"]["ReturnHurdleScenarioRead"][];
+            /** Source */
+            source: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "UNAVAILABLE";
+            /** Ticker */
+            ticker: string;
+            /** Unavailable Reason */
+            unavailable_reason: string | null;
+            /**
+             * Valuation Listing Id
+             * Format: uuid
+             */
+            valuation_listing_id: string;
+            /** Venue */
+            venue: string;
+            /** Weighted Entry Price */
+            weighted_entry_price: string | null;
+        };
+        /** ReturnHurdleScenarioRead */
+        ReturnHurdleScenarioRead: {
+            /** Probability */
+            probability: string;
+            /** Required Entry Price */
+            required_entry_price: string | null;
+            scenario: components["schemas"]["DcfScenario"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "UNAVAILABLE";
+            /** Unavailable Reason */
+            unavailable_reason: string | null;
+        };
         /** ReturnMethodologiesRead */
         ReturnMethodologiesRead: {
             /** Currency Policy */
@@ -15242,6 +15389,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinancialModelContractPreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_return_hurdle_v1_financial_models__model_id__return_hurdle_get: {
+        parameters: {
+            query: {
+                base_revision_id: string;
+                required_return: number | string;
+                entry_price?: (number | string) | null;
+            };
+            header?: never;
+            path: {
+                model_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnHurdleRead"];
                 };
             };
             /** @description Validation Error */
