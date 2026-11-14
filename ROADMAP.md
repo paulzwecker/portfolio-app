@@ -6,25 +6,20 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                              |
-| Branch / PR                 | `codex/investor-research-journey`; [PR #38](https://github.com/paulzwecker/portfolio-app/pull/38) frozen for owner review. Latest main `9a27353` with merged #37 integrated.       |
-| Implementation              | Complete: exact-listing research navigation, data-aware summary, responsive themed price charts; 483 web / 147 managed browser tests, isolated API journeys and final review pass. |
-| Next ready substantial task | Owner review of the frozen investor journey; then approved recovery/provider activation and real price/FX/fundamental readback.                                                    |
-| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                                                                           |
-| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation.                                                   |
+| Field                       | Current value                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Investment return hurdle explorer; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                         |
+| Branch / PR                 | `codex/investment-decision-cockpit` from main `866723e`; independent PR #39 stays frozen. Preserve this branch for later integration.                 |
+| Implementation              | Discovery complete: connect accepted native cash flows to an explicit hypothetical return target and entry price, without changing model assumptions. |
+| Next ready substantial task | Complete backend math, focused Valuation workflow and real read-only API/browser proof.                                                               |
+| Deferred                    | New ranking dashboards, fiscal mapping, operating-driver solver, consensus/provider activation and broad infrastructure.                              |
+| Production boundary         | No writes, migrations, deployment, configuration changes or investment acceptance. New API requires coordinated API-first release.                    |
 
-The current acceptance and evidence live in the active handoff. This UI milestone
-does not depend on completing Sheets recovery.
-
-November 14 read-only evidence: schema `b59f16c8a203`, accepted 22 positions,
-zero prices/FX/facts/filings/consensus. Market preview READY for 22 listings plus
-two FX pairs over 2025-11-10–2026-11-09, with zero requests/writes; SEC preview
-has no reviewed CIK mappings. Local recovery/guard/ingestion suite: 174 passed;
-contracts, types and 22 deployment/documentation tests passed. See the
-[operator runbook](docs/encrypted-production-recovery.md) and
-[provider decision](docs/financial-data-provider-decision.md).
+PR #38 is owner-merged. PR #39's SEC refresh slice is locally verified and frozen
+for review; this independent investment-intelligence work does not change it.
+November 14 production evidence remains schema `b59f16c8a203`, 22 accepted positions
+and zero prices/FX/facts/filings/consensus. Recovery and source prerequisites still
+gate production activation. No fictional test values are production observations.
 
 ## Prior implementation evidence
 
