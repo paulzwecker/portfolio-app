@@ -601,6 +601,11 @@ The observed 24-hour Neon history window is a dated project observation, not a
 durable off-provider backup or a promise of future retention. Check the active plan,
 history, branch expiry and restore permissions before relying on them.
 
+The operator-only [encrypted recovery procedure](encrypted-production-recovery.md)
+now wraps the existing snapshot/reconciliation engine with the production read guard
+and age encryption. Its disposable PostgreSQL round trip is locally verified; no
+production archive or production-data restore rehearsal has been performed.
+
 The existing [PostgreSQL migration toolkit](postgresql-migration.md) explicitly
 accepts only a loopback source. It must not be pointed at production through a
 tunnel to evade that guard. No production archive or complete restore rehearsal
@@ -621,8 +626,8 @@ Use least-privilege read access, `verify-full`, private storage outside Git/clou
 and a reviewed snapshot-consistent PostgreSQL 18 export. Preserve a versioned
 manifest with schema, source identity, timestamps, file hashes and coverage; verify
 archive integrity without publishing portfolio data. Establish retention and secure
-off-device copy with tested access and key recovery. These are requirements for a
-separately reviewed production backup procedure, not claims that one exists here.
+off-device copy with tested access and key recovery. These are requirements for
+executing the separately approved recovery procedure, not claims of production backup.
 That review must account for every database and required role/grant, extension,
 large object, table and sequence; a single database dump does not itself preserve
 cluster-wide roles. Verify the backup role can read every intended row, including

@@ -6,14 +6,24 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | Company refresh continuity — [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35), integration after #36. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                      |
-| Branch / PR                 | `codex/company-refresh-continuity` integrates main `9939fe3`, including merged PRs [#34](https://github.com/paulzwecker/portfolio-app/pull/34) and [#36](https://github.com/paulzwecker/portfolio-app/pull/36).                |
-| Implementation              | Restore company-scoped refresh status after navigation using existing durable job requests.                                                                                                                                    |
-| Next ready substantial task | Verify the API-first release and restore historical prices/FX after approved recovery and source access.                                                                                                                       |
-| Deferred work               | Financials chart selection cleanup; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                                            |
-| Production boundary         | Owner-reported provider settings permit automatic production deployment; freeze both providers before merge. Ingestion remains gated on source access, recovery and scoped authorization. No deployment without authorization. |
+| Field                       | Current value                                                                                                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Encrypted recovery and bounded financial-data activation. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                              |
+| Branch / PR                 | `codex/data-recovery-activation` from main `ddbacbc`; #34, #36 and #35 are owner-merged. One cohesive recovery PR; no merge/deployment authority.                                            |
+| Implementation              | Native snapshot/restore reuse with age encryption, production read guard, access inventory and disposable recovery test. No new service or migration.                                        |
+| Next ready substantial task | Owner-approved current-state backup and restore rehearsal, then first real market checkpoint; SEC mapping/ingestion is independent of market entitlement.                                    |
+| Deferred work               | Provider adapters before source selection; generic recovery/scheduler frameworks; Sheets recovery and unrelated UI changes.                                                                  |
+| Production boundary         | CONFIGURATION_REQUIRED for release controls; ingestion BLOCKED on approved recovery destination/target and provider access. No production backup, write, deployment or activation performed. |
+
+November 14 read-only evidence: schema `b59f16c8a203`, accepted 22 positions,
+zero prices/FX/facts/filings/consensus. Market preview READY for 22 listings plus
+two FX pairs over 2025-11-10–2026-11-09, with zero requests/writes; SEC preview
+has no reviewed CIK mappings. Local recovery/guard/ingestion suite: 174 passed;
+contracts, types and 22 deployment/documentation tests passed. See the
+[operator runbook](docs/encrypted-production-recovery.md) and
+[provider decision](docs/financial-data-provider-decision.md).
+
+## Prior implementation evidence
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

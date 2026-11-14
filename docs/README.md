@@ -103,6 +103,8 @@ For database operations use [write targets](database-write-targets.md) and
 - [Canonical PostgreSQL migration preparation](postgresql-migration.md)
 - [Canonical production portfolio baseline](production-canonical-baseline.md)
 - [Controlled production market and SEC ingestion](production-data-ingestion-operations.md)
+- [Encrypted recovery and first ingestion](encrypted-production-recovery.md)
+- [Financial-data provider decision](financial-data-provider-decision.md)
 - [Recurring Data & Research Operations](recurring-operations.md)
 - [PostgreSQL development targets](remote-development-postgresql.md)
 - [Testing and verification](testing.md)

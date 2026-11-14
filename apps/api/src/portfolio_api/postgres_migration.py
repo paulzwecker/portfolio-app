@@ -1732,7 +1732,9 @@ def _native_tool_environment(
             "PGUSER": endpoint.username,
             "PGDATABASE": endpoint.database,
             "PGAPPNAME": application_name or f"portfolio-migration-{endpoint.role}",
-            "PGOPTIONS": _connection_options(endpoint, read_only=endpoint.role == "source"),
+            "PGOPTIONS": _connection_options(
+                endpoint, read_only=endpoint.role in {"source", "recovery_source"}
+            ),
             "PGCONNECT_TIMEOUT": "10",
         }
     )

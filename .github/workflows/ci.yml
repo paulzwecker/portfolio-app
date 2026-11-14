@@ -182,7 +182,10 @@ jobs:
           fi
           echo "MIGRATION_PG_TOOLS_CONTAINER=$container_id" >> "$GITHUB_ENV"
 
-      - name: Run isolated PostgreSQL tests
+      - name: Install operator-only encryption tool for recovery rehearsal
+        run: sudo apt-get update && sudo apt-get install --yes age
+
+      - name: Verify encrypted recovery and isolated PostgreSQL tests
         run: npm run test:integration
 
   powershell:
