@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JobStatus } from "@/components/app/job-status";
 import { RefreshAction } from "@/components/app/refresh-action";
 import { PageSection } from "@/components/app/page-section";
@@ -28,6 +28,61 @@ const refreshActions: { name: OperationalJobName; label: string }[] = [
   },
 ];
 
+const secJobs = ["SEC_FILINGS", "SEC_FUNDAMENTALS"] as const;
+
+export async function requestUniverseRefresh(jobName: OperationalJobName) {
+  const response = await fetch("/api/research/operations/job-requests", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_name: jobName, scope_kind: "ACTIVE_UNIVERSE" }),
+  });
+  const data: unknown = await response.json();
+  if (!response.ok || !isOperationalJobRequest(data)) {
+    const detail =
+      typeof data === "object" && data !== null && "detail" in data
+        ? String(data.detail)
+        : "The refresh request could not be queued.";
+    throw new Error(detail);
+  }
+  if (
+    data.job_name !== jobName ||
+    data.scope_kind !== "ACTIVE_UNIVERSE" ||
+    data.company_id !== null
+  )
+    throw new Error("The refresh receipt did not match the requested scope.");
+  return data;
+}
+
+/** Two existing durable requests; retain the first receipt if the second fails. */
+export async function requestEligibleSecRefresh(
+  record: (request: OperationalJobRequest) => void,
+) {
+  for (const name of secJobs) {
+    try {
+      record(await requestUniverseRefresh(name));
+    } catch (failure) {
+      const detail =
+        failure instanceof Error ? failure.message : "Request unavailable.";
+      throw new Error(
+        name === "SEC_FILINGS"
+          ? `SEC filings could not be confirmed; fundamentals were not requested. ${detail}`
+          : `SEC fundamentals could not be confirmed. The filings receipt remains below. ${detail}`,
+      );
+    }
+  }
+}
+
+export function hasCompletedRefresh(
+  previousActive: ReadonlySet<string>,
+  requests: OperationalJobRequest[],
+) {
+  return requests.some(
+    (request) =>
+      previousActive.has(request.id) &&
+      !["QUEUED", "RUNNING"].includes(request.status),
+  );
+}
+
 export function ManualRefreshPanel({
   workerEnabled = true,
   manualRunnerEnabled = false,
@@ -47,8 +102,12 @@ export function ManualRefreshPanel({
   const [queueing, setQueueing] = useState<OperationalJobName | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(0);
+  const [queueingSec, setQueueingSec] = useState(false);
+  const previousActive = useRef(new Set<string>());
+  const loadSequence = useRef(0);
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     try {
       const response = await fetch(
         "/api/research/operations/job-requests?limit=30",
@@ -57,11 +116,21 @@ export function ManualRefreshPanel({
         },
       );
       const data: unknown = await response.json();
+      if (sequence !== loadSequence.current) return;
       if (!response.ok || !isOperationalJobRequestList(data))
         throw new Error("Manual job history is unavailable.");
+      const completed = hasCompletedRefresh(previousActive.current, data);
+      previousActive.current = new Set(
+        data
+          .filter((item) => ["QUEUED", "RUNNING"].includes(item.status))
+          .map((item) => item.id),
+      );
       setRequests(data);
       setLoadError(null);
+      if (completed)
+        window.dispatchEvent(new Event("portfolio:data-refreshed"));
     } catch (error) {
+      if (sequence !== loadSequence.current) return;
       setLoadError(
         error instanceof Error
           ? error.message
@@ -90,7 +159,14 @@ export function ManualRefreshPanel({
   );
   useEffect(() => {
     if (!active) return;
-    const interval = window.setInterval(() => void load(), 3000);
+    let inFlight = false;
+    const interval = window.setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
+      void load().finally(() => {
+        inFlight = false;
+      });
+    }, 3000);
     return () => window.clearInterval(interval);
   }, [active, load]);
 
@@ -102,27 +178,44 @@ export function ManualRefreshPanel({
     return latest;
   }, [requests]);
 
+  const recordRequest = useCallback((data: OperationalJobRequest) => {
+    loadSequence.current += 1;
+    setRequests((previous) => [
+      data,
+      ...previous.filter((item) => item.id !== data.id),
+    ]);
+    if (["QUEUED", "RUNNING"].includes(data.status))
+      previousActive.current.add(data.id);
+    else window.dispatchEvent(new Event("portfolio:data-refreshed"));
+    setClockNow(Date.now());
+  }, []);
+
+  const queueSec = async () => {
+    setQueueingSec(true);
+    setQueueError(null);
+    setNotice(null);
+    try {
+      await requestEligibleSecRefresh(recordRequest);
+      setNotice(
+        "SEC filings and fundamentals requests are recorded below. Existing requests are reused during their active period or cooldown.",
+      );
+    } catch (failure) {
+      setQueueError(
+        failure instanceof Error ? failure.message : "SEC refresh unavailable.",
+      );
+    } finally {
+      setQueueingSec(false);
+      void load();
+    }
+  };
+
   const queue = async (jobName: OperationalJobName) => {
     setQueueing(jobName);
     setQueueError(null);
     setNotice(null);
     try {
-      const response = await fetch("/api/research/operations/job-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          job_name: jobName,
-          scope_kind: "ACTIVE_UNIVERSE",
-        }),
-      });
-      const data: unknown = await response.json();
-      if (!response.ok || !isOperationalJobRequest(data)) {
-        const detail =
-          typeof data === "object" && data !== null && "detail" in data
-            ? String(data.detail)
-            : "The refresh request could not be queued.";
-        throw new Error(detail);
-      }
+      const data = await requestUniverseRefresh(jobName);
+      recordRequest(data);
       setNotice(
         data.deduplicated
           ? "A matching request is already queued or within its cooldown; its status is shown below."
@@ -188,6 +281,41 @@ export function ManualRefreshPanel({
       id="manual-refresh"
     >
       <div className="space-y-4">
+        <Card className="border-primary/20 bg-primary/[0.025] shadow-none">
+          <CardContent className="space-y-3 p-4">
+            <div>
+              <h3 className="font-medium">Refresh eligible SEC data</h3>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                Update reported fundamentals and filing history for held and
+                Watchlist companies with reviewed issuer mappings. Each domain
+                is limited to 30 issuers; filings can retrieve up to 30 recent
+                submissions and five historical files per attempt. Missing
+                mappings and partial coverage remain visible in the results.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Creates two durable requests: filings, then fundamentals.
+                Provider transport retries keep their existing limits. No market
+                prices, FX, analyst estimates, Sheets or investment decisions
+                are included.
+              </p>
+            </div>
+            <RefreshAction
+              variant="default"
+              onClick={() => void queueSec()}
+              pending={queueingSec}
+              disabled={
+                !(workerEnabled || manualRunnerEnabled) || Boolean(queueing)
+              }
+              disabledReason={
+                !(workerEnabled || manualRunnerEnabled)
+                  ? "Manual operations are disabled in this environment."
+                  : undefined
+              }
+            >
+              Refresh eligible SEC data
+            </RefreshAction>
+          </CardContent>
+        </Card>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {refreshActions.map((action) => {
             const recent = cooldownByJob.get(action.name);
@@ -214,7 +342,7 @@ export function ManualRefreshPanel({
                 <RefreshAction
                   onClick={() => void queue(action.name)}
                   pending={queueing === action.name}
-                  disabled={Boolean(disabledReason)}
+                  disabled={Boolean(disabledReason) || queueingSec}
                   disabledReason={disabledReason}
                 >
                   {action.label}
@@ -261,6 +389,7 @@ export function ManualRefreshPanel({
               pending={queueing === "REFRESH_ALL"}
               disabled={
                 !(workerEnabled || manualRunnerEnabled) ||
+                queueingSec ||
                 refreshAllRunning ||
                 refreshAllCooling
               }
