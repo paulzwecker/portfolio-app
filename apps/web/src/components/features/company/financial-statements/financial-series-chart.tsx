@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useChartWidth } from "@/hooks/use-chart-width";
 import { ChartContainer } from "@/components/app/chart-container";
 import { Button } from "@/components/ui/button";
 import type {
@@ -53,16 +54,7 @@ export function FinancialSeriesChart({
     row: FinancialStatementRow;
     cell: FinancialStatementCell;
   } | null>(null);
-  const container = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(820);
-  useEffect(() => {
-    if (!container.current) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(Math.max(280, entry.contentRect.width - 40)),
-    );
-    observer.observe(container.current);
-    return () => observer.disconnect();
-  }, []);
+  const { containerRef, width } = useChartWidth(40, 820);
   const W = width;
   const groups = new Map<string, FinancialStatementRow[]>();
   for (const row of rows) {
@@ -78,7 +70,7 @@ export function FinancialSeriesChart({
   const x = (date: string) =>
     L + ((W - L - R) * (Date.parse(date) - start)) / (end - start || 1);
   return (
-    <div ref={container} className="min-w-0">
+    <div ref={containerRef} className="min-w-0">
       <ChartContainer
         title="Financial development"
         description={

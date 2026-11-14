@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { companyResearchHref } from "./company-navigation";
+import type { CompanyView } from "./company-view-tabs";
 import { useState } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { AttentionCenter } from "@/components/attention-center";
@@ -124,12 +126,18 @@ function modelReturnNote(model: ReturnType<typeof selectPrimaryModelOutput>) {
 export function CompanyOverview({
   detail,
   lifecycleChanged,
+  listingId,
+  fromPortfolio,
 }: {
   detail: CompanyDetail;
   lifecycleChanged: () => void;
+  listingId: string;
+  fromPortfolio: boolean;
 }) {
   const companyId = detail.company.id;
   const allocation = detail.portfolio_context;
+  const researchHref = (view: CompanyView) =>
+    companyResearchHref(companyId, { view, listingId, fromPortfolio });
   const scores = useResearch(
     `companies/${encodeURIComponent(companyId)}/scores/current`,
     isScoreCurrents,
@@ -153,6 +161,11 @@ export function CompanyOverview({
 
   const model = selectPrimaryModelOutput(models.data);
   const revision = currentThesisRevision(thesis.data);
+  const hasAssessments =
+    scores.data?.some((score) => score.assessment !== null) ?? false;
+  const showThesis = Boolean(revision) || !thesis.data;
+  const showModels = Boolean(models.data?.models.length) || !models.data;
+  const showScores = hasAssessments || !scores.data;
   const advantage = firstClaim(revision, [
     "COMPETITIVE_ADVANTAGE",
     "DURABILITY",
@@ -189,24 +202,18 @@ export function CompanyOverview({
         title="Investment summary"
         description="What matters most about this business now, which evidence supports it, and where to investigate next."
       >
-        <MetricGroup label="Current investment summary" columns={4}>
-          <MetricCard
-            label="Lifecycle"
-            value={
-              <Badge
-                variant={detail.company.lifecycle ? "default" : "secondary"}
-              >
-                {detail.company.lifecycle ?? "Unassigned"}
-              </Badge>
-            }
-            note="Explicit investment state"
-          />
+        <MetricGroup
+          label="Current investment summary"
+          columns={model && pace ? 4 : model || pace ? 3 : 2}
+        >
           <MetricCard
             label="Portfolio position"
             value={
               allocation?.current_weight === null ||
               allocation?.current_weight === undefined
-                ? "Not held"
+                ? detail.positions.length > 0
+                  ? "Held · unvalued"
+                  : "Not held"
                 : compactPercent(allocation.current_weight)
             }
             note={
@@ -216,23 +223,32 @@ export function CompanyOverview({
             }
           />
           <MetricCard
-            label={modelReturnLabel(model)}
-            value={compactPercent(model?.snapshot.expected_cash_flow_irr)}
-            note={
-              (models.data?.models.length ?? 0) > 1
-                ? "Select an independent model in Valuation"
-                : modelReturnNote(model)
-            }
-            tone={model ? "default" : "warning"}
+            label="Strategic target"
+            value={compactPercent(detail.target_weight, "No target")}
+            note="Accepted allocation intent · independent of current value"
           />
-          <MetricCard
-            label="Decision state"
-            value={pace?.pace ?? paceStatus}
-            note={`Portfolio ${portfolioRank} · Watchlist ${watchlistRank} · Research ${researchRank}`}
-            tone={
-              pace?.decision_status === "AVAILABLE" ? "positive" : "warning"
-            }
-          />
+          {model && (
+            <MetricCard
+              label={modelReturnLabel(model)}
+              value={compactPercent(model?.snapshot.expected_cash_flow_irr)}
+              note={
+                (models.data?.models.length ?? 0) > 1
+                  ? "Select an independent model in Valuation"
+                  : modelReturnNote(model)
+              }
+              tone={model ? "default" : "warning"}
+            />
+          )}
+          {pace && (
+            <MetricCard
+              label="Decision state"
+              value={pace?.pace ?? paceStatus}
+              note={`Portfolio ${portfolioRank} · Watchlist ${watchlistRank} · Research ${researchRank}`}
+              tone={
+                pace?.decision_status === "AVAILABLE" ? "positive" : "warning"
+              }
+            />
+          )}
         </MetricGroup>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
@@ -250,18 +266,22 @@ export function CompanyOverview({
           />
           <StatusIndicator
             status={
-              scores.data
+              hasAssessments
                 ? "AVAILABLE"
-                : scores.error
+                : scores.data
                   ? "UNAVAILABLE"
-                  : "REFRESHING"
+                  : scores.error
+                    ? "UNAVAILABLE"
+                    : "REFRESHING"
             }
             label={
-              scores.data
+              hasAssessments
                 ? "Quality assessments"
-                : scores.error
-                  ? "Scores unavailable"
-                  : "Scores loading"
+                : scores.data
+                  ? "Quality not assessed"
+                  : scores.error
+                    ? "Scores unavailable"
+                    : "Scores loading"
             }
           />
           <StatusIndicator
@@ -275,270 +295,280 @@ export function CompanyOverview({
         </div>
       </PageSection>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <Card className="min-w-0 shadow-none">
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
-            <div>
-              <CardTitle className="text-base">Investment case</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Accepted thesis, strongest support and the most important open
-                question.
-              </p>
-            </div>
-            {revision ? (
-              <StatusIndicator
-                status={revision.confidence}
-                label={`${statusLabel(revision.confidence)} confidence`}
-              />
-            ) : null}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {revision?.thesis_statement ? (
-              <p className="max-w-3xl text-base leading-7">
-                {revision.thesis_statement}
-              </p>
-            ) : thesis.error ? (
-              <EmptyState
-                title="Thesis unavailable"
-                description="The accepted thesis could not be verified. Review the Research & Evidence view before drawing an investment conclusion."
-              />
-            ) : !thesis.data ? (
-              <p role="status" className="text-sm text-muted-foreground">
-                Loading accepted thesis…
-              </p>
-            ) : (
-              <EmptyState
-                title="No accepted thesis revision"
-                description="Missing thesis state is not a neutral investment conclusion. Start with Research & Evidence."
-              />
-            )}
-            <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
-              <InsightRow
-                label="Strongest advantage"
-                claim={advantage}
-                empty="No structured advantage recorded."
-              />
-              <InsightRow
-                label="Growth & reinvestment"
-                claim={growth}
-                empty="No structured growth driver recorded."
-              />
-              <InsightRow
-                label="Principal risk / thesis breaker"
-                claim={riskClaim}
-                empty="No structured risk recorded."
-                tone="warning"
-              />
-              <InsightRow
-                label="Open research question"
-                claim={openQuestion}
-                empty="No unresolved question recorded."
-                tone="warning"
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
-              <span>
-                {revision
-                  ? `Observed ${dateTime(revision.observed_at)} · recorded ${dateTime(revision.recorded_at)}`
-                  : "No accepted thesis timestamp available"}
-              </span>
-              <OverviewLink
-                href={`/company/${companyId}?view=thesis`}
-                label="Review thesis & evidence"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="min-w-0 shadow-none">
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
-            <div>
-              <CardTitle className="text-base">Valuation context</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                The accepted output and its method, without recomputing values
-                in the browser.
-              </p>
-            </div>
-            {model && (
-              <StatusIndicator
-                status={model.status}
-                label={statusLabel(model.status)}
-              />
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {model ? (
-              <>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {model.snapshot.model_key}
-                  </span>
-                  <span>·</span>
-                  <span>
-                    {model.snapshot.return_methodology?.title ??
-                      "Methodology unavailable"}
-                  </span>
-                  <span>·</span>
-                  <span>
-                    {model.snapshot.model_currency ?? "Currency unknown"}
-                  </span>
-                </div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <ModelMetric
-                    label="Bear fair value"
-                    value={formatCurrency(
-                      model.snapshot.bear_fv,
-                      model.snapshot.model_currency,
-                    )}
-                  />
-                  <ModelMetric
-                    label="Base fair value"
-                    value={formatCurrency(
-                      model.snapshot.base_fv,
-                      model.snapshot.model_currency,
-                    )}
-                  />
-                  <ModelMetric
-                    label="Bull fair value"
-                    value={formatCurrency(
-                      model.snapshot.bull_fv,
-                      model.snapshot.model_currency,
-                    )}
-                  />
-                  <ModelMetric
-                    label="Weighted fair value"
-                    value={formatCurrency(
-                      model.snapshot.weighted_fv,
-                      model.snapshot.model_currency,
-                    )}
-                  />
-                  <ModelMetric
-                    label="Expected excess"
-                    value={compactPercent(model.snapshot.expected_excess)}
-                  />
-                  <ModelMetric
-                    label="Hurdle"
-                    value={compactPercent(model.snapshot.hurdle)}
-                  />
-                  <ModelMetric
-                    label="Forward fundamental CAGR"
-                    value={compactPercent(
-                      model.snapshot.forward_fundamental_cagr,
-                    )}
-                  />
-                </dl>
-                <p className="border-t pt-3 text-xs leading-5 text-muted-foreground">
-                  {model.snapshot.output_quality === "COMPLETE"
-                    ? `Output recorded ${dateTime(model.snapshot.recorded_at)}. Fair value is a valuation reference, not a future price forecast.`
-                    : (model.snapshot.notes ??
-                      "Output is partial; unavailable fields remain explicit.")}
+      <div
+        className={`grid items-start gap-4 ${showThesis && showModels ? "xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]" : ""}`}
+      >
+        {showThesis && (
+          <Card className="min-w-0 shadow-none">
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-base">Investment case</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Accepted thesis, strongest support and the most important open
+                  question.
                 </p>
-              </>
-            ) : (models.data?.models.length ?? 0) > 1 ? (
-              <EmptyState
-                title="Multiple independent model outputs"
-                description="Select a model in Valuation to inspect its listing, methodology and revision. Company-level synthesis requires a reviewed valuation contract."
-              />
-            ) : models.error ? (
-              <EmptyState
-                title="Valuation unavailable"
-                description="No verified accepted model output is available for this company."
-                actions={
-                  <Button size="sm" variant="outline" onClick={models.retry}>
-                    Retry
-                  </Button>
-                }
-              />
-            ) : models.data ? (
-              <EmptyState
-                title="No accepted model output"
-                description={`The canonical model response is ${statusLabel(models.data.status)}. Open Valuation to review supported model families or the migration state.`}
-                actions={
-                  <Button size="sm" variant="outline" onClick={models.retry}>
-                    Retry
-                  </Button>
-                }
-              />
-            ) : (
-              <p role="status" className="text-sm text-muted-foreground">
-                Loading accepted model output…
-              </p>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
-              <span>
-                {model?.snapshot.rationale ??
-                  "Model rationale is available in the valuation workspace."}
-              </span>
-              <OverviewLink
-                href={`/company/${companyId}?view=valuation`}
-                label="Open valuation"
-              />
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+              {revision ? (
+                <StatusIndicator
+                  status={revision.confidence}
+                  label={`${statusLabel(revision.confidence)} confidence`}
+                />
+              ) : null}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {revision?.thesis_statement ? (
+                <p className="max-w-3xl text-base leading-7">
+                  {revision.thesis_statement}
+                </p>
+              ) : thesis.error ? (
+                <EmptyState
+                  title="Thesis unavailable"
+                  description="The accepted thesis could not be verified. Review the Research & Evidence view before drawing an investment conclusion."
+                />
+              ) : !thesis.data ? (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Loading accepted thesis…
+                </p>
+              ) : (
+                <EmptyState
+                  title="No accepted thesis revision"
+                  description="Missing thesis state is not a neutral investment conclusion. Start with Research & Evidence."
+                />
+              )}
+              <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+                <InsightRow
+                  label="Strongest advantage"
+                  claim={advantage}
+                  empty="No structured advantage recorded."
+                />
+                <InsightRow
+                  label="Growth & reinvestment"
+                  claim={growth}
+                  empty="No structured growth driver recorded."
+                />
+                <InsightRow
+                  label="Principal risk / thesis breaker"
+                  claim={riskClaim}
+                  empty="No structured risk recorded."
+                  tone="warning"
+                />
+                <InsightRow
+                  label="Open research question"
+                  claim={openQuestion}
+                  empty="No unresolved question recorded."
+                  tone="warning"
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
+                <span>
+                  {revision
+                    ? `Observed ${dateTime(revision.observed_at)} · recorded ${dateTime(revision.recorded_at)}`
+                    : "No accepted thesis timestamp available"}
+                </span>
+                <OverviewLink
+                  href={researchHref("thesis")}
+                  label="Review thesis & evidence"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {showModels && (
+          <Card className="min-w-0 shadow-none">
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-base">Valuation context</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  The accepted output and its method, without recomputing values
+                  in the browser.
+                </p>
+              </div>
+              {model && (
+                <StatusIndicator
+                  status={model.status}
+                  label={statusLabel(model.status)}
+                />
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {model ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {model.snapshot.model_key}
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {model.snapshot.return_methodology?.title ??
+                        "Methodology unavailable"}
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {model.snapshot.model_currency ?? "Currency unknown"}
+                    </span>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <ModelMetric
+                      label="Bear fair value"
+                      value={formatCurrency(
+                        model.snapshot.bear_fv,
+                        model.snapshot.model_currency,
+                      )}
+                    />
+                    <ModelMetric
+                      label="Base fair value"
+                      value={formatCurrency(
+                        model.snapshot.base_fv,
+                        model.snapshot.model_currency,
+                      )}
+                    />
+                    <ModelMetric
+                      label="Bull fair value"
+                      value={formatCurrency(
+                        model.snapshot.bull_fv,
+                        model.snapshot.model_currency,
+                      )}
+                    />
+                    <ModelMetric
+                      label="Weighted fair value"
+                      value={formatCurrency(
+                        model.snapshot.weighted_fv,
+                        model.snapshot.model_currency,
+                      )}
+                    />
+                    <ModelMetric
+                      label="Expected excess"
+                      value={compactPercent(model.snapshot.expected_excess)}
+                    />
+                    <ModelMetric
+                      label="Hurdle"
+                      value={compactPercent(model.snapshot.hurdle)}
+                    />
+                    <ModelMetric
+                      label="Forward fundamental CAGR"
+                      value={compactPercent(
+                        model.snapshot.forward_fundamental_cagr,
+                      )}
+                    />
+                  </dl>
+                  <p className="border-t pt-3 text-xs leading-5 text-muted-foreground">
+                    {model.snapshot.output_quality === "COMPLETE"
+                      ? `Output recorded ${dateTime(model.snapshot.recorded_at)}. Fair value is a valuation reference, not a future price forecast.`
+                      : (model.snapshot.notes ??
+                        "Output is partial; unavailable fields remain explicit.")}
+                  </p>
+                </>
+              ) : (models.data?.models.length ?? 0) > 1 ? (
+                <EmptyState
+                  title="Multiple independent model outputs"
+                  description="Select a model in Valuation to inspect its listing, methodology and revision. Company-level synthesis requires a reviewed valuation contract."
+                />
+              ) : models.error ? (
+                <EmptyState
+                  title="Valuation unavailable"
+                  description="No verified accepted model output is available for this company."
+                  actions={
+                    <Button size="sm" variant="outline" onClick={models.retry}>
+                      Retry
+                    </Button>
+                  }
+                />
+              ) : models.data ? (
+                <EmptyState
+                  title="No accepted model output"
+                  description={`The canonical model response is ${statusLabel(models.data.status)}. Open Valuation to review supported model families or the migration state.`}
+                  actions={
+                    <Button size="sm" variant="outline" onClick={models.retry}>
+                      Retry
+                    </Button>
+                  }
+                />
+              ) : (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Loading accepted model output…
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
+                <span>
+                  {model?.snapshot.rationale ??
+                    "Model rationale is available in the valuation workspace."}
+                </span>
+                <OverviewLink
+                  href={researchHref("valuation")}
+                  label="Open valuation"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-        <Card className="min-w-0 shadow-none">
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
-            <div>
-              <CardTitle className="text-base">Business assessment</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Independent quality dimensions; Risk excludes valuation and
-                higher means more risk.
-              </p>
-            </div>
-            <OverviewLink
-              href={`/company/${companyId}?view=thesis`}
-              label="Inspect assessments"
-            />
-          </CardHeader>
-          <CardContent>
-            {scores.data ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {scoreDimensions.map((dimension) => {
-                  const score = scoreFor(scores.data, dimension);
-                  return (
-                    <div
-                      key={dimension}
-                      className="rounded-md border bg-muted/20 p-3"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs font-medium">
-                          {scoreLabels[dimension]}
-                        </span>
-                        <StatusIndicator
-                          status={score?.assessment?.status ?? "UNAVAILABLE"}
-                        />
-                      </div>
-                      <p className="mt-2 text-lg font-semibold tabular-nums">
-                        {scoreDisplay(score)}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {score?.assessment?.rationale ??
-                          "No rationale recorded for this dimension."}
-                      </p>
-                    </div>
-                  );
-                })}
+      <div
+        className={`grid items-start gap-4 ${showScores ? "lg:grid-cols-2" : ""}`}
+      >
+        {showScores && (
+          <Card className="min-w-0 shadow-none">
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-base">Business assessment</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Independent quality dimensions; Risk excludes valuation and
+                  higher means more risk.
+                </p>
               </div>
-            ) : scores.error ? (
-              <EmptyState
-                title="Quality assessments unavailable"
-                description="The four independent score dimensions could not be verified."
-                actions={
-                  <Button size="sm" variant="outline" onClick={scores.retry}>
-                    Retry
-                  </Button>
-                }
+              <OverviewLink
+                href={researchHref("thesis")}
+                label="Inspect assessments"
               />
-            ) : (
-              <p role="status" className="text-sm text-muted-foreground">
-                Loading independent assessments…
-              </p>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {scores.data ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {scoreDimensions.map((dimension) => {
+                    const score = scoreFor(scores.data, dimension);
+                    return (
+                      <div
+                        key={dimension}
+                        className="rounded-md border bg-muted/20 p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-medium">
+                            {scoreLabels[dimension]}
+                          </span>
+                          <StatusIndicator
+                            status={score?.assessment?.status ?? "UNAVAILABLE"}
+                          />
+                        </div>
+                        <p className="mt-2 text-lg font-semibold tabular-nums">
+                          {scoreDisplay(score)}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {score?.assessment?.rationale ??
+                            "No rationale recorded for this dimension."}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : scores.error ? (
+                <EmptyState
+                  title="Quality assessments unavailable"
+                  description="The four independent score dimensions could not be verified."
+                  actions={
+                    <Button size="sm" variant="outline" onClick={scores.retry}>
+                      Retry
+                    </Button>
+                  }
+                />
+              ) : (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Loading independent assessments…
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="min-w-0 shadow-none">
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-3">
@@ -549,7 +579,10 @@ export function CompanyOverview({
                 separate.
               </p>
             </div>
-            <OverviewLink href="/portfolio" label="Open portfolio" />
+            <OverviewLink
+              href="/portfolio#portfolio-allocation"
+              label="Review allocation"
+            />
           </CardHeader>
           <CardContent className="space-y-4">
             {detail.portfolio && allocation ? (
@@ -610,29 +643,29 @@ export function CompanyOverview({
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <ExploreCard
-            href={`/company/${companyId}?view=financials`}
+            href={researchHref("financials")}
             title="Financial performance"
             description="Reported actuals and available forecasts."
           />
           <ExploreCard
-            href={`/company/${companyId}?view=valuation`}
+            href={researchHref("valuation")}
             title="Valuation & scenarios"
             description="Assumptions, scenarios and return basis."
           />
           <ExploreCard
-            href={`/company/${companyId}?view=thesis`}
+            href={researchHref("thesis")}
             title="Thesis & quality"
             description="Claims, scores, risks and breakers."
           />
           <ExploreCard
-            href={`/company/${companyId}?view=research`}
+            href={researchHref("research")}
             title="Research & evidence"
             description="Filings, source context and open work."
           />
           <ExploreCard
-            href={`/company/${companyId}?view=history`}
-            title="Historical changes"
-            description="Prices, expectations and decisions over time."
+            href={researchHref("history")}
+            title="Prices & history"
+            description="Exact-listing prices, source coverage and changes over time."
           />
         </div>
       </PageSection>

@@ -5,10 +5,10 @@ import { useRef } from "react";
 export const companyViews = [
   { id: "overview", label: "Overview" },
   { id: "financials", label: "Financials" },
+  { id: "history", label: "Prices & history" },
   { id: "valuation", label: "Valuation" },
-  { id: "thesis", label: "Investment Thesis" },
-  { id: "research", label: "Research & Evidence" },
-  { id: "history", label: "Historical Analysis" },
+  { id: "thesis", label: "Thesis & risks" },
+  { id: "research", label: "Evidence" },
 ] as const;
 
 export type CompanyView = (typeof companyViews)[number]["id"];
@@ -72,7 +72,7 @@ export function CompanyViewTabs({
     <div
       role="tablist"
       aria-label="Company research views"
-      className="mb-6 flex min-w-0 gap-1 overflow-x-auto border-b pb-px"
+      className="my-5 grid min-w-0 grid-cols-3 gap-1 rounded-lg border bg-card p-1 lg:flex"
     >
       {companyViews.map((view, index) => (
         <button
@@ -95,9 +95,9 @@ export function CompanyViewTabs({
               moveFocus(index, event.key);
             }
           }}
-          className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`min-w-0 rounded-md border-b-2 px-2 py-3 text-xs sm:px-3 sm:text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             value === view.id
-              ? "border-primary text-foreground"
+              ? "border-primary bg-primary/5 text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >

@@ -6,14 +6,17 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | Company refresh continuity — [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35), integration after #36. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                      |
-| Branch / PR                 | `codex/company-refresh-continuity` integrates main `9939fe3`, including merged PRs [#34](https://github.com/paulzwecker/portfolio-app/pull/34) and [#36](https://github.com/paulzwecker/portfolio-app/pull/36).                |
-| Implementation              | Restore company-scoped refresh status after navigation using existing durable job requests.                                                                                                                                    |
-| Next ready substantial task | Verify the API-first release and restore historical prices/FX after approved recovery and source access.                                                                                                                       |
-| Deferred work               | Financials chart selection cleanup; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                                            |
-| Production boundary         | Owner-reported provider settings permit automatic production deployment; freeze both providers before merge. Ingestion remains gated on source access, recovery and scoped authorization. No deployment without authorization. |
+| Field                       | Current value                                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                            |
+| Branch / PR                 | `codex/investor-research-journey` from main `ddbacbc`; PRs #34/#36/#35 merged. Recovery PR #37 remains independent and frozen.   |
+| Implementation              | Exact-listing portfolio navigation, data-aware company summary and price-first research history using existing UI components.    |
+| Next ready substantial task | Complete responsive light/dark and data-state integration review, then one owner-reviewable PR.                                  |
+| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                         |
+| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation. |
+
+The records below describe preceding work; the current acceptance and evidence live
+in the active handoff. This UI milestone does not depend on completing Sheets recovery.
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

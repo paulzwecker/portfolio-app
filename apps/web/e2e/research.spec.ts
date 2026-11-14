@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { portfolioFixture } from "./fixtures/portfolio";
 import { sensitivityFixture } from "./fixtures/dcf-sensitivity.mjs";
 import type { Overview } from "../src/lib/domain-contracts";
 
@@ -1188,9 +1189,10 @@ test("model outputs keep missing values visible across responsive universe and c
     "true",
   );
   await page.getByRole("tab", { name: "Financials" }).press("End");
-  await expect(
-    page.getByRole("tab", { name: "Historical Analysis" }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Evidence" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await overviewTab.click();
   await expect(
     page.getByText("No strategic target recorded", { exact: true }),
@@ -1218,7 +1220,11 @@ test("model outputs keep missing values visible across responsive universe and c
     page.getByText("No legacy model tab is mapped to this company."),
   ).toBeVisible();
   await expect(page.getByText("Lifecycle unassigned")).toBeVisible();
-  await page.getByRole("tab", { name: "Historical Analysis" }).click();
+  await page.getByRole("tab", { name: "Prices & history" }).click();
+  await page
+    .locator("summary")
+    .filter({ hasText: "Expectations & decision history" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Estimate Momentum" }),
   ).toBeVisible();
@@ -1227,7 +1233,7 @@ test("model outputs keep missing values visible across responsive universe and c
       "The selected source has no future annual Revenue/EPS estimates with resolved fiscal-period ends.",
     ),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Investment Thesis" }).click();
+  await page.getByRole("tab", { name: "Thesis & risks" }).click();
   await expect(
     page.getByRole("heading", { name: "Investment quality" }),
   ).toBeVisible();
@@ -2756,6 +2762,31 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ],
   };
 
+  let sparseOverview = false;
+  const otherListing = {
+    ...listing,
+    id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+    ticker: "EXPB",
+    currency: "EUR",
+  };
+  const journeyPortfolio = portfolioFixture();
+  journeyPortfolio.companies[0] = {
+    ...journeyPortfolio.companies[0],
+    company: { ...explorerCompany, lifecycle: "PORTFOLIO" },
+    positions: [
+      {
+        ...journeyPortfolio.companies[0].positions[0],
+        listing_id: listingId,
+        security_id: securityId,
+        ticker: "EXPL",
+        venue: listing.venue,
+        currency: listing.currency,
+        price_currency: listing.currency,
+      },
+    ],
+  };
+  if (journeyPortfolio.snapshot)
+    journeyPortfolio.snapshot.positions[0].listing_id = listingId;
   let marketDataRequestCount = 0;
   let incompatibleHistory = false;
   let statementMode: "populated" | "empty" | "conflict" | "other-metric" =
@@ -2765,12 +2796,38 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       "/api/research/",
       "",
     );
+    if (pathname === "portfolios")
+      return route.fulfill({ json: [journeyPortfolio.portfolio] });
+    if (pathname === `portfolios/${journeyPortfolio.portfolio.id}/overview`)
+      return route.fulfill({ json: journeyPortfolio });
     if (pathname === `companies/${id}`)
-      return route.fulfill({ json: companyDetail });
+      return route.fulfill({
+        json: {
+          ...companyDetail,
+          listings: [listing, otherListing],
+          portfolio_context: sparseOverview
+            ? {
+                ...companyDetail.portfolio_context,
+                current_weight: null,
+                current_market_value: null,
+                allocation_gap: null,
+                allocation_status: "UNAVAILABLE",
+              }
+            : companyDetail.portfolio_context,
+        },
+      });
     if (pathname === `companies/${id}/scores/current`)
-      return route.fulfill({ json: scoreAssessments });
+      return route.fulfill({
+        json: sparseOverview
+          ? scoreAssessments.map((score) => ({ ...score, assessment: null }))
+          : scoreAssessments,
+      });
     if (pathname === `companies/${id}/scores/history`)
-      return route.fulfill({ json: scoreAssessments });
+      return route.fulfill({
+        json: sparseOverview
+          ? scoreAssessments.map((score) => ({ ...score, assessment: null }))
+          : scoreAssessments,
+      });
     if (pathname === `companies/${id}/rankings`)
       return route.fulfill({ json: rankings });
     if (pathname === `companies/${id}/execution-pace`)
@@ -3036,7 +3093,11 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     if (pathname === `companies/${id}/research`)
       return route.fulfill({ json: companyResearchRead });
     if (pathname === `companies/${id}/thesis`)
-      return route.fulfill({ json: companyInvestmentThesisRead });
+      return route.fulfill({
+        json: sparseOverview
+          ? { ...companyInvestmentThesisRead, streams: [] }
+          : companyInvestmentThesisRead,
+      });
     if (pathname === `companies/${id}/risk-assessments`)
       return route.fulfill({ json: companyRiskAssessments });
     if (pathname === `companies/${id}/estimate-momentum`)
@@ -3179,7 +3240,16 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ).toHaveCount(0);
     statementMode = "populated";
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.goto(`/company/${id}`);
+    await page.goto("/portfolio");
+    await page
+      .getByRole("region", { name: "Holdings", exact: true })
+      .getByRole("link", { name: explorerCompany.name, exact: true })
+      .filter({ visible: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(`listing=${listingId}.*from=portfolio`),
+    );
     await expect(
       page.getByRole("tablist", { name: "Company research views" }),
     ).toBeVisible();
@@ -3189,12 +3259,39 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(page.getByLabel("Select exact listing")).toHaveValue(
       listingId,
     );
+    await page.screenshot({
+      path: testInfo.outputPath(`company-overview-${width}.png`),
+    });
+    await expect(
+      page.getByRole("link", { name: "← Back to holdings" }),
+    ).toHaveAttribute("href", "/portfolio#portfolio-holdings");
+    await expect(
+      page.getByRole("link", { name: "Review allocation →" }),
+    ).toHaveAttribute("href", "/portfolio#portfolio-allocation");
+    await page.getByLabel("Select exact listing").selectOption(otherListing.id);
+    await page.getByRole("tab", { name: "Prices & history" }).click();
+    await expect(
+      page.getByRole("heading", { name: "No exact listing history" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
+    ).toHaveCount(0);
+    await expect(page.getByText("Loading quote context")).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByLabel("Select exact listing")).toHaveValue(
+      otherListing.id,
+    );
+    await page.getByLabel("Select exact listing").selectOption(listingId);
+    await expect(
+      page.getByRole("img", { name: "Exact-listing price history for EXPL" }),
+    ).toBeVisible();
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
     expect(marketDataRequestCount).toBeGreaterThanOrEqual(1);
     await expect(
       page.getByText("FRESH", { exact: true }).first(),
     ).toBeVisible();
     await expect(
-      page.locator("#overview").getByText("10%", { exact: true }),
+      page.locator("#overview").getByText("10%", { exact: true }).first(),
     ).toBeVisible();
     await expect(
       page.locator("#overview").getByText("20%", { exact: true }).first(),
@@ -3204,7 +3301,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       page.getByText("VALUED", { exact: true }).first(),
     ).toBeVisible();
     await expect(page.getByText("$42.50").first()).toBeVisible();
-    await page.getByRole("tab", { name: "Investment Thesis" }).click();
+    await page.getByRole("tab", { name: "Thesis & risks" }).click();
     await expect(
       page.getByRole("heading", { name: "Investment quality" }),
     ).toBeVisible();
@@ -3329,7 +3426,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(page.getByText("0000000001-26-000001")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toBeHidden();
-    await page.getByRole("tab", { name: "Research & Evidence" }).click();
+    await page.getByRole("tab", { name: "Evidence" }).click();
     await expect(
       page.getByRole("heading", { name: "Filings & source documents" }),
     ).toBeVisible();
@@ -3391,7 +3488,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     ).toBeVisible();
     await page.getByRole("button", { name: "Close details" }).click();
     await page.getByLabel("Evidence category").selectOption("ALL");
-    await page.getByRole("tab", { name: "Investment Thesis" }).click();
+    await page.getByRole("tab", { name: "Thesis & risks" }).click();
     const thesis = page.getByRole("region", { name: "Investment thesis" });
     await expect(
       thesis.getByRole("heading", { name: "Investment thesis" }),
@@ -3432,9 +3529,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
         "The initial thesis rests on recurring customer demand.",
       ),
     ).toBeVisible();
-    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await page.getByRole("tab", { name: "Prices & history" }).click();
     await expect(
-      page.getByRole("heading", { name: "Historical analysis" }),
+      page.getByRole("heading", { name: "Prices & history" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Market history" }),
@@ -3445,6 +3542,34 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByText(/Exchange-session coverage has not been assessed/),
     ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`company-prices-${width}.png`),
+    });
+    const priceChart = page.getByRole("img", {
+      name: "Exact-listing price history for EXPL",
+    });
+    await priceChart.scrollIntoViewIfNeeded();
+    await expect(priceChart.locator("path")).toHaveCSS(
+      "stroke",
+      "rgb(0, 119, 125)",
+    );
+    await page.screenshot({
+      path: testInfo.outputPath(`prices-light-${width}.png`),
+    });
+    await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
+    await expect(priceChart.locator("path")).toHaveCSS(
+      "stroke",
+      "rgb(39, 196, 197)",
+    );
+    await expect(page.getByRole("tab", { name: "Prices & history" })).toHaveCSS(
+      "color",
+      "rgb(236, 240, 245)",
+    );
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`prices-dark-${width}.png`),
+    });
+    await page.getByLabel("Appearance", { exact: true }).selectOption("light");
     await expect(page.getByLabel("Historical date range")).toBeVisible();
     await page.getByRole("button", { name: "All available" }).click();
     await expect(
@@ -3602,14 +3727,14 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       ),
     ).toBe(true);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await page.getByRole("tab", { name: "Prices & history" }).click();
     await expect(
       page.getByRole("heading", { name: "Market history" }),
     ).toBeVisible();
     await expect(
       page.getByText("Market: AVAILABLE · Quote: FRESH"),
     ).toBeVisible();
-    await expect(page.getByText("200DMA")).toBeVisible();
+    await expect(page.getByText("200DMA", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("img", {
         name: "Exact-listing price history for EXPL",
@@ -3625,7 +3750,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto(`/company/${id}`);
-    await page.getByRole("tab", { name: "Historical Analysis" }).click();
+    await page.getByRole("tab", { name: "Prices & history" }).click();
     await expect(page.getByText("Price series needs review")).toBeVisible();
     await expect(
       page.getByText("Market: PARTIAL · Quote: FRESH"),
@@ -3720,7 +3845,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
   await page.getByRole("button", { name: "Sources & alignment" }).click();
   await expect(page.getByText("No consensus provider mapping.")).toBeVisible();
   await page.getByRole("button", { name: "Close details" }).click();
-  await page.getByRole("tab", { name: "Historical Analysis" }).click();
+  await page.getByRole("tab", { name: "Prices & history" }).click();
   const temporalRegion = page.getByRole("region", {
     name: "Forecast vs. outcome",
   });
@@ -3733,6 +3858,42 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  sparseOverview = true;
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`/company/${id}?from=portfolio&listing=${listingId}`);
+    await expect(
+      page.getByText("Held · unvalued", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Quality not assessed", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("No accepted thesis", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Business assessment", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("Valuation context", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByText("Not held", { exact: true })).toHaveCount(0);
+    await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`sparse-overview-dark-${width}.png`),
+    });
+    await page.getByLabel("Appearance", { exact: true }).selectOption("light");
+    await page.getByRole("link", { name: "Prices & history" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`view=history.*listing=${listingId}.*from=portfolio`),
+    );
+    await page.getByRole("link", { name: "Review allocation →" }).click();
+    await expect(page).toHaveURL(/portfolio#portfolio-allocation$/);
+    await expect(
+      page.getByRole("heading", { name: "Allocation and exposure" }),
+    ).toBeVisible();
+  }
 });
 
 test("Company Explorer exports, previews and accepts a Sheets contract responsively", async ({

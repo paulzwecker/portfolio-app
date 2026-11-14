@@ -57,6 +57,7 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
       errors.push(`${response.status()} ${new URL(response.url()).pathname}`);
   });
   await page.goto(`/company/${fixture.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   const panel = page.getByRole("region", {
     name: "SEC source coverage",
     exact: true,
@@ -147,9 +148,7 @@ test("company SEC evidence leads to scoped diagnostics without writes", async ({
   await expect(panel).toHaveCount(0);
   await page.getByRole("button", { name: "Latest known", exact: true }).click();
   await expect(panel).toBeVisible();
-  await page
-    .getByRole("tab", { name: "Research & Evidence", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Evidence", exact: true }).click();
   await expect(panel).toBeVisible();
   await panel.getByRole("button", { name: "Inspect SEC coverage" }).click();
   await drawer
@@ -249,6 +248,7 @@ test("a changed issuer identity is visible beside the historical refresh", async
       writes.push(req.method());
   });
   await page.goto(`/company/${before.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   const panel = page.getByRole("region", {
     name: "SEC source coverage",
     exact: true,
@@ -337,6 +337,7 @@ test("a changed issuer identity in a bootstrap remains visible when complete", a
       writes.push(req.method());
   });
   await page.goto(`/company/${before.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   const panel = page.getByRole("region", {
     name: "SEC source coverage",
     exact: true,
@@ -487,6 +488,7 @@ test("scoped company controls queue only the selected SEC job and retain termina
     },
   );
   await page.goto(`/company/${fixture.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   await expect(
     page.getByText(/SEC eligibility comes from verified holdings/),
   ).toBeVisible();
@@ -511,6 +513,7 @@ test("scoped company controls queue only the selected SEC job and retain termina
     await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
     if (index === 0) {
       await page.reload();
+      await page.getByText("Data & refresh", { exact: true }).click();
       await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
     }
     await expect(button).toBeDisabled();
@@ -615,6 +618,7 @@ test("company refresh history restores multiple active jobs and rejects a mismat
       }),
   );
   await page.goto(`/company/${fixture.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   const controls = page.getByRole("group", {
     name: "Company refresh requests",
     exact: true,
@@ -634,6 +638,7 @@ test("company refresh history restores multiple active jobs and rejects a mismat
     controls.getByRole("button", { name: "Refresh SEC filings" }),
   ).toBeDisabled();
   await page.reload();
+  await page.getByText("Data & refresh", { exact: true }).click();
   await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
   await expect(controls.getByText("RUNNING", { exact: true })).toBeVisible();
   mismatch = true;
@@ -673,6 +678,7 @@ test("company refresh history fails closed on timeout and older API then allows 
     },
   );
   await page.goto(`/company/${fixture.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   const controls = page.getByRole("group", {
     name: "Company refresh requests",
     exact: true,
@@ -783,6 +789,7 @@ test("a completed older job is recovered after it leaves the bounded history", a
       }),
   );
   await page.goto(`/company/${fixture.company_id}?view=financials`);
+  await page.getByText("Data & refresh", { exact: true }).click();
   const controls = page.getByRole("group", {
     name: "Company refresh requests",
     exact: true,

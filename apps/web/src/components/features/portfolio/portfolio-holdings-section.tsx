@@ -1,5 +1,7 @@
 "use client";
 
+import { companyResearchHref } from "../company/company-navigation";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PageSection } from "@/components/app/page-section";
@@ -58,7 +60,10 @@ export function PortfolioHoldingsSection({
         <div className="min-w-0">
           {row.companyId ? (
             <Link
-              href={`/company/${row.companyId}`}
+              href={companyResearchHref(row.companyId, {
+                listingId: row.listingId,
+                fromPortfolio: true,
+              })}
               className="font-medium hover:text-primary"
             >
               {row.companyName}
@@ -117,7 +122,11 @@ export function PortfolioHoldingsSection({
               <p>{statusLabel(row.valuationStatus)}</p>
               {row.valuationStatus === "PRICE_UNAVAILABLE" && row.companyId && (
                 <Link
-                  href={`/company/${row.companyId}?view=history`}
+                  href={companyResearchHref(row.companyId, {
+                    listingId: row.listingId,
+                    fromPortfolio: true,
+                    view: "history",
+                  })}
                   aria-label={`Review company prices, from ${row.ticker ?? "listing"} ${row.venue ?? row.listingId}`}
                   className="inline-block text-primary underline underline-offset-2"
                 >
