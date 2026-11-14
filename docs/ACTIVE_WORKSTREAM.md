@@ -36,7 +36,8 @@ no reviewed production CIK mappings. Private target-bound reports and the exact
 single-issuer proposal are in `%LOCALAPPDATA%\PortfolioResearch\private-reports`.
 The existing isolated SEC source-backed evidence is not production ingestion.
 
-Engineering package is ready for one owner-reviewed PR after remote checks.
+Engineering package is [PR #37](https://github.com/paulzwecker/portfolio-app/pull/37).
+Local checks pass; verify the latest-head remote checks before owner merge.
 Release classification: CONFIGURATION_REQUIRED; deployment controls/live hosted
 SHAs are unverified, and no deployment is authorized. No migrations. Production
 data activation remains BLOCKED on an approved encrypted destination/key custody
