@@ -23,12 +23,14 @@ After the preliminary integration of `387ec6d`, 471 web tests, 21 isolated
 company-refresh/API tests, contract comparisons, both offline schema gates,
 21 deployment tests and documentation checks passed. Eight synthetic
 desktop/mobile refresh journeys passed against the isolated API; the active
-request layouts were inspected. Repeat affected checks after integrating #36.
+request layouts were inspected. The post-#36 checks are recorded below.
 
 After integrating `9939fe3`, 481 web tests, 21 isolated company-refresh/API
 tests, contract comparisons, both offline schema gates, 21 deployment tests and
-the documentation check passed. The first concurrent web run and isolated
-browser startup timed out under load; the web suite passed when rerun serially.
+the documentation check passed. Eight isolated-API desktop/mobile refresh
+journeys, the synthetic Company Explorer journey, frontend build and lint also
+passed. The first concurrent web run and isolated browser startup timed out
+under load; the web and browser checks passed when rerun serially.
 
 Release status: BLOCKED. On November 14, the owner reported Render Auto-Deploy
 after CI, Blueprint Auto Sync on, and a Vercel hook permitting production when
