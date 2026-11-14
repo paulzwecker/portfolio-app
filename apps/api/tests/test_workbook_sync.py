@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_canonical_bootstrap import _prepared_inputs, synthetic_workbooks
@@ -32,7 +32,7 @@ from portfolio_api.domain.models import (
     WorkbookSyncRun,
     WorkbookSyncSchemaApproval,
 )
-from portfolio_api.recurring_operations import _manual_job_steps
+from portfolio_api.recurring_operations import LOCK_KEY, LOCK_NAMESPACE, _manual_job_steps
 from portfolio_api.workbook_sources import (
     PORTFOLIO_PROFILE,
     _portfolio_semantic_manifest,
@@ -229,6 +229,100 @@ def test_one_shot_runner_creates_and_runs_only_the_allowlisted_request(
     output = capsys.readouterr().out
     assert processed[0] in output
     assert "workbook" not in output.casefold()
+
+
+@pytest.mark.integration
+def test_one_shot_runner_defers_without_claiming_during_scheduled_cycle(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from portfolio_api import manual_job_runner
+    from portfolio_api.domain.schemas import OperationalJobRequestCreate
+    from portfolio_api.manual_operations import create_job_request
+    from portfolio_api.settings import Settings
+
+    settings = Settings(
+        _env_file=None,
+        database_url=SecretStr(postgres_engine.url.render_as_string(hide_password=False)),
+        manual_operations_enabled=True,
+    )
+    monkeypatch.setattr(manual_job_runner, "Settings", lambda: settings)
+    monkeypatch.setattr(
+        manual_job_runner, "create_database_engine", lambda *_args, **_kwargs: postgres_engine
+    )
+    monkeypatch.setattr(manual_job_runner, "verify_database_write_target", lambda _engine: None)
+    monkeypatch.setattr(
+        manual_job_runner,
+        "process_manual_job_requests",
+        lambda *_args, **_kwargs: pytest.fail("Busy worker must not claim a request"),
+    )
+    with Session(postgres_engine) as session, session.begin():
+        request, _ = create_job_request(
+            session, OperationalJobRequestCreate(job_name="SEC_FILINGS")
+        )
+        request_id = request.id
+    parameters = {"namespace": LOCK_NAMESPACE, "lock_key": LOCK_KEY}
+    with postgres_engine.connect() as scheduled:
+        assert scheduled.execute(
+            text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"), parameters
+        ).scalar_one()
+        scheduled.commit()
+        try:
+            assert manual_job_runner.main([str(request_id), "--confirm-run"]) == 1
+            output = capsys.readouterr().out
+            assert '"status": "DEFERRED"' in output
+            assert str(request_id) in output
+            with Session(postgres_engine) as session:
+                queued = session.get(OperationalJobRequest, request_id)
+                assert queued is not None and queued.status == "QUEUED"
+                assert queued.attempt_count == 0
+        finally:
+            assert scheduled.execute(
+                text("SELECT pg_advisory_unlock(:namespace, :lock_key)"), parameters
+            ).scalar_one()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("fail", [False, True])
+def test_one_shot_runner_holds_shared_lock_and_releases_after_completion_or_error(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch, fail: bool
+) -> None:
+    from portfolio_api import manual_job_runner
+    from portfolio_api.settings import Settings
+
+    settings = Settings(
+        _env_file=None,
+        database_url=SecretStr(postgres_engine.url.render_as_string(hide_password=False)),
+        manual_operations_enabled=True,
+    )
+    monkeypatch.setattr(manual_job_runner, "Settings", lambda: settings)
+    monkeypatch.setattr(
+        manual_job_runner, "create_database_engine", lambda *_args, **_kwargs: postgres_engine
+    )
+    monkeypatch.setattr(manual_job_runner, "verify_database_write_target", lambda _engine: None)
+    parameters = {"namespace": LOCK_NAMESPACE, "lock_key": LOCK_KEY}
+    called = []
+    with postgres_engine.connect() as observer:
+
+        def process(*_args: object, **_kwargs: object) -> dict[str, object]:
+            called.append(True)
+            assert not observer.execute(
+                text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"), parameters
+            ).scalar_one()
+            if fail:
+                raise ValueError("Synthetic execution failure")
+            return {"status": "SUCCEEDED", "steps": []}
+
+        monkeypatch.setattr(manual_job_runner, "process_manual_job_requests", process)
+        assert manual_job_runner.main(["--job-name", "SEC_FILINGS", "--confirm-run"]) == (
+            2 if fail else 0
+        )
+        assert called == [True]
+        assert observer.execute(
+            text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"), parameters
+        ).scalar_one()
+        assert observer.execute(
+            text("SELECT pg_advisory_unlock(:namespace, :lock_key)"), parameters
+        ).scalar_one()
 
 
 @pytest.mark.integration
