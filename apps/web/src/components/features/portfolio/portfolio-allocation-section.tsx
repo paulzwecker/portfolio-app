@@ -1,9 +1,9 @@
+import { companyResearchHref } from "../company/company-navigation";
 import Link from "next/link";
 import { ChartContainer } from "@/components/app/chart-container";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageSection } from "@/components/app/page-section";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   GapRow,
@@ -46,7 +46,10 @@ function allocationItems(overview: Overview): ExposureItem[] {
     value: row.current_market_value,
     currency: row.current_market_currency,
     status: row.allocation_status,
-    href: `/company/${row.company.id}`,
+    href: companyResearchHref(row.company.id, {
+      listingId: row.positions[0]?.listing_id,
+      fromPortfolio: true,
+    }),
   }));
   const standalone: ExposureItem[] = overview.standalone_positions.map(
     (position) => ({
@@ -110,33 +113,6 @@ export function PortfolioAllocationSection({
               Group by
             </span>
             <Badge>Company and cash</Badge>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled
-              title="Canonical sector classification coverage is incomplete"
-            >
-              Sector · unavailable
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled
-              title="Canonical geographic classification coverage is incomplete"
-            >
-              Geography · unavailable
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled
-              title="Canonical business-model classification coverage is incomplete"
-            >
-              Business model · unavailable
-            </Button>
           </div>
           {items.length === 0 ? (
             <EmptyState
@@ -336,15 +312,22 @@ export function PortfolioAllocationSection({
 
 export function PortfolioPerformanceSection() {
   return (
-    <PageSection
+    <details
       id="portfolio-performance"
-      title="Performance"
-      description="Portfolio returns require reliable cash-flow and dated valuation history."
+      className="rounded-xl border bg-card p-4"
     >
+      <summary className="cursor-pointer text-sm font-medium">
+        Data coverage & performance availability
+      </summary>
+      <p className="my-3 text-sm text-muted-foreground">
+        Sector, geographic and business-model exposure are unavailable until
+        their classifications are recorded. Composition uses company, listing
+        and cash identities.
+      </p>
       <EmptyState
         title="Historical portfolio performance is unavailable"
         description="The application does not yet have complete transaction and cash-flow history to calculate portfolio performance. Current holdings multiplied by historical prices would be a hypothetical price series, not realized portfolio performance, so it is not shown here."
       />
-    </PageSection>
+    </details>
   );
 }

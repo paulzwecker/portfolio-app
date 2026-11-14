@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CompanyResearchLink } from "./company-research-link";
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -1522,12 +1523,13 @@ function QuestionSummary({
             The accepted thesis keeps this question open for evidence review.
           </p>
         </div>
-        <Link
-          href={`/company/${encodeURIComponent(companyId)}?view=thesis`}
+        <CompanyResearchLink
+          companyId={companyId}
+          view="thesis"
           className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           Review thesis <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
+        </CompanyResearchLink>
       </CardContent>
     </Card>
   );
@@ -1605,27 +1607,30 @@ function ThesisContext({
             })}
           </div>
           <div className="flex flex-wrap gap-3 border-t pt-3">
-            <Link
-              href={`/company/${encodeURIComponent(companyId)}?view=thesis`}
+            <CompanyResearchLink
+              companyId={companyId}
+              view="thesis"
               className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               Open full thesis{" "}
               <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-            <Link
-              href={`/company/${encodeURIComponent(companyId)}?view=financials`}
+            </CompanyResearchLink>
+            <CompanyResearchLink
+              companyId={companyId}
+              view="financials"
               className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               Review financials{" "}
               <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-            <Link
-              href={`/company/${encodeURIComponent(companyId)}?view=valuation`}
+            </CompanyResearchLink>
+            <CompanyResearchLink
+              companyId={companyId}
+              view="valuation"
               className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               Review valuation{" "}
               <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
+            </CompanyResearchLink>
           </div>
         </CardContent>
       </Card>
@@ -1894,13 +1899,14 @@ export function CompanyResearchEvidenceWorkspace({
                         >
                           Inspect current revision
                         </Button>
-                        <Link
-                          href={`/company/${encodeURIComponent(companyId)}?view=financials`}
+                        <CompanyResearchLink
+                          companyId={companyId}
+                          view="financials"
                           className="inline-flex items-center gap-1 px-2 text-sm font-medium text-primary hover:underline"
                         >
                           Financial context{" "}
                           <ArrowRight aria-hidden="true" className="size-4" />
-                        </Link>
+                        </CompanyResearchLink>
                       </div>
                       <ResearchEvidenceSection
                         data={streamResearch}

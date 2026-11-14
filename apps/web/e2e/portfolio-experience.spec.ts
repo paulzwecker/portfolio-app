@@ -74,7 +74,10 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Sector · unavailable/ }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
+  await page
+    .getByText("Data coverage & performance availability", { exact: true })
+    .click();
   await expect(
     page.getByRole("heading", {
       name: "Historical portfolio performance is unavailable",

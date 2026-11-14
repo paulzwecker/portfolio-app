@@ -20,6 +20,7 @@ import { CompanyValuationWorkspace } from "@/components/features/company/company
 import { InvestmentQuality as CompanyInvestmentQuality } from "@/components/features/company/company-investment-quality";
 import { FinancialStatementsWorkspace } from "@/components/features/company/financial-statements/financial-statements-workspace";
 import { CompanyHistoricalAnalysisWorkspace } from "@/components/features/company/company-historical-analysis-workspace";
+import { selectedCompanyListing } from "./company-navigation";
 import { CompanyRefreshAction } from "@/components/features/operations/company-refresh-action";
 export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
   const id = companyId;
@@ -31,6 +32,16 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
     isListingMarketDataList,
   );
   const detail = state.data;
+  const query = new URLSearchParams(search);
+  const listingId = detail
+    ? selectedCompanyListing(detail, query.get("listing"))
+    : "";
+  const fromPortfolio = query.get("from") === "portfolio";
+  const selectListing = (next: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("listing", next);
+    window.history.replaceState(null, "", url);
+  };
 
   useEffect(() => {
     const syncFromLocation = () =>
@@ -91,6 +102,9 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
       <CompanyIdentityHeader
         detail={detail}
         marketState={marketState}
+        listingId={listingId}
+        onListingChange={selectListing}
+        fromPortfolio={fromPortfolio}
         actions={
           <CompanyRefreshAction
             key={detail.company.id}
@@ -107,7 +121,12 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
         className="min-w-0 space-y-8 outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {view === "overview" && (
-          <CompanyOverview detail={detail} lifecycleChanged={state.retry} />
+          <CompanyOverview
+            detail={detail}
+            lifecycleChanged={state.retry}
+            listingId={listingId}
+            fromPortfolio={fromPortfolio}
+          />
         )}
         {view === "financials" && (
           <FinancialStatementsWorkspace companyId={detail.company.id} />
@@ -137,6 +156,8 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
           <CompanyHistoricalAnalysisWorkspace
             companyId={detail.company.id}
             marketState={marketState}
+            listingId={listingId}
+            onListingChange={selectListing}
           />
         )}
       </div>

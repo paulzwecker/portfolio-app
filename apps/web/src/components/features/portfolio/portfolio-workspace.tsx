@@ -263,12 +263,6 @@ export function PortfolioWorkspace({ id }: { id: string }) {
         >
           Allocation &amp; exposure
         </a>
-        <a
-          className="rounded-md px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          href="#portfolio-performance"
-        >
-          Performance
-        </a>
         <Link
           className="rounded-md px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           href="/portfolio/ledger"

@@ -6,14 +6,17 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Encrypted recovery and bounded financial-data activation. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                              |
-| Branch / PR                 | `codex/data-recovery-activation` from main `ddbacbc`; #34, #36 and #35 are owner-merged. [PR #37](https://github.com/paulzwecker/portfolio-app/pull/37); no merge/deployment authority.      |
-| Implementation              | Native snapshot/restore reuse with age encryption, production read guard, access inventory and disposable recovery test. No new service or migration.                                        |
-| Next ready substantial task | Owner-approved current-state backup and restore rehearsal, then first real market checkpoint; SEC mapping/ingestion is independent of market entitlement.                                    |
-| Deferred work               | Provider adapters before source selection; generic recovery/scheduler frameworks; Sheets recovery and unrelated UI changes.                                                                  |
-| Production boundary         | CONFIGURATION_REQUIRED for release controls; ingestion BLOCKED on approved recovery destination/target and provider access. No production backup, write, deployment or activation performed. |
+| Field                       | Current value                                                                                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                              |
+| Branch / PR                 | `codex/investor-research-journey`; [PR #38](https://github.com/paulzwecker/portfolio-app/pull/38) frozen for owner review. Latest main `9a27353` with merged #37 integrated.       |
+| Implementation              | Complete: exact-listing research navigation, data-aware summary, responsive themed price charts; 483 web / 147 managed browser tests, isolated API journeys and final review pass. |
+| Next ready substantial task | Owner review of the frozen investor journey; then approved recovery/provider activation and real price/FX/fundamental readback.                                                    |
+| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                                                                           |
+| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation.                                                   |
+
+The current acceptance and evidence live in the active handoff. This UI milestone
+does not depend on completing Sheets recovery.
 
 November 14 read-only evidence: schema `b59f16c8a203`, accepted 22 positions,
 zero prices/FX/facts/filings/consensus. Market preview READY for 22 listings plus

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { DataFreshnessIndicator } from "@/components/app/data-freshness-indicator";
@@ -22,20 +21,17 @@ export function CompanyIdentityHeader({
   detail,
   marketState,
   actions,
+  listingId,
+  onListingChange,
+  fromPortfolio,
 }: {
   detail: CompanyDetail;
   marketState: MarketState;
   actions?: ReactNode;
+  listingId: string;
+  onListingChange: (id: string) => void;
+  fromPortfolio: boolean;
 }) {
-  const [requestedListingId, setListingId] = useState(
-    () => detail.positions[0]?.listing_id ?? detail.listings[0]?.id ?? "",
-  );
-  const listingId = detail.listings.some(
-    (listing) => listing.id === requestedListingId,
-  )
-    ? requestedListingId
-    : (detail.positions[0]?.listing_id ?? detail.listings[0]?.id ?? "");
-
   const market = marketState.data?.find(
     (item) => item.listing.id === listingId,
   );
@@ -48,16 +44,33 @@ export function CompanyIdentityHeader({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link
           className="text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
-          href="/universe"
+          href={fromPortfolio ? "/portfolio#portfolio-holdings" : "/universe"}
         >
-          ← Back to universe
+          {fromPortfolio ? "← Back to holdings" : "← Back to universe"}
         </Link>
+        {fromPortfolio && (
+          <Link
+            href="/portfolio#portfolio-allocation"
+            className="ml-auto font-medium text-primary hover:underline"
+          >
+            Review allocation →
+          </Link>
+        )}
       </div>
       <PageHeader
         eyebrow="Company Explorer"
         title={detail.company.name}
-        description="What do we know about this business, what do we expect, and what is it worth?"
-        actions={actions}
+        className="mb-4"
+        actions={
+          actions ? (
+            <details className="max-w-lg rounded-lg border bg-card p-3 text-sm">
+              <summary className="cursor-pointer font-medium">
+                Data & refresh
+              </summary>
+              <div className="mt-3 border-t pt-3">{actions}</div>
+            </details>
+          ) : undefined
+        }
         demo={detail.company.is_demo}
         context={
           <>
@@ -72,10 +85,10 @@ export function CompanyIdentityHeader({
         }
       />
       <Card className="shadow-none">
-        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <CardContent className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 p-4 sm:p-5">
           <div className="min-w-0 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              Exact listing and quote context
+              Exact listing
             </p>
             {detail.listings.length > 0 ? (
               <label className="flex flex-wrap items-center gap-2 text-sm font-medium">
@@ -83,8 +96,8 @@ export function CompanyIdentityHeader({
                 <select
                   aria-label="Select exact listing"
                   value={listingId}
-                  onChange={(event) => setListingId(event.target.value)}
-                  className="h-10 max-w-full rounded-md border bg-background px-3"
+                  onChange={(event) => onListingChange(event.target.value)}
+                  className="h-10 max-w-full rounded-md border bg-background px-2 text-xs sm:text-sm"
                 >
                   {detail.listings.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -99,34 +112,10 @@ export function CompanyIdentityHeader({
                 No listing identity is recorded.
               </p>
             )}
-            {market ? (
-              <DataFreshnessIndicator
-                state={market.freshness}
-                observedAt={quote?.observed_at}
-                source={quote?.provider ?? "No quote source"}
-                detail={
-                  quote
-                    ? `Market date ${date(quote.market_date)} · ${quote.data_quality}`
-                    : "No quote for this listing"
-                }
-              />
-            ) : marketState.error ? (
-              <div className="space-y-2">
-                <StatusIndicator status="UNAVAILABLE" />
-                <p className="text-xs text-muted-foreground">
-                  Listing quote state could not be loaded.
-                </p>
-              </div>
-            ) : (
-              <StatusIndicator
-                status="REFRESHING"
-                label="Loading quote context"
-              />
-            )}
           </div>
-          <div className="min-w-0 sm:text-right">
+          <div className="min-w-0 text-right">
             <p className="text-xs text-muted-foreground">
-              Latest split-adjusted close · {currency ?? "Currency unknown"}
+              Split-adjusted close · {currency ?? "Unknown"}
             </p>
             <p className="mt-1 break-words text-2xl font-semibold tabular-nums">
               {quote?.split_adjusted_close === null || !quote
@@ -140,6 +129,34 @@ export function CompanyIdentityHeader({
                   retry={marketState.retry}
                 />
               </div>
+            )}
+          </div>
+          <div className="col-span-2">
+            {market ? (
+              <DataFreshnessIndicator
+                state={market.freshness}
+                observedAt={quote?.observed_at}
+                source={quote?.provider ?? "No quote source"}
+                detail={
+                  quote
+                    ? `Market date ${date(quote.market_date)} · ${quote.data_quality}`
+                    : "No quote for this listing"
+                }
+              />
+            ) : marketState.error || marketState.data ? (
+              <div className="space-y-2">
+                <StatusIndicator status="UNAVAILABLE" />
+                <p className="text-xs text-muted-foreground">
+                  {marketState.error
+                    ? "Listing quote state could not be loaded."
+                    : "No quote recorded for this exact listing."}
+                </p>
+              </div>
+            ) : (
+              <StatusIndicator
+                status="REFRESHING"
+                label="Loading quote context"
+              />
             )}
           </div>
         </CardContent>

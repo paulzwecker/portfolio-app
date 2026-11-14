@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useChartWidth } from "@/hooks/use-chart-width";
 import {
   ChevronRight,
   Clock3,
@@ -352,12 +353,22 @@ export function PriceHistoryChart({
         description="At least two exact-listing observations are required for a line chart. Existing observations remain available in the history list."
       />
     );
+  return <PriceHistoryPlot market={market} observations={observations} />;
+}
+
+function PriceHistoryPlot({
+  market,
+  observations,
+}: {
+  market: ListingMarketData;
+  observations: ListingMarketData["history"];
+}) {
+  const { containerRef, width } = useChartWidth();
   const ordered = [...observations].reverse();
   const dated = ordered.filter((item) => item.split_adjusted_close !== null);
   const times = dated.map((item) => parseTime(item.market_date) ?? 0);
   const numeric = dated.map((item) => Number(item.split_adjusted_close));
   const bounds = chartBounds(numeric);
-  const width = 760;
   const height = 230;
   const left = 54;
   const right = 16;
@@ -380,7 +391,7 @@ export function PriceHistoryChart({
     )
     .join(" ");
   return (
-    <div className="min-w-0">
+    <div ref={containerRef} className="min-w-0">
       <svg
         role="img"
         aria-label={`Exact-listing price history for ${market.listing.ticker}`}
@@ -435,19 +446,14 @@ export function PriceHistoryChart({
         >
           {marketDate(dated[dated.length - 1].market_date)}
         </text>
-        <path
-          d={path}
-          fill="none"
-          stroke="hsl(var(--primary))"
-          strokeWidth="2.4"
-        />
+        <path d={path} fill="none" stroke="var(--chart-1)" strokeWidth="2.4" />
         {dated.map((item, index) => (
           <circle
             key={item.id}
             cx={x(times[index])}
             cy={y(numeric[index])}
             r="3"
-            fill="hsl(var(--primary))"
+            fill="var(--chart-1)"
           >
             <title>{`${marketDate(item.market_date)} · ${formatCurrency(item.split_adjusted_close, item.currency)} · observed ${dateTime(item.observed_at)} · recorded ${dateTime(item.recorded_at)}`}</title>
           </circle>
@@ -740,14 +746,17 @@ export function PriceObservationReview({
 function MarketHistory({
   marketState,
   range,
+  listingId,
+  onListingChange,
 }: {
   marketState: MarketState;
   range: HistoricalRange;
+  listingId: string;
+  onListingChange: (id: string) => void;
 }) {
   const markets = marketState.data ?? [];
-  const [listingId, setListingId] = useState<string | null>(null);
   const selected =
-    markets.find((item) => item.listing.id === listingId) ?? markets[0] ?? null;
+    markets.find((item) => item.listing.id === listingId) ?? null;
   const observations = selected
     ? filterByHistoricalRange(
         selected.history,
@@ -759,11 +768,11 @@ function MarketHistory({
     return (
       <PendingOrError error={marketState.error} retry={marketState.retry} />
     );
-  if (markets.length === 0)
+  if (!selected)
     return (
       <EmptyState
         title="No exact listing history"
-        description="A listing-specific market observation has not been recorded for this company."
+        description="No market history is recorded for the selected listing. Choose another exact listing above to inspect its own observations."
       />
     );
   return (
@@ -782,7 +791,7 @@ function MarketHistory({
             <select
               aria-label="Historical listing"
               value={selected?.listing.id ?? ""}
-              onChange={(event) => setListingId(event.target.value)}
+              onChange={(event) => onListingChange(event.target.value)}
               className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
             >
               {markets.map((item) => (
@@ -811,7 +820,7 @@ function MarketHistory({
           </ChartContainer>
           <Card className="shadow-none">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Market regime</CardTitle>
+              <CardTitle className="text-sm">Price context</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
               <div className="flex items-center justify-between gap-2">
@@ -833,10 +842,14 @@ function MarketHistory({
                     : "Unknown"}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Source trend</span>
-                <StatusIndicator status={selected.price_regime?.trend_state} />
-              </div>
+              {selected.price_regime && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Source trend</span>
+                  <StatusIndicator
+                    status={selected.price_regime?.trend_state}
+                  />
+                </div>
+              )}
               {selected.price_regime && (
                 <p className="text-muted-foreground">
                   Source regime as of {dateTime(selected.price_regime.as_of)}
@@ -865,23 +878,25 @@ function MarketHistory({
                       ? null
                       : readablePercent(selected.analytics.drawdown_52w),
                   ],
-                ].map(([label, value]) => (
-                  <div key={label as string}>
-                    <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="mt-1 font-medium tabular-nums">
-                      {value === null
-                        ? "Unavailable"
-                        : label === "20DMA" ||
-                            label === "50DMA" ||
-                            label === "200DMA"
-                          ? formatCurrency(
-                              value as string,
-                              selected.listing.currency ?? null,
-                            )
-                          : value}
-                    </dd>
-                  </div>
-                ))}
+                ]
+                  .filter(([, value]) => value !== null)
+                  .map(([label, value]) => (
+                    <div key={label as string}>
+                      <dt className="text-muted-foreground">{label}</dt>
+                      <dd className="mt-1 font-medium tabular-nums">
+                        {value === null
+                          ? "Unavailable"
+                          : label === "20DMA" ||
+                              label === "50DMA" ||
+                              label === "200DMA"
+                            ? formatCurrency(
+                                value as string,
+                                selected.listing.currency ?? null,
+                              )
+                            : value}
+                      </dd>
+                    </div>
+                  ))}
               </div>
               <p className="border-t pt-3 leading-5 text-muted-foreground">
                 {selected.analytics.status === "AVAILABLE"
@@ -916,29 +931,29 @@ function ExpectationChart({
         {
           key: "expected_cash_flow_irr" as const,
           label: "Expected IRR",
-          color: "hsl(var(--primary))",
+          color: "var(--primary)",
         },
         {
           key: "hurdle" as const,
           label: "Hurdle",
-          color: "hsl(var(--warning))",
+          color: "var(--warning)",
         },
         {
           key: "expected_excess" as const,
           label: "Expected excess",
-          color: "hsl(var(--positive))",
+          color: "var(--positive)",
         },
       ]
     : [
         {
           key: "weighted_fv" as const,
           label: "Weighted Fair Value",
-          color: "hsl(var(--primary))",
+          color: "var(--primary)",
         },
         {
           key: "market_price" as const,
           label: "Comparable price",
-          color: "hsl(var(--info))",
+          color: "var(--info)",
         },
       ];
   const getValue = (
@@ -1685,9 +1700,13 @@ function ThesisContext({
 export function CompanyHistoricalAnalysisWorkspace({
   companyId,
   marketState,
+  listingId,
+  onListingChange,
 }: {
   companyId: string;
   marketState: MarketState;
+  listingId: string;
+  onListingChange: (id: string) => void;
 }) {
   const [range, setRange] = useState<HistoricalRange>("1Y");
   const [eventFilter, setEventFilter] = useState<HistoricalEventKind | "ALL">(
@@ -1743,6 +1762,26 @@ export function CompanyHistoricalAnalysisWorkspace({
       rankingsState.data,
       thesisState.data,
     ],
+  );
+  const historyStates = [
+    expectedState,
+    momentumState,
+    rankingsState,
+    executionState,
+    temporalState,
+    thesisState,
+  ];
+  const historyLoading = historyStates.some(
+    (state) => !state.data && !state.error,
+  );
+  const hasResearchHistory = Boolean(
+    expectedState.data?.history.length ||
+    rankingsState.data?.history.length ||
+    executionState.data?.history.length ||
+    thesisState.data?.streams.some((stream) => stream.current_revision) ||
+    momentumState.data?.coverage_count ||
+    temporalState.data?.actual.value != null ||
+    temporalState.data?.consensus.value != null,
   );
   const filteredEvents = events
     .filter((event) => eventFilter === "ALL" || event.kind === eventFilter)
@@ -1857,7 +1896,7 @@ export function CompanyHistoricalAnalysisWorkspace({
       aria-labelledby="historical-analysis-title"
       className="space-y-8"
     >
-      <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -1866,14 +1905,9 @@ export function CompanyHistoricalAnalysisWorkspace({
                 id="historical-analysis-title"
                 className="text-xl font-semibold tracking-tight"
               >
-                Historical analysis
+                Prices & history
               </h2>
             </div>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-              How market prices, our expectations and our investment decisions
-              changed over time. Each source keeps its own effective, observed,
-              recorded and decision-run timestamps.
-            </p>
           </div>
           <div
             className="flex flex-wrap gap-1"
@@ -1893,260 +1927,260 @@ export function CompanyHistoricalAnalysisWorkspace({
             ))}
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <MetricCard
-            label="Price history"
-            value={
-              marketState.data?.reduce(
-                (count, item) =>
-                  count +
-                  filterByHistoricalRange(
-                    item.history,
-                    range,
-                    (observation) => observation.market_date,
-                  ).length,
-                0,
-              ) ?? "Unavailable"
-            }
-            note="Exact-listing observations in range"
-          />
-          <MetricCard
-            label="Expectation history"
-            value={
-              expectedState.data
-                ? `${expectedState.data.history.length} points`
-                : "Loading"
-            }
-            note={
-              expectedState.data?.status.replaceAll("_", " ") ??
-              "Point-in-time model records"
-            }
-          />
-          <MetricCard
-            label="Recorded decisions"
-            value={
-              rankingsState.data && executionState.data
-                ? `${rankingsState.data.history.length + executionState.data.history.length}`
-                : "Loading"
-            }
-            note="Ranking and Execution Pace snapshots"
-          />
-        </div>
       </div>
       <PageSection
         title="Market history"
-        description="What the exact listing was worth in each market session, with canonical analytics and freshness."
+        description="Split-adjusted daily closes · original listing currency"
         id="market-history"
       >
-        <MarketHistory marketState={marketState} range={range} />
-      </PageSection>
-      <PageSection
-        title="Expectations history"
-        description="How accepted valuation and return expectations changed, while preserving methodology and return-basis differences."
-        id="expectations-history"
-      >
-        <ExpectationsHistory
-          state={expectedState}
+        <MarketHistory
+          marketState={marketState}
           range={range}
-          onInspect={(point) => {
-            setSelectedTimelineEvent(null);
-            setSelectedPoint(point);
-          }}
+          listingId={listingId}
+          onListingChange={onListingChange}
         />
-        <section
-          className="mt-6"
-          role="region"
-          aria-labelledby="historical-forecast-outcome-title"
-        >
-          <h3
-            id="historical-forecast-outcome-title"
-            className="text-base font-semibold"
+      </PageSection>
+      <details
+        className="group rounded-xl border bg-card p-4 sm:p-5"
+        open={hasResearchHistory}
+      >
+        <summary className="cursor-pointer text-sm font-semibold">
+          Expectations & decision history
+          <span className="ml-2 font-normal text-muted-foreground">
+            {hasResearchHistory
+              ? "Observed research available"
+              : historyLoading
+                ? "Loading coverage…"
+                : "No research observations"}
+            {[
+              expectedState,
+              momentumState,
+              rankingsState,
+              executionState,
+              temporalState,
+              thesisState,
+            ].some((state) => state.error)
+              ? " · Some sources unavailable — review diagnostics"
+              : " · Coverage & diagnostics"}
+          </span>
+        </summary>
+        <div className="mt-6 space-y-8">
+          <PageSection
+            title="Expectations history"
+            description="How accepted valuation and return expectations changed, while preserving methodology and return-basis differences."
+            id="expectations-history"
           >
-            Forecast vs. outcome
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            A point-in-time comparison; later actuals are never shown as
-            information available before publication.
-          </p>
-          <div className="mt-3 rounded-lg border p-3">
-            <div className="mb-3 grid gap-2 sm:grid-cols-3">
-              <label className="grid gap-1 text-xs text-muted-foreground">
-                Fiscal year
-                <input
-                  aria-label="Historical fiscal year"
-                  type="number"
-                  value={fiscalYear}
-                  onChange={(event) => setFiscalYear(event.target.value)}
-                  className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
-                />
-              </label>
-              <label className="grid gap-1 text-xs text-muted-foreground">
-                Forecast date
-                <input
-                  aria-label="Historical forecast date"
-                  type="date"
-                  value={asOf}
-                  onChange={(event) => setAsOf(event.target.value)}
-                  className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
-                />
-              </label>
-              <label className="grid gap-1 text-xs text-muted-foreground">
-                Outcome horizon
+            <ExpectationsHistory
+              state={expectedState}
+              range={range}
+              onInspect={(point) => {
+                setSelectedTimelineEvent(null);
+                setSelectedPoint(point);
+              }}
+            />
+            <section
+              className="mt-6"
+              role="region"
+              aria-labelledby="historical-forecast-outcome-title"
+            >
+              <h3
+                id="historical-forecast-outcome-title"
+                className="text-base font-semibold"
+              >
+                Forecast vs. outcome
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A point-in-time comparison; later actuals are never shown as
+                information available before publication.
+              </p>
+              <div className="mt-3 rounded-lg border p-3">
+                <div className="mb-3 grid gap-2 sm:grid-cols-3">
+                  <label className="grid gap-1 text-xs text-muted-foreground">
+                    Fiscal year
+                    <input
+                      aria-label="Historical fiscal year"
+                      type="number"
+                      value={fiscalYear}
+                      onChange={(event) => setFiscalYear(event.target.value)}
+                      className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs text-muted-foreground">
+                    Forecast date
+                    <input
+                      aria-label="Historical forecast date"
+                      type="date"
+                      value={asOf}
+                      onChange={(event) => setAsOf(event.target.value)}
+                      className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs text-muted-foreground">
+                    Outcome horizon
+                    <select
+                      aria-label="Historical return horizon"
+                      value={horizonDays}
+                      onChange={(event) => setHorizonDays(event.target.value)}
+                      className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
+                    >
+                      <option value="90">90 days</option>
+                      <option value="180">180 days</option>
+                      <option value="365">1 year</option>
+                      <option value="730">2 years</option>
+                    </select>
+                  </label>
+                </div>
+                <ForecastOutcome state={temporalState} />
+              </div>
+            </section>
+            <div className="mt-6">
+              <h3 className="text-base font-semibold">Estimate Momentum</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Revision direction and coverage are contextual. Sparse or stale
+                consensus remains explicitly unavailable.
+              </p>
+              <div className="mt-3">
+                <EstimateSummary state={momentumState} />
+              </div>
+            </div>
+            <div className="mt-6">
+              <h3 className="text-base font-semibold">Thesis developments</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Research confidence and thesis revisions are shown as recorded
+                context, separate from factual observations and model outputs.
+              </p>
+              <div className="mt-3">
+                <ThesisContext state={thesisState} />
+              </div>
+            </div>
+          </PageSection>
+          <PageSection
+            title="Decision history"
+            description="Recorded ranking and Execution Pace outcomes with the run context used at that time. Historical entries are not recomputed from today's state."
+            id="decision-history"
+          >
+            <DecisionHistory
+              rankings={rankingsState}
+              execution={executionState}
+            />
+          </PageSection>
+          <PageSection
+            title="Change timeline"
+            description="Filter the dated events that connect market, model, research and decision history. Event times and recorded times remain separate."
+            id="change-timeline"
+            actions={
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <SlidersHorizontal aria-hidden="true" className="size-4" />
+                <span className="sr-only">Event type</span>
                 <select
-                  aria-label="Historical return horizon"
-                  value={horizonDays}
-                  onChange={(event) => setHorizonDays(event.target.value)}
+                  aria-label="Historical event type"
+                  value={eventFilter}
+                  onChange={(event) =>
+                    setEventFilter(
+                      event.target.value as HistoricalEventKind | "ALL",
+                    )
+                  }
                   className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
                 >
-                  <option value="90">90 days</option>
-                  <option value="180">180 days</option>
-                  <option value="365">1 year</option>
-                  <option value="730">2 years</option>
+                  {EVENT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
-            </div>
-            <ForecastOutcome state={temporalState} />
-          </div>
-        </section>
-        <div className="mt-6">
-          <h3 className="text-base font-semibold">Estimate Momentum</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Revision direction and coverage are contextual. Sparse or stale
-            consensus remains explicitly unavailable.
-          </p>
-          <div className="mt-3">
-            <EstimateSummary state={momentumState} />
-          </div>
-        </div>
-        <div className="mt-6">
-          <h3 className="text-base font-semibold">Thesis developments</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Research confidence and thesis revisions are shown as recorded
-            context, separate from factual observations and model outputs.
-          </p>
-          <div className="mt-3">
-            <ThesisContext state={thesisState} />
-          </div>
-        </div>
-      </PageSection>
-      <PageSection
-        title="Decision history"
-        description="Recorded ranking and Execution Pace outcomes with the run context used at that time. Historical entries are not recomputed from today's state."
-        id="decision-history"
-      >
-        <DecisionHistory rankings={rankingsState} execution={executionState} />
-      </PageSection>
-      <PageSection
-        title="Change timeline"
-        description="Filter the dated events that connect market, model, research and decision history. Event times and recorded times remain separate."
-        id="change-timeline"
-        actions={
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <SlidersHorizontal aria-hidden="true" className="size-4" />
-            <span className="sr-only">Event type</span>
-            <select
-              aria-label="Historical event type"
-              value={eventFilter}
-              onChange={(event) =>
-                setEventFilter(
-                  event.target.value as HistoricalEventKind | "ALL",
-                )
-              }
-              className="h-9 rounded-md border bg-background px-2 text-sm text-foreground"
-            >
-              {EVENT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        }
-      >
-        <div className="space-y-2">
-          {filteredEvents.length === 0 ? (
-            <EmptyState
-              title="No events in this range"
-              description="No dated source event matches the selected time range and filter. Missing history remains visible as unavailable in its source section."
-            />
-          ) : (
-            visibleEvents.map((event) => (
-              <div
-                key={event.id}
-                className="flex min-w-0 items-start gap-3 rounded-lg border p-3"
-              >
-                <div className="mt-1 rounded-full bg-primary/10 p-1.5 text-primary">
-                  <LineChart aria-hidden="true" className="size-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold">
-                      {eventLabel(event.kind)}
-                    </span>
-                    <StatusIndicator
-                      status={event.status}
-                      label={statusLabel(event.status)}
-                    />
+            }
+          >
+            <div className="space-y-2">
+              {filteredEvents.length === 0 ? (
+                <EmptyState
+                  title="No events in this range"
+                  description="No dated source event matches the selected time range and filter. Missing history remains visible as unavailable in its source section."
+                />
+              ) : (
+                visibleEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex min-w-0 items-start gap-3 rounded-lg border p-3"
+                  >
+                    <div className="mt-1 rounded-full bg-primary/10 p-1.5 text-primary">
+                      <LineChart aria-hidden="true" className="size-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold">
+                          {eventLabel(event.kind)}
+                        </span>
+                        <StatusIndicator
+                          status={event.status}
+                          label={statusLabel(event.status)}
+                        />
+                      </div>
+                      <p className="mt-1 break-words text-sm font-medium">
+                        {event.title}
+                      </p>
+                      <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+                        {event.summary}
+                      </p>
+                      <p className="mt-2 text-[10px] text-muted-foreground">
+                        {event.eventAt
+                          ? `Effective ${dateTime(event.eventAt)}`
+                          : "Effective time unavailable"}{" "}
+                        · recorded{" "}
+                        {event.recordedAt
+                          ? dateTime(event.recordedAt)
+                          : "unknown"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPoint(null);
+                        setSelectedTimelineEvent(event);
+                      }}
+                      aria-label={`Inspect ${event.title}`}
+                    >
+                      <Search aria-hidden="true" className="size-4" />
+                      <span className="sr-only">Inspect</span>
+                    </Button>
                   </div>
-                  <p className="mt-1 break-words text-sm font-medium">
-                    {event.title}
+                ))
+              )}
+              {filteredEvents.length > 12 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+                  <p className="text-xs text-muted-foreground">
+                    Showing {visibleEvents.length} of {filteredEvents.length}{" "}
+                    dated events in this filter.
                   </p>
-                  <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
-                    {event.summary}
-                  </p>
-                  <p className="mt-2 text-[10px] text-muted-foreground">
-                    {event.eventAt
-                      ? `Effective ${dateTime(event.eventAt)}`
-                      : "Effective time unavailable"}{" "}
-                    · recorded{" "}
-                    {event.recordedAt ? dateTime(event.recordedAt) : "unknown"}
-                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setShowAllTimelineEvents((current) => !current)
+                    }
+                  >
+                    {showAllTimelineEvents
+                      ? "Show fewer events"
+                      : "Show more events"}
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedPoint(null);
-                    setSelectedTimelineEvent(event);
-                  }}
-                  aria-label={`Inspect ${event.title}`}
-                >
-                  <Search aria-hidden="true" className="size-4" />
-                  <span className="sr-only">Inspect</span>
-                </Button>
-              </div>
-            ))
-          )}
-          {filteredEvents.length > 12 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-              <p className="text-xs text-muted-foreground">
-                Showing {visibleEvents.length} of {filteredEvents.length} dated
-                events in this filter.
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowAllTimelineEvents((current) => !current)}
-              >
-                {showAllTimelineEvents
-                  ? "Show fewer events"
-                  : "Show more events"}
-              </Button>
+              )}
             </div>
-          )}
+          </PageSection>
+          <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
+            <div className="flex items-start gap-2">
+              <Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Historical series do not share one coverage window. Market
+                session dates, source observation dates, model effective times
+                and decision run times are preserved independently. Price-only
+                history does not imply dividend-inclusive portfolio performance.
+              </p>
+            </div>
+          </div>
         </div>
-      </PageSection>
-      <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
-        <div className="flex items-start gap-2">
-          <Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Historical series do not share one coverage window. Market session
-            dates, source observation dates, model effective times and decision
-            run times are preserved independently. Price-only history does not
-            imply dividend-inclusive portfolio performance.
-          </p>
-        </div>
-      </div>
+      </details>
       <DetailDrawer
         open={selectedEvent !== null}
         onOpenChange={(open) => {
