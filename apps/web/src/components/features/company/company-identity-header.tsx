@@ -63,7 +63,7 @@ export function CompanyIdentityHeader({
         className="mb-4"
         actions={
           actions ? (
-            <details className="max-w-lg rounded-lg border bg-card p-3 text-sm">
+            <details className="min-w-0 max-w-full rounded-lg border bg-card p-3 text-sm sm:max-w-lg">
               <summary className="cursor-pointer font-medium">
                 Data & refresh
               </summary>
