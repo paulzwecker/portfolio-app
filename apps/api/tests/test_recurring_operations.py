@@ -10,6 +10,7 @@ from portfolio_api.database import Base
 from portfolio_api.domain.models import (
     ExternalIngestionAttempt,
     ExternalIngestionRun,
+    OperationalJobAttempt,
     OperationalJobRequest,
     RecurringOperationRun,
 )
@@ -110,6 +111,106 @@ def test_provider_only_cycle_is_durable_and_leaves_unrelated_work_queued(
             for table in protected
         }
         assert after == before
+
+
+@pytest.mark.integration
+def test_sec_only_cycle_drains_bounded_manual_work_and_catches_up_after_sleep(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    at = datetime.now(UTC)
+    settings = Settings(
+        _env_file=None,
+        recurring_operations_enabled=True,
+        manual_operations_enabled=True,
+        google_sheets_poll_seconds=60,
+        fmp_consensus_ingestion_enabled=True,
+    )
+    calls: list[str] = []
+
+    def sec(
+        _engine: Engine, _settings: Settings, domain: ExternalDataDomain, _at: datetime
+    ) -> dict[str, object]:
+        calls.append(f"scheduled:{domain.value}")
+        return {"status": "COMPLETE"}
+
+    def manual(
+        _engine: Engine,
+        _settings: Settings,
+        _request: OperationalJobRequest,
+        step_name: str,
+        _at: datetime,
+    ) -> dict[str, object]:
+        assert step_name in {"SEC_FILINGS", "SEC_FUNDAMENTALS"}
+        calls.append(f"manual:{step_name}")
+        return {"status": "COMPLETE"}
+
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("SEC-only execution reached an unrelated workflow")
+
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_sec_domain", sec)
+    monkeypatch.setattr("portfolio_api.recurring_operations._run_manual_step", manual)
+    for name in (
+        "_run_fmp_consensus",
+        "_run_sheets_discovery",
+        "_run_trigger_scan",
+        "_publish_agent_feeds",
+        "_run_decision_recompute",
+    ):
+        monkeypatch.setattr(f"portfolio_api.recurring_operations.{name}", forbidden)
+    with Session(postgres_engine) as session, session.begin():
+        unrelated, _ = create_job_request(
+            session,
+            OperationalJobRequestCreate(job_name="SHEETS_DISCOVERY"),
+            now_at=at - timedelta(days=3),
+        )
+        first, _ = create_job_request(
+            session,
+            OperationalJobRequestCreate(job_name="SEC_FILINGS"),
+            now_at=at - timedelta(days=2),
+        )
+        second, _ = create_job_request(
+            session,
+            OperationalJobRequestCreate(job_name="SEC_FUNDAMENTALS"),
+            now_at=at - timedelta(days=1),
+        )
+        unrelated_id, first_id, second_id = unrelated.id, first.id, second.id
+        for name in ("SEC_FILINGS", "SEC_FUNDAMENTALS"):
+            session.add(
+                RecurringOperationRun(
+                    job_name=name,
+                    status="SUCCEEDED",
+                    started_at=at - timedelta(days=3),
+                    finished_at=at - timedelta(days=3),
+                    next_attempt_at=at - timedelta(days=2),
+                )
+            )
+    # A fresh process checks persisted due times after sleep and runs one current
+    # cycle, not an unbounded catch-up invocation for each missed interval.
+    first_cycle = run_recurring_cycle(settings, engine=postgres_engine, now_at=at, sec_only=True)
+    assert cast(dict[str, object], first_cycle["manual_request"])["request_id"] == str(first_id)
+    with Session(postgres_engine) as session:
+        queued = session.get(OperationalJobRequest, second_id)
+        assert queued is not None and queued.status == "QUEUED"
+    second_cycle = run_recurring_cycle(
+        settings, engine=postgres_engine, now_at=at + timedelta(minutes=1), sec_only=True
+    )
+    assert cast(dict[str, object], second_cycle["manual_request"])["request_id"] == str(second_id)
+    assert all(
+        item["status"] == "NOT_DUE" for item in cast(list[dict[str, object]], second_cycle["jobs"])
+    )
+    assert calls == [
+        "manual:SEC_FILINGS",
+        "scheduled:REPORTED_FUNDAMENTALS",
+        "scheduled:SOURCE_DOCUMENTS",
+        "manual:SEC_FUNDAMENTALS",
+    ]
+    with Session(postgres_engine) as session:
+        untouched = session.get(OperationalJobRequest, unrelated_id)
+        assert untouched is not None and untouched.status == "QUEUED"
+        assert session.scalar(select(func.count()).select_from(RecurringOperationRun)) == 4
+        attempts = list(session.scalars(select(OperationalJobAttempt)))
+        assert len(attempts) == 2
+        assert all(item.status == "SUCCEEDED" and item.finished_at for item in attempts)
 
 
 def test_recurring_worker_adds_sec_google_exclusions_only_for_known_local_proxy(
@@ -546,7 +647,10 @@ def test_operation_replay_waits_for_cadence_and_retry_is_bounded(
 
 
 @pytest.mark.integration
-def test_concurrent_scheduler_cycle_is_skipped_by_postgres_lock(postgres_engine: Engine) -> None:
+@pytest.mark.parametrize("sec_only", [False, True])
+def test_concurrent_scheduler_cycle_is_skipped_by_postgres_lock(
+    postgres_engine: Engine, sec_only: bool
+) -> None:
     settings = Settings(_env_file=None, recurring_operations_enabled=True)
     with postgres_engine.connect() as connection:
         acquired: bool = connection.execute(
@@ -556,7 +660,7 @@ def test_concurrent_scheduler_cycle_is_skipped_by_postgres_lock(postgres_engine:
         connection.commit()
         assert acquired
         try:
-            result = run_recurring_cycle(settings, engine=postgres_engine)
+            result = run_recurring_cycle(settings, engine=postgres_engine, sec_only=sec_only)
         finally:
             connection.execute(
                 text("SELECT pg_advisory_unlock(:namespace, :lock_key)"),

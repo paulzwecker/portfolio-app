@@ -58,6 +58,22 @@ def _summary(report: dict[str, object]) -> dict[str, object]:
                 if any(item["status"] in SUCCESS_STATUSES for item in summaries)
                 else "FAILED"
             )
+    manual = report.get("manual_request")
+    if manual is not None:
+        manual_status = manual.get("status") if isinstance(manual, dict) else None
+        known_manual = (
+            SUCCESS_STATUSES
+            | {"IDLE", "DEFERRED", "REQUEST_NOT_READY"}
+            | {"PARTIAL", "FAILED", "BLOCKED"}
+        )
+        safe_status = (
+            manual_status
+            if isinstance(manual_status, str) and manual_status in known_manual
+            else "FAILED"
+        )
+        result["manual_request"] = {"status": safe_status}
+        if safe_status not in SUCCESS_STATUSES | {"IDLE", "DEFERRED", "REQUEST_NOT_READY"}:
+            result["status"] = "PARTIAL" if safe_status == "PARTIAL" else "FAILED"
     return result
 
 
@@ -65,9 +81,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scope",
-        choices=("market-data", "provider-data", "all-operations"),
+        choices=("market-data", "provider-data", "sec-data", "all-operations"),
         default="market-data",
-        help="Market/FX by default. Select broader providers or all operations explicitly.",
+        help="Market/FX by default. SEC-only also drains at most one queued SEC request.",
     )
     args = parser.parse_args(argv)
     settings = Settings()
@@ -79,14 +95,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     reports: dict[str, object] = {}
-    try:
-        reports["market_data"] = run_startup_refresh(
-            settings,
-            allow_local_proxy_bypass=False,
-            cloud_incremental=True,
-        )
-    except Exception as error:
-        reports["market_data"] = {"status": "FAILED", "error_type": type(error).__name__}
+    if args.scope != "sec-data":
+        try:
+            reports["market_data"] = run_startup_refresh(
+                settings,
+                allow_local_proxy_bypass=False,
+                cloud_incremental=True,
+            )
+        except Exception as error:
+            reports["market_data"] = {"status": "FAILED", "error_type": type(error).__name__}
 
     if args.scope != "market-data":
         engine = None
@@ -108,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
                     instance_id=instance_id,
                     process_started_at=started_at,
                     provider_only=args.scope == "provider-data",
+                    sec_only=args.scope == "sec-data",
                 )
         except Exception as error:
             error_type = type(error).__name__

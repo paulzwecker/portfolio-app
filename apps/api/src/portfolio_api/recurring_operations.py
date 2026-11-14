@@ -50,7 +50,7 @@ from portfolio_api.external_data import ExternalDataDomain
 from portfolio_api.external_ingestion import PROVIDERS, run_scheduled
 from portfolio_api.google_sheets_sync import run_sync_check
 from portfolio_api.health import check_readiness
-from portfolio_api.manual_operations import JOB_DOMAINS
+from portfolio_api.manual_operations import JOB_DOMAINS, SEC_COMPANY_JOBS
 from portfolio_api.market_data_ingestion import DEFAULT_LOOKBACK_DAYS, active_market_listings
 from portfolio_api.market_data_startup import (
     ADVISORY_LOCK_KEY as MARKET_DATA_LOCK_KEY,
@@ -847,8 +847,9 @@ def process_manual_job_requests(
     *,
     now_at: datetime | None = None,
     request_id: UUID | None = None,
+    job_names: frozenset[str] | None = None,
 ) -> dict[str, object]:
-    """Claim at most one request, optionally restricting a one-shot run to an exact ID."""
+    """Claim at most one request, filtering exact ID or allowed jobs before claiming."""
 
     current = _utc(now_at)
     claimed_request_id: UUID | None = None
@@ -872,6 +873,8 @@ def process_manual_job_requests(
         )
         if request_id is not None:
             statement = statement.where(OperationalJobRequest.id == request_id)
+        if job_names is not None:
+            statement = statement.where(OperationalJobRequest.job_name.in_(job_names))
         request = session.scalar(statement)
         if request is None:
             return {
@@ -1186,8 +1189,9 @@ def run_recurring_cycle(
     instance_id: UUID | None = None,
     process_started_at: datetime | None = None,
     provider_only: bool = False,
+    sec_only: bool = False,
 ) -> dict[str, object]:
-    """Run due jobs once; the scheduler lock prevents duplicate concurrent cycles."""
+    """Run due jobs once under the existing lock; SEC-only excludes unrelated work."""
 
     if not settings.recurring_operations_enabled:
         return {"status": "DISABLED", "reason": "RECURRING_OPERATIONS_ENABLED is false."}
@@ -1222,11 +1226,17 @@ def run_recurring_cycle(
                     started_at=started,
                     now_at=current,
                 )
-                manual = (
-                    None
-                    if provider_only
-                    else process_manual_job_requests(current_engine, settings, now_at=current)
-                )
+                if sec_only:
+                    manual = process_manual_job_requests(
+                        current_engine,
+                        settings,
+                        now_at=current,
+                        job_names=frozenset(SEC_COMPANY_JOBS),
+                    )
+                elif provider_only:
+                    manual = None
+                else:
+                    manual = process_manual_job_requests(current_engine, settings, now_at=current)
                 jobs: list[dict[str, object]] = []
                 jobs.append(
                     _run_one_job(
@@ -1255,7 +1265,7 @@ def run_recurring_cycle(
                         ),
                     )
                 )
-                if settings.fmp_consensus_ingestion_enabled:
+                if settings.fmp_consensus_ingestion_enabled and not sec_only:
                     jobs.append(
                         _run_one_job(
                             current_engine,
@@ -1266,7 +1276,7 @@ def run_recurring_cycle(
                             lambda: _run_fmp_consensus(current_engine, settings, current),
                         )
                     )
-                if not provider_only:
+                if not (provider_only or sec_only):
                     if settings.google_sheets_poll_seconds != 0:
                         jobs.append(
                             _run_one_job(

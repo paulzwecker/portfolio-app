@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import case, func, select, text
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
@@ -224,20 +225,22 @@ def create_job_request(
             text("SELECT pg_advisory_xact_lock(:lock_id)"),
             {"lock_id": MANUAL_QUEUE_LOCK_ID},
         )
+    # An active request stays the owner of identical work even when a host sleeps
+    # beyond the UI cooldown. Explicit retries bypass only terminal cooldowns.
+    reusable: ColumnElement[bool] = OperationalJobRequest.status.in_(("QUEUED", "RUNNING"))
     if not bypass_cooldown:
-        # Serialize equal requests to prevent concurrent clicks from creating
-        # duplicate work. The queue lock above serializes these lookups.
-        existing = session.scalar(
-            select(OperationalJobRequest)
-            .where(
-                OperationalJobRequest.request_fingerprint == fingerprint,
-                OperationalJobRequest.requested_at >= now - COOLDOWN[job_name],
-            )
-            .order_by(OperationalJobRequest.requested_at.desc())
-            .limit(1)
+        reusable = reusable | (OperationalJobRequest.requested_at >= now - COOLDOWN[job_name])
+    existing = session.scalar(
+        select(OperationalJobRequest)
+        .where(OperationalJobRequest.request_fingerprint == fingerprint, reusable)
+        .order_by(
+            case((OperationalJobRequest.status.in_(("QUEUED", "RUNNING")), 0), else_=1),
+            OperationalJobRequest.requested_at.desc(),
         )
-        if existing is not None:
-            return existing, True
+        .limit(1)
+    )
+    if existing is not None:
+        return existing, True
     active_count = session.scalar(
         select(func.count())
         .select_from(OperationalJobRequest)
@@ -362,13 +365,16 @@ def job_request_read(
 def list_job_requests(
     session: Session, limit: int = 30, *, company_id: UUID | None = None
 ) -> list[s.OperationalJobRequestRead]:
-    query = select(OperationalJobRequest)
+    # Keep accepted work visible in both Operations and the company view even
+    # when later terminal requests exceed the history limit.
+    query = select(OperationalJobRequest).order_by(
+        case((OperationalJobRequest.status.in_(("QUEUED", "RUNNING")), 0), else_=1)
+    )
     if company_id is not None:
-        # Active requests must remain visible even after many later completed jobs.
         query = query.where(
             OperationalJobRequest.scope_kind == "COMPANY",
             OperationalJobRequest.company_id == company_id,
-        ).order_by(case((OperationalJobRequest.status.in_(("QUEUED", "RUNNING")), 0), else_=1))
+        )
     requests = list(
         session.scalars(
             query.order_by(
