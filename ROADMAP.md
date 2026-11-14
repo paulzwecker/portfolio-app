@@ -6,16 +6,19 @@ Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Active checkpoint           | Real-source SEC refresh complete in isolated PostgreSQL/API/UI; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                             |
-| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39) frozen for owner review.           |
-| Implementation              | Official MSCI capture reconciles 1,596 facts and 310 filings through manual/scheduled refresh and desktop/mobile Financials. Coverage remains PARTIAL. |
-| Next ready substantial task | Owner recovery destination/restore-target approval, then exact MSCI activation. Independent next capability: official ECB historical FX.               |
-| Deferred work               | Unverified free equity/consensus access, ECB adapter, broader analytics, Sheets and generic infrastructure.                                            |
-| Production boundary         | No production writes, deployment, settings changes, scheduler activation or paid services.                                                             |
+| Field                       | Current value                                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | MSCI and Microsoft real-source financial history integrated in isolated PostgreSQL/API/UI; [handoff](docs/ACTIVE_WORKSTREAM.md).                              |
+| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39) frozen for owner review.                  |
+| Implementation              | MSCI: 1,596 facts / 310 filings. Microsoft: 1,909 facts / 428 filings; 14 annual/quarterly samples checked against actual filings. Coverage remains PARTIAL.  |
+| Next ready substantial task | Owner recovery destination/restore-target approval, then bounded verified-issuer activation. Additional issuer reviews follow this proven statement workflow. |
+| Deferred work               | Unverified free equity/consensus access, ECB adapter, broader analytics, Sheets and generic infrastructure.                                                   |
+| Production boundary         | No production writes, deployment, settings changes, scheduler activation or paid services.                                                                    |
 
 Three official SEC requests captured verified MSCI data using the existing contact.
+Six further official requests captured Microsoft JSON and annual/quarterly filing
+evidence. Its noncalendar FY2026 and FY2027 Q1 income, cash-flow and balance samples
+match actual filing contexts; zero derived financial assumptions were introduced.
 Private unchanged recordings now demonstrate source -> durable job -> canonical
 PostgreSQL -> Financials and source evidence. Desktop/mobile manual, Operations and
 missed-run scheduled replay pass; accepted state content hashes remain unchanged.
@@ -24,6 +27,9 @@ gaps and restatements remain visible, and no fixture is presented as production.
 PR #37 recovery and PR #38 UI are already on main; independent investment intelligence
 is preserved at `33cedff`. Release is CONFIGURATION_REQUIRED: no schema/API changes;
 current hosted release controls and operational recovery still need verification.
+Private mapping proposals are evidence-backed but not owner-approved production
+mappings. Debt components exclude separately reported leases; partial coverage and
+changed comparative values stay visible. No international/provider expansion here.
 
 November 14 production evidence remains: schema `b59f16c8a203`, accepted 22 positions,
 zero prices/FX/facts/filings/consensus. Recovery and provider prerequisites still gate

@@ -103,7 +103,11 @@ The `sec-real-refresh` scenario reuses the same queue, worker, adapters and boun
 test database. It requires a private `sec-real-recording-v1` manifest containing
 the exact issuer/listing evidence, original capture times, official source URLs,
 file lengths/SHA-256 hashes, all indexed history pages (at most five), and independently
-checked expected values. No raw response or private manifest belongs in Git.
+checked expected values. `expected.statement_samples` pins each metric's view,
+economic start/end, value, unit/currency, fiscal label, cell status and selected
+accession/concept/source URL; `annual_samples` also carries explicit fiscal labels.
+Optional `missing_metrics` pins unavailable metric/period cells. Never generate
+these expectations from the API being tested. No raw response or private manifest belongs in Git.
 The loader validates the complete bundle before seeding its random test schema.
 It never downloads a missing file or substitutes a fictional response.
 
@@ -136,6 +140,20 @@ selected filing evidence, genuine PARTIAL coverage, refreshed tables/charts,
 internal table scrolling and unchanged protected state. Source gaps, restatements
 and unlinked amendments remain visible. The ordinary fictional scenario separately
 tests new-period updates, outages and synthetic conflicts.
+
+The November 15 Berlin-time extension adds Microsoft, with six official requests:
+four JSON responses plus the latest 10-K/10-Q filing HTML for independent review.
+Only the four JSON responses enter the replay manifest; filing bodies remain
+private comparison evidence and are not imported as canonical document content.
+Reconciliation retains 1,909 facts and 428 filing references. Fourteen filing-checked
+annual/quarterly samples cover revenue, gross profit, operating/net income, cash,
+operating cash flow and capex. The June annual period is FY2026; September 2026 is
+FY2027 Q1. Source capex keeps its positive XBRL sign; no FCF is synthesized.
+The same test switches existing Income Statement, Cash Flow and Balance Sheet
+views, verifies source drawers, and reruns MSCI without new source requests.
+The opt-in backend check also proves that a knowledge cutoff before capture cannot
+expose observations recorded later during replay. Private mapping proposals remain
+unapproved; isolated success is not a production mapping or activation receipt.
 
 For the opt-in backend replay, set `BROWSER_SEC_RECORDING_MANIFEST` to the same file
 and select `test_real_sec_recording_manual_scheduled_api_reconciliation` in

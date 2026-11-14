@@ -124,6 +124,9 @@ def test_real_sec_recording_manual_scheduled_api_reconciliation(postgres_engine:
     if not configured:
         pytest.skip("Opt-in private official SEC recording is not configured")
     recording = SecRecording(Path(configured))
+    expected = recording.manifest.expected
+    samples = expected["statement_samples"]
+    assert samples, "Independent source-checked statement expectations are required"
     settings = fixture_settings()
     metadata = prepare_real_sec_data(postgres_engine, recording)
     refresh = RefreshRehearsal(postgres_engine, settings, metadata, recording=recording)
@@ -155,40 +158,73 @@ def test_real_sec_recording_manual_scheduled_api_reconciliation(postgres_engine:
         before = refresh.readback()
         counts = before["counts"]
         assert isinstance(counts, dict)
-        assert counts["reported_fundamental_observations"] == 1596
-        assert counts["source_documents"] == 310
-        assert before["provider_request_count"] == 3
-        annual = client.get(
-            f"/v1/companies/{metadata['company_id']}/financial-statements?period_type=ANNUAL&period_limit=10"
-        ).json()
-        assert len(annual["periods"]) == 10
-        revenue = next(
-            row
-            for row in annual["rows"]
-            if row["metric"] == "REVENUE" and row["source_kind"] == "REPORTED_ACTUAL"
+        assert counts["reported_fundamental_observations"] == expected["fundamental_observations"]
+        assert counts["source_documents"] == expected["source_documents"]
+        assert before["provider_request_count"] == len(recording.payloads)
+        statements = {}
+        for period_type in ("ANNUAL", "QUARTERLY"):
+            response = client.get(
+                f"/v1/companies/{metadata['company_id']}/financial-statements",
+                params={"period_type": period_type, "period_limit": 10},
+            )
+            assert response.status_code == 200
+            statements[period_type] = response.json()
+        assert len(statements["ANNUAL"]["periods"]) == expected["annual_periods"]
+        # Expected values come from independent source review, never API output.
+        for sample in samples:
+            statement = statements[sample["period_type"]]
+            row = next(
+                row
+                for row in statement["rows"]
+                if row["metric"] == sample["metric"] and row["source_kind"] == "REPORTED_ACTUAL"
+            )
+            cell = next(cell for cell in row["cells"] if cell["period_end"] == sample["period_end"])
+            assert cell["status"] == sample["status"], sample
+            assert Decimal(cell["value"]) == Decimal(sample["value"]), sample
+            assert row["currency"] == sample["currency"]
+            assert row["unit"] == sample["unit"]
+            column = next(
+                item for item in statement["periods"] if item["period_end"] == sample["period_end"]
+            )
+            assert column["fiscal_year"] == sample["fiscal_year"]
+            assert column["fiscal_period"] == sample["fiscal_period"]
+            observation = next(
+                observation
+                for period in statement["reported_periods"]
+                for observation in period["observations"]
+                if observation["id"] == cell["selected_source_id"]
+            )
+            for field in ("accession_number", "source_concept", "source_url"):
+                assert observation[field] == sample[field], (field, sample)
+            for field in ("period_start", "period_end"):
+                assert (observation[field][:10] if observation[field] else None) == sample[field]
+            assert (
+                datetime.fromisoformat(observation["observed_at"])
+                == recording.captured[recording.facts_url]
+            )
+        for missing in expected.get("missing_metrics", []):
+            statement = statements[missing["period_type"]]
+            row = next(
+                item
+                for item in statement["rows"]
+                if item["metric"] == missing["metric"] and item["source_kind"] == "REPORTED_ACTUAL"
+            )
+            if not row["cells"]:
+                assert row["availability_reason"]
+                continue
+            cell = next(
+                item for item in row["cells"] if item["period_end"] == missing["period_end"]
+            )
+            assert cell["value"] is None and cell["selected_source_id"] is None
+            assert cell["status"] == "UNAVAILABLE"
+        # A capture replayed now must not become historical application knowledge.
+        prior_capture = min(recording.captured.values()) - timedelta(seconds=1)
+        historical = client.get(
+            f"/v1/companies/{metadata['company_id']}/financial-statements",
+            params={"known_at": prior_capture.isoformat()},
         )
-        for end, value in [
-            ("2025-12-31", "3134459000"),
-            ("2024-12-31", "2856128000"),
-            ("2023-12-31", "2528920000"),
-        ]:
-            cell = next(cell for cell in revenue["cells"] if cell["period_end"] == end)
-            assert cell["status"] == "AVAILABLE"
-            assert Decimal(cell["value"]) == Decimal(value)
-            period = next(period for period in annual["periods"] if period["period_end"] == end)
-            assert period["fiscal_year"] == int(end[:4])
-        quarterly = client.get(
-            f"/v1/companies/{metadata['company_id']}/financial-statements?period_type=QUARTERLY&period_limit=10"
-        ).json()
-        quarter_revenue = next(
-            row
-            for row in quarterly["rows"]
-            if row["metric"] == "REVENUE" and row["source_kind"] == "REPORTED_ACTUAL"
-        )
-        quarter = next(
-            cell for cell in quarter_revenue["cells"] if cell["period_end"] == "2026-09-30"
-        )
-        assert Decimal(quarter["value"]) == Decimal("892000000")
+        assert historical.status_code == 200
+        assert not historical.json()["reported_periods"]
         with postgres_engine.connect() as connection:
             from sqlalchemy import text
 
@@ -201,8 +237,11 @@ def test_real_sec_recording_manual_scheduled_api_reconciliation(postgres_engine:
         scheduled = client.post(
             "/__test/refresh-control", json={"paused": True, "scheduled_days_later": 3}
         ).json()
-        assert scheduled["counts"]["reported_fundamental_observations"] == 1596
-        assert scheduled["counts"]["source_documents"] == 310
+        assert (
+            scheduled["counts"]["reported_fundamental_observations"]
+            == expected["fundamental_observations"]
+        )
+        assert scheduled["counts"]["source_documents"] == expected["source_documents"]
         assert scheduled["protected_state_sha256"] == baseline
         repeated = client.post(
             "/__test/refresh-control", json={"paused": True, "scheduled_days_later": 3}

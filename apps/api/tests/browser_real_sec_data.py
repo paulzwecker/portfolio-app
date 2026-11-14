@@ -109,7 +109,7 @@ class SecRecording:
         tickers, exchanges = submissions.get("tickers", []), submissions.get("exchanges", [])
         if (
             len(tickers) != len(exchanges)
-            or exchanges[tickers.index(issuer.ticker)] != issuer.venue
+            or str(exchanges[tickers.index(issuer.ticker)]).casefold() != issuer.venue.casefold()
         ):
             raise ValueError("Recorded SEC listing venue does not match")
         files = submissions.get("filings", {}).get("files", [])
