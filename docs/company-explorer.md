@@ -8,19 +8,31 @@ responses own all portfolio and financial calculations.
 
 The stable header shows canonical company identity, lifecycle, reporting currency,
 the exact selected listing, its quote currency and its listing-specific freshness.
-Selecting another listing changes only the quote context. It does not substitute a
-security or change the model's valuation listing.
+Portfolio holding links carry the exact listing and a known portfolio origin. The
+header and price history share that selection across tabs and reloads; a listing
+without market data stays unavailable. A model retains its own valuation listing.
+Back to holdings and Review allocation close the research loop. Internal overview,
+evidence and financial-source links retain the research context for the same company.
+
+The compact Data & refresh disclosure contains existing company controls and job
+status. Quote freshness, currency and source remain visible. Successful empty thesis,
+model and quality responses become coverage labels instead of placeholder cards;
+failed reads remain explicit. Held positions with unavailable weights say held and
+unvalued. Optional expectations/decision history opens when observations exist and
+otherwise stays in a coverage/diagnostics disclosure. Portfolio performance and
+unsupported exposure classifications are explained in a disclosure, not empty
+primary navigation. No absent data is interpreted as zero or a recommendation.
 
 The workspace uses six keyboard-accessible tabs and preserves legacy section links:
 
-| View                | Main purpose and contents                                                                                                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview            | Company context, lifecycle, holdings/target context and the company Attention Center.                                                                                                   |
-| Financials          | Selectable reported annual/quarterly statement rows with a multi-series chart and source drawer; third-party consensus; agent-authored forecasts. Each source stays separately labeled. |
-| Valuation           | Method-specific native editors for UFCF DCF, owner cash flow and residual income; projections, revisions, imported output snapshots and model migration status.                         |
-| Investment Thesis   | Independent score assessments and their history alongside accepted, versioned thesis claims and evidence.                                                                               |
-| Research & Evidence | Filing/source documents and accepted qualitative risk assessments with their portfolio baseline.                                                                                        |
-| Historical Analysis | Listing-specific market history, Estimate Momentum, point-in-time forecast-versus-outcome alignment, expected-return history, rankings and Execution Pace.                              |
+| View             | Main purpose and contents                                                                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview         | Company context, lifecycle, holdings/target context and the company Attention Center.                                                                                                   |
+| Financials       | Selectable reported annual/quarterly statement rows with a multi-series chart and source drawer; third-party consensus; agent-authored forecasts. Each source stays separately labeled. |
+| Valuation        | Method-specific native editors for UFCF DCF, owner cash flow and residual income; projections, revisions, imported output snapshots and model migration status.                         |
+| Thesis & risks   | Independent score assessments and their history alongside accepted, versioned thesis claims and evidence.                                                                               |
+| Evidence         | Filing/source documents and accepted qualitative risk assessments with their portfolio baseline.                                                                                        |
+| Prices & history | Listing-specific market history, Estimate Momentum, point-in-time forecast-versus-outcome alignment, expected-return history, rankings and Execution Pace.                              |
 
 Reported metric exploration supports only canonical facts returned by the reported
 fundamentals API (including revenue, operating income/EBIT, cash-flow, balance-sheet

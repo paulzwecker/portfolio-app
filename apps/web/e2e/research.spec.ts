@@ -2811,7 +2811,7 @@ test("Company Explorer composes canonical company context at desktop and mobile 
                 current_weight: null,
                 current_market_value: null,
                 allocation_gap: null,
-                allocation_status: "UNAVAILABLE",
+                allocation_status: "PRICE_COVERAGE_INCOMPLETE",
               }
             : companyDetail.portfolio_context,
         },
@@ -3404,6 +3404,15 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       page.getByRole("group", { name: "Financial chart comparison mode" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Sources & alignment" }).click();
+    await expect(
+      page.getByRole("link", {
+        name: "Inspect accepted model projections in Valuation",
+      }),
+    ).toHaveAttribute(
+      "href",
+      new RegExp(`view=valuation.*listing=${listingId}.*from=portfolio`),
+    );
+
     await expect(
       page.getByText("Accepted agent research archive"),
     ).toBeVisible();

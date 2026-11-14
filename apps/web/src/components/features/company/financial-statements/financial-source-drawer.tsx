@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanyResearchLink } from "../company-research-link";
 import { DetailDrawer } from "@/components/app/detail-drawer";
 import { SourceReference } from "@/components/app/source-reference";
 import { StatusIndicator } from "@/components/app/status-indicator";
@@ -291,12 +292,13 @@ export function FinancialSourceDrawer({
                 </li>
               ))}
             </ul>
-            <a
-              href={`/company/${data.company_id}?view=valuation`}
+            <CompanyResearchLink
+              companyId={data.company_id}
+              view="valuation"
               className="inline-block text-sm text-primary underline"
             >
               Inspect accepted model projections in Valuation
-            </a>
+            </CompanyResearchLink>
             <h3 className="border-t pt-4 text-sm font-semibold">
               Consensus source archive
             </h3>

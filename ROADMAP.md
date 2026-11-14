@@ -6,14 +6,14 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                          |
-| Branch / PR                 | `codex/investor-research-journey` from main `ddbacbc`; PRs #34/#36/#35 merged. Recovery PR #37 owner-merged; latest main `9a27353` integrated. |
-| Implementation              | Exact-listing portfolio navigation, data-aware company summary and price-first research history using existing UI components.                  |
-| Next ready substantial task | Complete responsive light/dark and data-state integration review, then one owner-reviewable PR.                                                |
-| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                                       |
-| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation.               |
+| Field                       | Current value                                                                                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                              |
+| Branch / PR                 | `codex/investor-research-journey` from main `ddbacbc`; PRs #34/#36/#35 merged. Recovery PR #37 owner-merged; latest main `9a27353` integrated.                                     |
+| Implementation              | Complete: exact-listing research navigation, data-aware summary, responsive themed price charts; 483 web / 147 managed browser tests, isolated API journeys and final review pass. |
+| Next ready substantial task | Owner review of the frozen investor journey; then approved recovery/provider activation and real price/FX/fundamental readback.                                                    |
+| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                                                                           |
+| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation.                                                   |
 
 The current acceptance and evidence live in the active handoff. This UI milestone
 does not depend on completing Sheets recovery.

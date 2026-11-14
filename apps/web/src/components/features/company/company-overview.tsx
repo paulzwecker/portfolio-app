@@ -262,7 +262,11 @@ export function CompanyOverview({
               models.data?.status ??
               (models.error ? "UNAVAILABLE" : "REFRESHING")
             }
-            label={`Model ${statusLabel(models.data?.status ?? (models.error ? "UNAVAILABLE" : "REFRESHING"))}`}
+            label={
+              models.data?.status === "NO_MODEL"
+                ? "No accepted model"
+                : `Model ${statusLabel(models.data?.status ?? (models.error ? "UNAVAILABLE" : "REFRESHING"))}`
+            }
           />
           <StatusIndicator
             status={
