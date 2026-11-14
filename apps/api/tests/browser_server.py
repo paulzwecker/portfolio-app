@@ -8,7 +8,7 @@ import os
 import re
 import subprocess
 from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager, nullcontext, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Timer
@@ -19,6 +19,7 @@ import uvicorn
 from alembic import command
 from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
+from browser_refresh_data import RefreshRehearsal
 from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -246,6 +247,7 @@ def fixture_application(
     metadata: dict[str, object] | None = None,
     *,
     ledger_writer: Engine | None = None,
+    refresh: RefreshRehearsal | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -255,6 +257,8 @@ def fixture_application(
 
     application = create_app(settings)
     application.router.lifespan_context = lifespan
+    if refresh is not None:
+        refresh.install(application)
     if ledger_writer is not None:
         if metadata is None or (
             (metadata.get("ledger_receipts_only") is True)
@@ -304,6 +308,17 @@ def fixture_application(
                 and not ledger_review
                 and not ledger_publish
             ):
+                if refresh is not None and request.method == "POST":
+                    if request.url.path == "/__test/refresh-control":
+                        return await call_next(request)
+                    if request.url.path == "/v1/operations/job-requests":
+                        payload = await request.json()
+                        if payload.get("job_name") in {"SEC_FUNDAMENTALS", "SEC_FILINGS"}:
+                            return await call_next(request)
+                    if re.fullmatch(
+                        r"/v1/operations/job-requests/[a-f0-9-]{36}/retry", request.url.path
+                    ):
+                        return await call_next(request)
                 return JSONResponse(
                     {"detail": "This fixture supports read-only inspection."}, status_code=405
                 )
@@ -314,12 +329,15 @@ def fixture_application(
             return {
                 **metadata,
                 "test_only": "portfolio-data-v1",
-                "protected_state_sha256": protected_state(
+                "protected_state_sha256": refresh.protected_state()
+                if refresh
+                else protected_state(
                     engine,
                     str(metadata["portfolio_id"]),
                     ledger_receipts=metadata.get("ledger_receipts_only") is True,
                     ledger_publication=metadata.get("ledger_publication_only") is True,
                 ),
+                **(refresh.readback() if refresh else {}),
             }
 
     return application
@@ -342,6 +360,7 @@ def main(argv: list[str] | None = None) -> None:
             "sec-unmapped",
             "sec-refresh-partial",
             "sec-refresh-outage",
+            "sec-refresh-workflow",
         ),
         default="demo",
     )
@@ -366,6 +385,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     reader: Engine | None = None
     ledger_writer: Engine | None = None
+    refresh: RefreshRehearsal | None = None
     try:
         with engine.begin() as connection:
             config = alembic_config()
@@ -386,12 +406,17 @@ def main(argv: list[str] | None = None) -> None:
                     else cast(PortfolioDataState, args.scenario),
                     settings,
                 )
-                if args.scenario.startswith("sec-"):
+                if args.scenario == "sec-refresh-workflow":
+                    metadata["scenario"] = args.scenario
+                    refresh = RefreshRehearsal(engine, settings, metadata)
+                    settings = refresh.settings
+                elif args.scenario.startswith("sec-"):
                     prepare_sec_data(engine, metadata, args.scenario)
             if args.scenario in {"ledger-owned", "ledger-publication"}:
                 prepare_ledger_ownership(engine, metadata, publish=args.scenario == "ledger-owned")
             metadata["schema"] = schema
-            reader = fixture_read_engine(url, schema, settings)
+            if refresh is None:
+                reader = fixture_read_engine(url, schema, settings)
         if args.scenario == "ledger-review":
             assert metadata is not None
             with Session(engine) as session, session.begin():
@@ -418,7 +443,7 @@ def main(argv: list[str] | None = None) -> None:
             metadata["ledger_publication_only"] = True
             ledger_writer = fixture_ledger_writer(url, schema, publication=True)
         application = fixture_application(
-            reader or engine, settings, metadata, ledger_writer=ledger_writer
+            reader or engine, settings, metadata, ledger_writer=ledger_writer, refresh=refresh
         )
         port = int(os.environ.get("BROWSER_API_PORT", "8000"))
         server = uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port))
@@ -431,7 +456,8 @@ def main(argv: list[str] | None = None) -> None:
             deadline.daemon = True
             deadline.start()
         try:
-            server.run()
+            with refresh.running() if refresh else nullcontext():
+                server.run()
         finally:
             if deadline is not None:
                 deadline.cancel()

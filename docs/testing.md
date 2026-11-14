@@ -65,6 +65,38 @@ financial data retain their separate evidence and authorization requirements.
 
 ## Evidence maintenance
 
+### Complete SEC refresh rehearsal (no provider network)
+
+Use an existing disposable native PostgreSQL database ending `_test` on loopback;
+Docker is not required. The browser server verifies the connected identity and
+creates its own migrated random schema. With `TEST_DATABASE_URL` set to that exact
+local target and `BROWSER_API_PORT=8011`, start:
+
+```sh
+node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py --scenario sec-refresh-workflow --lifetime-seconds 600
+```
+
+In a second terminal set `API_BASE_URL=http://127.0.0.1:8011`,
+`BROWSER_API_PORT=8011`, `E2E_SEC_REFRESH_API=1`, and a free `E2E_WEB_PORT` (3120
+was verified). Run:
+
+```sh
+node node_modules/@playwright/test/cli.js test --config apps/web/playwright.config.ts financial-refresh.spec.ts --project desktop --workers 1 --timeout 180000
+```
+
+Repeat with a **fresh fixture server/schema** for `--project mobile`. Do not point
+this scenario at an existing application or use the managed synthetic API mode.
+
+This scenario alone permits the two SEC request types and test-only clock/provider
+controls. It runs the real queue, SEC adapters, normalization, raw receipts and
+financial APIs against fixed [fictional responses](../apps/api/tests/recorded/sec-refresh/README.md).
+It proves navigation/reload recovery, automatic UI invalidation, the Operations
+two-domain batch, one coalesced missed-run cycle, duplicate-free replay, retained
+facts during outage, partial coverage and separate currencies. Every table outside
+the SEC ingestion/job scope is content-hashed before and after. Existing read-only
+browser scenarios keep their original restrictions. No real SEC request, recurring
+schedule registration, production write or activation is part of this rehearsal.
+
 Record exact command/results, test scope and skips in the current roadmap. Keep
 long logs and historical milestone records under dated evidence. Existing financial
 parity contracts and synthetic fixtures remain the regression basis for engines.

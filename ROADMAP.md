@@ -6,25 +6,26 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                                                              |
-| Branch / PR                 | `codex/investor-research-journey`; [PR #38](https://github.com/paulzwecker/portfolio-app/pull/38) frozen for owner review. Latest main `9a27353` with merged #37 integrated.       |
-| Implementation              | Complete: exact-listing research navigation, data-aware summary, responsive themed price charts; 483 web / 147 managed browser tests, isolated API journeys and final review pass. |
-| Next ready substantial task | Owner review of the frozen investor journey; then approved recovery/provider activation and real price/FX/fundamental readback.                                                    |
-| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                                                                           |
-| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation.                                                   |
+| Field                       | Current value                                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Bounded SEC refresh vertical slice locally complete; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                          |
+| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; PR #38 owner-merged; no open PR at intake.                                                          |
+| Implementation              | Manual and scheduled SEC refresh verified through real PostgreSQL/API/UI using fictional recordings; desktop/mobile and 147 broader browser checks pass. |
+| Next ready substantial task | Freeze one PR for owner review; clear recovery/contact gates for bounded SEC activation. Independent next capability: official ECB historical FX.        |
+| Deferred work               | Unverified free equity/consensus access, ECB adapter, broader analytics, Sheets and generic infrastructure.                                              |
+| Production boundary         | No production writes, deployment, settings changes, scheduler activation or paid services.                                                               |
 
-The current acceptance and evidence live in the active handoff. This UI milestone
-does not depend on completing Sheets recovery.
+The frozen SEC slice uses recorded fictional provider responses and actual isolated
+PostgreSQL. It does not claim real-source or production coverage. Prior UI milestone
+PR #38 passed all CI and was owner-merged; existing work and history are preserved.
+Local rehearsal ends with four facts and two filings, with all accepted state
+content hashes unchanged. Release is CONFIGURATION_REQUIRED: unchanged schema
+matches the existing attestation; current hosted release controls need verification.
 
-November 14 read-only evidence: schema `b59f16c8a203`, accepted 22 positions,
-zero prices/FX/facts/filings/consensus. Market preview READY for 22 listings plus
-two FX pairs over 2025-11-10–2026-11-09, with zero requests/writes; SEC preview
-has no reviewed CIK mappings. Local recovery/guard/ingestion suite: 174 passed;
-contracts, types and 22 deployment/documentation tests passed. See the
-[operator runbook](docs/encrypted-production-recovery.md) and
-[provider decision](docs/financial-data-provider-decision.md).
+November 14 production evidence remains: schema `b59f16c8a203`, accepted 22 positions,
+zero prices/FX/facts/filings/consensus. Recovery and provider prerequisites still gate
+production activation. See [recovery](docs/encrypted-production-recovery.md) and the
+[zero-cost provider decision](docs/financial-data-provider-decision.md).
 
 ## Prior implementation evidence
 
