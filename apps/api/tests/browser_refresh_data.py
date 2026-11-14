@@ -15,6 +15,7 @@ from unittest.mock import patch
 from urllib.error import URLError
 from uuid import UUID
 
+from browser_real_sec_data import SecRecording
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import Table, event, select, text
@@ -26,9 +27,11 @@ from test_fundamentals_bootstrap import CIK
 from portfolio_api.database import Base
 from portfolio_api.database_write_target import DatabaseReadOnlyError, _statement_may_write
 from portfolio_api.domain.models import ExternalIngestionRun
+from portfolio_api.external_data import ProviderQuery, RawProviderRecord
 from portfolio_api.recurring_operations import process_manual_job_requests, run_recurring_cycle
-from portfolio_api.reported_fundamentals import record_cik_mapping
+from portfolio_api.reported_fundamentals import SecCompanyFactsProvider, record_cik_mapping
 from portfolio_api.settings import Settings
+from portfolio_api.source_documents import SecSubmissionsProvider
 
 REFRESH_TABLES = frozenset(
     {
@@ -55,12 +58,20 @@ class FixtureControl(BaseModel):
 
 
 class RefreshRehearsal:
-    def __init__(self, engine: Engine, settings: Settings, metadata: dict[str, object]) -> None:
+    def __init__(
+        self,
+        engine: Engine,
+        settings: Settings,
+        metadata: dict[str, object],
+        *,
+        recording: SecRecording | None = None,
+    ) -> None:
         self.engine = engine
+        self.recording = recording
         self.settings = settings.model_copy(
             update={
                 "manual_operations_enabled": True,
-                "sec_user_agent": "Recorded fictional browser fixture test@example.invalid",
+                "sec_user_agent": "Offline SEC browser replay test@example.invalid",
             }
         )
         self.metadata = metadata
@@ -75,9 +86,11 @@ class RefreshRehearsal:
             record_cik_mapping(
                 session,
                 UUID(str(metadata["company_id"])),
-                CIK,
-                "Synthetic Holdings Inc.",
-                "https://www.sec.gov/edgar/browse/?CIK=1",
+                recording.manifest.issuer.cik if recording else CIK,
+                recording.manifest.issuer.name if recording else "Synthetic Holdings Inc.",
+                recording.submissions_url
+                if recording
+                else "https://www.sec.gov/edgar/browse/?CIK=1",
             )
 
     def protected_state(self) -> str:
@@ -103,7 +116,10 @@ class RefreshRehearsal:
         with Session(self.engine) as session:
             scopes = [run.request_scope for run in session.scalars(select(ExternalIngestionRun))]
         return {
-            "provider_fixture": "recorded-fictional-sec-v1",
+            "provider_fixture": "recorded-real-sec-v1"
+            if self.recording
+            else "recorded-fictional-sec-v1",
+            "replay_started_at": self.at.isoformat(),
             "provider_request_count": len(self.calls),
             "provider_urls": self.calls,
             "counts": counts,
@@ -114,6 +130,13 @@ class RefreshRehearsal:
         }
 
     def download(self, url: str, _agent: str) -> bytes:
+        if self.recording:
+            if url not in self.recording.payloads:
+                raise AssertionError("Private recording rejects an unexpected provider target")
+            self.calls.append(url)
+            if self.response == "outage":
+                raise URLError("Simulated outage while replaying recorded official SEC data")
+            return self.recording.payloads[url]
         if url not in {
             f"https://data.sec.gov/api/xbrl/companyfacts/CIK{CIK}.json",
             f"https://data.sec.gov/submissions/CIK{CIK}.json",
@@ -128,7 +151,12 @@ class RefreshRehearsal:
     def install(self, application: FastAPI) -> None:
         @application.post("/__test/refresh-control")
         def control(value: FixtureControl) -> dict[str, object]:
-            if value.response not in {"initial", "updated", "outage", "partial"}:
+            allowed = (
+                {"initial", "outage"}
+                if self.recording
+                else {"initial", "updated", "outage", "partial"}
+            )
+            if value.response not in allowed:
                 raise HTTPException(422, "Unknown recorded response")
             if value.scheduled_days_later is not None and not 0 <= value.scheduled_days_later <= 7:
                 raise HTTPException(422, "Fixture clock is bounded to seven days")
@@ -192,6 +220,31 @@ class RefreshRehearsal:
                 patch("portfolio_api.source_documents._download_sec_json", self.download)
             )
             stack.enter_context(patch("portfolio_api.external_ingestion.time.sleep"))
+            if self.recording:
+                recording = self.recording
+                original_facts = SecCompanyFactsProvider.fetch
+                original_filings = SecSubmissionsProvider.fetch
+
+                def captured(records: list[RawProviderRecord]) -> list[RawProviderRecord]:
+                    return [
+                        record.model_copy(
+                            update={"retrieved_at": recording.captured[str(record.source_url)]}
+                        )
+                        for record in records
+                    ]
+
+                async def facts(
+                    provider: SecCompanyFactsProvider, query: ProviderQuery
+                ) -> list[RawProviderRecord]:
+                    return captured(list(await original_facts(provider, query)))
+
+                async def filings(
+                    provider: SecSubmissionsProvider, query: ProviderQuery
+                ) -> list[RawProviderRecord]:
+                    return captured(list(await original_filings(provider, query)))
+
+                stack.enter_context(patch.object(SecCompanyFactsProvider, "fetch", facts))
+                stack.enter_context(patch.object(SecSubmissionsProvider, "fetch", filings))
             event.listen(self.engine, "before_cursor_execute", restrict)
             worker = Thread(target=self._work, daemon=True)
             worker.start()

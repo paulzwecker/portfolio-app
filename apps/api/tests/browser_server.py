@@ -19,6 +19,7 @@ import uvicorn
 from alembic import command
 from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
+from browser_real_sec_data import SecRecording, prepare_real_sec_data
 from browser_refresh_data import RefreshRehearsal
 from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
@@ -361,6 +362,7 @@ def main(argv: list[str] | None = None) -> None:
             "sec-refresh-partial",
             "sec-refresh-outage",
             "sec-refresh-workflow",
+            "sec-real-refresh",
         ),
         default="demo",
     )
@@ -369,6 +371,12 @@ def main(argv: list[str] | None = None) -> None:
     if args.lifetime_seconds is not None and not 1 <= args.lifetime_seconds <= 600:
         parser.error("Fixture lifetime must be between 1 and 600 seconds")
     url = local_test_url(os.environ.get("TEST_DATABASE_URL"))
+    recording = None
+    if args.scenario == "sec-real-refresh":
+        recording_path = os.environ.get("BROWSER_SEC_RECORDING_MANIFEST")
+        if not recording_path:
+            parser.error("Real SEC replay requires a private BROWSER_SEC_RECORDING_MANIFEST")
+        recording = SecRecording(Path(recording_path))
     settings = fixture_settings()
     schema = f"test_browser_{uuid4().hex}"
     admin = create_engine(url, connect_args={"connect_timeout": 3}, hide_parameters=True)
@@ -395,6 +403,11 @@ def main(argv: list[str] | None = None) -> None:
         if args.scenario == "demo":
             with Session(engine) as session, session.begin():
                 seed(session)
+        elif recording is not None:
+            metadata = prepare_real_sec_data(engine, recording)
+            refresh = RefreshRehearsal(engine, settings, metadata, recording=recording)
+            settings = refresh.settings
+            metadata["schema"] = schema
         else:
             with TemporaryDirectory(prefix="portfolio-browser-") as directory:
                 metadata = prepare_portfolio_data(
@@ -448,7 +461,11 @@ def main(argv: list[str] | None = None) -> None:
         port = int(os.environ.get("BROWSER_API_PORT", "8000"))
         server = uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port))
         lifetime = args.lifetime_seconds or (120 if metadata is not None else None)
-        print("Isolated fictional browser fixtures ready.")
+        print(
+            "Isolated recorded official SEC data with fictional portfolio context ready."
+            if recording
+            else "Isolated fictional browser fixtures ready."
+        )
         if lifetime:
             print(f"Fixture lifetime {lifetime} seconds. Normal shutdown removes its test schema.")
         deadline = Timer(lifetime, setattr, (server, "should_exit", True)) if lifetime else None
