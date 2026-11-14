@@ -1,5 +1,28 @@
 # Active workstream
 
+## Real-source integration extension - acceptance frozen (2026-11-14)
+
+The owner explicitly requested integration and real observations. Continue the
+compatible PR #39 with its existing history. Main `866723e` already includes
+PR #37's encrypted recovery tooling and PR #38's investor journey. The independent
+return-hurdle capability is complete on `codex/investment-decision-cockpit` at
+`33cedff`; preserve it for later integration rather than expanding this data slice.
+
+Frozen outcome: one exact verified MSCI issuer (`CIK0001408198`) -> unchanged
+official Company Facts/submissions recordings -> existing manual durable requests
+and SEC importers -> disposable PostgreSQL -> Financials/source evidence and filing
+history in the real UI. Verify dates, units, source values, idempotent scheduled
+replay, desktop/mobile light/dark, and unchanged accepted portfolio/model state.
+Capture and local replay times remain distinct. Raw source files stay private.
+
+Use the existing configured SEC contact for a bounded official capture: one index,
+one facts response and at most five index-linked history files, serial requests.
+Stop on access denial or identity mismatch. No paid source, new application worker,
+schema, model acceptance, production write, cloud change or deployment is in scope.
+Production recovery destination/restore rehearsal and mapping approval remain gates;
+they do not block this isolated source-to-UI verification. Existing fictional tests
+retain failure/partial/new-period coverage without being presented as real data.
+
 ## Bounded SEC refresh � acceptance frozen (2026-11-14)
 
 Branch `codex/financial-refresh-slice` starts at main `866723e`, owner-merged
