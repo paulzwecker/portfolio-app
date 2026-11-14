@@ -6,17 +6,27 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                            |
-| Branch / PR                 | `codex/investor-research-journey` from main `ddbacbc`; PRs #34/#36/#35 merged. Recovery PR #37 remains independent and frozen.   |
-| Implementation              | Exact-listing portfolio navigation, data-aware company summary and price-first research history using existing UI components.    |
-| Next ready substantial task | Complete responsive light/dark and data-state integration review, then one owner-reviewable PR.                                  |
-| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                         |
-| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation. |
+| Field                       | Current value                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint           | Investor research journey; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                                          |
+| Branch / PR                 | `codex/investor-research-journey` from main `ddbacbc`; PRs #34/#36/#35 merged. Recovery PR #37 owner-merged; latest main `9a27353` integrated. |
+| Implementation              | Exact-listing portfolio navigation, data-aware company summary and price-first research history using existing UI components.                  |
+| Next ready substantial task | Complete responsive light/dark and data-state integration review, then one owner-reviewable PR.                                                |
+| Deferred work               | New analytics, financial engines, model synthesis, ingestion/scheduler changes and generic architecture.                                       |
+| Production boundary         | No deployment or production changes. Recovery destination/restore rehearsal and provider access still gate real-data activation.               |
 
-The records below describe preceding work; the current acceptance and evidence live
-in the active handoff. This UI milestone does not depend on completing Sheets recovery.
+The current acceptance and evidence live in the active handoff. This UI milestone
+does not depend on completing Sheets recovery.
+
+November 14 read-only evidence: schema `b59f16c8a203`, accepted 22 positions,
+zero prices/FX/facts/filings/consensus. Market preview READY for 22 listings plus
+two FX pairs over 2025-11-10–2026-11-09, with zero requests/writes; SEC preview
+has no reviewed CIK mappings. Local recovery/guard/ingestion suite: 174 passed;
+contracts, types and 22 deployment/documentation tests passed. See the
+[operator runbook](docs/encrypted-production-recovery.md) and
+[provider decision](docs/financial-data-provider-decision.md).
+
+## Prior implementation evidence
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

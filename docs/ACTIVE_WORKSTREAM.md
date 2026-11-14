@@ -3,8 +3,8 @@
 ## Investor research journey — acceptance frozen (2026-11-14)
 
 `codex/investor-research-journey` starts at main `ddbacbc` after owner-merged
-PRs #34, #36 and #35. Independent recovery package [PR #37](https://github.com/paulzwecker/portfolio-app/pull/37)
-remains frozen for owner review. No ingestion/scheduler changes belong here.
+PRs #34, #36 and #35; integrated main `9a27353` with the owner-merged recovery
+package [PR #37](https://github.com/paulzwecker/portfolio-app/pull/37). No ingestion/scheduler changes belong here.
 
 Acceptance for this milestone:
 
@@ -26,3 +26,15 @@ browser fixtures are not production ingestion. Recovery/provider activation is a
 separate owner-gated workstream. No new architecture or optional analytics required.
 
 The preceding integration handoff is preserved in Git at `ddbacbc`.
+
+Production activation evidence preserved from merged #37 (November 14): exact Neon
+identity and `b59f16c8a203` matched; 22 accepted positions, two cash rows and one
+target revision. Prices, FX, reported facts, filing records and consensus are zero.
+Market preview READY: 22 listings + DKK/EUR and USD/EUR, 2025-11-10–2026-11-09,
+no provider requests/writes. No reviewed production CIK mappings. No durable backup
+has been executed. The expiring November 8 recovery branch is not durable protection.
+
+Use the merged [encrypted recovery runbook](encrypted-production-recovery.md) and
+[provider decision matrix](financial-data-provider-decision.md). Next operational
+step remains an owner-approved encrypted destination/key custody and isolated
+restore rehearsal, then verified provider access and one guarded checkpoint.

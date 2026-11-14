@@ -2,6 +2,19 @@
 
 ## Status
 
+**2026-11-14 execution update:** the owner-approved initial market scope is
+2025-11-10 through 2026-11-09, 22 held listings plus DKK/EUR and USD/EUR.
+A fresh read-only preview is READY on `b59f16c8a203`, with the canonical receipt
+accepted, 24 logical requests planned and zero provider calls/writes. All production
+price, FX, facts, filing and consensus observation counts remain zero. SEC preview
+is blocked by missing reviewed production CIK mappings. The existing Yahoo transport
+can make four HTTP attempts per logical request; inspect its bounded retry budget
+before execution. Current-state recovery and provider entitlement remain prerequisites;
+the conceptual ingestion authorization need not be requested again. Follow the
+[current recovery/activation sequence](encrypted-production-recovery.md) and
+[provider decision](financial-data-provider-decision.md). Dates/revisions below are
+historical evidence or parameterized examples, not the current approved window.
+
 **Market planning preview verified on 2026-11-07; execution requires separate authorization.**
 The market-data and SEC bootstrap commands use the shared database write-target
 guard. The [Nov 7 baseline](production-canonical-baseline.md) records the reconciled
