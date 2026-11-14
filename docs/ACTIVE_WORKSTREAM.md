@@ -1,5 +1,22 @@
 # Active workstream
 
+## Agent 6 - statement coverage extension (acceptance frozen 2026-11-15)
+
+The owner requests additional public fundamentals on the same compatible PR #39.
+Extend the completed MSCI workflow with **Microsoft only**, subject to exact official
+CIK/legal-entity/listing review. Validate annual and discrete-quarter revenue,
+earnings, operating results, available cash-flow and balance observations against
+actual filing evidence. Preserve June fiscal-year labels, units, comparative facts,
+source dates, unavailable values and partial/conflicting coverage.
+
+Reuse the existing private recording, durable refresh and statement resolver in
+isolated PostgreSQL/API/UI. Capture at most nine official requests: submissions,
+Company Facts, up to five index-linked history pages, one annual and one quarterly
+filing. Stop on access denial or identity mismatch. Retain independent source checks
+and an unapproved mapping proposal privately. No production mapping, backup, write,
+deployment, additional issuer, derived-ratio expansion or new infrastructure.
+Passing MSCI and Microsoft evidence ends this extension; do not expand its scope.
+
 ## Real-source SEC refresh - integrated acceptance (2026-11-15)
 
 Continue the existing [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39),
