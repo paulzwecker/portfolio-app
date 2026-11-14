@@ -9,7 +9,7 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Field                       | Current value                                                                                                                                            |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Active checkpoint           | Bounded SEC refresh vertical slice locally complete; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                          |
-| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; PR #38 owner-merged; no open PR at intake.                                                          |
+| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39) frozen for owner review.             |
 | Implementation              | Manual and scheduled SEC refresh verified through real PostgreSQL/API/UI using fictional recordings; desktop/mobile and 147 broader browser checks pass. |
 | Next ready substantial task | Freeze one PR for owner review; clear recovery/contact gates for bounded SEC activation. Independent next capability: official ECB historical FX.        |
 | Deferred work               | Unverified free equity/consensus access, ECB adapter, broader analytics, Sheets and generic infrastructure.                                              |

@@ -6,6 +6,8 @@ Branch `codex/financial-refresh-slice` starts at main `866723e`, owner-merged
 [PR #38](https://github.com/paulzwecker/portfolio-app/pull/38). GitHub had no open
 PR at intake. Owner checkout edits, private references, stash and prior branches
 remain intact. No production changes or paid services belong in this milestone.
+Delivery is frozen in [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39)
+for owner review; latest-head CI results are maintained in that PR.
 
 Frozen user outcome: Company Explorer requests verified-issuer SEC facts/filings;
 Operations requests both domains across the bounded held/Watchlist scope; existing
