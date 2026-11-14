@@ -1,19 +1,19 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-11. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                                                               |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Financial statements availability — [PR #36](https://github.com/paulzwecker/portfolio-app/pull/36) reconciled for review. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                             |
-| Branch / PR                 | `codex/financial-statements-availability` integrates main `387ec6d` with merged [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34); [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35) follows #36. |
-| Implementation              | Financials hides unsupported empty controls, selects an available chart series and counts only displayed-period coverage while retaining source and quality evidence.                                                       |
-| Next ready substantial task | Restore operational historical prices/FX after verified recovery and provider access; do not infer identities.                                                                                                              |
-| Deferred work               | Chart selection cleanup after filter changes; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                               |
-| Production boundary         | Production ingestion remains gated on provider terms, independently verified recovery and the owner's scoped conditions. No migration, deployment or financial decision without authorization.                              |
+| Field                       | Current value                                                                                                                                                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | Company refresh continuity — [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35), integration after #36. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                      |
+| Branch / PR                 | `codex/company-refresh-continuity` integrates main `9939fe3`, including merged PRs [#34](https://github.com/paulzwecker/portfolio-app/pull/34) and [#36](https://github.com/paulzwecker/portfolio-app/pull/36).                |
+| Implementation              | Restore company-scoped refresh status after navigation using existing durable job requests.                                                                                                                                    |
+| Next ready substantial task | Verify the API-first release and restore historical prices/FX after approved recovery and source access.                                                                                                                       |
+| Deferred work               | Financials chart selection cleanup; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                                            |
+| Production boundary         | Owner-reported provider settings permit automatic production deployment; freeze both providers before merge. Ingestion remains gated on source access, recovery and scoped authorization. No deployment without authorization. |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

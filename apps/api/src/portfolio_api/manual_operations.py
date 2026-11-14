@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, text
+from sqlalchemy import case, func, select, text
 from sqlalchemy.orm import Session
 
 from portfolio_api.domain import schemas as s
@@ -359,12 +359,21 @@ def job_request_read(
     )
 
 
-def list_job_requests(session: Session, limit: int = 30) -> list[s.OperationalJobRequestRead]:
+def list_job_requests(
+    session: Session, limit: int = 30, *, company_id: UUID | None = None
+) -> list[s.OperationalJobRequestRead]:
+    query = select(OperationalJobRequest)
+    if company_id is not None:
+        # Active requests must remain visible even after many later completed jobs.
+        query = query.where(
+            OperationalJobRequest.scope_kind == "COMPANY",
+            OperationalJobRequest.company_id == company_id,
+        ).order_by(case((OperationalJobRequest.status.in_(("QUEUED", "RUNNING")), 0), else_=1))
     requests = list(
         session.scalars(
-            select(OperationalJobRequest)
-            .order_by(OperationalJobRequest.requested_at.desc())
-            .limit(limit)
+            query.order_by(
+                OperationalJobRequest.requested_at.desc(), OperationalJobRequest.id.desc()
+            ).limit(limit)
         )
     )
     return [job_request_read(session, item) for item in requests]

@@ -37561,6 +37561,65 @@
         ]
       }
     },
+    "/v1/companies/{company_id}/job-requests": {
+      "get": {
+        "operationId": "get_company_job_requests_v1_companies__company_id__job_requests_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OperationalJobRequestRead"
+                  },
+                  "title": "Response Get Company Job Requests V1 Companies  Company Id  Job Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Job Requests",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/companies/{company_id}/lifecycle-transitions": {
       "post": {
         "operationId": "post_transition_v1_companies__company_id__lifecycle_transitions_post",

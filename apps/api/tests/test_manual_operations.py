@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from threading import Event, Thread
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,6 +41,59 @@ def _company_in_state(session: Session, state: str = "PORTFOLIO") -> Company:
     session.add(CurrentLifecycle(company_id=company.id, event_id=event.id))
     session.flush()
     return company
+
+
+@pytest.mark.integration
+def test_company_job_history_filters_before_limit_and_keeps_active_first(
+    postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from portfolio_api.main import create_app
+
+    now_at = datetime.now(UTC)
+    with Session(postgres_engine) as session, session.begin():
+        issuer = _company_in_state(session, "WATCHLIST")
+        other = _company_in_state(session, "WATCHLIST")
+        issuer_id, other_id = issuer.id, other.id
+        active_ids = []
+        for index in range(72):
+            company = issuer if index < 37 else other
+            active = index < 2
+            request_id = uuid4()
+            if active:
+                active_ids.append(str(request_id))
+            session.add(
+                OperationalJobRequest(
+                    id=request_id,
+                    job_name="SEC_FILINGS" if index == 0 else "SEC_FUNDAMENTALS",
+                    scope_kind="COMPANY",
+                    company_id=company.id,
+                    company_name=company.name,
+                    requested_by="LOCAL_USER",
+                    request_fingerprint=f"{index:064x}",
+                    status="RUNNING" if index == 0 else "QUEUED" if active else "SUCCEEDED",
+                    requested_at=now_at + timedelta(seconds=index),
+                    attempt_count=0,
+                    affected_domains=[],
+                    scope_detail={},
+                    result={"steps": []},
+                )
+            )
+    monkeypatch.setattr(
+        "portfolio_api.main.create_database_engine", lambda *_args, **_kwargs: postgres_engine
+    )
+    with TestClient(
+        create_app(Settings(database_url=None, recurring_operations_enabled=False))
+    ) as client:
+        response = client.get(f"/v1/companies/{issuer_id}/job-requests?limit=30")
+        assert response.status_code == 200
+        rows = response.json()
+        assert len(rows) == 30
+        assert {row["id"] for row in rows[:2]} == set(active_ids)
+        assert all(row["company_id"] == str(issuer_id) for row in rows)
+        assert client.get(f"/v1/companies/{other_id}/job-requests?limit=101").status_code == 422
+        assert client.get(f"/v1/companies/{uuid4()}/job-requests").status_code == 404
+    with Session(postgres_engine) as session:
+        assert len(list(session.scalars(select(OperationalJobRequest)))) == 72
 
 
 @pytest.mark.integration
