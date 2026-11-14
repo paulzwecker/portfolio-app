@@ -1,11 +1,9 @@
 # Active workstream
 
-## Company refresh continuity — preliminary integration
+## Company refresh continuity — integration
 
-`codex/company-refresh-continuity` is [draft PR #35](https://github.com/paulzwecker/portfolio-app/pull/35),
-integrating main `387ec6d` with merged PR #34. Reconcile again after the owner merges
-[PR #36](https://github.com/paulzwecker/portfolio-app/pull/36) before treating the
-branch as ready for review.
+`codex/company-refresh-continuity` is [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35),
+integrating main `9939fe3` after owner-merged PRs #34 and #36.
 Company Explorer restores queued and running company jobs after navigation and
 reload, displays multiple active requests and the latest completed outcome, and
 continues polling the existing durable operations pipeline. A bounded, read-only
@@ -25,15 +23,64 @@ After the preliminary integration of `387ec6d`, 471 web tests, 21 isolated
 company-refresh/API tests, contract comparisons, both offline schema gates,
 21 deployment tests and documentation checks passed. Eight synthetic
 desktop/mobile refresh journeys passed against the isolated API; the active
-request layouts were inspected. These checks must be repeated as appropriate
-after #36 is merged and reconciled.
+request layouts were inspected. Repeat affected checks after integrating #36.
 
 Release status: BLOCKED pending fresh Neon identity/schema and deployed-commit
 verification. The owner reports deployment controls verified. Older APIs lack the
-new route, so freeze Vercel production builds and deploy and verify the API before
-the frontend; until then controls fail closed. Reconcile the shared roadmap and
-handoff again after #36 merges. Production ingestion and scheduler activation remain
-separately gated.
+new route, so keep Vercel production builds frozen and deploy and verify the API
+before the frontend under separate authorization; until then controls fail closed.
+Production ingestion and scheduler activation remain separately gated.
+
+For a separately authorized release: keep both provider freezes in place through
+owner merge and record the exact merged main SHA and passing checks. Verify the
+live Neon identity/revision and provider state, then release that SHA to the existing
+Render API and verify its commit, live/ready health and authenticated read-only
+`GET /v1/companies/{company_id}/job-requests`. Only then may the owner release the
+same SHA to Vercel through the reviewed schema-aware hook and GitHub Deployment
+Checks, and verify the production alias, authenticated health and Company Explorer.
+Stop on a mismatch; do not force-promote or enable ingestion or schedules.
+
+## Previous Financials availability — merged
+
+[PR #36](https://github.com/paulzwecker/portfolio-app/pull/36) merged into main as
+`9939fe3`, following merged [PR #34](https://github.com/paulzwecker/portfolio-app/pull/34). Company Financials
+now hides the unsupported growth/ratios category and suppresses empty chart controls
+and zero-count cards when no aligned cells exist. Sources, SEC coverage, time filters
+and quality-checked cells stay accessible; zero remains a valid chartable value.
+Source filters can hide and restore the chart without hiding their own controls.
+Retained flagged values now announce their status to screen readers.
+
+The next BUILD increment defaults the chart to another eligible reported metric,
+or an eligible forecast if no reported metric can be charted. An explicit empty
+selection stays empty. Coverage counts and source messages now use displayed
+periods, and out-of-window observations cannot enable a chart checkbox. Seventeen
+focused web tests, lint/typecheck and a synthetic Company Explorer journey at
+desktop and mobile widths passed; independent review identified these issues and
+confirmed that a suspected consensus mapping issue is not currently reachable.
+
+Local evidence: all 475 web tests, lint/typecheck, frontend production build, 22
+deployment/documentation checks and both offline schema gates passed. A synthetic
+Company Explorer journey covers placeholder rows, conflicts, source toggles and
+populated data at mobile and desktop widths. Two browser checks used the real
+isolated empty API response, verified source access and unchanged protected state,
+and were inspected in light and dark themes. Independent review found no remaining
+concrete blocker. No schema, financial calculation, provider or production changes.
+Frozen acceptance: suppress unsupported empty controls; retain source and quality
+evidence; chart only aligned eligible values, including zero; preserve explicit
+selection. The full 478-test web suite, lint, production build, documentation and
+deployment checks passed. Desktop/mobile journeys passed with synthetic data and
+with the isolated API; empty-state light/dark layouts were inspected. Independent
+review found no blocker. A pre-existing selection that persists after a period or
+source change is deferred. This slice creates no financial observations. The owner
+reports the deployment controls verified; the live schema and deployment commits
+remain independently unverified. Production release remains BLOCKED until checked.
+Source access and recovery gates for real data are separate.
+
+After integrating `387ec6d`, the 478 web tests, lint, frontend build, contract
+comparisons, both offline schema gates, 21 deployment checks and documentation
+check passed. The Company Explorer synthetic desktop/mobile journey and the two
+isolated-API desktop/mobile empty-state journeys also passed. The owner-reported
+deployment-control verification does not establish the current live schema or SHA.
 
 ## Previous SEC issuer review — merged
 

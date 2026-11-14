@@ -13,12 +13,14 @@ export function FinancialStatementsTable({
   selected,
   onToggle,
   onInspect,
+  chartAvailable,
 }: {
   data: CompanyFinancialStatements;
   rows: FinancialStatementRow[];
   selected: string[];
   onToggle: (id: string) => void;
   onInspect: (row: FinancialStatementRow, cell: FinancialStatementCell) => void;
+  chartAvailable: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   return (
@@ -27,8 +29,8 @@ export function FinancialStatementsTable({
         className="mb-2 text-xs text-muted-foreground"
         id="statement-table-help"
       >
-        Select metric rows to chart. Scroll within the table for more periods.
-        Select a value to inspect its evidence.
+        {chartAvailable && "Select metric rows to chart. "}Scroll within the
+        table for more periods. Select a value to inspect its evidence.
       </p>
       <div
         ref={scroller}
@@ -75,8 +77,14 @@ export function FinancialStatementsTable({
           <tbody>
             {rows.map((row) => {
               const available = row.cells.some(
-                (cell) => cell.status === "AVAILABLE" && cell.value !== null,
+                (cell) =>
+                  data.periods.some(
+                    (period) => period.period_end === cell.period_end,
+                  ) &&
+                  cell.status === "AVAILABLE" &&
+                  cell.value !== null,
               );
+              const RowLabel = chartAvailable ? "label" : "div";
               return (
                 <tr
                   key={row.id}
@@ -90,15 +98,19 @@ export function FinancialStatementsTable({
                     scope="row"
                     className="sticky left-0 z-10 border-b bg-card px-3 py-3 text-left font-normal shadow-[1px_0_0_0_var(--border)]"
                   >
-                    <label className="flex cursor-pointer items-start gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(row.id)}
-                        disabled={!available && !selected.includes(row.id)}
-                        onChange={() => onToggle(row.id)}
-                        aria-label={`Chart ${rowLabel(row)}`}
-                        className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
-                      />
+                    <RowLabel
+                      className={`flex items-start gap-2.5 ${chartAvailable ? "cursor-pointer" : ""}`}
+                    >
+                      {chartAvailable && (
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(row.id)}
+                          disabled={!available && !selected.includes(row.id)}
+                          onChange={() => onToggle(row.id)}
+                          aria-label={`Chart ${rowLabel(row)}`}
+                          className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                      )}
                       <span className="min-w-0">
                         <span className="block text-xs font-medium sm:text-sm">
                           {row.label}
@@ -114,7 +126,7 @@ export function FinancialStatementsTable({
                           {unitLabel(row)}
                         </span>
                       </span>
-                    </label>
+                    </RowLabel>
                     {row.availability_reason && (
                       <span className="mt-1 block max-w-[220px] text-[10px] leading-4 text-muted-foreground">
                         {row.availability_reason}
@@ -134,7 +146,7 @@ export function FinancialStatementsTable({
                           <button
                             type="button"
                             onClick={() => onInspect(row, cell)}
-                            aria-label={`${row.label}, ${period.label}, ${cell.value === null ? cell.status : `${quantity(cell.value)} ${unitLabel(row)}`}, inspect source`}
+                            aria-label={`${row.label}, ${period.label}, ${cell.value === null ? cell.status : `${quantity(cell.value)} ${unitLabel(row)}${cell.status === "AVAILABLE" ? "" : `, ${cell.status}`}`}, inspect source`}
                             className={`min-h-9 w-full rounded px-1 text-right underline-offset-4 hover:bg-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${cell.value !== null && Number(cell.value) < 0 ? "text-negative" : ""}`}
                           >
                             {formatCompactFinancial(cell.value)}

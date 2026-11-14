@@ -2758,6 +2758,8 @@ test("Company Explorer composes canonical company context at desktop and mobile 
 
   let marketDataRequestCount = 0;
   let incompatibleHistory = false;
+  let statementMode: "populated" | "empty" | "conflict" | "other-metric" =
+    "populated";
   await page.route(/\/api\/research\//, (route) => {
     const pathname = new URL(route.request().url()).pathname.replace(
       "/api/research/",
@@ -2889,101 +2891,143 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       const statementUrl = new URL(route.request().url());
       const quarterly =
         statementUrl.searchParams.get("period_type") === "QUARTERLY";
-      return route.fulfill({
-        json: {
-          company_id: id,
-          period_type: quarterly ? "QUARTERLY" : "ANNUAL",
-          as_of: null,
-          known_at: null,
-          latest_observed_at: observedAt,
-          periods: [
-            {
-              period_end: "2025-12-31",
-              label: quarterly ? "FY2025 · Q4" : "FY2025",
-              fiscal_year: 2025,
-              fiscal_period: "FY",
-              is_forecast: false,
-            },
-          ],
-          rows: [
-            {
-              id: "REPORTED_ACTUAL::OPERATING_INCOME::USD::currency",
-              metric: "OPERATING_INCOME",
-              label: "Operating income",
-              statement: "INCOME_STATEMENT",
-              source_kind: "REPORTED_ACTUAL",
-              source_name: "Reported actuals",
-              scenario: null,
-              currency: "USD",
-              unit: "currency",
-              availability_reason: null,
-              cells: [
-                {
-                  period_end: "2025-12-31",
-                  value: "250000",
-                  status: "AVAILABLE",
-                  reason: null,
-                  selected_source_id: null,
-                  source_ids: [],
-                },
-              ],
-            },
-            {
-              id: "REPORTED_ACTUAL::REVENUE::USD::currency",
-              metric: "REVENUE",
-              label: "Revenue",
-              statement: "INCOME_STATEMENT",
-              source_kind: "REPORTED_ACTUAL",
-              source_name: "Reported actuals",
-              scenario: null,
-              currency: "USD",
-              unit: "currency",
-              availability_reason: null,
-              cells: [
-                {
-                  period_end: "2025-12-31",
-                  value: "1000000",
-                  status: "AVAILABLE",
-                  reason: null,
-                  selected_source_id: revenueObservation.id,
-                  source_ids: [revenueObservation.id],
-                },
-              ],
-            },
-            {
-              id: "REPORTED_ACTUAL::CASH_AND_CASH_EQUIVALENTS::USD::currency",
-              metric: "CASH_AND_CASH_EQUIVALENTS",
-              label: "Cash and cash equivalents",
-              statement: "BALANCE_SHEET",
-              source_kind: "REPORTED_ACTUAL",
-              source_name: "Reported actuals",
-              scenario: null,
-              currency: null,
-              unit: "currency",
+      const statementResponse = {
+        company_id: id,
+        period_type: quarterly ? "QUARTERLY" : "ANNUAL",
+        as_of: null,
+        known_at: null,
+        latest_observed_at: observedAt,
+        periods: [
+          {
+            period_end: "2025-12-31",
+            label: quarterly ? "FY2025 · Q4" : "FY2025",
+            fiscal_year: 2025,
+            fiscal_period: "FY",
+            is_forecast: false,
+          },
+        ],
+        rows: [
+          {
+            id: "REPORTED_ACTUAL::OPERATING_INCOME::USD::currency",
+            metric: "OPERATING_INCOME",
+            label: "Operating income",
+            statement: "INCOME_STATEMENT",
+            source_kind: "REPORTED_ACTUAL",
+            source_name: "Reported actuals",
+            scenario: null,
+            currency: "USD",
+            unit: "currency",
+            availability_reason: null,
+            cells: [
+              {
+                period_end: "2025-12-31",
+                value: "250000",
+                status: "AVAILABLE",
+                reason: null,
+                selected_source_id: null,
+                source_ids: [],
+              },
+            ],
+          },
+          {
+            id: "REPORTED_ACTUAL::REVENUE::USD::currency",
+            metric: "REVENUE",
+            label: "Revenue",
+            statement: "INCOME_STATEMENT",
+            source_kind: "REPORTED_ACTUAL",
+            source_name: "Reported actuals",
+            scenario: null,
+            currency: "USD",
+            unit: "currency",
+            availability_reason: null,
+            cells: [
+              {
+                period_end: "2025-12-31",
+                value: "1000000",
+                status: "AVAILABLE",
+                reason: null,
+                selected_source_id: revenueObservation.id,
+                source_ids: [revenueObservation.id],
+              },
+            ],
+          },
+          {
+            id: "REPORTED_ACTUAL::CASH_AND_CASH_EQUIVALENTS::USD::currency",
+            metric: "CASH_AND_CASH_EQUIVALENTS",
+            label: "Cash and cash equivalents",
+            statement: "BALANCE_SHEET",
+            source_kind: "REPORTED_ACTUAL",
+            source_name: "Reported actuals",
+            scenario: null,
+            currency: null,
+            unit: "currency",
+            availability_reason:
+              "No eligible reported observation in this period view.",
+            cells: [],
+          },
+        ],
+        reported_periods: reportedFundamentals.periods,
+        consensus: consensusEstimateRead,
+        research: companyResearchRead,
+        limitations: [
+          {
+            source_name: "Growth & ratios",
+            reason:
+              "No canonical growth/ratio or reported EPS, EBITDA, FCF calculation is implemented.",
+            reference_id: null,
+          },
+          {
+            source_name: "legacy_workbook_estimates · REVENUE · FY+1",
+            reason:
+              "Currency and fiscal period are unknown; alignment is unavailable.",
+            reference_id: estimateObservation.id,
+          },
+        ],
+      };
+      if (statementMode === "other-metric")
+        return route.fulfill({
+          json: {
+            ...statementResponse,
+            rows: [
+              {
+                ...statementResponse.rows[0],
+                id: "REPORTED_ACTUAL::NET_INCOME::USD::currency",
+                metric: "NET_INCOME",
+                label: "Net income",
+              },
+            ],
+          },
+        });
+      if (statementMode === "empty")
+        return route.fulfill({
+          json: {
+            ...statementResponse,
+            periods: [],
+            rows: statementResponse.rows.map((row) => ({
+              ...row,
+              cells: [],
               availability_reason:
                 "No eligible reported observation in this period view.",
-              cells: [],
-            },
-          ],
-          reported_periods: reportedFundamentals.periods,
-          consensus: consensusEstimateRead,
-          research: companyResearchRead,
-          limitations: [
-            {
-              source_name: "Growth & ratios",
-              reason:
-                "No canonical growth/ratio or reported EPS, EBITDA, FCF calculation is implemented.",
-              reference_id: null,
-            },
-            {
-              source_name: "legacy_workbook_estimates · REVENUE · FY+1",
-              reason:
-                "Currency and fiscal period are unknown; alignment is unavailable.",
-              reference_id: estimateObservation.id,
-            },
-          ],
-        },
-      });
+            })),
+            latest_observed_at: null,
+          },
+        });
+      if (statementMode === "conflict")
+        return route.fulfill({
+          json: {
+            ...statementResponse,
+            rows: statementResponse.rows.map((row) => ({
+              ...row,
+              cells: row.cells.map((cell) => ({
+                ...cell,
+                value: null,
+                status: "DATA_CHECK",
+                reason: "Conflicting source observations",
+              })),
+            })),
+          },
+        });
+      return route.fulfill({ json: statementResponse });
     }
     if (pathname === `companies/${id}/source-documents`)
       return route.fulfill({ json: sourceDocuments });
@@ -3120,6 +3164,20 @@ test("Company Explorer composes canonical company context at desktop and mobile 
   });
 
   for (const width of [390, 1440]) {
+    statementMode = "other-metric";
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`/company/${id}?view=financials`);
+    const netIncome = page.getByLabel("Chart Net income · Reported actuals");
+    await expect(netIncome).toBeChecked();
+    await netIncome.uncheck();
+    await expect(
+      page.getByText("Select a metric row to explore its history."),
+    ).toBeVisible();
+    await netIncome.check();
+    await expect(
+      page.getByText("Select a metric row to explore its history."),
+    ).toHaveCount(0);
+    statementMode = "populated";
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto(`/company/${id}`);
     await expect(
@@ -3183,12 +3241,9 @@ test("Company Explorer composes canonical company context at desktop and mobile 
     await expect(
       page.getByText("No aligned estimates", { exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Growth & Ratios", exact: true })
-      .click();
     await expect(
-      page.getByRole("heading", { name: "Growth & ratios are unavailable" }),
-    ).toBeVisible();
+      page.getByRole("button", { name: "Growth & Ratios", exact: true }),
+    ).toHaveCount(0);
     await page
       .getByRole("button", { name: "Income Statement", exact: true })
       .click();
@@ -3197,6 +3252,60 @@ test("Company Explorer composes canonical company context at desktop and mobile 
       page.getByRole("button", { name: "Quarterly", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Annual", exact: true }).click();
+    statementMode = "empty";
+    await page.getByRole("button", { name: "Quarterly", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "No aligned financial periods" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Financial statement category" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("Select a metric row to explore its history."),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Sources & alignment" }),
+    ).toBeEnabled();
+    await page.locator("#reported-fundamentals").screenshot({
+      path: testInfo.outputPath(`financial-empty-${width}.png`),
+    });
+    statementMode = "conflict";
+    await page.getByRole("button", { name: "Annual", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /Revenue, FY2025, DATA_CHECK/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Financial chart comparison mode" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("region", {
+        name: "Financial statements table, scrollable periods",
+      }),
+    ).toBeVisible();
+    statementMode = "populated";
+    await page.getByRole("button", { name: "Quarterly", exact: true }).click();
+    await expect(
+      page.getByLabel("Chart Revenue · Reported actuals"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Annual", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /Revenue, FY2025, 1000000 USD/ }),
+    ).toBeVisible();
+    const sourceControls = page.getByRole("group", {
+      name: "Financial source visibility",
+    });
+    const reportedSource = sourceControls.getByRole("checkbox", {
+      name: "Reported actuals",
+    });
+    await reportedSource.uncheck();
+    await expect(
+      page.getByRole("group", { name: "Financial chart comparison mode" }),
+    ).toHaveCount(0);
+    await expect(sourceControls).toBeVisible();
+    await reportedSource.check();
+    await expect(
+      page.getByRole("group", { name: "Financial chart comparison mode" }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Sources & alignment" }).click();
     await expect(
       page.getByText("Accepted agent research archive"),
