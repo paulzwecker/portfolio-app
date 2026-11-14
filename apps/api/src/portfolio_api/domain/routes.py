@@ -31,6 +31,7 @@ from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services as operations
 from portfolio_api.domain.models import (
+    Company,
     ForecastAccuracyMetric,
     ForecastAccuracySourceType,
     FundamentalPeriodType,
@@ -1006,6 +1007,17 @@ def get_operational_job_requests(
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> list[s.OperationalJobRequestRead]:
     return list_job_requests(db, limit)
+
+
+@router.get(
+    "/companies/{company_id}/job-requests", response_model=list[s.OperationalJobRequestRead]
+)
+def get_company_job_requests(
+    company_id: UUID, db: Db, limit: Annotated[int, Query(ge=1, le=100)] = 30
+) -> list[s.OperationalJobRequestRead]:
+    if db.get(Company, company_id) is None:
+        raise HTTPException(404, "Company was not found.")
+    return list_job_requests(db, limit, company_id=company_id)
 
 
 @router.get("/operations/job-requests/{request_id}", response_model=s.OperationalJobRequestRead)

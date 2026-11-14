@@ -408,6 +408,7 @@ test("scoped company controls queue only the selected SEC job and retain termina
   const submissions: unknown[] = [];
   let polling = 0;
   let maximumPolling = 0;
+  let historyReads = 0;
   let current: Record<string, unknown> | null = null;
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -424,6 +425,7 @@ test("scoped company controls queue only the selected SEC job and retain termina
       if (route.request().method() === "POST") {
         const body = route.request().postDataJSON();
         submissions.push(body);
+        historyReads = 0;
         const at = new Date().toISOString();
         current = {
           id: `11111111-1111-4111-8111-11111111111${submissions.length}`,
@@ -457,7 +459,14 @@ test("scoped company controls queue only the selected SEC job and retain termina
         };
         return route.fulfill({ status: 202, json: current });
       }
-      if (route.request().url().endsWith(String(current?.id))) {
+      return route.continue();
+    },
+  );
+  await page.route(
+    `**/api/research/companies/${fixture.company_id}/job-requests**`,
+    async (route) => {
+      if (current) {
+        if (historyReads++ === 0) return route.fulfill({ json: [current] });
         polling += 1;
         maximumPolling = Math.max(maximumPolling, polling);
         // A response slower than the poll interval must not overlap a later poll
@@ -465,17 +474,16 @@ test("scoped company controls queue only the selected SEC job and retain termina
         if (submissions.length === 1)
           await new Promise((resolve) => setTimeout(resolve, 4000));
         polling -= 1;
-        return route.fulfill({
-          json: {
-            ...current,
-            status: submissions.length === 1 ? "PARTIAL" : "FAILED",
-            finished_at: new Date().toISOString(),
-            error_code: "SYNTHETIC_SEC_RESULT",
-            error_message: "Synthetic source coverage needs review.",
-          },
-        });
+        current = {
+          ...current,
+          status: submissions.length === 1 ? "PARTIAL" : "FAILED",
+          finished_at: new Date().toISOString(),
+          error_code: "SYNTHETIC_SEC_RESULT",
+          error_message: "Synthetic source coverage needs review.",
+        };
+        return route.fulfill({ json: [current] });
       }
-      return route.continue();
+      return route.fulfill({ json: [] });
     },
   );
   await page.goto(`/company/${fixture.company_id}?view=financials`);
@@ -501,6 +509,10 @@ test("scoped company controls queue only the selected SEC job and retain termina
     await button.focus();
     await page.keyboard.press("Enter");
     await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
+    if (index === 0) {
+      await page.reload();
+      await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
+    }
     await expect(button).toBeDisabled();
     await expect(
       controls.getByText(index === 0 ? "PARTIAL" : "FAILED", { exact: true }),
@@ -547,6 +559,244 @@ test("scoped company controls queue only the selected SEC job and retain termina
     ),
   ).toBe(true);
   expect(errors).toEqual([]);
+  const after = await (await request.get(`${api}/__test/fixture`)).json();
+  expect(after.protected_state_sha256).toBe(fixture.protected_state_sha256);
+});
+
+test("company refresh history restores multiple active jobs and rejects a mismatched response", async ({
+  page,
+  request,
+}, info) => {
+  const api = `http://127.0.0.1:${process.env.BROWSER_API_PORT ?? "8011"}`;
+  const fixture = await (await request.get(`${api}/__test/fixture`)).json();
+  const optionsPath = `/api/research/companies/${fixture.company_id}/refresh-options`;
+  const options = await (await request.get(optionsPath)).json();
+  await page.route(`**${optionsPath}`, (route) =>
+    route.fulfill({ json: { ...options, execution_mode: "OPERATOR" } }),
+  );
+  const at = new Date().toISOString();
+  const job = (id: string, job_name: string, status: string) => ({
+    id,
+    job_name,
+    scope_kind: "COMPANY",
+    company_id: fixture.company_id,
+    company_name: options.company_name,
+    lifecycle: null,
+    requested_by: "LOCAL_USER",
+    status,
+    requested_at: at,
+    started_at: null,
+    finished_at: null,
+    next_attempt_at: null,
+    attempt_count: 0,
+    retry_of_id: null,
+    affected_domains: [],
+    scope_detail: {},
+    result: {},
+    error_code: null,
+    error_message: null,
+    retry_available: false,
+    deduplicated: false,
+    cooldown_until: at,
+    attempts: [],
+  });
+  const jobs = [
+    job("11111111-1111-4111-8111-111111111111", "SEC_FILINGS", "QUEUED"),
+    job("22222222-2222-4222-8222-222222222222", "SEC_FUNDAMENTALS", "RUNNING"),
+  ];
+  let mismatch = false;
+  await page.route(
+    `**/api/research/companies/${fixture.company_id}/job-requests**`,
+    (route) =>
+      route.fulfill({
+        json: mismatch
+          ? [{ ...jobs[0], company_id: "33333333-3333-4333-8333-333333333333" }]
+          : jobs,
+      }),
+  );
+  await page.goto(`/company/${fixture.company_id}?view=financials`);
+  const controls = page.getByRole("group", {
+    name: "Company refresh requests",
+    exact: true,
+  });
+  await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
+  await expect(controls.getByText("RUNNING", { exact: true })).toBeVisible();
+  await controls.screenshot({
+    path: info.outputPath("company-active-refreshes.png"),
+    scale: "css",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await expect(
+    controls.getByRole("button", { name: "Refresh SEC filings" }),
+  ).toBeDisabled();
+  await page.reload();
+  await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
+  await expect(controls.getByText("RUNNING", { exact: true })).toBeVisible();
+  mismatch = true;
+  await expect(
+    controls.getByText(/Company refresh history could not be verified/),
+  ).toBeVisible();
+  await expect(
+    controls.getByRole("button", { name: "Refresh SEC filings" }),
+  ).toBeDisabled();
+  const after = await (await request.get(`${api}/__test/fixture`)).json();
+  expect(after.protected_state_sha256).toBe(fixture.protected_state_sha256);
+});
+
+test("company refresh history fails closed on timeout and older API then allows retry", async ({
+  page,
+  request,
+}) => {
+  const api = `http://127.0.0.1:${process.env.BROWSER_API_PORT ?? "8011"}`;
+  const fixture = await (await request.get(`${api}/__test/fixture`)).json();
+  const optionsPath = `/api/research/companies/${fixture.company_id}/refresh-options`;
+  const options = await (await request.get(optionsPath)).json();
+  await page.route(`**${optionsPath}`, (route) =>
+    route.fulfill({ json: { ...options, execution_mode: "OPERATOR" } }),
+  );
+  let calls = 0;
+  await page.route(
+    `**/api/research/companies/${fixture.company_id}/job-requests**`,
+    async (route) => {
+      calls += 1;
+      if (calls === 1) {
+        await new Promise((resolve) => setTimeout(resolve, 11_000));
+        return route.fulfill({ json: [] }).catch(() => undefined);
+      }
+      return calls === 2
+        ? route.fulfill({ status: 404, json: { detail: "Not found" } })
+        : route.fulfill({ json: [] });
+    },
+  );
+  await page.goto(`/company/${fixture.company_id}?view=financials`);
+  const controls = page.getByRole("group", {
+    name: "Company refresh requests",
+    exact: true,
+  });
+  const filings = controls.getByRole("button", { name: "Refresh SEC filings" });
+  await expect(filings).toBeDisabled();
+  await expect(
+    controls.getByText(/Company refresh history timed out/),
+  ).toBeVisible();
+  await controls.getByRole("button", { name: "Retry refresh history" }).click();
+  await expect(
+    controls.getByText(/Company refresh history could not be verified/),
+  ).toBeVisible();
+  await expect(filings).toBeDisabled();
+  await controls.getByRole("button", { name: "Retry refresh history" }).click();
+  await expect(filings).toBeEnabled();
+  const after = await (await request.get(`${api}/__test/fixture`)).json();
+  expect(after.protected_state_sha256).toBe(fixture.protected_state_sha256);
+});
+
+test("a completed older job is recovered after it leaves the bounded history", async ({
+  page,
+  request,
+}) => {
+  const api = `http://127.0.0.1:${process.env.BROWSER_API_PORT ?? "8011"}`;
+  const fixture = await (await request.get(`${api}/__test/fixture`)).json();
+  const optionsPath = `/api/research/companies/${fixture.company_id}/refresh-options`;
+  const options = await (await request.get(optionsPath)).json();
+  await page.route(`**${optionsPath}`, (route) =>
+    route.fulfill({ json: { ...options, execution_mode: "OPERATOR" } }),
+  );
+  const at = new Date().toISOString();
+  const base = {
+    job_name: "SEC_FILINGS",
+    scope_kind: "COMPANY",
+    company_id: fixture.company_id,
+    company_name: options.company_name,
+    lifecycle: null,
+    requested_by: "LOCAL_USER",
+    requested_at: at,
+    started_at: null,
+    finished_at: at,
+    next_attempt_at: null,
+    attempt_count: 0,
+    retry_of_id: null,
+    affected_domains: [],
+    scope_detail: {},
+    result: {},
+    error_code: null,
+    error_message: null,
+    retry_available: false,
+    deduplicated: false,
+    cooldown_until: at,
+    attempts: [],
+  };
+  const old = {
+    ...base,
+    id: "99999999-9999-4999-8999-999999999999",
+    status: "RUNNING",
+    finished_at: null,
+  };
+  const newer = Array.from({ length: 30 }, (_, index) => ({
+    ...base,
+    id: `11111111-1111-4111-8111-${String(index).padStart(12, "0")}`,
+    status: "SUCCEEDED",
+  }));
+  const stillActive = {
+    ...base,
+    id: "88888888-8888-4888-8888-888888888888",
+    job_name: "SEC_FUNDAMENTALS",
+    status: "QUEUED",
+    finished_at: null,
+  };
+  let finished = false;
+  let secondFinished = false;
+  let pollsAfterFinish = 0;
+  await page.route(
+    `**/api/research/companies/${fixture.company_id}/job-requests**`,
+    (route) => {
+      if (finished) pollsAfterFinish += 1;
+      return route.fulfill({
+        json: finished
+          ? [
+              secondFinished
+                ? {
+                    ...stillActive,
+                    status: "PARTIAL",
+                    finished_at: at,
+                    error_message: "Newer job needs review.",
+                  }
+                : stillActive,
+              ...newer.slice(0, 29),
+            ]
+          : [old, stillActive, ...newer.slice(0, 28)],
+      });
+    },
+  );
+  await page.route(
+    `**/api/research/operations/job-requests/${old.id}`,
+    (route) =>
+      route.fulfill({
+        json: {
+          ...old,
+          status: "FAILED",
+          finished_at: at,
+          error_message: "Older job failed.",
+        },
+      }),
+  );
+  await page.goto(`/company/${fixture.company_id}?view=financials`);
+  const controls = page.getByRole("group", {
+    name: "Company refresh requests",
+    exact: true,
+  });
+  await expect(controls.getByText("RUNNING", { exact: true })).toBeVisible();
+  finished = true;
+  await expect(controls.getByText("Older job failed.")).toBeVisible();
+  await expect(controls.getByText("FAILED", { exact: true })).toBeVisible();
+  await expect.poll(() => pollsAfterFinish).toBeGreaterThanOrEqual(2);
+  await expect(controls.getByText("Older job failed.")).toBeVisible();
+  await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
+  secondFinished = true;
+  await expect(controls.getByText("Newer job needs review.")).toBeVisible();
+  await expect(controls.getByText("Older job failed.")).toBeVisible();
   const after = await (await request.get(`${api}/__test/fixture`)).json();
   expect(after.protected_state_sha256).toBe(fixture.protected_state_sha256);
 });

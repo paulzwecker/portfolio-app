@@ -5,7 +5,7 @@ import {
   isCompanyRefreshOptions,
   type CompanyRefreshOptions,
 } from "@/lib/domain-contracts";
-import { CompanyRefreshAction } from "./company-refresh-action";
+import { CompanyRefreshAction, latestCooldown } from "./company-refresh-action";
 
 const state = vi.hoisted(() => ({
   data: undefined as CompanyRefreshOptions | undefined,
@@ -34,6 +34,15 @@ beforeEach(() => {
   vi.stubEnv("WEB_ACCESS_USERNAME", "");
   vi.stubEnv("WEB_ACCESS_PASSWORD", "");
 });
+it("compares cooldowns by instant and flags malformed dates", () => {
+  expect(
+    latestCooldown(["2026-11-10T10:00:00+02:00", "2026-11-10T09:00:00Z"]),
+  ).toEqual({
+    invalid: false,
+    until: "2026-11-10T09:00:00Z",
+  });
+  expect(latestCooldown(["invalid"]).invalid).toBe(true);
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -60,7 +69,8 @@ it("shows scoped controls for a held company without inventing lifecycle", () =>
   expect(html).toContain("Refresh SEC filings");
   expect(html).toContain("operator-run one-shot");
   expect(html).not.toContain("Refresh this company");
-  expect(html).not.toContain('disabled=""');
+  // Actions remain disabled until the company history has been verified in-browser.
+  expect(html.match(/disabled=""/g)).toHaveLength(2);
 });
 it("preserves broad active-lifecycle action while Operations stays SEC scoped", () => {
   state.data = {
@@ -125,4 +135,64 @@ it("proxies eligibility only as a verified read", async () => {
   expect(mock).toHaveBeenCalledTimes(1);
   mock.mockResolvedValue(Response.json({ ...held, holding_snapshot_id: null }));
   expect((await GET(new Request(url), context)).status).toBe(503);
+});
+
+it("exposes scoped job history only as an identity-checked read", async () => {
+  const job = {
+    id,
+    job_name: "SEC_FILINGS",
+    scope_kind: "COMPANY",
+    company_id: id,
+    company_name: "Synthetic issuer",
+    lifecycle: null,
+    requested_by: "LOCAL_USER",
+    status: "QUEUED",
+    requested_at: "2026-10-16T01:00:00Z",
+    started_at: null,
+    finished_at: null,
+    next_attempt_at: null,
+    attempt_count: 0,
+    retry_of_id: null,
+    affected_domains: ["SOURCE_DOCUMENTS"],
+    scope_detail: {},
+    result: {},
+    error_code: null,
+    error_message: null,
+    retry_available: false,
+    deduplicated: false,
+    cooldown_until: "2026-10-16T01:15:00Z",
+    attempts: [],
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json([job]));
+  vi.stubGlobal("fetch", mock);
+  const path = ["companies", id, "job-requests"];
+  const context = { params: Promise.resolve({ path }) };
+  const url = `http://localhost/api/research/${path.join("/")}`;
+  expect((await GET(new Request(url), context)).status).toBe(200);
+  expect((mock.mock.calls[0][0] as URL).pathname).toBe(`/v1/${path.join("/")}`);
+  expect(
+    (await POST(new Request(url, { method: "POST", body: "{}" }), context))
+      .status,
+  ).toBe(404);
+  mock.mockResolvedValue(
+    Response.json([
+      { ...job, company_id: "22222222-2222-4222-8222-222222222222" },
+    ]),
+  );
+  expect((await GET(new Request(url), context)).status).toBe(503);
+});
+
+it("requires web authentication before reading company job history", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("WEB_ACCESS_USERNAME", "fixture-user");
+  vi.stubEnv("WEB_ACCESS_PASSWORD", "fixture-password");
+  const mock = vi.fn();
+  vi.stubGlobal("fetch", mock);
+  const path = ["companies", id, "job-requests"];
+  const url = `http://localhost/api/research/${path.join("/")}`;
+  const response = await GET(new Request(url), {
+    params: Promise.resolve({ path }),
+  });
+  expect(response.status).toBe(401);
+  expect(mock).not.toHaveBeenCalled();
 });
