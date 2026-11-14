@@ -38,7 +38,7 @@ export function FinancialStatementsTable({
         role="region"
         aria-label="Financial statements table, scrollable periods"
         aria-describedby="statement-table-help"
-        className="max-h-[620px] overflow-auto rounded-xl border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative max-h-[620px] overflow-auto rounded-xl border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <table className="w-full border-separate border-spacing-0 text-sm tabular-nums">
           <caption className="sr-only">

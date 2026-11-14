@@ -1,92 +1,80 @@
 # Active workstream
 
-## Real-source integration extension - acceptance frozen (2026-11-14)
+## Real-source SEC refresh - integrated acceptance (2026-11-15)
 
-The owner explicitly requested integration and real observations. Continue the
-compatible PR #39 with its existing history. Main `866723e` already includes
-PR #37's encrypted recovery tooling and PR #38's investor journey. The independent
-return-hurdle capability is complete on `codex/investment-decision-cockpit` at
-`33cedff`; preserve it for later integration rather than expanding this data slice.
+Continue the existing [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39),
+branch `codex/financial-refresh-slice`, based on main `866723e`. Main already
+includes PR #37 recovery tooling and PR #38 investor UI. The independent return-hurdle
+workflow remains preserved at `33cedff` on `codex/investment-decision-cockpit`; it
+does not belong in this data milestone. Owner edits, worktrees and stash are intact.
 
-Frozen outcome: one exact verified MSCI issuer (`CIK0001408198`) -> unchanged
-official Company Facts/submissions recordings -> existing manual durable requests
-and SEC importers -> disposable PostgreSQL -> Financials/source evidence and filing
-history in the real UI. Verify dates, units, source values, idempotent scheduled
-replay, desktop/mobile light/dark, and unchanged accepted portfolio/model state.
-Capture and local replay times remain distinct. Raw source files stay private.
+Frozen outcome is complete locally: exact MSCI identity (`CIK0001408198`) -> official
+SEC facts/submissions -> existing durable manual/scheduled ingestion -> disposable
+PostgreSQL -> Financials charts/tables, source evidence and filing history. No new
+schema, API contract, worker framework, service or paid dependency. A real-history
+table overflow was fixed in its existing shared scroll container.
 
-Use the existing configured SEC contact for a bounded official capture: one index,
-one facts response and at most five index-linked history files, serial requests.
-Stop on access denial or identity mismatch. No paid source, new application worker,
-schema, model acceptance, production write, cloud change or deployment is in scope.
-Production recovery destination/restore rehearsal and mapping approval remain gates;
-they do not block this isolated source-to-UI verification. Existing fictional tests
-retain failure/partial/new-period coverage without being presented as real data.
+Three serial official requests on November 14 UTC used the existing configured SEC
+contact. The private, hash-verified recordings retain original capture times and
+exact issuer/listing evidence. Offline replay uses a fictional portfolio allocation;
+these are **real-source isolated observations, not production observations**.
+Manual and scheduled readback reconciles **1,596 facts and 310 filing references**.
+FY2025 revenue is USD 3,134,459,000; Q3 2026 revenue is USD 892,000,000, with exact
+fiscal dates, units, accession evidence and distinct capture/recording timestamps.
 
-## Bounded SEC refresh � acceptance frozen (2026-11-14)
+Both receipts correctly remain **PARTIAL**: 545 unmapped concepts, 419 excluded
+YTD/unclassified durations, 39 potential-restatement facts, six unlinked amendments
+and 1,210 unsupported filing forms. Gross profit stays unavailable. Filing records
+are metadata/references, not downloaded document bodies; the default UI/API view is
+bounded to 100 of the retained 310. Do not present this as complete SEC coverage.
 
-Branch `codex/financial-refresh-slice` starts at main `866723e`, owner-merged
-[PR #38](https://github.com/paulzwecker/portfolio-app/pull/38). GitHub had no open
-PR at intake. Owner checkout edits, private references, stash and prior branches
-remain intact. No production changes or paid services belong in this milestone.
-Delivery is frozen in [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39)
-for owner review; latest-head CI results are maintained in that PR.
+Desktop and mobile real-API browser journeys pass: queued identity survives
+navigation/reload, persisted values appear without reloading Financials, source
+links match accessions, Operations submits both bounded domains, and a three-day
+late scheduled pass preserves counts. Same-day replay makes no new transport call.
+All tables outside ingestion/jobs retain their full content hashes. Original
+fictional rehearsals separately verify new-period updates, outages and conflicts.
+Independent raw-source, financial/API and visual reviews found no A-class blocker.
 
-Frozen user outcome: Company Explorer requests verified-issuer SEC facts/filings;
-Operations requests both domains across the bounded held/Watchlist scope; existing
-durable requests survive navigation/reload; the existing importer persists validated
-observations and the current APIs/UI display them. The equivalent SEC-only daily
-cycle drains eligible manual work and catches up once after a missed run. Failures,
-partial/currency-conflicting responses and source provenance stay visible. All
-accepted holdings, targets and model contents remain unchanged.
+Verification: 977 backend units (two platform skips), 492 web tests, 11 focused
+rehearsal/recording checks, 28 browser-server regressions, contracts, types, lint
+and 21 deployment tests pass. The broader managed production-build browser suite
+passes 147 cases (55 opt-in skips); latest-head CI results are kept in PR #39.
+Reproduce via [testing](testing.md#recorded-official-sec-responses-through-the-investor-ui).
+Screenshots show isolated real SEC data:
+[annual desktop](design/screenshots/real-sec-annual-desktop.png),
+[quarterly mobile](design/screenshots/real-sec-quarterly-mobile.png),
+[source evidence](design/screenshots/real-sec-source-desktop.png).
 
-Acceptance uses explicitly recorded **fictional** SEC responses in a disposable
-loopback PostgreSQL schema. It establishes actual queue/import/database/API/browser
-integration, not real-source coverage or production activation. No new API contract,
-schema, queue, worker framework or service is needed. Existing guards/defaults remain.
+## Release and operational boundary
 
-Implementation and local acceptance are complete. The narrow `cloud_cron --scope
-sec-data` path, active-request deduplication and active-first history reuse existing
-services. Company and Operations actions retain durable source receipts and refresh
-open data after completion. The exact one-shot runner shares the recurring lock;
-an expanded receipt stays within the mobile viewport.
+**CONFIGURATION_REQUIRED.** No migrations or new API dependency. Review/deploy
+schema gates match the existing attestation `b59f16c8a203`, zero pending revisions,
+unchanged migration fingerprint. Hosted commits/deployment controls have not been
+newly attested. Owner review and release-control verification precede release.
+No merge, deployment, cloud change, production query/write or scheduler activation
+occurred in this extension. Freeze scope after passing integration checks.
 
-Evidence: 969 backend unit tests, 492 web tests, 86 relevant integration tests,
-four one-shot lock tests and two new real PostgreSQL/API/CLI rehearsals passed.
-The complete refresh browser journey passed on desktop/mobile: zero to four facts
-and two filings, 13 simulated provider attempts, no provider network. It verifies
-reload recovery, missed-run coalescing, no-fetch replay, outage, partial coverage and
-unchanged contents of every table outside ingestion/jobs. The broader managed
-production-build browser suite passed 147 cases (53 opt-in cases skipped).
-Lint, formatting, types, contracts and 21 deployment tests pass. Independent backend
-and visual reviews found no remaining A-class blocker. Screenshots use fictional
-data: [mobile receipt](design/screenshots/sec-refresh-mobile.png),
-[Operations](design/screenshots/sec-refresh-operations.png),
-[new financial period](design/screenshots/sec-refresh-financials.png).
+Production remains **NOT STARTED** for financial-data activation. Last recorded
+November 14 read-only inventory: 22 positions, two cash rows, one target revision;
+zero prices, FX, facts, filings or consensus. This is historical evidence, not a
+new production readback. The 22-listing + two-FX preview was READY without fetching
+provider data. Yahoo automation permission and a complete free equity source remain
+unverified. See [provider decision](financial-data-provider-decision.md).
 
-Release classification: **CONFIGURATION_REQUIRED**. The schema gate matches
-`b59f16c8a203` with no pending migrations or changed migration bytes; API contracts
-are unchanged. Current hosted commits/deployment controls are not newly attested.
-Owner review and release-control verification precede any merge/deployment. The
-free existing-host schedule is proposed and locally exercised, not registered.
+Smallest next operator sequence:
 
-Delivery review: freeze this completed scope for one PR and owner review. Defer
-expanded receipt density, legacy Operations controls, ECB FX adapter, free equity
-prices/consensus, expanded analytics, generic scheduling and further UI redesign.
-Do not expand Sheets or recovery work. The source decision and scheduling proposal
-are in [provider decision](financial-data-provider-decision.md) and
-[recurring operations](recurring-operations.md).
+1. Approve an owner-controlled encrypted off-provider destination, key custody and
+   isolated restore target; execute the merged [recovery runbook](encrypted-production-recovery.md)
+   with its confirmations. No current-state production backup has been executed.
+   The old Neon branch expires November 15 at 14:18 CET and is not durable recovery.
+2. Approve the exact MSCI mapping and bounded SEC ingestion scope, verify the
+   production SEC contact/configuration, then run the existing target-bound preview
+   and guarded checkpoints. Reconcile canonical records and authenticated live UI.
+3. Prove one controlled incremental refresh before separately activating the
+   [existing-host SEC schedule](recurring-operations.md#zero-cost-sec-scheduling-proposal).
 
-Production remains NOT STARTED for this work. Last recorded November 14 read-only
-Neon evidence: `b59f16c8a203`, 22 accepted positions, two cash rows, one target
-revision; zero prices, FX, facts, filings and consensus. Market preview was READY
-for 22 listings + two FX pairs, with no provider requests. Recovery destination/key
-custody and restore rehearsal, monitored SEC contact/reviewed issuer mappings,
-provider permission and exact activation approvals remain operational gates.
-The expiring Neon branch is not a durable backup. Use the merged
-[recovery runbook](encrypted-production-recovery.md); no backup is executed here.
-Next operational action: approve the recovery destination/key custody and isolated
-restore target, supply a monitored SEC contact, then run the reviewed recovery and
-bounded verified-issuer preflight. Next independent data capability is official ECB
-historical FX, preserving published direction, reference-rate semantics and missing
-days; it does not need another generic worker or queue.
+Defer broader analytics, Sheets recovery/publication, generic worker work, UI polish
+and full-document ingestion. Next independent data capability: official ECB
+historical USD/EUR and DKK/EUR reference rates through existing ingestion, preserving
+direction, attribution and missing days. No paid fallback or new infrastructure.

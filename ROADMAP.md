@@ -1,26 +1,29 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Bounded SEC refresh vertical slice locally complete; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                                          |
-| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39) frozen for owner review.             |
-| Implementation              | Manual and scheduled SEC refresh verified through real PostgreSQL/API/UI using fictional recordings; desktop/mobile and 147 broader browser checks pass. |
-| Next ready substantial task | Freeze one PR for owner review; clear recovery/contact gates for bounded SEC activation. Independent next capability: official ECB historical FX.        |
-| Deferred work               | Unverified free equity/consensus access, ECB adapter, broader analytics, Sheets and generic infrastructure.                                              |
-| Production boundary         | No production writes, deployment, settings changes, scheduler activation or paid services.                                                               |
+| Field                       | Current value                                                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | Real-source SEC refresh complete in isolated PostgreSQL/API/UI; acceptance frozen in [handoff](docs/ACTIVE_WORKSTREAM.md).                             |
+| Branch / PR                 | `codex/financial-refresh-slice` from main `866723e`; [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39) frozen for owner review.           |
+| Implementation              | Official MSCI capture reconciles 1,596 facts and 310 filings through manual/scheduled refresh and desktop/mobile Financials. Coverage remains PARTIAL. |
+| Next ready substantial task | Owner recovery destination/restore-target approval, then exact MSCI activation. Independent next capability: official ECB historical FX.               |
+| Deferred work               | Unverified free equity/consensus access, ECB adapter, broader analytics, Sheets and generic infrastructure.                                            |
+| Production boundary         | No production writes, deployment, settings changes, scheduler activation or paid services.                                                             |
 
-The frozen SEC slice uses recorded fictional provider responses and actual isolated
-PostgreSQL. It does not claim real-source or production coverage. Prior UI milestone
-PR #38 passed all CI and was owner-merged; existing work and history are preserved.
-Local rehearsal ends with four facts and two filings, with all accepted state
-content hashes unchanged. Release is CONFIGURATION_REQUIRED: unchanged schema
-matches the existing attestation; current hosted release controls need verification.
+Three official SEC requests captured verified MSCI data using the existing contact.
+Private unchanged recordings now demonstrate source -> durable job -> canonical
+PostgreSQL -> Financials and source evidence. Desktop/mobile manual, Operations and
+missed-run scheduled replay pass; accepted state content hashes remain unchanged.
+Original fictional tests retain new-period/outage/conflict coverage. Real coverage
+gaps and restatements remain visible, and no fixture is presented as production.
+PR #37 recovery and PR #38 UI are already on main; independent investment intelligence
+is preserved at `33cedff`. Release is CONFIGURATION_REQUIRED: no schema/API changes;
+current hosted release controls and operational recovery still need verification.
 
 November 14 production evidence remains: schema `b59f16c8a203`, accepted 22 positions,
 zero prices/FX/facts/filings/consensus. Recovery and provider prerequisites still gate

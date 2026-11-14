@@ -97,6 +97,52 @@ the SEC ingestion/job scope is content-hashed before and after. Existing read-on
 browser scenarios keep their original restrictions. No real SEC request, recurring
 schedule registration, production write or activation is part of this rehearsal.
 
+### Recorded official SEC responses through the investor UI
+
+The `sec-real-refresh` scenario reuses the same queue, worker, adapters and bounded
+test database. It requires a private `sec-real-recording-v1` manifest containing
+the exact issuer/listing evidence, original capture times, official source URLs,
+file lengths/SHA-256 hashes, all indexed history pages (at most five), and independently
+checked expected values. No raw response or private manifest belongs in Git.
+The loader validates the complete bundle before seeding its random test schema.
+It never downloads a missing file or substitutes a fictional response.
+
+Set `TEST_DATABASE_URL` to the verified loopback `_test` target and
+`BROWSER_SEC_RECORDING_MANIFEST` to that private rehearsal manifest. With
+`BROWSER_API_PORT=8017`, start:
+
+```sh
+node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py --scenario sec-real-refresh --lifetime-seconds 600
+```
+
+Set `API_BASE_URL=http://127.0.0.1:8017`, `BROWSER_API_PORT=8017`,
+`E2E_REAL_SEC_REFRESH_API=1`, and a free `E2E_WEB_PORT` in another terminal:
+
+```sh
+node node_modules/@playwright/test/cli.js test --config apps/web/playwright.config.ts real-sec-refresh.spec.ts --project desktop --workers 1
+```
+
+Repeat mobile with a fresh fixture/schema. The frontend must also use loopback.
+This is real source data replayed offline in a fictional portfolio, not production
+or an additional live provider request. Original `retrieved_at`/`observed_at`
+remain the capture times; jobs and database recording have their later execution
+times. The scheduled-clock check replays identical bytes: it proves idempotence
+and missed-run handling, not a new filing or financial period.
+
+The November 14 UTC MSCI capture used three public SEC requests and the existing
+configured contact. Independent raw-source counts were 1,596 supported facts and
+310 supported filings. Rehearsal checks annual/quarterly values, fiscal labels,
+selected filing evidence, genuine PARTIAL coverage, refreshed tables/charts,
+internal table scrolling and unchanged protected state. Source gaps, restatements
+and unlinked amendments remain visible. The ordinary fictional scenario separately
+tests new-period updates, outages and synthetic conflicts.
+
+For the opt-in backend replay, set `BROWSER_SEC_RECORDING_MANIFEST` to the same file
+and select `test_real_sec_recording_manual_scheduled_api_reconciliation` in
+`apps/api/tests/test_refresh_rehearsal.py`. It carries `source_data` and integration
+markers; ordinary CI never opens private captures. Bundle validation has ordinary
+synthetic guard tests that run without source access.
+
 Record exact command/results, test scope and skips in the current roadmap. Keep
 long logs and historical milestone records under dated evidence. Existing financial
 parity contracts and synthetic fixtures remain the regression basis for engines.
