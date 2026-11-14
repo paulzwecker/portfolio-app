@@ -6,14 +6,14 @@ Updated 2026-11-14. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                       | Current value                                                                                                                                                                                                   |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint           | Company refresh continuity — [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35), integration after #36. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                       |
-| Branch / PR                 | `codex/company-refresh-continuity` integrates main `9939fe3`, including merged PRs [#34](https://github.com/paulzwecker/portfolio-app/pull/34) and [#36](https://github.com/paulzwecker/portfolio-app/pull/36). |
-| Implementation              | Restore company-scoped refresh status after navigation using existing durable job requests.                                                                                                                     |
-| Next ready substantial task | Verify the API-first release and restore historical prices/FX after approved recovery and source access.                                                                                                        |
-| Deferred work               | Financials chart selection cleanup; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                             |
-| Production boundary         | Keep deployments frozen; ingestion remains gated on source access, independently verified recovery and the owner's scoped conditions. No migration, deployment or financial decision without authorization.     |
+| Field                       | Current value                                                                                                                                                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active checkpoint           | Company refresh continuity — [PR #35](https://github.com/paulzwecker/portfolio-app/pull/35), integration after #36. [Handoff](docs/ACTIVE_WORKSTREAM.md).                                                                      |
+| Branch / PR                 | `codex/company-refresh-continuity` integrates main `9939fe3`, including merged PRs [#34](https://github.com/paulzwecker/portfolio-app/pull/34) and [#36](https://github.com/paulzwecker/portfolio-app/pull/36).                |
+| Implementation              | Restore company-scoped refresh status after navigation using existing durable job requests.                                                                                                                                    |
+| Next ready substantial task | Verify the API-first release and restore historical prices/FX after approved recovery and source access.                                                                                                                       |
+| Deferred work               | Financials chart selection cleanup; refresh ownership and Sheets recovery remain on `codex/sec-coverage-readiness`.                                                                                                            |
+| Production boundary         | Owner-reported provider settings permit automatic production deployment; freeze both providers before merge. Ingestion remains gated on source access, recovery and scoped authorization. No deployment without authorization. |
 
 Integration review added exact listing lookup for an unexpected ending-only
 position. The preview treats an unexplained observation as a blocking mismatch,

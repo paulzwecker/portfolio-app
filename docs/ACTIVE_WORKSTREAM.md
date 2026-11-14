@@ -25,8 +25,16 @@ company-refresh/API tests, contract comparisons, both offline schema gates,
 desktop/mobile refresh journeys passed against the isolated API; the active
 request layouts were inspected. Repeat affected checks after integrating #36.
 
-Release status: BLOCKED pending fresh Neon identity/schema and deployed-commit
-verification. The owner reports deployment controls verified. Older APIs lack the
+After integrating `9939fe3`, 481 web tests, 21 isolated company-refresh/API
+tests, contract comparisons, both offline schema gates, 21 deployment tests and
+the documentation check passed. The first concurrent web run and isolated
+browser startup timed out under load; the web suite passed when rerun serially.
+
+Release status: BLOCKED. On November 14, the owner reported Render Auto-Deploy
+after CI, Blueprint Auto Sync on, and a Vercel hook permitting production when
+the schema gate passes. These are not a deployment freeze; the owner must freeze
+both providers before merge. Fresh Neon identity/schema and deployed commits also
+remain unverified. Older APIs lack the
 new route, so keep Vercel production builds frozen and deploy and verify the API
 before the frontend under separate authorization; until then controls fail closed.
 Production ingestion and scheduler activation remain separately gated.
@@ -39,6 +47,12 @@ Render API and verify its commit, live/ready health and authenticated read-only
 same SHA to Vercel through the reviewed schema-aware hook and GitHub Deployment
 Checks, and verify the production alias, authenticated health and Company Explorer.
 Stop on a mismatch; do not force-promote or enable ingestion or schedules.
+
+Alternatively, the owner may separately authorize an API-first release with
+Render Auto-Deploy after CI left on. Before merge, freeze Vercel production and
+verify the exact Blueprint sync effects and existing runtime settings; do not treat
+this alternative as already authorized. Verify the resulting exact Render SHA and
+health before releasing the matching Vercel build through the existing gates.
 
 ## Previous Financials availability — merged
 
@@ -72,14 +86,15 @@ deployment checks passed. Desktop/mobile journeys passed with synthetic data and
 with the isolated API; empty-state light/dark layouts were inspected. Independent
 review found no blocker. A pre-existing selection that persists after a period or
 source change is deferred. This slice creates no financial observations. The owner
-reports the deployment controls verified; the live schema and deployment commits
-remain independently unverified. Production release remains BLOCKED until checked.
+reported deployment controls verified on November 11; the current November 14
+settings permit automatic deployment. The live schema and deployment commits remain
+independently unverified. Production release remains BLOCKED until checked.
 Source access and recovery gates for real data are separate.
 
 After integrating `387ec6d`, the 478 web tests, lint, frontend build, contract
 comparisons, both offline schema gates, 21 deployment checks and documentation
 check passed. The Company Explorer synthetic desktop/mobile journey and the two
-isolated-API desktop/mobile empty-state journeys also passed. The owner-reported
+isolated-API desktop/mobile empty-state journeys also passed. The November 11
 deployment-control verification does not establish the current live schema or SHA.
 
 ## Previous SEC issuer review — merged
@@ -108,7 +123,7 @@ separately released. A contact-bearing SEC user agent is needed for live source
 requests. Real issuer verification and ingestion are separate follow-on operations.
 Production backfill and unattended refresh remain conditional on verified recovery,
 provider terms, reconciliation and the owner's explicitly scoped approvals.
-The owner reports verifying deployment controls. Production release remains BLOCKED
+The owner reported verifying deployment controls on November 11. Production release remains BLOCKED
 pending fresh schema and deployed-commit verification; the checked-in attestation
 alone is not live production evidence.
 
