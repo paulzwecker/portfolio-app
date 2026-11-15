@@ -6,20 +6,21 @@ Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field             | Current value                                                                                                                          |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | Integrate completed Agents 1–8 into the existing PR #39; [frozen acceptance](docs/ACTIVE_WORKSTREAM.md).                               |
-| Branch / PR       | `codex/integrated-delivery` stages existing SEC, market/FX, expectations and return-hurdle histories for a fast-forward update of #39. |
-| Product outcome   | Portfolio value/source → exact company prices, statements and expectations → accepted-model return analysis → portfolio context.       |
-| Integration       | Main `866723e` already contains recovery #37 and investor UI #38; preserve separate branches and owner work.                           |
-| Production        | November 15 01:14 UTC guarded readback: prices, FX, facts, filings and estimates all zero; accepted portfolio unchanged.               |
-| Release           | New return-hurdle API and native-price fields require API-first sequencing; hosted controls and recovery remain external gates.        |
-| Deferred          | Broad provider coverage, EPS basis, inferred fiscal model alignment, Sheets recovery/publication and new infrastructure.               |
+| Field             | Current value                                                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint | Agents 1–8 integrated into PR #39; scope frozen for final CI/owner review. [Handoff](docs/ACTIVE_WORKSTREAM.md).                 |
+| Branch / PR       | PR #39 `codex/financial-refresh-slice` now retains the integrated SEC, market/FX, expectations and return-hurdle histories.      |
+| Product outcome   | Portfolio value/source → exact company prices, statements and expectations → accepted-model return analysis → portfolio context. |
+| Integration       | Main `866723e` already contains recovery #37 and investor UI #38; preserve separate branches and owner work.                     |
+| Production        | November 15 01:14 UTC guarded readback: prices, FX, facts, filings and estimates all zero; accepted portfolio unchanged.         |
+| Release           | New return-hurdle API and native-price fields require API-first sequencing; hosted controls and recovery remain external gates.  |
+| Deferred          | Broad provider coverage, EPS basis, inferred fiscal model alignment, Sheets recovery/publication and new infrastructure.         |
 
 Acceptance is the existing complete investor journey, not new analytics or providers.
 Demonstrate authorized private real-source recordings in isolated PostgreSQL, retain
 all source/currency/time/adjustment distinctions, and verify missing-data behavior.
-Full integration, financial checks and desktop/mobile review precede PR update.
+Six real-source desktop/mobile journeys, financial boundaries and local checks pass;
+all three exact-head CI gates remain mandatory for owner review readiness.
 Production activation remains separate from engineering and release readiness.
 
 ## Prior implementation evidence

@@ -2,8 +2,8 @@
 
 ## Integrated Portfolio Research delivery — INTEGRATE, 2026-11-15
 
-Owner explicitly requested consolidation of Agents 1–8. Integration is staged on
-`codex/integrated-delivery` before a history-preserving update of the existing
+Owner explicitly requested consolidation of Agents 1–8. Integration on
+`codex/integrated-delivery` was fast-forwarded into the existing
 [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39), not a competing PR.
 Main `866723e` contains recovery tooling (#37) and investor UI (#38). PR #39
 `69371f1` supplies SEC/manual/scheduled refresh; market/FX `b432335`, expectations
@@ -70,10 +70,20 @@ absent directly on the service; linked environment-group contact remains unverif
 Local integration passes: 1,092 backend units (two platform skips), 530 web tests,
 four source-backed PostgreSQL/API replays, four cross-feature native-price/model
 boundary cases, four archive/encrypted recovery checks, and 157 authenticated
-production-build browser cases (61 explicit opt-ins skipped). The two new combined
-real-source desktop/mobile journeys pass in light/dark themes. Types (256 Python
-files and TypeScript), lint, contracts, build and 21 deployment checks pass. Full
-PostgreSQL CI and refreshed source-specific UI refresh runs are still in progress.
+production-build browser cases (61 explicit opt-ins skipped). Six real-source
+desktop/mobile journeys pass in light/dark themes: the combined investor journey,
+market manual/scheduled increment and Microsoft SEC manual/scheduled refresh.
+Types (256 Python files and TypeScript), lint, formatting, contracts, build and 21
+deployment checks pass. Production dependency audit reports zero vulnerabilities.
+
+The broad local database sweep was stopped after fixture errors during concurrent
+shared-server work; it is not a full pass. Both affected files pass serially (13
+cases) without application changes. Separate parallel cleanup had exhausted the
+test server's lock budget; no server configuration was changed. The complete
+569-case PostgreSQL suite is a required CI gate on the PR's exact head, alongside
+Quality/contracts/build and Windows migration compatibility. Consult current PR
+checks for the final result; prior-head checks never substitute. Scope is frozen
+with no remaining code blocker; ENGINEERING_READY requires all three gates green.
 Independent financial/isolation and visual reviews found no remaining A-class
 blocker. Existing single-snapshot history-panel clutter is deferred B-class polish.
 
@@ -82,8 +92,9 @@ fields require an API-first release. No migration is introduced. Release is
 **REQUIRES_COORDINATED_RELEASE; RELEASE_READY=false; DATA_OPERATIONALLY_VERIFIED=false**.
 Before merge the owner must freeze Vercel production, authorize the API-first
 release and verify the matching Render API, then separately release the frontend.
-CI success is not release or data-operational readiness. PR #39 is temporarily
-draft while its expanded integration evidence and latest-head CI are refreshed.
+CI success is not release or data-operational readiness. PR #39's description and
+checks hold the current review verdict; do not merge while live release controls
+would cause an unauthorized deployment.
 Live authenticated UI readback is unverified because frontend Basic Auth credentials
 are not present locally; no authentication was guessed or bypassed.
 
