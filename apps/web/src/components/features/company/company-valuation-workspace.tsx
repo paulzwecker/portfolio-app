@@ -14,6 +14,7 @@ import { ModelMigrationStatus } from "@/components/model-migration-status";
 import { ModelOutputs as CompanyModelOutputHistory } from "@/components/features/company/company-model-output-history";
 import { ModelRevisionProposalReview } from "@/components/features/modeling/model-revision-proposal-review";
 import { DcfSensitivityPanel } from "@/components/features/modeling/dcf-sensitivity";
+import { ReturnHurdleExplorer } from "@/components/features/modeling/return-hurdle-explorer";
 import { useResearch } from "@/hooks/use-research";
 import {
   isCompanyExpectedReturnHistory,
@@ -82,6 +83,7 @@ type ModelDescriptor = {
   name: string;
   modelId: string | null;
   revisionId: string | null;
+  listingId: string | null;
   ticker: string | null;
   venue: string | null;
   listingCurrency: string | null;
@@ -321,6 +323,7 @@ function nativeDescriptor(
     method,
     modelId: readString(modelRecord.id),
     revisionId: readString(revision?.id),
+    listingId: readString(listing?.id),
     name: readString(modelRecord.model_name) ?? "Accepted model",
     ticker: readString(listing?.ticker),
     venue: readString(listing?.venue),
@@ -357,6 +360,7 @@ function importedDescriptor(snapshot: unknown): ModelDescriptor | null {
     method: null,
     modelId: null,
     revisionId: null,
+    listingId: null,
     name: `Imported output · ${modelKey}`,
     ticker: null,
     venue: null,
@@ -1044,11 +1048,26 @@ export function CompanyValuationWorkspace({
         )}
       </PageSection>
 
+      {activeDescriptor?.native &&
+        activeDescriptor.modelId &&
+        activeDescriptor.revisionId &&
+        activeDescriptor.listingId &&
+        activeDescriptor.currency && (
+          <ReturnHurdleExplorer
+            key={`return-hurdle:${activeDescriptor.modelId}:${activeDescriptor.revisionId}`}
+            companyId={companyId}
+            modelId={activeDescriptor.modelId}
+            revisionId={activeDescriptor.revisionId}
+            listingId={activeDescriptor.listingId}
+            currency={activeDescriptor.currency}
+          />
+        )}
+
       {activeDescriptor?.method === "UFCF_DCF_10Y_FADE" &&
         activeDescriptor.modelId &&
         activeDescriptor.revisionId && (
           <DcfSensitivityPanel
-            key={`${activeDescriptor.modelId}:${activeDescriptor.revisionId}`}
+            key={`dcf-sensitivity:${activeDescriptor.modelId}:${activeDescriptor.revisionId}`}
             modelId={activeDescriptor.modelId}
             revisionId={activeDescriptor.revisionId}
           />

@@ -63,6 +63,43 @@ Browser credentials are restricted to the exact local frontend origin. This fixt
 verification establishes local auth/proxy behavior; hosted verification and real
 financial data retain their separate evidence and authorization requirements.
 
+## Return hurdle investor journey (fictional data)
+
+The opt-in `return-hurdle-api.spec.ts` journey uses the real Next.js proxy,
+FastAPI native engines and a disposable PostgreSQL schema. It creates explicitly
+fictional accepted DCF, owner-cash-flow and residual-income models, then serves
+them through a database connection with `default_transaction_read_only=on`.
+There are no provider requests. Accepted revisions and the portfolio fingerprint
+must remain unchanged after the browser explores all three models and returns
+to Holdings.
+
+In one terminal, set `TEST_DATABASE_URL` to an operator-verified loopback
+PostgreSQL database ending `_test` (never production), then run:
+
+```powershell
+$env:BROWSER_API_PORT = "8014"
+node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py --scenario return-hurdle --lifetime-seconds 600
+```
+
+After the fixture is ready, in another terminal:
+
+```powershell
+$env:BROWSER_API_PORT = "8014"
+$env:API_BASE_URL = "http://127.0.0.1:8014"
+$env:E2E_RETURN_HURDLE_API = "1"
+$env:E2E_WEB_PORT = "3122"
+npm run test:e2e -- return-hurdle-api.spec.ts --workers=1
+```
+
+Repeat with `--scenario return-hurdle-unpriced` after normal fixture shutdown to
+verify hypothetical analysis without any price observations. The server removes
+its own random schema at normal shutdown. Both Chromium projects cover the full
+journey, light/dark themes, stale input suppression, source details and screenshots.
+The ordinary `research.spec.ts` suite separately exercises stale revisions,
+mismatched identity, an older API and delayed responses with labeled fixtures.
+The managed production-browser mode skips the opt-in database journey; its broader
+auth/proxy checks remain separate from these real local API checks.
+
 ## Evidence maintenance
 
 ### Complete SEC refresh rehearsal (no provider network)

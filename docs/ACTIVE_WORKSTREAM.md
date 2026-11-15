@@ -1,91 +1,65 @@
 # Active workstream
 
-## Free analyst expectations — frozen local slice, 2026-11-15
+## Integrated Portfolio Research delivery — INTEGRATE, 2026-11-15
 
-`codex/free-expectations` is stacked on `codex/official-fx-valuation` (`b432335`),
-which retains frozen [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39)
-head `69371f1`. Preserve that independently reviewed SEC milestone. This work has
-no competing PR; reconcile the stack after owner integration. Main remains
-`866723e`. Owner worktree edits, branches and stash remain untouched.
+Owner explicitly requested consolidation of Agents 1–8. Integration is staged on
+`codex/integrated-delivery` before a history-preserving update of the existing
+[PR #39](https://github.com/paulzwecker/portfolio-app/pull/39), not a competing PR.
+Main `866723e` contains recovery tooling (#37) and investor UI (#38). PR #39
+`69371f1` supplies SEC/manual/scheduled refresh; market/FX `b432335`, expectations
+`c45f4e6` and investment return-hurdle `33cedff` remain preserved. Other branches,
+worktrees, owner edits and stash are untouched. No protected merge or deployment.
 
-### Frozen outcome and source truth
+### Frozen acceptance before integration
 
-One exact Amazon/NASDAQ/USD mapping → documented free EODHD demo → existing
-immutable consensus storage → API → Company Explorer Financials. No new queue,
-table, migration, paid dependency, guidance framework or production activation.
+1. Preserve the existing Portfolio → exact company → prices → Financials/filings
+   and expectations → valuation/research → portfolio navigation using shared UI.
+2. Compose one private real-source isolated journey with the same AMZN identity for
+   market observations and estimates; keep supported SEC issuers distinct. Verify
+   native-price/dated-FX EUR valuation against raw evidence and fictional quantities.
+3. Retain reported observations, provider forecasts, uncertain EPS and accepted
+   model assumptions as separate categories. Do not infer fiscal anchors, transactions,
+   historical portfolio performance, adjustments or absent data.
+4. Integrate the already-complete read-only return-hurdle explorer. Independently
+   verify native-model economics, scenario probabilities, quote provenance and
+   unchanged accepted state with explicitly fictional model fixtures.
+5. Rerun existing real SEC and market manual/scheduled refresh journeys; durable
+   identity survives reloads, bounded work persists observations and partial/failure
+   states remain visible. No new worker, scheduler or consensus UI refresh endpoint.
+6. Run comprehensive relevant backend integration, unit/contract/schema/deployment
+   checks, production-build browser tests and desktop/mobile light/dark review.
+   Fix proven in-scope blockers only, then freeze one updated owner-reviewable PR.
 
-One authorized public demo request on November 15 at 00:51:48 UTC produced eight
-real observations: revenue and EPS for FY2026, FY2027, FY2026 Q4 and FY2027 Q1.
-Means, analyst ranges and counts are retained. Four revenue observations are
-eligible; four EPS observations remain DATA_CHECK because accounting basis is
-unverified. Forty-seven ended-period rows are excluded. One snapshot establishes
-no historical revision series; relative EPS lookback fields are not dated history.
+### Known data and operational limits
 
-USD is supported only for this constrained issuer by independently reviewed USD
-reporting/listing identity and the provider's reporting-currency endpoint policy.
-The conflicting generic CurrencyCode wording is disclosed in the canonical
-[consensus reference](consensus-estimates.md#bounded-eodhd-private-evaluation-2026-11-15)
-and observation evidence; never generalize it to ADRs or other issuers.
-Demo evaluation/storage is permitted, but production entitlement and sustainable
-broader coverage are not established. Authentic payloads, values and screenshots
-remain in the private report store, never public Git.
+Prior evidence: isolated MSCI 1,596 facts/310 filing references; Microsoft 1,909/428;
+AMZN 255 native closes and USD/EUR + DKK/EUR 518 FX observations through November 13;
+eight AMZN revenue/EPS forecasts across four periods captured November 15.
+Fresh integrated reconciliation is pending. Authentic recordings/screenshots remain
+private where source redistribution terms require it. Surrounding holdings, cash,
+targets and native-model examples are fictional, never live owner observations.
 
-### What works and verification
+ECB/SEC public access is usable within existing policies. EODHD documented demo
+supports bounded private evaluation only; production execution stays rejected.
+Broader zero-cost equity/consensus access is unverified. EPS basis remains DATA_CHECK;
+one estimates capture is not a historical revision series. FMP and Yahoo remain
+inactive without verified free entitlement. No paid dependencies are required.
 
-`CONSENSUS_PROVIDER=eodhd_demo_estimates` is explicit and isolated-only. Existing
-external-ingestion CLI and scheduled entry share durable runs, exact frozen identity,
-advisory locking and a one-request/ten-credit bound. Missing mappings, identity
-changes and production targets stop before fetch. Partial receipts expose EPS
-uncertainty and unmapped companies. Replays cannot replace a provider. Default FMP
-configuration and existing activation gates remain unchanged.
+Current production read-only verification is in progress. No production backup is
+established by #37: a destination, key custody and isolated restore target still
+need owner approval and the existing interactive rehearsal. The old Neon branch
+expires November 15 and is not durable recovery. All write/activation gates remain.
 
-The source-backed isolated PostgreSQL/API check verifies all eight raw values,
-ranges/counts, annual/quarterly periods, per-observation freshness, immutable
-retrieval time, same-day reuse, later scheduled replay, pre-capture knowledge cutoff
-and unchanged full-content hashes of unrelated tables. The later replay uses the
-same recording, not a new source observation. Fictional research context is never
-presented as the owner's production portfolio. The browser is read-only; no new
-consensus UI refresh action or unattended timer is enabled.
+### Release boundary and next action
 
-Desktop/mobile browser journeys pass in light/dark themes: chartable revenue,
-explicit uncertain EPS, sources/ranges/counts, reload persistence, no page errors
-or overflow and unchanged protected state. Independent accounting/ingestion review
-found no remaining blocker. Reproduction: [private rehearsal](testing.md#private-consensus-source-rehearsal).
+Engineering evidence is being refreshed; do not yet claim ENGINEERING_READY.
+The new `GET /v1/financial-models/{id}/return-hurdle` endpoint and additive native-price
+fields require an API-first release. No migration is introduced. Keep Vercel
+production frozen until the owner authorizes and verifies the matching Render API,
+then separately releases the frontend. Actual hosted commits/settings must be
+verified; CI success is not release or data-operational readiness.
 
-Final checks: 1,059 backend unit tests (two skips), 500 web tests, 62 relevant
-PostgreSQL/adapter checks, the private source-backed API replay and two real-source
-desktop/mobile journeys pass. Lint, formatting, Python/TypeScript types, OpenAPI
-contracts, production frontend build, documentation/source-data policy and 21
-deployment checks pass. Review/deploy schema gates match `b59f16c8a203` with no
-pending revision and unchanged fingerprint
-`de9fb593f76ec72261ef40bb3d88a12751b0e114c81fc48f08f96dee48be73f2`.
-The fresh feature branch has no remote CI claim; those are local verification results.
-
-### Release and operational boundary
-
-**CONFIGURATION_REQUIRED for release; production ingestion NOT STARTED.** No
-schema or API-shape changes in this increment. The inherited market slice requires
-API-first deployment for its additive fields. Current hosted commits/control
-settings were not reverified, so this is not SAFE_TO_MERGE_AND_DEPLOY or a deployment
-approval. Production demo execution is deliberately rejected.
-
-The latest production readback remains the prior November 15 00:18 UTC guarded
-check: exact target/schema `b59f16c8a203`, canonical receipt, 22 holdings and two FX
-pairs matched; prices, FX, corporate actions, facts, filings and estimates were all
-zero. No fresh production query or write occurred in this estimates run. Accepted
-holdings, cash, targets and models remain unchanged.
-
-Production still needs an approved encrypted off-provider backup destination, key
-custody and isolated restore target, then the existing guarded backup/restore
-rehearsal. The expiring Neon branch is not durable recovery. No source, cloud,
-credential, Sheets, model-acceptance or scheduler setting was changed.
-
-### Next and deferred
-
-Next highest-value outcome: execute the already-prepared real SEC and ECB scopes
-once exact mapping/source and recovery approvals exist. Agent 7's isolated 255 AMZN
-native closes and 518 ECB FX observations through November 13 remain preserved on
-the parent branch. Do not expand this narrow estimates slice while those operational
-gates wait. Broader lawful free estimates, verified EPS basis, actual/model
-comparisons and real prospective revisions remain explicit coverage gaps, not
-mandatory blockers for the demonstrated local workflow.
+After this milestone: approved recovery rehearsal, then exact SEC/ECB production
+activation through existing guards. Broader source coverage, guidance ingestion,
+model fiscal alignment, new comparison analytics, Sheets publication and generic
+infrastructure are deferred rather than blockers for the selected journey.

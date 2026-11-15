@@ -23,6 +23,7 @@ from browser_public_market_data import PublicMarketReplay
 from browser_real_estimates import prepare_real_estimates
 from browser_real_sec_data import SecRecording, prepare_real_sec_data
 from browser_refresh_data import RefreshRehearsal
+from browser_return_hurdle import prepare_return_hurdle
 from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -372,6 +373,8 @@ def main(argv: list[str] | None = None) -> None:
             "sec-real-refresh",
             "public-market-refresh",
             "real-consensus",
+            "return-hurdle",
+            "return-hurdle-unpriced",
         ),
         default="demo",
     )
@@ -436,10 +439,14 @@ def main(argv: list[str] | None = None) -> None:
                 metadata = prepare_portfolio_data(
                     engine,
                     Path(directory),
-                    "unpriced"
-                    if args.scenario.startswith("sec-")
-                    or args.scenario in {"ledger-review", "ledger-owned", "ledger-publication"}
-                    else cast(PortfolioDataState, args.scenario),
+                    (
+                        "valued"
+                        if args.scenario == "return-hurdle"
+                        else "unpriced"
+                        if args.scenario.startswith(("sec-", "return-hurdle-"))
+                        or args.scenario in {"ledger-review", "ledger-owned", "ledger-publication"}
+                        else cast(PortfolioDataState, args.scenario)
+                    ),
                     settings,
                 )
                 if args.scenario == "sec-refresh-workflow":
@@ -448,6 +455,8 @@ def main(argv: list[str] | None = None) -> None:
                     settings = refresh.settings
                 elif args.scenario.startswith("sec-"):
                     prepare_sec_data(engine, metadata, args.scenario)
+                if args.scenario.startswith("return-hurdle"):
+                    prepare_return_hurdle(engine, metadata, args.scenario)
             if args.scenario in {"ledger-owned", "ledger-publication"}:
                 prepare_ledger_ownership(engine, metadata, publish=args.scenario == "ledger-owned")
             metadata["schema"] = schema

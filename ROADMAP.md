@@ -6,28 +6,21 @@ Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                    | Current value                                                                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint        | Free Amazon analyst expectations, frozen local source-to-UI slice; [handoff](docs/ACTIVE_WORKSTREAM.md).                                             |
-| Branch / PR              | `codex/free-expectations` stacked on `b432335` market/FX work and frozen PR #39 head `69371f1`; no competing PR.                                     |
-| Actual isolated coverage | One genuine snapshot: eight revenue/EPS observations for FY2026/FY2027 and Q4 2026/Q1 2027; four EPS rows remain DATA_CHECK.                         |
-| User outcome             | Annual/quarterly revenue expectations in Financials, analyst ranges/counts and source evidence; uncertain EPS stays separate from actuals/models.    |
-| Verification             | Real private recording → durable ingestion → PostgreSQL → API → desktop/mobile light/dark UI; replay and protected-state checks pass.                |
-| Production               | Prior November 15 00:18 UTC readback: all observation counts zero. No production writes or new readback in this estimates run.                       |
-| Next operator action     | Approve durable recovery destination/key custody/restore target; execute existing rehearsal, then exact SEC/ECB activation scopes.                   |
-| Deferred                 | Broader free estimates/prices, verified EPS methodology, real revision history, comparisons without aligned data, Sheets and generic infrastructure. |
+| Field             | Current value                                                                                                                          |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint | Integrate completed Agents 1–8 into the existing PR #39; [frozen acceptance](docs/ACTIVE_WORKSTREAM.md).                               |
+| Branch / PR       | `codex/integrated-delivery` stages existing SEC, market/FX, expectations and return-hurdle histories for a fast-forward update of #39. |
+| Product outcome   | Portfolio value/source → exact company prices, statements and expectations → accepted-model return analysis → portfolio context.       |
+| Integration       | Main `866723e` already contains recovery #37 and investor UI #38; preserve separate branches and owner work.                           |
+| Production        | November 15 01:14 UTC guarded readback: prices, FX, facts, filings and estimates all zero; accepted portfolio unchanged.               |
+| Release           | New return-hurdle API and native-price fields require API-first sequencing; hosted controls and recovery remain external gates.        |
+| Deferred          | Broad provider coverage, EPS basis, inferred fiscal model alignment, Sheets recovery/publication and new infrastructure.               |
 
-The documented EODHD AMZN demo permits this bounded private evaluation at zero
-subscription cost; it is not an approved production consensus feed. Exact issuer,
-USD currency basis, analyst coverage, fiscal periods and retrieval timestamps remain
-explicit. Forty-seven ended-period rows and relative lookback fields do not become
-historical consensus. Source values/screenshots remain outside public Git.
-
-No new service, table, migration or API shape. Existing ingestion and Financials
-components are reused. Individual observation freshness prevents uncertain EPS from
-hiding valid revenue or a fresh neighbor from legitimizing a stale forecast.
-Demo configuration/execution rejects production. Release is CONFIGURATION_REQUIRED;
-PR #39 remains owner-controlled and unchanged, with separate stacked work preserved.
+Acceptance is the existing complete investor journey, not new analytics or providers.
+Demonstrate authorized private real-source recordings in isolated PostgreSQL, retain
+all source/currency/time/adjustment distinctions, and verify missing-data behavior.
+Full integration, financial checks and desktop/mobile review precede PR update.
+Production activation remains separate from engineering and release readiness.
 
 ## Prior implementation evidence
 

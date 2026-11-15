@@ -1,0 +1,92 @@
+import type { ReturnHurdle } from "../../src/lib/return-hurdle-contracts";
+
+/** Fictional presentation/proxy fixture. Financial mathematics is tested in the API. */
+export function returnHurdleFixture(): ReturnHurdle {
+  const companyId = "11111111-1111-4111-8111-111111111111";
+  const modelId = "99999999-9999-4999-8999-999999999999";
+  const revisionId = "22222222-2222-4222-8222-222222222222";
+  const listingId = "77777777-7777-4777-8777-777777777777";
+  return {
+    calculation_version: "native-return-hurdle-v1",
+    company_id: companyId,
+    model_id: modelId,
+    model_name: "Fictional accepted DCF",
+    model_type: "UFCF_DCF_10Y_FADE",
+    valuation_listing_id: listingId,
+    ticker: "EXM",
+    venue: "NASDAQ",
+    model_currency: "USD",
+    revision_id: revisionId,
+    revision_number: 1,
+    methodology_version: "ufcf-dcf-fade-v1",
+    source: "Fictional browser fixture",
+    effective_at: "2026-10-05T00:00:00Z",
+    recorded_at: "2026-10-05T00:00:00Z",
+    calculated_at: "2026-11-14T00:00:00Z",
+    return_methodology: {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      code: "UFCF_ENTERPRISE_IRR",
+      version: 1,
+      title: "Probability-weighted enterprise UFCF IRR",
+      perspective: "ENTERPRISE",
+      cash_flow_basis: "Probability-weighted annual unlevered free cash flow.",
+      entry_value_basis:
+        "Implied enterprise cost from exact listing price and net cash.",
+      share_price_basis: "Exact valuation listing split-adjusted close.",
+      comparability_group: "ENTERPRISE_UFCF",
+      cross_method_policy: "SAME_METHOD_ONLY",
+      limitation: "Not shareholder-distribution IRR.",
+      effective_from: "2026-10-04T00:00:00Z",
+      recorded_at: "2026-10-04T00:00:00Z",
+    },
+    required_return: "0.12",
+    accepted_hurdle: "0.09",
+    status: "AVAILABLE",
+    unavailable_reason: null,
+    weighted_entry_price: "18.75",
+    reconciled_irr: "0.12",
+    scenarios: (["BEAR", "BASE", "BULL"] as const).map((scenario, index) => ({
+      scenario,
+      probability: scenario === "BASE" ? "0.6" : "0.2",
+      status: "AVAILABLE",
+      required_entry_price: ["12.75", "18.75", "24.75"][index],
+      unavailable_reason: null,
+    })),
+    contributions: {
+      annual_cash_flow_pv_per_share: "8.75",
+      terminal_pv_per_share: "12",
+      opening_balance_sheet_per_share: "-2",
+    },
+    cash_flows: Array.from({ length: 10 }, (_, index) => ({
+      forecast_year: index + 1,
+      annual_cash_flow_per_share: "1.5",
+      terminal_cash_flow_per_share: index === 9 ? "35" : "0",
+    })),
+    hypothetical_entry_price: null,
+    hypothetical_expected_irr: null,
+    hypothetical_status: "NOT_REQUESTED",
+    hypothetical_unavailable_reason: null,
+    market_price: {
+      status: "NO_DATA",
+      listing_id: listingId,
+      ticker: "EXM",
+      venue: "NASDAQ",
+      listing_currency: "USD",
+      quote: null,
+      quote_currency: null,
+      model_reference_price: null,
+      model_currency: "USD",
+      effective_at: null,
+      observed_at: null,
+      recorded_at: null,
+      provider: null,
+      adjustment_basis: null,
+      observation_id: null,
+      source_ref: null,
+      reason: "No matching observed price is retained.",
+    },
+    current_price: null,
+    current_expected_irr: null,
+    current_price_gap_to_required: null,
+  };
+}

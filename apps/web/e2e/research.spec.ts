@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { portfolioFixture } from "./fixtures/portfolio";
 import { sensitivityFixture } from "./fixtures/dcf-sensitivity.mjs";
+import { returnHurdleFixture } from "./fixtures/return-hurdle";
 import type { Overview } from "../src/lib/domain-contracts";
 
 const id = "11111111-1111-4111-8111-111111111111";
@@ -269,6 +270,173 @@ const contractModel = {
   current_revision: contractRevision,
   history: [contractRevision],
 };
+
+for (const mode of [
+  "complete",
+  "stale",
+  "wrong-identity",
+  "old-application",
+  "racing-response",
+] as const) {
+  test(`Return hurdle explorer ${mode} stays hypothetical and bound to the selected model`, async ({
+    page,
+  }) => {
+    let reads = 0;
+    let writes = 0;
+    let releaseFirst = () => {};
+    let firstFinished = false;
+    const firstResponse = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    await page.route(/\/api\/research\//, async (route) => {
+      const url = new URL(route.request().url());
+      const path = url.pathname.replace("/api/research/", "");
+      if (route.request().method() !== "GET") writes += 1;
+      if (path === `companies/${id}`)
+        return route.fulfill({
+          json: {
+            company,
+            securities: [],
+            listings: [contractListing],
+            lifecycle_history: [],
+            portfolio: null,
+            portfolio_context: null,
+            holding_snapshot: null,
+            positions: [],
+            target_weight: null,
+            target_revision_id: null,
+          },
+        });
+      if (path === `companies/${id}/financial-models`)
+        return route.fulfill({ json: [contractModel] });
+      if (
+        path === `companies/${id}/canonical-financial-models` ||
+        path === "model-revision-proposals"
+      )
+        return route.fulfill({ json: [] });
+      if (path === `financial-models/${contractModelId}/return-hurdle`) {
+        reads += 1;
+        expect(url.searchParams.get("base_revision_id")).toBe(
+          contractRevisionId,
+        );
+        const data = returnHurdleFixture();
+        data.required_return = url.searchParams.get("required_return")!;
+        data.reconciled_irr = data.required_return;
+        data.hypothetical_entry_price = url.searchParams.get("entry_price");
+        if (data.hypothetical_entry_price) {
+          data.hypothetical_status = "AVAILABLE";
+          data.hypothetical_expected_irr = "0.11";
+        }
+        if (mode === "stale")
+          return route.fulfill({
+            status: 409,
+            json: { detail: "Changed accepted revision" },
+          });
+        if (mode === "old-application")
+          return route.fulfill({ status: 404, json: { detail: "Not found" } });
+        if (mode === "wrong-identity") data.company_id = contractModelId;
+        if (mode === "racing-response" && data.required_return === "0.12") {
+          data.weighted_entry_price = "99";
+          await firstResponse;
+          await route.fulfill({ json: data });
+          firstFinished = true;
+          return;
+        }
+        return route.fulfill({ json: data });
+      }
+      return route.fulfill({
+        status: 404,
+        json: { detail: "No synthetic route" },
+      });
+    });
+    await page.goto(
+      `/company/${id}?view=valuation&listing=${contractListing.id}&from=portfolio`,
+    );
+    const panel = page.getByRole("region", { name: "Return hurdle explorer" });
+    await panel
+      .getByRole("button", { name: "Explore required return" })
+      .click();
+    expect(reads).toBe(0);
+    await expect(panel.getByLabel("Required annual return (%)")).toHaveValue(
+      "",
+    );
+    await panel.getByLabel("Required annual return (%)").fill("12");
+    await panel.getByRole("button", { name: "Calculate entry value" }).click();
+    if (mode === "complete") {
+      await expect(
+        panel.getByText("Model entry price at selected return"),
+      ).toBeVisible();
+      await expect(
+        panel.getByText("Observed market comparison unavailable", {
+          exact: false,
+        }),
+      ).toBeVisible();
+      await panel.getByLabel("Required annual return (%)").fill("15");
+      await expect(
+        panel.getByText("Inputs changed.", { exact: false }),
+      ).toBeVisible();
+      await expect(
+        panel.getByText("Model entry price at selected return"),
+      ).toHaveCount(0);
+      await panel
+        .getByLabel("Hypothetical entry price (USD, optional)")
+        .fill("20");
+      await panel
+        .getByRole("button", { name: "Calculate entry value" })
+        .click();
+      await expect(
+        panel.getByText("Modeled return at your entry price"),
+      ).toBeVisible();
+      await expect(panel.getByText("11%", { exact: true })).toBeVisible();
+      expect(reads).toBe(2);
+      await expect(
+        panel.getByRole("button", { name: /accept|save/i }),
+      ).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    } else if (mode === "racing-response") {
+      try {
+        await expect.poll(() => reads).toBe(1);
+        await panel.getByLabel("Required annual return (%)").fill("15");
+        await panel
+          .getByRole("button", { name: "Calculate entry value" })
+          .click();
+        await expect(
+          panel.getByText("Selected annual return 15%", { exact: false }),
+        ).toBeVisible();
+        releaseFirst();
+        await expect.poll(() => firstFinished).toBe(true);
+        await expect(panel.getByText("$99.00", { exact: true })).toHaveCount(0);
+        await expect(
+          panel.getByText("Selected annual return 15%", { exact: false }),
+        ).toBeVisible();
+      } finally {
+        releaseFirst();
+      }
+    } else if (mode === "old-application") {
+      await expect(
+        panel.getByText("This analysis is unavailable", { exact: false }),
+      ).toBeVisible();
+      await expect(
+        panel.getByText("Model entry price at selected return"),
+      ).toHaveCount(0);
+    } else {
+      await expect(panel.getByRole("alert")).toContainText(
+        mode === "stale" ? "accepted model changed" : "does not match",
+      );
+      await expect(
+        panel.getByRole("button", { name: "Reload company" }),
+      ).toBeVisible();
+      await expect(
+        panel.getByText("Model entry price at selected return"),
+      ).toHaveCount(0);
+    }
+    expect(writes).toBe(0);
+  });
+}
 
 for (const mode of [
   "complete",

@@ -3694,6 +3694,69 @@ class DcfSensitivityRead(Contract):
     cells: list[DcfSensitivityCellRead] = Field(min_length=9, max_length=9)
 
 
+class ReturnHurdleRequest(Contract):
+    base_revision_id: UUID
+    required_return: Annotated[ModelNumber, Field(ge=0, lt=1)]
+    entry_price: PositiveModelNumber | None = None
+
+
+class ReturnHurdleScenarioRead(Contract):
+    scenario: DcfScenario
+    probability: Probability
+    status: Literal["AVAILABLE", "UNAVAILABLE"]
+    required_entry_price: ModelNumber | None
+    unavailable_reason: str | None
+
+
+class ReturnHurdleContributionsRead(Contract):
+    annual_cash_flow_pv_per_share: ModelNumber
+    terminal_pv_per_share: ModelNumber
+    opening_balance_sheet_per_share: ModelNumber
+
+
+class ReturnHurdleCashFlowRead(Contract):
+    forecast_year: Annotated[int, Field(ge=1, le=10)]
+    annual_cash_flow_per_share: ModelNumber
+    terminal_cash_flow_per_share: ModelNumber
+
+
+class ReturnHurdleRead(Contract):
+    calculation_version: Literal["native-return-hurdle-v1"]
+    company_id: UUID
+    model_id: UUID
+    model_name: str
+    model_type: FinancialModelType
+    valuation_listing_id: UUID
+    ticker: str
+    venue: str
+    model_currency: Currency
+    revision_id: UUID
+    revision_number: int
+    methodology_version: str
+    source: str | None
+    effective_at: datetime
+    recorded_at: datetime
+    calculated_at: datetime
+    return_methodology: ReturnMethodologyRead
+    required_return: ModelNumber
+    accepted_hurdle: ModelNumber
+    status: Literal["AVAILABLE", "UNAVAILABLE"]
+    unavailable_reason: str | None
+    weighted_entry_price: ModelNumber | None
+    reconciled_irr: ModelNumber | None
+    scenarios: list[ReturnHurdleScenarioRead] = Field(min_length=3, max_length=3)
+    contributions: ReturnHurdleContributionsRead | None
+    cash_flows: list[ReturnHurdleCashFlowRead] = Field(min_length=10, max_length=10)
+    hypothetical_entry_price: ModelNumber | None
+    hypothetical_expected_irr: ModelNumber | None
+    hypothetical_status: Literal["NOT_REQUESTED", "AVAILABLE", "UNAVAILABLE"]
+    hypothetical_unavailable_reason: str | None
+    market_price: ExpectedReturnMarketPriceRead
+    current_price: ModelNumber | None
+    current_expected_irr: ModelNumber | None
+    current_price_gap_to_required: ModelNumber | None
+
+
 class FinancialModelEvidenceReference(Contract):
     evidence_type: ModelEvidenceType
     reference_id: UUID
