@@ -691,7 +691,7 @@ def _manual_result_status(result: dict[str, object]) -> str:
 def _run_manual_market_step(
     engine: Engine,
     settings: Settings,
-    request: OperationalJobRequest,
+    request: OperationalJobRequest | None,
     now_at: datetime,
     *,
     include_market: bool,
@@ -704,7 +704,7 @@ def _run_manual_market_step(
         domains.append(ExternalDataDomain.MARKET_DATA)
     if include_fx:
         domains.append(ExternalDataDomain.FX)
-    company_ids = {request.company_id} if request.company_id else None
+    company_ids = {request.company_id} if request and request.company_id else None
     with Session(engine) as session:
         selected, _held = active_market_listings(session, company_ids)
         initial_backfill_needed = any(
@@ -724,6 +724,8 @@ def _run_manual_market_step(
             for listing, _security, _company in selected
         )
     lookback_days = DEFAULT_LOOKBACK_DAYS if include_market and initial_backfill_needed else 90
+    if include_market and settings.market_data_provider == "EODHD_DEMO":
+        lookback_days = 365
     with engine.connect() as connection:
         acquired: bool = connection.execute(
             text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"),
@@ -737,7 +739,8 @@ def _run_manual_market_step(
                 "retry_after_seconds": 60,
             }
         try:
-            configure_yahoo_no_proxy()
+            if include_market and settings.market_data_provider == "YAHOO_FINANCE":
+                configure_yahoo_no_proxy()
             with Session(bind=connection) as session:
                 report = run_scheduled(
                     session,
@@ -745,7 +748,8 @@ def _run_manual_market_step(
                     domains=domains,
                     lookback_days=lookback_days,
                     company_ids=company_ids,
-                    request_nonce=request.id,
+                    request_nonce=request.id if request else None,
+                    end_date=now_at.date(),
                     run_date=now_at.date(),
                 )
                 session.commit()
@@ -1190,6 +1194,7 @@ def run_recurring_cycle(
     process_started_at: datetime | None = None,
     provider_only: bool = False,
     sec_only: bool = False,
+    public_market_only: bool = False,
 ) -> dict[str, object]:
     """Run due jobs once under the existing lock; SEC-only excludes unrelated work."""
 
@@ -1226,6 +1231,29 @@ def run_recurring_cycle(
                     started_at=started,
                     now_at=current,
                 )
+                if public_market_only:
+                    if settings.fx_provider != "ECB_REFERENCE":
+                        return {"status": "BLOCKED", "reason": "Select ECB_REFERENCE explicitly."}
+                    include_prices = settings.market_data_provider == "EODHD_DEMO"
+                    public_manual = process_manual_job_requests(
+                        current_engine,
+                        settings,
+                        now_at=current,
+                        job_names=frozenset({"FX", "MARKET_DATA", "MARKET_AND_FX"})
+                        if include_prices
+                        else frozenset({"FX"}),
+                    )
+                    # ExternalIngestionRun already owns one daily provider scope;
+                    # reuse it instead of inventing another recurring job type.
+                    result = _run_manual_market_step(
+                        current_engine,
+                        settings,
+                        None,
+                        current,
+                        include_market=include_prices,
+                        include_fx=True,
+                    )
+                    return {**result, "manual_request": public_manual}
                 if sec_only:
                     manual = process_manual_job_requests(
                         current_engine,

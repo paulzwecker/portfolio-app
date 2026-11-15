@@ -188,3 +188,28 @@ ordinary CI. Preserve all source-data checkout and credential restrictions.
 
 Current integration status and preserved branch evidence are in the
 [active workstream](ACTIVE_WORKSTREAM.md).
+
+## Private public-market source rehearsal
+
+`test_real_public_market.py` requires off-repository `BROWSER_PUBLIC_MARKET_MANIFEST`
+with version `private-public-market-v1`. The manifest binds original EODHD metadata,
+history and official ECB CSV URLs, hashes and capture timestamps. All referenced
+files stay within its private bundle; missing responses never trigger network fetches.
+Two explicit captured windows (`initial`, `incremental`) are replayed unchanged.
+Independent source values determine expected counts and EUR values for fictional
+quantities/cash. No source value is checked into CI.
+
+Against the existing loopback `_test` target, run:
+
+```powershell
+node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests/test_real_public_market.py -q
+```
+
+`browser_server.py --scenario public-market-refresh --lifetime-seconds 600` serves
+the same fixture for `public-market-refresh.spec.ts`. Its opt-in environment guards
+require private screenshot output. Initial stale history, queued manual work,
+scheduled increment, unchanged protected hashes and same-day reuse are verified.
+Review desktop/mobile and light/dark themes. Real screenshots/readbacks remain private;
+default CI uses synthetic data and skips this recording. Freshness assertions require
+a contemporaneous recording bundle; never alter original capture timestamps to make
+old provider data appear current.

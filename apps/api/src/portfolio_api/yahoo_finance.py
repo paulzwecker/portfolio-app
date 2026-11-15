@@ -99,7 +99,7 @@ class YahooPriceFact:
     market_date: datetime
     observed_at: datetime | None
     provider_close: Decimal
-    split_adjusted_close: Decimal
+    split_adjusted_close: Decimal | None
     total_return_close: Decimal | None
     volume: Decimal | None
     currency: str

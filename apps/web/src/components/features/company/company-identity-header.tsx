@@ -38,6 +38,9 @@ export function CompanyIdentityHeader({
   const listing = detail.listings.find((item) => item.id === listingId);
   const quote = market?.latest;
   const currency = quote?.currency ?? listing?.currency ?? null;
+  const native =
+    quote?.split_adjusted_close == null && quote?.native_close != null;
+  const shownPrice = native ? quote?.native_close : quote?.split_adjusted_close;
 
   return (
     <div className="space-y-4">
@@ -115,12 +118,13 @@ export function CompanyIdentityHeader({
           </div>
           <div className="min-w-0 text-right">
             <p className="text-xs text-muted-foreground">
-              Split-adjusted close · {currency ?? "Unknown"}
+              {native ? "Unadjusted native close" : "Split-adjusted close"} ·{" "}
+              {currency ?? "Unknown"}
             </p>
             <p className="mt-1 break-words text-2xl font-semibold tabular-nums">
-              {quote?.split_adjusted_close === null || !quote
+              {shownPrice == null
                 ? "Unavailable"
-                : formatCurrency(quote.split_adjusted_close, currency, 2)}
+                : formatCurrency(shownPrice, currency, 2)}
             </p>
             {marketState.error && (
               <div className="mt-2 sm:ml-auto sm:max-w-sm">
@@ -134,12 +138,16 @@ export function CompanyIdentityHeader({
           <div className="col-span-2">
             {market ? (
               <DataFreshnessIndicator
-                state={market.freshness}
+                state={
+                  native
+                    ? (market.native_freshness ?? "NO_DATA")
+                    : market.freshness
+                }
                 observedAt={quote?.observed_at}
                 source={quote?.provider ?? "No quote source"}
                 detail={
                   quote
-                    ? `Market date ${date(quote.market_date)} · ${quote.data_quality}`
+                    ? `Market date ${date(quote.market_date)} · ${quote.data_quality}${native ? " · Unadjusted native close" : ""}${quote.provider === "EODHD_DEMO" ? " · Indicative test-drive data" : ""}`
                     : "No quote for this listing"
                 }
               />

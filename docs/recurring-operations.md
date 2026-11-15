@@ -420,3 +420,21 @@ The `--once` process exited cleanly and recorded its stopped heartbeat. A subseq
 uses the persisted due times and the advisory lock to avoid duplicate provider calls and work-feed
 rows. For continuous local operation, `npm run dev` starts the supervised worker process alongside
 the existing market-data worker.
+
+## Bounded public-market trigger
+
+`python -m portfolio_api.cloud_cron --scope public-market-data` reuses existing
+manual requests, advisory locks and daily external-ingestion identities. It requires
+explicit `FX_PROVIDER=ECB_REFERENCE`, existing cloud/recurring flags and writer guards.
+With unchanged Yahoo market selection it performs FX only; isolated
+`MARKET_DATA_PROVIDER=EODHD_DEMO` adds the fixed AMZN example. It drains at most one
+eligible queued request and excludes SEC/FMP/Sheets/model/research work. There is no
+new recurring-job table/type. Same-day scopes reuse receipts; missed triggers perform
+one bounded current pass. Nonretryable failures stop after one attempt; retryable
+failures retain the three-attempt maximum. Durable receipts expose progress/failures.
+
+Proposed existing-host timing: weekdays after 22:30 America/New_York for market+FX,
+or after 17:00 Europe/Berlin for ECB-only, with named-timezone DST handling. The host
+must be awake; sleeping Render Free is not a scheduler. No timer was registered.
+Recovery, source permission, initial reconciliation and a controlled increment precede
+separately approved unattended activation.

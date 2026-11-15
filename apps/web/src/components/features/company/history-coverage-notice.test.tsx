@@ -307,3 +307,51 @@ describe("historical market coverage notice", () => {
     expect(html).toContain("split adjusted");
   });
 });
+
+describe("unadjusted native history", () => {
+  const observations = ["50", "100"].map((value, index) => ({
+    id: String(index),
+    market_date: `2026-11-${13 - index}T00:00:00Z`,
+    native_close: value,
+    split_adjusted_close: null,
+    currency: "USD",
+    provider: "EODHD_DEMO",
+    provider_symbol: "SYNTH.US",
+    data_quality: "PASS",
+    adjustment_basis: "UNADJUSTED_NATIVE_CLOSE",
+    source_ref: "test:native",
+    observed_at: "2026-11-15T00:00:00Z",
+    recorded_at: "2026-11-15T00:00:00Z",
+  })) as ListingMarketData["history"];
+  const market = {
+    listing: { ticker: "SYNTH" },
+    analytics: { input_issues: [] },
+  } as unknown as ListingMarketData;
+  it("renders explicitly requested native observations without filling split-adjusted data", () => {
+    const chart = renderToStaticMarkup(
+      <PriceHistoryChart market={market} observations={observations} native />,
+    );
+    expect(chart).toContain('role="img"');
+    const original = renderToStaticMarkup(
+      <PriceHistoryChart market={market} observations={observations} />,
+    );
+    expect(original).toContain("Price history is unavailable");
+    const review = renderToStaticMarkup(
+      <PriceObservationReview observations={observations} native />,
+    );
+    expect(review).toContain("Exact unadjusted native close");
+    expect(review).toContain("50 USD");
+    expect(review).toContain("EODHD_DEMO");
+  });
+  it("hides a native chart when its source context conflicts", () => {
+    const chart = renderToStaticMarkup(
+      <PriceHistoryChart
+        market={{ ...market, native_history_reason: "Conflicting sources" }}
+        observations={observations}
+        native
+      />,
+    );
+    expect(chart).toContain("Price series needs review");
+    expect(chart).not.toContain('role="img"');
+  });
+});

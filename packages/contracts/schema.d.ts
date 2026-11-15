@@ -7272,6 +7272,8 @@ export interface components {
             price_freshness: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA";
             /** Price Observed At */
             price_observed_at?: string | null;
+            /** Price Provider */
+            price_provider?: string | null;
             /** Quantity */
             quantity: string | null;
             /**
@@ -7283,6 +7285,8 @@ export interface components {
             security_name: string;
             /** Ticker */
             ticker: string;
+            /** Valuation Price Basis */
+            valuation_price_basis?: ("SPLIT_ADJUSTED_CLOSE" | "UNADJUSTED_NATIVE_CLOSE") | null;
             /**
              * Valuation Status
              * @default PRICE_UNAVAILABLE
@@ -8805,6 +8809,16 @@ export interface components {
             last_market_update: string | null;
             latest: components["schemas"]["PriceObservationRead"] | null;
             listing: components["schemas"]["ListingRead"];
+            /**
+             * Native Freshness
+             * @default NO_DATA
+             * @enum {string}
+             */
+            native_freshness: "FRESH" | "STALE" | "QUALITY_CHECK" | "NO_DATA";
+            /** Native History */
+            native_history?: components["schemas"]["PriceObservationRead"][];
+            /** Native History Reason */
+            native_history_reason?: string | null;
             price_regime: components["schemas"]["PriceRegimeRead"] | null;
         };
         /** ListingRead */
@@ -10288,6 +10302,8 @@ export interface components {
              * Format: date-time
              */
             market_date: string;
+            /** Native Close */
+            native_close?: string | null;
             /** Observed At */
             observed_at: string | null;
             /**

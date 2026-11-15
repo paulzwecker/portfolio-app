@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     manual_operations_enabled: bool = False
     workbook_sync_enabled: bool = False
     fmp_consensus_ingestion_enabled: bool = False
+    fx_provider: Literal["YAHOO_FINANCE", "ECB_REFERENCE"] = "YAHOO_FINANCE"
+    market_data_provider: Literal["YAHOO_FINANCE", "EODHD_DEMO"] = "YAHOO_FINANCE"
 
     @field_validator("google_sheets_spreadsheet_id")
     @classmethod
@@ -112,6 +114,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_runtime_configuration(self) -> "Settings":
+        if self.market_data_provider == "EODHD_DEMO" and (
+            self.app_env == "production" or self.database_target_environment == "production"
+        ):
+            raise ValueError("EODHD demo coverage is isolated-only, not a production feed approval")
         proposal_roles = (
             (self.model_proposal_agent_token, self.model_proposal_agent_id, "agent"),
             (self.model_proposal_reviewer_token, self.model_proposal_reviewer_id, "reviewer"),

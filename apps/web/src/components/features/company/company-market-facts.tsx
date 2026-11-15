@@ -29,8 +29,8 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
           Market facts
         </h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Listing-specific quotes and split-adjusted history. These facts do not
-          determine lifecycle, targets or execution.
+          Listing-specific quotes and explicitly labeled price history. These
+          facts do not determine lifecycle, targets or execution.
         </p>
       </div>
       {!marketState.data ? (
@@ -45,7 +45,15 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
         <div className="grid gap-4 xl:grid-cols-2">
           {marketState.data.map((market) => {
             const regime = market.price_regime;
-            const history = [...market.history].reverse();
+            const native =
+              market.history.length === 0 &&
+              (market.native_history?.length ?? 0) > 0;
+            const history = [
+              ...(native ? (market.native_history ?? []) : market.history),
+            ].reverse();
+            const freshness = native
+              ? (market.native_freshness ?? "NO_DATA")
+              : market.freshness;
             return (
               <Card key={market.listing.id} className="min-w-0 shadow-none">
                 <CardHeader className="pb-2">
@@ -55,13 +63,11 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
                       {market.listing.currency ?? "Currency unknown"}
                     </CardTitle>
                     <Badge
-                      variant={
-                        market.freshness === "FRESH" ? "default" : "secondary"
-                      }
+                      variant={freshness === "FRESH" ? "default" : "secondary"}
                     >
-                      {market.freshness === "FRESH" && market.age_days !== null
+                      {freshness === "FRESH" && market.age_days !== null
                         ? `Fresh · ${market.age_days}d`
-                        : market.freshness.replaceAll("_", " ")}
+                        : freshness.replaceAll("_", " ")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -69,11 +75,15 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Latest split-adjusted close
+                        {native
+                          ? "Latest unadjusted native close"
+                          : "Latest split-adjusted close"}
                       </p>
                       <p className="mt-1 text-2xl font-semibold tabular-nums">
                         {formatPrice(
-                          market.latest?.split_adjusted_close ?? null,
+                          native
+                            ? (market.latest?.native_close ?? null)
+                            : (market.latest?.split_adjusted_close ?? null),
                           market.latest?.currency ??
                             market.listing.currency ??
                             null,
@@ -103,8 +113,13 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
                       {" "}
                       {history.length >= 2 ? (
                         <PriceSeriesChart
+                          native={native}
                           values={history
-                            .map((item) => item.split_adjusted_close)
+                            .map((item) =>
+                              native
+                                ? (item.native_close ?? null)
+                                : item.split_adjusted_close,
+                            )
                             .filter((value): value is string => value !== null)}
                         />
                       ) : (
@@ -112,66 +127,77 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
                           Price history is unavailable or too short to chart.
                         </p>
                       )}
-                      <dl className="grid grid-cols-2 gap-3 border-t pt-3 sm:grid-cols-4">
-                        {[
-                          [
-                            "20-day average",
-                            regime?.dma_20
-                              ? formatPrice(
-                                  regime.dma_20,
-                                  market.listing.currency ?? null,
-                                )
-                              : "Unavailable",
-                          ],
-                          [
-                            "50-day average",
-                            regime?.dma_50
-                              ? formatPrice(
-                                  regime.dma_50,
-                                  market.listing.currency ?? null,
-                                )
-                              : "Unavailable",
-                          ],
-                          [
-                            "200-day average",
-                            regime?.dma_200
-                              ? formatPrice(
-                                  regime.dma_200,
-                                  market.listing.currency ?? null,
-                                )
-                              : "Unavailable",
-                          ],
-                          [
-                            "52-week drawdown",
-                            rateLabel(regime?.drawdown_52w ?? null),
-                          ],
-                          [
-                            "1-month return",
-                            rateLabel(regime?.return_1m ?? null),
-                          ],
-                          [
-                            "3-month return",
-                            rateLabel(regime?.return_3m ?? null),
-                          ],
-                          [
-                            "6-month return",
-                            rateLabel(regime?.return_6m ?? null),
-                          ],
-                          [
-                            "20-day realized volatility",
-                            rateLabel(regime?.realized_vol_20d ?? null),
-                          ],
-                        ].map(([label, value]) => (
-                          <div key={label} className="min-w-0">
-                            <dt className="text-[10px] leading-4 text-muted-foreground">
-                              {label}
-                            </dt>
-                            <dd className="mt-1 break-words text-xs font-medium tabular-nums">
-                              {value}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
+                      {native && (
+                        <p className="text-xs text-muted-foreground">
+                          Unadjusted native prices can jump after splits or
+                          distributions; these are not comparable investment
+                          returns.{" "}
+                          {market.latest?.provider === "EODHD_DEMO" &&
+                            "EODHD test-drive data is indicative."}
+                        </p>
+                      )}
+                      {!native && (
+                        <dl className="grid grid-cols-2 gap-3 border-t pt-3 sm:grid-cols-4">
+                          {[
+                            [
+                              "20-day average",
+                              regime?.dma_20
+                                ? formatPrice(
+                                    regime.dma_20,
+                                    market.listing.currency ?? null,
+                                  )
+                                : "Unavailable",
+                            ],
+                            [
+                              "50-day average",
+                              regime?.dma_50
+                                ? formatPrice(
+                                    regime.dma_50,
+                                    market.listing.currency ?? null,
+                                  )
+                                : "Unavailable",
+                            ],
+                            [
+                              "200-day average",
+                              regime?.dma_200
+                                ? formatPrice(
+                                    regime.dma_200,
+                                    market.listing.currency ?? null,
+                                  )
+                                : "Unavailable",
+                            ],
+                            [
+                              "52-week drawdown",
+                              rateLabel(regime?.drawdown_52w ?? null),
+                            ],
+                            [
+                              "1-month return",
+                              rateLabel(regime?.return_1m ?? null),
+                            ],
+                            [
+                              "3-month return",
+                              rateLabel(regime?.return_3m ?? null),
+                            ],
+                            [
+                              "6-month return",
+                              rateLabel(regime?.return_6m ?? null),
+                            ],
+                            [
+                              "20-day realized volatility",
+                              rateLabel(regime?.realized_vol_20d ?? null),
+                            ],
+                          ].map(([label, value]) => (
+                            <div key={label} className="min-w-0">
+                              <dt className="text-[10px] leading-4 text-muted-foreground">
+                                {label}
+                              </dt>
+                              <dd className="mt-1 break-words text-xs font-medium tabular-nums">
+                                {value}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         {regime?.data_quality === "PASS"
                           ? `Trend: ${regime.trend_state ?? "Unavailable"} · Correction: ${regime.correction_state ?? "Unavailable"}`
@@ -190,7 +216,13 @@ export function MarketFacts({ marketState }: { marketState: MarketState }) {
   );
 }
 
-function PriceSeriesChart({ values }: { values: string[] }) {
+function PriceSeriesChart({
+  values,
+  native = false,
+}: {
+  values: string[];
+  native?: boolean;
+}) {
   const points = values.map(Number).filter(Number.isFinite);
   if (points.length < 2) return null;
   const min = Math.min(...points);
@@ -204,7 +236,11 @@ function PriceSeriesChart({ values }: { values: string[] }) {
     .join(" ");
   return (
     <div
-      aria-label="Recent split-adjusted daily closing prices"
+      aria-label={
+        native
+          ? "Recent unadjusted native daily closing prices"
+          : "Recent split-adjusted daily closing prices"
+      }
       role="img"
       className="rounded-md bg-secondary/30 px-2 py-3"
     >

@@ -255,6 +255,8 @@ class HoldingContext(Contract):
     security_name: str
     quantity: FixedDecimal | None
     latest_price: FixedDecimal | None
+    valuation_price_basis: Literal["SPLIT_ADJUSTED_CLOSE", "UNADJUSTED_NATIVE_CLOSE"] | None = None
+    price_provider: str | None = None
     price_date: datetime | None
     price_observed_at: datetime | None = None
     price_currency: Currency | None
@@ -779,6 +781,7 @@ class PriceObservationRead(Contract):
     observed_at: datetime | None
     recorded_at: datetime
     provider_close: FixedDecimal | None
+    native_close: FixedDecimal | None = None
     split_adjusted_close: FixedDecimal | None
     total_return_close: FixedDecimal | None
     volume: FixedDecimal | None
@@ -1217,6 +1220,9 @@ class ListingMarketData(Contract):
     analytics: PriceHistoryAnalyticsRead
     last_market_update: datetime | None
     history: list[PriceObservationRead]
+    native_history: list[PriceObservationRead] = Field(default_factory=list)
+    native_freshness: Literal["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"] = "NO_DATA"
+    native_history_reason: str | None = None
 
 
 class ReportedFundamentalObservationRead(Contract):

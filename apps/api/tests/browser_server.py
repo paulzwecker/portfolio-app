@@ -19,6 +19,7 @@ import uvicorn
 from alembic import command
 from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
+from browser_public_market_data import PublicMarketReplay
 from browser_real_sec_data import SecRecording, prepare_real_sec_data
 from browser_refresh_data import RefreshRehearsal
 from browser_sec_data import prepare_sec_data
@@ -248,7 +249,7 @@ def fixture_application(
     metadata: dict[str, object] | None = None,
     *,
     ledger_writer: Engine | None = None,
-    refresh: RefreshRehearsal | None = None,
+    refresh: RefreshRehearsal | PublicMarketReplay | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -314,7 +315,12 @@ def fixture_application(
                         return await call_next(request)
                     if request.url.path == "/v1/operations/job-requests":
                         payload = await request.json()
-                        if payload.get("job_name") in {"SEC_FUNDAMENTALS", "SEC_FILINGS"}:
+                        allowed = (
+                            {"MARKET_DATA", "FX", "MARKET_AND_FX"}
+                            if isinstance(refresh, PublicMarketReplay)
+                            else {"SEC_FUNDAMENTALS", "SEC_FILINGS"}
+                        )
+                        if payload.get("job_name") in allowed:
                             return await call_next(request)
                     if re.fullmatch(
                         r"/v1/operations/job-requests/[a-f0-9-]{36}/retry", request.url.path
@@ -363,6 +369,7 @@ def main(argv: list[str] | None = None) -> None:
             "sec-refresh-outage",
             "sec-refresh-workflow",
             "sec-real-refresh",
+            "public-market-refresh",
         ),
         default="demo",
     )
@@ -393,7 +400,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     reader: Engine | None = None
     ledger_writer: Engine | None = None
-    refresh: RefreshRehearsal | None = None
+    refresh: RefreshRehearsal | PublicMarketReplay | None = None
     try:
         with engine.begin() as connection:
             config = alembic_config()
@@ -403,6 +410,13 @@ def main(argv: list[str] | None = None) -> None:
         if args.scenario == "demo":
             with Session(engine) as session, session.begin():
                 seed(session)
+        elif args.scenario == "public-market-refresh":
+            path = os.environ.get("BROWSER_PUBLIC_MARKET_MANIFEST")
+            if not path:
+                parser.error("Private BROWSER_PUBLIC_MARKET_MANIFEST is required")
+            refresh = PublicMarketReplay(engine, settings, Path(path))
+            metadata, settings = refresh.metadata, refresh.settings
+            metadata["schema"] = schema
         elif recording is not None:
             metadata = prepare_real_sec_data(engine, recording)
             refresh = RefreshRehearsal(engine, settings, metadata, recording=recording)

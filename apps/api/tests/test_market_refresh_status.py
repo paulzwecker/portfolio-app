@@ -73,7 +73,9 @@ def test_read_only_diagnostics_follow_cooldown_and_preserve_recovered_attempts(
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("problem", ["exhausted", "identity", "previous_day", "running", "replay"])
+@pytest.mark.parametrize(
+    "problem", ["exhausted", "identity", "previous_day", "running", "replay", "official_provider"]
+)
 def test_diagnostics_never_offer_an_unsupported_automatic_retry(
     postgres_engine: Engine,
     market_scope: object,
@@ -100,6 +102,12 @@ def test_diagnostics_never_offer_an_unsupported_automatic_retry(
             ).one()
             running.status = "RUNNING"
             running.finished_at = None
+    elif problem == "official_provider":
+        with Session(postgres_engine) as session, session.begin():
+            official_run = session.scalars(
+                select(ExternalIngestionRun).where(ExternalIngestionRun.domain == "FX")
+            ).one()
+            official_run.provider_id = "ECB_REFERENCE"
     elif problem == "replay":
         with Session(postgres_engine) as session, session.begin():
             replay = session.scalars(
@@ -124,6 +132,7 @@ def test_diagnostics_never_offer_an_unsupported_automatic_retry(
             "previous_day": "REVIEW_REQUIRED",
             "running": "RUNNING",
             "replay": "REVIEW_REQUIRED",
+            "official_provider": "REVIEW_REQUIRED",
         }[problem]
     )
     assert run.retry_eligible_at is None

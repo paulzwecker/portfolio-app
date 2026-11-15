@@ -81,7 +81,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scope",
-        choices=("market-data", "provider-data", "sec-data", "all-operations"),
+        choices=(
+            "market-data",
+            "provider-data",
+            "sec-data",
+            "public-market-data",
+            "all-operations",
+        ),
         default="market-data",
         help="Market/FX by default. SEC-only also drains at most one queued SEC request.",
     )
@@ -95,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     reports: dict[str, object] = {}
-    if args.scope != "sec-data":
+    if args.scope not in {"sec-data", "public-market-data"}:
         try:
             reports["market_data"] = run_startup_refresh(
                 settings,
@@ -126,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
                     process_started_at=started_at,
                     provider_only=args.scope == "provider-data",
                     sec_only=args.scope == "sec-data",
+                    public_market_only=args.scope == "public-market-data",
                 )
         except Exception as error:
             error_type = type(error).__name__

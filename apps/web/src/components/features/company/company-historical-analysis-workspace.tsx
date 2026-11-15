@@ -330,11 +330,17 @@ function chartBounds(values: number[]) {
 export function PriceHistoryChart({
   market,
   observations,
+  native = false,
 }: {
   market: ListingMarketData;
   observations: ListingMarketData["history"];
+  native?: boolean;
 }) {
-  if ((market.analytics.input_issues?.length ?? 0) > 0)
+  if (
+    native
+      ? Boolean(market.native_history_reason)
+      : (market.analytics.input_issues?.length ?? 0) > 0
+  )
     return (
       <EmptyState
         title="Price series needs review"
@@ -342,7 +348,9 @@ export function PriceHistoryChart({
       />
     );
   const values = observations
-    .map((item) => item.split_adjusted_close)
+    .map((item) =>
+      native ? (item.native_close ?? null) : item.split_adjusted_close,
+    )
     .filter((value): value is string => value !== null)
     .map(Number)
     .filter(Number.isFinite);
@@ -353,21 +361,31 @@ export function PriceHistoryChart({
         description="At least two exact-listing observations are required for a line chart. Existing observations remain available in the history list."
       />
     );
-  return <PriceHistoryPlot market={market} observations={observations} />;
+  return (
+    <PriceHistoryPlot
+      market={market}
+      observations={observations}
+      native={native}
+    />
+  );
 }
 
 function PriceHistoryPlot({
   market,
   observations,
+  native,
 }: {
   market: ListingMarketData;
   observations: ListingMarketData["history"];
+  native: boolean;
 }) {
   const { containerRef, width } = useChartWidth();
   const ordered = [...observations].reverse();
-  const dated = ordered.filter((item) => item.split_adjusted_close !== null);
+  const close = (item: ListingMarketData["history"][number]) =>
+    native ? (item.native_close ?? null) : item.split_adjusted_close;
+  const dated = ordered.filter((item) => close(item) !== null);
   const times = dated.map((item) => parseTime(item.market_date) ?? 0);
-  const numeric = dated.map((item) => Number(item.split_adjusted_close));
+  const numeric = dated.map((item) => Number(close(item)));
   const bounds = chartBounds(numeric);
   const height = 230;
   const left = 54;
@@ -455,7 +473,7 @@ function PriceHistoryPlot({
             r="3"
             fill="var(--chart-1)"
           >
-            <title>{`${marketDate(item.market_date)} · ${formatCurrency(item.split_adjusted_close, item.currency)} · observed ${dateTime(item.observed_at)} · recorded ${dateTime(item.recorded_at)}`}</title>
+            <title>{`${marketDate(item.market_date)} · ${formatCurrency(close(item), item.currency)} · observed ${dateTime(item.observed_at)} · recorded ${dateTime(item.recorded_at)}`}</title>
           </circle>
         ))}
       </svg>
@@ -658,8 +676,10 @@ export function filterPriceObservations(
 
 export function PriceObservationReview({
   observations,
+  native = false,
 }: {
   observations: ListingMarketData["history"];
+  native?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const filtered = filterPriceObservations(observations, search);
@@ -671,12 +691,16 @@ export function PriceObservationReview({
     },
     {
       id: "close",
-      header: "Exact split-adjusted close",
+      header: native
+        ? "Exact unadjusted native close"
+        : "Exact split-adjusted close",
       className: "tabular-nums",
-      render: (item) =>
-        item.split_adjusted_close === null
-          ? "Unavailable"
-          : `${item.split_adjusted_close} ${item.currency}`,
+      render: (item) => {
+        const close = native
+          ? (item.native_close ?? null)
+          : item.split_adjusted_close;
+        return close === null ? "Unavailable" : `${close} ${item.currency}`;
+      },
     },
     {
       id: "observed",
@@ -757,9 +781,18 @@ function MarketHistory({
   const markets = marketState.data ?? [];
   const selected =
     markets.find((item) => item.listing.id === listingId) ?? null;
+  const native = Boolean(
+    selected &&
+    selected.history.length === 0 &&
+    ((selected.native_history?.length ?? 0) > 0 ||
+      selected.native_history_reason),
+  );
+  const selectedHistory = native
+    ? (selected?.native_history ?? [])
+    : (selected?.history ?? []);
   const observations = selected
     ? filterByHistoricalRange(
-        selected.history,
+        selectedHistory,
         range,
         (item) => item.market_date,
       )
@@ -781,8 +814,11 @@ function MarketHistory({
         <div>
           <p className="text-sm font-medium">Exact listing and price basis</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Split-adjusted daily closes are shown for one listing at a time.
-            Listing identity and currency are never substituted.
+            {native
+              ? "Unadjusted native daily closes"
+              : "Split-adjusted daily closes"}{" "}
+            are shown for one listing at a time. Listing identity and currency
+            are never substituted.
           </p>
         </div>
         {markets.length > 1 && (
@@ -808,15 +844,32 @@ function MarketHistory({
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(260px,.75fr)]">
           <ChartContainer
             title={`${selected.listing.ticker} price history`}
-            description={`${observations.length} observations in the selected range · exact listing · split-adjusted close`}
+            description={`${observations.length} observations in the selected range · exact listing · ${native ? "unadjusted native close" : "split-adjusted close"}`}
             source={
               <StatusIndicator
                 status={selected.availability}
-                label={`Market: ${statusLabel(selected.availability)} · Quote: ${statusLabel(selected.freshness)}`}
+                label={
+                  native
+                    ? `Native quote: ${statusLabel(selected.native_freshness ?? "NO_DATA")} · Split-adjusted analytics unavailable`
+                    : `Market: ${statusLabel(selected.availability)} · Quote: ${statusLabel(selected.freshness)}`
+                }
               />
             }
           >
-            <PriceHistoryChart market={selected} observations={observations} />
+            <PriceHistoryChart
+              market={selected}
+              observations={observations}
+              native={native}
+            />
+            {native && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Unadjusted prices can jump after splits or distributions. This
+                chart is not a comparable return series or historical portfolio
+                performance.{" "}
+                {selected.latest?.provider === "EODHD_DEMO" &&
+                  "EODHD test-drive data is indicative; do not treat it as execution pricing."}
+              </p>
+            )}
           </ChartContainer>
           <Card className="shadow-none">
             <CardHeader className="pb-2">
@@ -828,7 +881,9 @@ function MarketHistory({
                 <strong>
                   {selected.latest
                     ? formatCurrency(
-                        selected.latest.split_adjusted_close,
+                        native
+                          ? (selected.latest.native_close ?? null)
+                          : selected.latest.split_adjusted_close,
                         selected.latest.currency,
                       )
                     : "Unavailable"}
@@ -903,8 +958,17 @@ function MarketHistory({
                   ? `Analytics as of ${dateTime(selected.analytics.as_of)} · ${selected.analytics.methodology_version}`
                   : `Analytics ${statusLabel(selected.analytics.status)}. ${selected.analytics.observation_count} observations were examined.`}
               </p>
-              <HistoryCoverageNotice analytics={selected.analytics} />
-              <HistorySourceReview analytics={selected.analytics} />
+              {native ? (
+                <p className="text-muted-foreground">
+                  {selected.native_history_reason ??
+                    "Session completeness is not assessed. Split-adjusted return and trend measures remain unavailable."}
+                </p>
+              ) : (
+                <>
+                  <HistoryCoverageNotice analytics={selected.analytics} />
+                  <HistorySourceReview analytics={selected.analytics} />
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -912,7 +976,8 @@ function MarketHistory({
       {selected && (
         <PriceObservationReview
           key={selected.listing.id}
-          observations={selected.history}
+          observations={selectedHistory}
+          native={native}
         />
       )}
     </div>
@@ -1930,7 +1995,7 @@ export function CompanyHistoricalAnalysisWorkspace({
       </div>
       <PageSection
         title="Market history"
-        description="Split-adjusted daily closes · original listing currency"
+        description="Source-backed daily closes · explicit price basis · original listing currency"
         id="market-history"
       >
         <MarketHistory

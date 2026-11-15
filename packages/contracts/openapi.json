@@ -16814,6 +16814,17 @@
             ],
             "title": "Price Observed At"
           },
+          "price_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Provider"
+          },
           "quantity": {
             "anyOf": [
               {
@@ -16837,6 +16848,21 @@
           "ticker": {
             "title": "Ticker",
             "type": "string"
+          },
+          "valuation_price_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SPLIT_ADJUSTED_CLOSE",
+                  "UNADJUSTED_NATIVE_CLOSE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Price Basis"
           },
           "valuation_status": {
             "default": "PRICE_UNAVAILABLE",
@@ -20854,6 +20880,35 @@
           },
           "listing": {
             "$ref": "#/components/schemas/ListingRead"
+          },
+          "native_freshness": {
+            "default": "NO_DATA",
+            "enum": [
+              "FRESH",
+              "STALE",
+              "QUALITY_CHECK",
+              "NO_DATA"
+            ],
+            "title": "Native Freshness",
+            "type": "string"
+          },
+          "native_history": {
+            "items": {
+              "$ref": "#/components/schemas/PriceObservationRead"
+            },
+            "title": "Native History",
+            "type": "array"
+          },
+          "native_history_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native History Reason"
           },
           "price_regime": {
             "anyOf": [
@@ -25845,6 +25900,17 @@
             "format": "date-time",
             "title": "Market Date",
             "type": "string"
+          },
+          "native_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Close"
           },
           "observed_at": {
             "anyOf": [
