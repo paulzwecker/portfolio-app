@@ -161,7 +161,7 @@ The Company market view computes these measures directly from the latest clean,
 exact-listing canonical daily observations; it does not depend on a legacy
 `PriceRegimeSnapshot`. A 50- or 200-observation average and the 20-return volatility
 are exposed as soon as their individual windows exist. The aggregate analytics
-state is `AVAILABLE` with at least 252 eligible observations, `PARTIAL` with 2–251,
+state is `AVAILABLE` with at least 252 eligible observations, `PARTIAL` with 2â€“251,
 and `UNAVAILABLE` with fewer than two. These states describe calculation inputs,
 not verified exchange-session completeness. The 52-week high and drawdown use the
 last 252 observations and remain null until that many observations exist. The API
@@ -197,10 +197,10 @@ independently observed November 8, 2026, with SHA-256
 Nasdaq source does not state an as-of date; none is inferred. Separate local
 content-addressed source copies are retained outside Git in
 `%LOCALAPPDATA%/PortfolioResearch/reference-calendars`; this local store is not a
-durable backup. Exact `XETRA` or `XETR` listings use Deutsche Börse's independently
+durable backup. Exact `XETRA` or `XETR` listings use Deutsche BÃ¶rse's independently
 captured [2026 Xetra schedule](https://www.cashmarket.deutsche-boerse.com/resource/blob/4481276/1b643791fcb4d60bdd7f25efad3f4626/data/deutsche-boerse-trading-calendar-2026.pdf)
 (SHA-256 `1edfc7b737ae1f5fe93179bfa9af59223b3c9d11cc8deddd127b386fb87e44b6`;
-observed November 8, 2026; no as-of date stated). Deutsche Börse identifies XETR
+observed November 8, 2026; no as-of date stated). Deutsche BÃ¶rse identifies XETR
 as Xetra's MIC; it is distinct from XFRA. Other venues and years remain unassessed;
 no FX schedule is inferred.
 
@@ -377,3 +377,32 @@ Medistim's NOK listing now has an explicit NOK/EUR provider series mapping, but
 dated FX must still be ingested before its EUR portfolio valuation is available.
 The per-listing sources and exact status are in the
 [10F identity reconciliation](reconciliation/issuer-identity-international-filing-coverage-2026-10-16.md).
+
+## Official FX and native-close evaluation (2026-11-15)
+
+Optional `FX_PROVIDER=ECB_REFERENCE` supports exactly USD/EUR and DKK/EUR through
+ECB's official daily EXR CSV API, at most 366 inclusive dates per request. Initial
+coverage uses two requests; increments overlap three calendar days with stored ECB
+history. Original currency-units-per-EUR responses are retained; canonical EUR per
+foreign unit is the reciprocal rounded to 14 decimals. UTC midnight encodes a
+reference date, not a publication instant; observation time is retrieval. Attribute
+the ECB and disclose conversion under its [reuse terms](https://www.ecb.europa.eu/services/using-our-site/disclaimer/html/index.en.html).
+These informational reference rates are not execution quotes. Unsupported pairs
+and failed responses never fall back to Yahoo.
+
+Optional `MARKET_DATA_PROVIDER=EODHD_DEMO` verifies exact AMZN.US/NASDAQ/USD/common
+stock metadata and CIK before bounded history access. It rejects production runtime
+or target selection; all other listings remain uncovered. This documented free
+test-drive uses no key/account/payment and is not production feed entitlement.
+[EOD documentation](https://eodhd.com/financial-apis/api-for-historical-data-and-volumes)
+and [private software terms](https://eodhd.com/help/ai-tools) require keeping real
+responses, screenshots and derived outputs out of public Git.
+
+Explicit `UNADJUSTED_NATIVE_CLOSE` can support current quantity × native quote ×
+dated FX, with currency/unit, quality, freshness and knowledge-cutoff checks. Native
+history is separate from split-adjusted analytics, models and IRR. Total-return
+close is never substituted; corporate actions do not become transactions. Conflicting
+native values remain unavailable. Later ingestion cannot become historical knowledge.
+Both provider defaults remain unchanged. Production ECB source selection needs
+separate exact scope/recovery approval and existing guards; never relabel a Yahoo
+bootstrap checkpoint as ECB. No migration or accepted-data change is included.

@@ -320,6 +320,58 @@ native parity, scoped PostgreSQL checks, the proxy defect/correction and real
 Next.js → synthetic HTTPS → UI verification. Hosted model readback and financial
 acceptance retain their separate gates.
 
+## Hypothetical return hurdle explorer
+
+The read-only Company Valuation workflow asks: **what entry price satisfies an
+explicit required annual return if this accepted model's assumptions hold?** It
+does not choose a return target, propose a trade, change assumptions or accept a
+revision. Imported output-only models cannot supply the underlying cash flows and
+do not expose this analytical control.
+
+The user supplies a Decimal required return from zero to below 100%, and optionally
+a positive hypothetical entry price. The selected exact native model/revision,
+listing, currency, methodology and effective/recorded source evidence bind the
+response. A changed accepted revision requires reloading. Analysis uses current
+eligible knowledge; it is not a reconstructed historical decision or a claim that
+ordinal forecast years identify issuer fiscal periods.
+
+Let `r` be the user's hypothetical annual required return. Discount the existing
+native return stream with `PV = sum(CF[t] / (1+r)^t), t=1..10`. IRR is the rate
+that makes the full cash-flow stream's NPV zero; see the
+[primary numerical reference](https://numpy.org/numpy-financial/latest/_api_stubs/numpy_financial.irr.html).
+Implementation reuses this application's Decimal engines, not a new dependency.
+
+| Native method               | Frozen return cash flows and entry-price conversion                                                                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UFCF DCF, including H-model | Annual UFCF plus the **return** terminal value in year 10. `price = (PV + opening net cash/debt) / diluted shares`. The H-model return terminal deliberately differs from its Fair Value terminal. |
+| Owner cash flow             | Annual owner cash flow per share plus terminal owner cash flow and net cash per share in year 10. Entry price equals PV; opening cash is not added a second time.                                  |
+| Residual income             | Annual dividends per share plus ending book value and terminal residual income per share in year 10. Entry price equals PV.                                                                        |
+
+Bear/Base/Bull probabilities weight the cash flows before the aggregate return is
+solved. Scenario prices answer the same target-rate question conditional on each
+case; they do not imply confidence bounds or guarantees. Expected IRR is never the
+arithmetic average of scenario IRRs. Each aggregate target price is reconciled
+through the unchanged native engine. Unsupported/nonconventional streams, invalid
+positive entry cost or failed reconciliation remain unavailable with reasons.
+
+The user's return target does **not** replace WACC, required-return assumptions,
+cost of equity, terminal growth, terminal valuation, operating projections,
+probabilities or the accepted share basis. Thus this derived entry price is not a
+replacement for Fair Value. Enterprise UFCF remains an enterprise return, not a
+shareholder-distribution return; equity methods retain their distinct conventions.
+No tax, transaction-cost, inflation or FX-return assumption is added.
+
+Current market comparisons require the model's exact listing and a fresh,
+same-currency quote with retained observation provenance. Missing, stale, rejected
+or conflicting market evidence leaves the current comparison unavailable; it does
+not suppress a valid hypothetical result or cause listing/currency substitution.
+An optional hypothetical entry price is always labeled separately from observed
+market data. Accepted reference outputs and all portfolio/model state remain intact.
+
+The API must be released before a matching frontend; no migration is required.
+Local fixture evidence and hosted availability are tracked in the
+[active handoff](ACTIVE_WORKSTREAM.md).
+
 ## Google Sheets interoperability
 
 The portable boundaries are `FinancialModelContractV1` (`1.0.0`–`1.2.0`) for DCF and

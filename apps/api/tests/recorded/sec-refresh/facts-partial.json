@@ -1,0 +1,63 @@
+{
+  "cik": 1,
+  "entityName": "Synthetic Holdings Inc.",
+  "facts": {
+    "us-gaap": {
+      "Revenues": {
+        "units": {
+          "USD": [
+            {
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "val": 1000000,
+              "accn": "0000000001-24-000001",
+              "fy": 2023,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2024-02-10",
+              "frame": "CY2023"
+            }
+          ],
+          "EUR": [
+            {
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "val": 900000,
+              "accn": "0000000001-24-000001",
+              "fy": 2023,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2024-02-10",
+              "frame": "CY2023"
+            }
+          ]
+        }
+      },
+      "CashAndCashEquivalentsAtCarryingValue": {
+        "units": {
+          "USD": [
+            {
+              "end": "2023-12-31",
+              "val": 0,
+              "accn": "0000000001-24-000001",
+              "fy": 2023,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2024-02-10"
+            }
+          ]
+        }
+      },
+      "FictionalUnsupportedMetric": {
+        "units": {
+          "USD": [
+            {
+              "val": 42,
+              "end": "2023-12-31"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

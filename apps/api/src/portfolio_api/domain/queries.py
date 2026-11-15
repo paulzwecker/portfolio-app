@@ -3,7 +3,7 @@
 from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from sqlalchemy import and_, case, func, or_, select
@@ -250,12 +250,25 @@ def overview(
             observation = market.latest
             if observation is not None:
                 market_dates.append(observation.market_date)
+            valuation_price = observation.split_adjusted_close if observation else None
+            price_basis: Literal["SPLIT_ADJUSTED_CLOSE", "UNADJUSTED_NATIVE_CLOSE"] | None = (
+                "SPLIT_ADJUSTED_CLOSE" if valuation_price is not None else None
+            )
+            price_freshness = market.freshness
+            if (
+                observation is not None
+                and valuation_price is None
+                and observation.native_close is not None
+            ):
+                valuation_price = observation.native_close
+                price_basis = "UNADJUSTED_NATIVE_CLOSE"
+                price_freshness = market.native_freshness
             value = (
-                position.quantity * observation.split_adjusted_close
+                position.quantity * valuation_price
                 if position.quantity is not None
                 and observation is not None
-                and observation.split_adjusted_close is not None
-                and market.freshness == "FRESH"
+                and valuation_price is not None
+                and price_freshness == "FRESH"
                 else None
             )
             valuation_status: str
@@ -263,7 +276,7 @@ def overview(
             fx_effective_at: datetime | None = None
             if position.quantity is None:
                 valuation_status = "QUANTITY_UNAVAILABLE"
-            elif observation is None or market.freshness in {"NO_DATA", "STALE", "QUALITY_CHECK"}:
+            elif observation is None or price_freshness in {"NO_DATA", "STALE", "QUALITY_CHECK"}:
                 valuation_status = "PRICE_UNAVAILABLE"
             elif listing.currency == item.base_currency:
                 valuation_status = "VALUED"
@@ -298,14 +311,16 @@ def overview(
                 currency=listing.currency,
                 security_name=security.name,
                 quantity=position.quantity,
-                latest_price=(observation.split_adjusted_close if observation else None),
+                latest_price=valuation_price,
+                valuation_price_basis=price_basis,
+                price_provider=observation.provider if observation else None,
                 price_date=(observation.market_date if observation else None),
                 price_observed_at=(observation.observed_at if observation else None),
                 price_currency=(observation.currency if observation else None),
                 fx_rate=fx_rate,
                 fx_effective_at=fx_effective_at,
                 valuation_sync_status=sync_status,
-                price_freshness=market.freshness,
+                price_freshness=price_freshness,
                 native_market_value=value,
                 base_market_value=base_value,
                 valuation_status=valuation_status,
@@ -623,7 +638,7 @@ def _metric_decimal(value: object) -> Decimal | None:
 
 
 def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
-    """Expose the latest persisted Yahoo market/FX refresh state."""
+    """Expose latest persisted market/FX refreshes without authorizing provider retries."""
 
     from portfolio_api.external_ingestion import cloud_retry_eligible_at
 
@@ -631,7 +646,9 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         domain: session.scalar(
             select(ExternalIngestionRun)
             .where(
-                ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
+                ExternalIngestionRun.provider_id.in_(
+                    ("YAHOO_FINANCE", "ECB_REFERENCE", "EODHD_DEMO")
+                ),
                 ExternalIngestionRun.domain == domain,
                 ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
             )
@@ -654,7 +671,7 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
     )
     last_success = session.scalar(
         select(func.max(ExternalIngestionRun.last_successful_at)).where(
-            ExternalIngestionRun.provider_id == "YAHOO_FINANCE",
+            ExternalIngestionRun.provider_id.in_(("YAHOO_FINANCE", "ECB_REFERENCE", "EODHD_DEMO")),
             ExternalIngestionRun.domain.in_(("MARKET_DATA", "FX")),
         )
     )
@@ -695,7 +712,8 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         history = attempts[run.id]
         eligible_at = (
             cloud_retry_eligible_at(run, history[-1] if history else None)
-            if "crosswalk_sha256" in run.request_scope
+            if run.provider_id == "YAHOO_FINANCE"
+            and "crosswalk_sha256" in run.request_scope
             and run.idempotency_key.startswith("daily:")
             and run.replay_of_run_id is None
             and run.request_scope.get("end_date") == current.astimezone(UTC).date().isoformat()
@@ -750,6 +768,36 @@ def market_refresh_status(session: Session) -> s.MarketRefreshStatusRead:
         message=message,
         runs=runs,
     )
+
+
+def _native_close(
+    observation: PriceObservation, currency: str | None, known_at: datetime
+) -> Decimal | None:
+    """Current native units are not a comparable historical return series."""
+    if (
+        observation.adjustment_basis != "UNADJUSTED_NATIVE_CLOSE"
+        or observation.price_kind != "DAILY_CLOSE"
+        or observation.data_quality not in {"PASS", "PASS_VERIFIED_FALLBACK"}
+        or currency is None
+        or observation.currency != currency
+        or observation.provider_close is None
+        or observation.provider_close <= 0
+        or observation.source_price_multiplier <= 0
+        or observation.observed_at is None
+        or observation.observed_at > known_at
+        or observation.recorded_at > known_at
+        or observation.market_date > known_at
+    ):
+        return None
+    return observation.provider_close * observation.source_price_multiplier
+
+
+def _market_price_read(
+    observation: PriceObservation, currency: str | None, known_at: datetime
+) -> s.PriceObservationRead:
+    result = s.PriceObservationRead.model_validate(observation)
+    result.native_close = _native_close(observation, currency, known_at)
+    return result
 
 
 def listing_market_data(
@@ -904,6 +952,69 @@ def listing_market_data(
         correction_state=cast(str | None, values["correction_state"]),
     )
     history = analytics_rows[:history_limit] if history_limit > 0 else []
+    native_history: list[s.PriceObservationRead] = []
+    native_reason = None
+    native_latest_conflict = False
+    if latest_model is not None and latest_model.adjustment_basis == "UNADJUSTED_NATIVE_CLOSE":
+        # Portfolio valuation requests no chart history. Resolve competing current
+        # evidence independently, retaining legitimate point-in-time corrections.
+        latest_native_rows = list(
+            session.scalars(
+                select(PriceObservation).where(
+                    *price_filters,
+                    PriceObservation.market_date == latest_model.market_date,
+                    PriceObservation.adjustment_basis == "UNADJUSTED_NATIVE_CLOSE",
+                    PriceObservation.price_kind == "DAILY_CLOSE",
+                )
+            )
+        )
+        superseded = {row.supersedes_observation_id for row in latest_native_rows}
+        current_native_rows = [row for row in latest_native_rows if row.id not in superseded]
+        streams = {(row.provider, row.provider_symbol, row.currency) for row in current_native_rows}
+        native_values = {
+            _native_close(row, listing.currency, knowledge_cutoff) for row in current_native_rows
+        }
+        native_latest_conflict = len(streams) > 1 or len(native_values) > 1 or None in native_values
+        if native_latest_conflict:
+            native_reason = "Conflicting latest native prices; valuation and chart need review."
+    if history_limit > 0 and not native_latest_conflict:
+        native_rows = list(
+            session.scalars(
+                select(PriceObservation)
+                .where(
+                    *price_filters,
+                    PriceObservation.adjustment_basis == "UNADJUSTED_NATIVE_CLOSE",
+                    PriceObservation.price_kind == "DAILY_CLOSE",
+                )
+                .order_by(PriceObservation.market_date.desc(), *_price_ordering())
+                .limit(max(252, history_limit))
+            )
+        )
+        superseded = {row.supersedes_observation_id for row in native_rows}
+        native_rows = [row for row in native_rows if row.id not in superseded]
+        streams = {(row.provider, row.provider_symbol, row.currency) for row in native_rows}
+        native_values_by_day: dict[date, set[Decimal | None]] = defaultdict(set)
+        for row in native_rows:
+            native_values_by_day[row.market_date.astimezone(UTC).date()].add(
+                _native_close(row, listing.currency, knowledge_cutoff)
+            )
+        if len(streams) > 1:
+            native_reason = "Conflicting native price sources; no combined series is shown."
+        elif any(
+            _native_close(row, listing.currency, knowledge_cutoff) is None for row in native_rows
+        ):
+            native_reason = "Native price identity, timing or quality needs review."
+        elif any(len(values) > 1 for values in native_values_by_day.values()):
+            native_reason = "Conflicting historical native prices; no combined series is shown."
+        else:
+            seen_days: set[date] = set()
+            for row in native_rows:
+                day = row.market_date.astimezone(UTC).date()
+                if day not in seen_days and len(native_history) < history_limit:
+                    native_history.append(
+                        _market_price_read(row, listing.currency, knowledge_cutoff)
+                    )
+                    seen_days.add(day)
     comparison_date = market_as_of or knowledge_cutoff.date()
     age = (comparison_date - latest_model.market_date.date()).days if latest_model else None
     if (
@@ -967,9 +1078,26 @@ def listing_market_data(
     if market_end is not None:
         regime_statement = regime_statement.where(PriceRegimeSnapshot.as_of <= market_end)
     regime = session.scalar(regime_statement)
+    native_freshness: Literal["FRESH", "STALE", "QUALITY_CHECK", "NO_DATA"] = "NO_DATA"
+    if latest_model is not None and latest_model.adjustment_basis == "UNADJUSTED_NATIVE_CLOSE":
+        native_freshness = (
+            "QUALITY_CHECK"
+            if native_latest_conflict
+            or _native_close(latest_model, listing.currency, knowledge_cutoff) is None
+            else "STALE"
+            if age is not None and age > FRESH_DAYS
+            else "FRESH"
+        )
+    latest_read = (
+        _market_price_read(latest_model, listing.currency, knowledge_cutoff)
+        if latest_model
+        else None
+    )
+    if latest_read is not None and native_latest_conflict:
+        latest_read.native_close = None
     return s.ListingMarketData(
         listing=s.ListingRead.model_validate(listing),
-        latest=s.PriceObservationRead.model_validate(latest_model) if latest_model else None,
+        latest=latest_read,
         freshness=freshness,
         availability=availability,
         age_days=age,
@@ -977,6 +1105,9 @@ def listing_market_data(
         analytics=analytics,
         last_market_update=latest_model.recorded_at if latest_model else None,
         history=[s.PriceObservationRead.model_validate(observation) for observation in history],
+        native_history=native_history,
+        native_freshness=native_freshness,
+        native_history_reason=native_reason,
     )
 
 

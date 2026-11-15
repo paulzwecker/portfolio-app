@@ -216,6 +216,7 @@ def company_financial_statements(
                 )
                 continue
             assert observation is not None and period.period_end is not None
+            assert observation.observed_at is not None
             row = row_for(
                 period.metric,
                 FORECAST_METRICS[period.metric][0],
@@ -226,7 +227,11 @@ def company_financial_statements(
                 unit,
                 provider.provider_id,
             )
-            eligible = observation.data_quality == "PASS" and provider.freshness == "FRESH"
+            # One uncertain EPS row must not hide valid revenue, nor should a fresh
+            # neighbor make an old period current. Freshness belongs to this fact.
+            age = ((as_of or datetime.now(UTC).date()) - observation.observed_at.date()).days
+            observation_freshness = "FRESH" if 0 <= age <= 14 else "STALE"
+            eligible = observation.data_quality == "PASS" and observation_freshness == "FRESH"
             _append_cell(
                 row,
                 s.FinancialStatementCellRead(
@@ -236,7 +241,7 @@ def company_financial_statements(
                     reason=None
                     if eligible
                     else (
-                        f"Consensus {provider.freshness}; "
+                        f"Consensus {observation_freshness}; "
                         f"{observation.quality_reason or observation.data_quality}."
                     ),
                     selected_source_id=observation.id,

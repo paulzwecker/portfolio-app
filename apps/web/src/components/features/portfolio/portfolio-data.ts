@@ -14,6 +14,8 @@ export type PortfolioHoldingRow = {
   listingCurrency: string | null;
   quantity: string | null;
   latestPrice: string | null;
+  valuationPriceBasis?: string | null;
+  priceProvider?: string | null;
   priceCurrency: string | null;
   priceDate: string | null;
   priceObservedAt: string | null;
@@ -67,6 +69,8 @@ export function portfolioHoldingRows(
       listingCurrency: position?.currency ?? null,
       quantity: snapshotPosition.quantity,
       latestPrice: position?.latest_price ?? null,
+      valuationPriceBasis: position?.valuation_price_basis ?? null,
+      priceProvider: position?.price_provider ?? null,
       priceCurrency: position?.price_currency ?? null,
       priceDate: position?.price_date ?? null,
       priceObservedAt: position?.price_observed_at ?? null,

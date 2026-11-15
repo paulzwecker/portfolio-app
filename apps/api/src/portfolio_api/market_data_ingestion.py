@@ -37,11 +37,13 @@ from portfolio_api.domain.models import (
 from portfolio_api.external_data import (
     CanonicalSubjectKind,
     CanonicalSubjectRef,
+    DomainNormalizer,
     ExternalDataDomain,
     NormalizationDisposition,
     ProviderQuery,
     RawProviderRecord,
     raw_batch_fingerprint,
+    raw_record_fingerprint,
 )
 from portfolio_api.settings import REPOSITORY_PATH, Settings
 from portfolio_api.yahoo_finance import (
@@ -50,6 +52,7 @@ from portfolio_api.yahoo_finance import (
     YahooChartNormalizer,
     YahooCorporateActionFact,
     YahooFinanceProvider,
+    YahooFxFacts,
     YahooFxNormalizer,
     YahooListingCrosswalk,
     YahooListingFacts,
@@ -207,12 +210,26 @@ def _raw_payload_row(batch_id: UUID, record: RawProviderRecord) -> dict[str, obj
 def market_provider_batch_plan(
     query: ProviderQuery,
     records: list[RawProviderRecord],
-    normalizer: YahooChartNormalizer,
+    normalizer: DomainNormalizer[YahooListingFacts],
+    *,
+    provider_id: str = YAHOO_PROVIDER_ID,
+    provider_schema_version: str = "yahoo-chart-v8",
+    evidence_records: list[RawProviderRecord] | None = None,
 ) -> dict[str, Any] | None:
     if not records:
         return None
-    digest = raw_batch_fingerprint(YAHOO_PROVIDER_ID, query, records)
-    batch_id = _batch_id(digest, YahooChartNormalizer.version)
+    retained_records = [*records, *(evidence_records or [])]
+    if any(record.provider_id != provider_id for record in retained_records):
+        raise ValueError("Market batch cannot mix provider identities")
+    digest = raw_batch_fingerprint(provider_id, query, records)
+    if evidence_records:
+        digest = _json_hash(
+            {
+                "price_digest": digest,
+                "evidence": [raw_record_fingerprint(record) for record in evidence_records],
+            }
+        )
+    batch_id = _batch_id(digest, normalizer.version)
     normalized: list[tuple[RawProviderRecord, YahooListingFacts]] = []
     rejected: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -228,7 +245,7 @@ def market_provider_batch_plan(
             )
             continue
         if result.observation is None:
-            raise RuntimeError("Accepted Yahoo normalization returned no market observation")
+            raise RuntimeError("Accepted normalization returned no market observation")
         normalized.append((record, result.observation))
         warnings.extend(
             {
@@ -258,7 +275,7 @@ def market_provider_batch_plan(
                     "currency": fact.currency,
                     "provider_currency": fact.provider_currency,
                     "source_price_multiplier": fact.source_price_multiplier,
-                    "provider": YAHOO_PROVIDER_ID,
+                    "provider": provider_id,
                     "provider_symbol": fact.provider_symbol,
                     "adjustment_basis": fact.adjustment_basis,
                     "data_quality": "PASS",
@@ -266,7 +283,7 @@ def market_provider_batch_plan(
                 }
             )
         action_rows.extend(
-            _action_row(batch_id, facts.listing_id, record, action)
+            _action_row(batch_id, facts.listing_id, record, action, provider_id=provider_id)
             for action in facts.corporate_actions
         )
     item_summary = [
@@ -303,13 +320,13 @@ def market_provider_batch_plan(
         for record, facts in normalized
     ]
     report: dict[str, Any] = {
-        "provider_id": YAHOO_PROVIDER_ID,
-        "provider_schema_version": "yahoo-chart-v8",
-        "normalizer_version": YahooChartNormalizer.version,
+        "provider_id": provider_id,
+        "provider_schema_version": provider_schema_version,
+        "normalizer_version": normalizer.version,
         "source_digest": digest,
         "query_scope": query.model_dump(mode="json", exclude={"requested_at"}),
         "requested_subjects": len(query.subjects),
-        "raw_responses": len(records),
+        "raw_responses": len(retained_records),
         "accepted_subjects": len(normalized),
         "rejected_subjects": rejected,
         "normalization_warnings": warnings,
@@ -327,19 +344,22 @@ def market_provider_batch_plan(
         "id": batch_id,
         "source_digest": digest,
         "source_kind": "PROVIDER_RESPONSE",
-        "provider_id": YAHOO_PROVIDER_ID,
-        "provider_schema_version": "yahoo-chart-v8",
-        "normalizer_version": YahooChartNormalizer.version,
+        "provider_id": provider_id,
+        "provider_schema_version": provider_schema_version,
+        "normalizer_version": normalizer.version,
         "query_scope": report["query_scope"],
         "source_as_of": None,
         "source_updated_text": None,
         "recorded_at": datetime.now(UTC),
-        "provider_summary": {"response_count": len(records), "accepted_subjects": len(normalized)},
+        "provider_summary": {
+            "response_count": len(retained_records),
+            "accepted_subjects": len(normalized),
+        },
         "reconciliation": report,
     }
     return {
         "batch": batch_values,
-        "records": records,
+        "records": retained_records,
         "prices": price_rows,
         "actions": action_rows,
         "fx": [],
@@ -352,12 +372,14 @@ def _action_row(
     listing_id: UUID,
     record: RawProviderRecord,
     fact: YahooCorporateActionFact,
+    *,
+    provider_id: str = YAHOO_PROVIDER_ID,
 ) -> dict[str, object]:
     return {
         "id": uuid5(NAMESPACE_URL, fact.source_action_id),
         "listing_id": listing_id,
         "source_action_id": fact.source_action_id,
-        "provider": YAHOO_PROVIDER_ID,
+        "provider": provider_id,
         "effective_date": fact.effective_date,
         "observed_at": fact.observed_at,
         "action_type": fact.action_type,
@@ -377,12 +399,19 @@ def _action_row(
 def fx_provider_batch_plan(
     query: ProviderQuery,
     records: list[RawProviderRecord],
-    normalizer: YahooFxNormalizer,
+    normalizer: DomainNormalizer[YahooFxFacts],
+    *,
+    provider_id: str = YAHOO_PROVIDER_ID,
+    provider_schema_version: str = "yahoo-chart-v8",
+    provider_label: str = "Yahoo",
+    reason_suffix: str = "",
 ) -> dict[str, Any] | None:
     if not records:
         return None
-    digest = raw_batch_fingerprint(YAHOO_PROVIDER_ID, query, records)
-    batch_id = _batch_id(digest, YahooFxNormalizer.version)
+    if any(record.provider_id != provider_id for record in records):
+        raise ValueError("FX batch cannot mix provider identities")
+    digest = raw_batch_fingerprint(provider_id, query, records)
+    batch_id = _batch_id(digest, normalizer.version)
     fx_rows: list[dict[str, object]] = []
     accepted: list[dict[str, object]] = []
     rejected: list[dict[str, str]] = []
@@ -401,7 +430,7 @@ def fx_provider_batch_plan(
             continue
         facts = result.observation
         if facts is None:
-            raise RuntimeError("Accepted Yahoo FX normalization returned no rate observations")
+            raise RuntimeError("Accepted FX normalization returned no rate observations")
         warnings.extend(
             {
                 "source_record_id": record.source_record_id or "",
@@ -440,14 +469,14 @@ def fx_provider_batch_plan(
                 "effective_at": observation.effective_at,
                 "observed_at": observation.observed_at,
                 "recorded_at": record.retrieved_at,
-                "provider": YAHOO_PROVIDER_ID,
+                "provider": provider_id,
                 "source": str(record.source_url)
                 if record.source_url
                 else observation.provider_symbol,
                 "source_ref": observation.source_ref,
                 "actor": "SYSTEM",
                 "reason": (
-                    f"Yahoo {observation.provider_symbol} observed "
+                    f"{provider_label} {observation.provider_symbol} observed "
                     f"{observation.provider_base_currency}/{observation.provider_quote_currency} "
                     + (
                         "rate inverted to canonical "
@@ -455,15 +484,16 @@ def fx_provider_batch_plan(
                         if observation.inverted
                         else "dated exchange rate"
                     )
+                    + reason_suffix
                 ),
                 "batch_id": batch_id,
             }
             for observation in facts.observations
         )
     report: dict[str, Any] = {
-        "provider_id": YAHOO_PROVIDER_ID,
-        "provider_schema_version": "yahoo-chart-v8",
-        "normalizer_version": YahooFxNormalizer.version,
+        "provider_id": provider_id,
+        "provider_schema_version": provider_schema_version,
+        "normalizer_version": normalizer.version,
         "source_digest": digest,
         "query_scope": query.model_dump(mode="json", exclude={"requested_at"}),
         "requested_subjects": len(query.subjects),
@@ -479,9 +509,9 @@ def fx_provider_batch_plan(
         "id": batch_id,
         "source_digest": digest,
         "source_kind": "PROVIDER_RESPONSE",
-        "provider_id": YAHOO_PROVIDER_ID,
-        "provider_schema_version": "yahoo-chart-v8",
-        "normalizer_version": YahooFxNormalizer.version,
+        "provider_id": provider_id,
+        "provider_schema_version": provider_schema_version,
+        "normalizer_version": normalizer.version,
         "query_scope": report["query_scope"],
         "source_as_of": None,
         "source_updated_text": None,

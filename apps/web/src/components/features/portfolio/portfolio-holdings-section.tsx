@@ -107,8 +107,24 @@ export function PortfolioHoldingsSection({
       id: "price",
       header: "Market price",
       className: "w-[15%] text-right tabular-nums",
-      render: (row: PortfolioHoldingRow) =>
-        currency(row.latestPrice, row.priceCurrency),
+      render: (row: PortfolioHoldingRow) => (
+        <div>
+          {currency(row.latestPrice, row.priceCurrency)}
+          {row.valuationPriceBasis === "UNADJUSTED_NATIVE_CLOSE" && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Unadjusted native close
+              {row.priceProvider === "EODHD_DEMO"
+                ? " · Indicative test-drive data"
+                : ""}
+            </p>
+          )}
+          {row.priceProvider && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {row.priceProvider}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       id: "value",

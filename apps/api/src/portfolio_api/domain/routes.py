@@ -130,6 +130,7 @@ from portfolio_api.research_triggers import (
     refresh_research_triggers,
     research_trigger_context,
 )
+from portfolio_api.return_hurdle import model_return_hurdle
 from portfolio_api.return_semantics import methodology_payload
 from portfolio_api.risk_assessments import (
     accept_risk_candidate,
@@ -1865,6 +1866,13 @@ def get_financial_model(model_id: UUID, db: Db) -> s.FinancialModelRead:
 @router.get("/financial-models/{model_id}/sensitivity", response_model=s.DcfSensitivityRead)
 def get_dcf_sensitivity(model_id: UUID, base_revision_id: UUID, db: Db) -> s.DcfSensitivityRead:
     return model_dcf_sensitivity(db, model_id, base_revision_id)
+
+
+@router.get("/financial-models/{model_id}/return-hurdle", response_model=s.ReturnHurdleRead)
+def get_return_hurdle(
+    model_id: UUID, request: Annotated[s.ReturnHurdleRequest, Query()], db: Db
+) -> s.ReturnHurdleRead:
+    return model_return_hurdle(db, model_id, request)
 
 
 @router.get(

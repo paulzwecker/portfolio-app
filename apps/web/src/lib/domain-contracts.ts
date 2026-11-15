@@ -5486,7 +5486,7 @@ function isExpectedReturnEstimateContext(
   );
 }
 
-function isExpectedReturnMarketPrice(
+export function isExpectedReturnMarketPrice(
   value: unknown,
 ): value is ExpectedReturnMarketPrice {
   return (

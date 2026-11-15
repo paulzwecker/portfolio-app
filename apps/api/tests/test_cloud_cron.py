@@ -74,14 +74,17 @@ def test_default_cloud_scope_only_refreshes_market_and_preserves_proxy_routing(
 
 
 @pytest.mark.parametrize(
-    ("scope", "provider_only"), [("provider-data", True), ("all-operations", False)]
+    ("scope", "provider_only"),
+    [("provider-data", True), ("all-operations", False), ("sec-data", False)],
 )
 def test_explicit_cloud_scope_uses_existing_guarded_engine_and_closes_it(
     cloud_enabled: None, scope: str, provider_only: bool
 ) -> None:
     engine = Mock()
     with (
-        patch("portfolio_api.cloud_cron.run_startup_refresh", return_value={"status": "SKIPPED"}),
+        patch(
+            "portfolio_api.cloud_cron.run_startup_refresh", return_value={"status": "SKIPPED"}
+        ) as market,
         patch("portfolio_api.cloud_cron.create_database_engine", return_value=engine) as factory,
         patch(
             "portfolio_api.cloud_cron.run_recurring_cycle",
@@ -98,9 +101,36 @@ def test_explicit_cloud_scope_uses_existing_guarded_engine_and_closes_it(
         "write_operation_kind": "ingestion",
     }
     assert cycle.call_args.kwargs["provider_only"] is provider_only
+    assert cycle.call_args.kwargs["sec_only"] is (scope == "sec-data")
+    assert market.call_count == (0 if scope == "sec-data" else 1)
     assert cycle.call_args.kwargs["engine"] is engine
     assert heartbeat.call_args.kwargs["stopped"] is True
     engine.dispose.assert_called_once()
+
+
+@pytest.mark.parametrize("status", ["FAILED", "PARTIAL", "BLOCKED", {"invalid": True}])
+def test_sec_manual_failure_is_visible_when_scheduled_jobs_succeed(
+    cloud_enabled: None, status: object, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with (
+        patch("portfolio_api.cloud_cron.run_startup_refresh") as market,
+        patch("portfolio_api.cloud_cron.create_database_engine", return_value=Mock()),
+        patch(
+            "portfolio_api.cloud_cron.run_recurring_cycle",
+            return_value={
+                "status": "COMPLETE",
+                "jobs": [{"job_name": "SEC_FILINGS", "status": "NOT_DUE"}],
+                "manual_request": {"status": status, "provider_secret": "PRIVATE_DETAILS"},
+            },
+        ),
+        patch("portfolio_api.cloud_cron._record_heartbeat"),
+    ):
+        assert main(["--scope", "sec-data"]) == 1
+    market.assert_not_called()
+    output = capsys.readouterr().out
+    assert "PRIVATE_DETAILS" not in output
+    summary = json.loads(output)["operations"]["recurring_operations"]
+    assert summary["manual_request"]["status"] == (status if isinstance(status, str) else "FAILED")
 
 
 @pytest.mark.parametrize("status", ["PARTIAL", "FAILED", "BLOCKED", "RUNNING", "UNKNOWN", None])

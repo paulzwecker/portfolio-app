@@ -42,6 +42,24 @@ locks and run receipts while leaving manual requests, Sheets, research feeds and
 decision jobs outside that cycle. `--scope all-operations` explicitly selects the
 legacy full cycle and requires its separately reviewed source/write authority.
 
+`--scope sec-data` selects only SEC facts and filings. It claims at most one queued
+`SEC_FILINGS` or `SEC_FUNDAMENTALS` request, then executes due daily SEC work through
+the same ingestion services. It excludes market/FX, FMP, Sheets, research feeds and
+decision jobs even when their unrelated flags are enabled. Company Explorer queues
+its eligible company request; Operations can request both SEC domains for the
+bounded eligible issuer set. Existing eligibility, frozen scope, locks, attempt
+limits, request history and exact production guards still apply. This is the
+zero-cost refresh slice; broader `REFRESH_ALL` still includes Sheets discovery and
+must not be used as its substitute.
+
+A maximum-size SEC cycle can request up to **100 logical resources**: one queued
+all-issuer filings request (30 recent responses plus five historical files), then
+due scheduled facts (30) and filings (35). Existing transport retries allow at most
+three tries per resource, for a worst-case 300 transport attempts. Idempotent reuse,
+scope rejection, retained history and domains not due reduce that ceiling. Manual
+and scheduled work have separate frozen run identities; do not describe this as
+only 30 requests per invocation or as one provider call per company per day.
+
 All scopes retain the cloud/recurring enable flags and production target guards.
 The market/FX portion uses a frozen exact-listing/FX scope and reviewed crosswalk
 hash over 90 inclusive calendar dates, capped at 30 listing/pair subjects. A cloud
@@ -308,21 +326,67 @@ node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.recu
 node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.market_data_startup --once
 ```
 
-In a deployed environment, run `portfolio_api.recurring_operations` and the
-existing `portfolio_api.market_data_startup` as separate supervised worker
-processes, each with the same migrated PostgreSQL database and secret-backed
-environment. Do not also install an overlapping cron for the same domains.
+Where an already-authorized supervised host is available, the legacy full workers
+can run as separate processes against the same migrated database and secret-backed
+environment. They are broader than the selected SEC slice. Do not also install an
+overlapping cron for the same domains or provision paid workers for this task.
 The external-data one-shot CLI remains available for operator-requested runs
 and replay; its provider/domain idempotency and run ledger are unchanged. The
 separate `portfolio_api.manual_job_runner <request-id> --confirm-run` processes
-only one previously queued allowlisted request and exits. It does not poll or
-schedule future work. See [Workbook Sync Operations](workbook-sync-operations.md)
+only one previously queued allowlisted request and exits. It shares the recurring
+worker lock; when busy it leaves the request queued and exits nonzero as `DEFERRED`.
+It does not poll or schedule future work. See [Workbook Sync Operations](workbook-sync-operations.md)
 for its environment gates and Render one-off execution guidance.
 
 The user-managed ChatGPT schedules are not created, edited or activated by the
 application. Feed publication is a delivery receipt, not proof an agent
 processed its work. A reviewer still explicitly accepts or rejects proposals
 and completes research-queue items.
+
+## Zero-cost SEC scheduling proposal
+
+This is an **operator proposal, not an activated schedule**. Use the existing
+Windows host and Task Scheduler to invoke one bounded cycle every 15 minutes:
+
+```sh
+node scripts/uv.mjs run --locked --project apps/api python -m portfolio_api.cloud_cron --scope sec-data
+```
+
+Use a reviewed checkout as the working directory and an owner-controlled process
+environment; do not put credentials in command arguments or task XML. Configure
+the task not to start a second instance. The database advisory lock is authoritative
+across machines. One invocation drains at most one SEC manual request, so two queued
+domain requests may require two invocations; this is not an immediate-execution SLA.
+The 15-minute trigger checks eligibility, not a 15-minute provider-fetch cadence:
+successful SEC domains retain their existing 24-hour cadence and persisted retries.
+
+Set [StartWhenAvailable](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-startwhenavailable)
+for missed time-based triggers; optionally review
+[WakeToRun](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-waketorun)
+for sleep. On recovery, run one current due cycle, not one provider call for every
+missed interval. Stored next-attempt times, frozen scopes and provider replay budgets
+remain authoritative. An offline or powered-off host cannot meet a wall-clock SLA;
+Operations must retain the missed/stale state until a successful run and readback.
+Test missed-run and duplicate-trigger behavior in the isolated fixture before
+proposing production activation.
+
+The checked-in Render service starts only the API. [Render Free](https://render.com/docs/free)
+spins down after 15 minutes without inbound traffic; API startup or a UI request
+must not be treated as proof that a worker ran. Render has no free background-worker
+instance and [Render cron](https://render.com/docs/cronjobs) has a minimum monthly
+charge, so neither is the zero-cost scheduler. Do not add keepalive traffic or cloud
+configuration to conceal this limitation. Database-backed jobs survive sleeping
+Render; the independent host runs their guarded ingestion and the awakened API reads
+the resulting observations.
+
+For future permitted market access, schedule bounded price/FX updates after the
+relevant exchange closes and provider publication lag, with explicit timezones and
+correction overlap. ECB reference FX publishes on working days, not weekends.
+Do not enable Yahoo or analyst refresh until the
+[provider decision](financial-data-provider-decision.md) prerequisites pass.
+Production destination/recovery verification, source contact/mappings, exact write
+guards and separately approved recurring activation remain required. Do not register
+the task or globally enable production writes as part of local verification.
 
 ## Bounded live verification (2026-10-16)
 
@@ -356,3 +420,21 @@ The `--once` process exited cleanly and recorded its stopped heartbeat. A subseq
 uses the persisted due times and the advisory lock to avoid duplicate provider calls and work-feed
 rows. For continuous local operation, `npm run dev` starts the supervised worker process alongside
 the existing market-data worker.
+
+## Bounded public-market trigger
+
+`python -m portfolio_api.cloud_cron --scope public-market-data` reuses existing
+manual requests, advisory locks and daily external-ingestion identities. It requires
+explicit `FX_PROVIDER=ECB_REFERENCE`, existing cloud/recurring flags and writer guards.
+With unchanged Yahoo market selection it performs FX only; isolated
+`MARKET_DATA_PROVIDER=EODHD_DEMO` adds the fixed AMZN example. It drains at most one
+eligible queued request and excludes SEC/FMP/Sheets/model/research work. There is no
+new recurring-job table/type. Same-day scopes reuse receipts; missed triggers perform
+one bounded current pass. Nonretryable failures stop after one attempt; retryable
+failures retain the three-attempt maximum. Durable receipts expose progress/failures.
+
+Proposed existing-host timing: weekdays after 22:30 America/New_York for market+FX,
+or after 17:00 Europe/Berlin for ECB-only, with named-timezone DST handling. The host
+must be awake; sleeping Render Free is not a scheduler. No timer was registered.
+Recovery, source permission, initial reconciliation and a controlled increment precede
+separately approved unattended activation.

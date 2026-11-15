@@ -16814,6 +16814,17 @@
             ],
             "title": "Price Observed At"
           },
+          "price_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Provider"
+          },
           "quantity": {
             "anyOf": [
               {
@@ -16837,6 +16848,21 @@
           "ticker": {
             "title": "Ticker",
             "type": "string"
+          },
+          "valuation_price_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SPLIT_ADJUSTED_CLOSE",
+                  "UNADJUSTED_NATIVE_CLOSE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation Price Basis"
           },
           "valuation_status": {
             "default": "PRICE_UNAVAILABLE",
@@ -20854,6 +20880,35 @@
           },
           "listing": {
             "$ref": "#/components/schemas/ListingRead"
+          },
+          "native_freshness": {
+            "default": "NO_DATA",
+            "enum": [
+              "FRESH",
+              "STALE",
+              "QUALITY_CHECK",
+              "NO_DATA"
+            ],
+            "title": "Native Freshness",
+            "type": "string"
+          },
+          "native_history": {
+            "items": {
+              "$ref": "#/components/schemas/PriceObservationRead"
+            },
+            "title": "Native History",
+            "type": "array"
+          },
+          "native_history_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native History Reason"
           },
           "price_regime": {
             "anyOf": [
@@ -25845,6 +25900,17 @@
             "format": "date-time",
             "title": "Market Date",
             "type": "string"
+          },
+          "native_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Close"
           },
           "observed_at": {
             "anyOf": [
@@ -31278,6 +31344,421 @@
           "rationale"
         ],
         "title": "ReturnComparabilityRuleRead",
+        "type": "object"
+      },
+      "ReturnHurdleCashFlowRead": {
+        "additionalProperties": false,
+        "properties": {
+          "annual_cash_flow_per_share": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Annual Cash Flow Per Share",
+            "type": "string"
+          },
+          "forecast_year": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "terminal_cash_flow_per_share": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Terminal Cash Flow Per Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "forecast_year",
+          "annual_cash_flow_per_share",
+          "terminal_cash_flow_per_share"
+        ],
+        "title": "ReturnHurdleCashFlowRead",
+        "type": "object"
+      },
+      "ReturnHurdleContributionsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "annual_cash_flow_pv_per_share": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Annual Cash Flow Pv Per Share",
+            "type": "string"
+          },
+          "opening_balance_sheet_per_share": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Opening Balance Sheet Per Share",
+            "type": "string"
+          },
+          "terminal_pv_per_share": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Terminal Pv Per Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "annual_cash_flow_pv_per_share",
+          "terminal_pv_per_share",
+          "opening_balance_sheet_per_share"
+        ],
+        "title": "ReturnHurdleContributionsRead",
+        "type": "object"
+      },
+      "ReturnHurdleRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_hurdle": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Accepted Hurdle",
+            "type": "string"
+          },
+          "calculated_at": {
+            "format": "date-time",
+            "title": "Calculated At",
+            "type": "string"
+          },
+          "calculation_version": {
+            "const": "native-return-hurdle-v1",
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "cash_flows": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnHurdleCashFlowRead"
+            },
+            "maxItems": 10,
+            "minItems": 10,
+            "title": "Cash Flows",
+            "type": "array"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contributions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReturnHurdleContributionsRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_expected_irr": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Expected Irr"
+          },
+          "current_price": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Price"
+          },
+          "current_price_gap_to_required": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Price Gap To Required"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "hypothetical_entry_price": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothetical Entry Price"
+          },
+          "hypothetical_expected_irr": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothetical Expected Irr"
+          },
+          "hypothetical_status": {
+            "enum": [
+              "NOT_REQUESTED",
+              "AVAILABLE",
+              "UNAVAILABLE"
+            ],
+            "title": "Hypothetical Status",
+            "type": "string"
+          },
+          "hypothetical_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothetical Unavailable Reason"
+          },
+          "market_price": {
+            "$ref": "#/components/schemas/ExpectedReturnMarketPriceRead"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "model_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_type": {
+            "$ref": "#/components/schemas/FinancialModelType"
+          },
+          "reconciled_irr": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciled Irr"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "required_return": {
+            "decimal_places": 18,
+            "max_digits": 38,
+            "title": "Required Return",
+            "type": "string"
+          },
+          "return_methodology": {
+            "$ref": "#/components/schemas/ReturnMethodologyRead"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "revision_number": {
+            "title": "Revision Number",
+            "type": "integer"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnHurdleScenarioRead"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Scenarios",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "UNAVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          },
+          "valuation_listing_id": {
+            "format": "uuid",
+            "title": "Valuation Listing Id",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          },
+          "weighted_entry_price": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weighted Entry Price"
+          }
+        },
+        "required": [
+          "calculation_version",
+          "company_id",
+          "model_id",
+          "model_name",
+          "model_type",
+          "valuation_listing_id",
+          "ticker",
+          "venue",
+          "model_currency",
+          "revision_id",
+          "revision_number",
+          "methodology_version",
+          "source",
+          "effective_at",
+          "recorded_at",
+          "calculated_at",
+          "return_methodology",
+          "required_return",
+          "accepted_hurdle",
+          "status",
+          "unavailable_reason",
+          "weighted_entry_price",
+          "reconciled_irr",
+          "scenarios",
+          "contributions",
+          "cash_flows",
+          "hypothetical_entry_price",
+          "hypothetical_expected_irr",
+          "hypothetical_status",
+          "hypothetical_unavailable_reason",
+          "market_price",
+          "current_price",
+          "current_expected_irr",
+          "current_price_gap_to_required"
+        ],
+        "title": "ReturnHurdleRead",
+        "type": "object"
+      },
+      "ReturnHurdleScenarioRead": {
+        "additionalProperties": false,
+        "properties": {
+          "probability": {
+            "decimal_places": 18,
+            "ge": 0,
+            "le": 1,
+            "max_digits": 38,
+            "title": "Probability",
+            "type": "string"
+          },
+          "required_entry_price": {
+            "anyOf": [
+              {
+                "decimal_places": 18,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Entry Price"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/DcfScenario"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "UNAVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          }
+        },
+        "required": [
+          "scenario",
+          "probability",
+          "status",
+          "required_entry_price",
+          "unavailable_reason"
+        ],
+        "title": "ReturnHurdleScenarioRead",
         "type": "object"
       },
       "ReturnMethodologiesRead": {
@@ -39123,6 +39604,107 @@
           }
         },
         "summary": "Post Financial Model Contract Preview",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/financial-models/{model_id}/return-hurdle": {
+      "get": {
+        "operationId": "get_return_hurdle_v1_financial_models__model_id__return_hurdle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Base Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "required_return",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ],
+              "decimal_places": 18,
+              "ge": 0,
+              "lt": 1,
+              "max_digits": 38,
+              "title": "Required Return"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entry_price",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                      "type": "string"
+                    }
+                  ],
+                  "decimal_places": 18,
+                  "gt": 0,
+                  "max_digits": 38
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entry Price"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnHurdleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Return Hurdle",
         "tags": [
           "Portfolio research"
         ]

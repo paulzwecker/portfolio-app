@@ -8,7 +8,7 @@ import os
 import re
 import subprocess
 from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager, nullcontext, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Timer
@@ -17,8 +17,14 @@ from uuid import UUID, uuid4
 
 import uvicorn
 from alembic import command
+from browser_integrated_sources import prepare_integrated_sources
 from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
+from browser_public_market_data import PublicMarketReplay
+from browser_real_estimates import prepare_real_estimates
+from browser_real_sec_data import SecRecording, prepare_real_sec_data
+from browser_refresh_data import RefreshRehearsal
+from browser_return_hurdle import prepare_return_hurdle
 from browser_sec_data import prepare_sec_data
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -246,6 +252,7 @@ def fixture_application(
     metadata: dict[str, object] | None = None,
     *,
     ledger_writer: Engine | None = None,
+    refresh: RefreshRehearsal | PublicMarketReplay | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -255,6 +262,8 @@ def fixture_application(
 
     application = create_app(settings)
     application.router.lifespan_context = lifespan
+    if refresh is not None:
+        refresh.install(application)
     if ledger_writer is not None:
         if metadata is None or (
             (metadata.get("ledger_receipts_only") is True)
@@ -304,6 +313,22 @@ def fixture_application(
                 and not ledger_review
                 and not ledger_publish
             ):
+                if refresh is not None and request.method == "POST":
+                    if request.url.path == "/__test/refresh-control":
+                        return await call_next(request)
+                    if request.url.path == "/v1/operations/job-requests":
+                        payload = await request.json()
+                        allowed = (
+                            {"MARKET_DATA", "FX", "MARKET_AND_FX"}
+                            if isinstance(refresh, PublicMarketReplay)
+                            else {"SEC_FUNDAMENTALS", "SEC_FILINGS"}
+                        )
+                        if payload.get("job_name") in allowed:
+                            return await call_next(request)
+                    if re.fullmatch(
+                        r"/v1/operations/job-requests/[a-f0-9-]{36}/retry", request.url.path
+                    ):
+                        return await call_next(request)
                 return JSONResponse(
                     {"detail": "This fixture supports read-only inspection."}, status_code=405
                 )
@@ -314,12 +339,15 @@ def fixture_application(
             return {
                 **metadata,
                 "test_only": "portfolio-data-v1",
-                "protected_state_sha256": protected_state(
+                "protected_state_sha256": refresh.protected_state()
+                if refresh
+                else protected_state(
                     engine,
                     str(metadata["portfolio_id"]),
                     ledger_receipts=metadata.get("ledger_receipts_only") is True,
                     ledger_publication=metadata.get("ledger_publication_only") is True,
                 ),
+                **(refresh.readback() if refresh else {}),
             }
 
     return application
@@ -342,6 +370,13 @@ def main(argv: list[str] | None = None) -> None:
             "sec-unmapped",
             "sec-refresh-partial",
             "sec-refresh-outage",
+            "sec-refresh-workflow",
+            "sec-real-refresh",
+            "public-market-refresh",
+            "real-consensus",
+            "integrated-real-sources",
+            "return-hurdle",
+            "return-hurdle-unpriced",
         ),
         default="demo",
     )
@@ -350,6 +385,12 @@ def main(argv: list[str] | None = None) -> None:
     if args.lifetime_seconds is not None and not 1 <= args.lifetime_seconds <= 600:
         parser.error("Fixture lifetime must be between 1 and 600 seconds")
     url = local_test_url(os.environ.get("TEST_DATABASE_URL"))
+    recording = None
+    if args.scenario == "sec-real-refresh":
+        recording_path = os.environ.get("BROWSER_SEC_RECORDING_MANIFEST")
+        if not recording_path:
+            parser.error("Real SEC replay requires a private BROWSER_SEC_RECORDING_MANIFEST")
+        recording = SecRecording(Path(recording_path))
     settings = fixture_settings()
     schema = f"test_browser_{uuid4().hex}"
     admin = create_engine(url, connect_args={"connect_timeout": 3}, hide_parameters=True)
@@ -366,6 +407,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     reader: Engine | None = None
     ledger_writer: Engine | None = None
+    refresh: RefreshRehearsal | PublicMarketReplay | None = None
     try:
         with engine.begin() as connection:
             config = alembic_config()
@@ -375,23 +417,69 @@ def main(argv: list[str] | None = None) -> None:
         if args.scenario == "demo":
             with Session(engine) as session, session.begin():
                 seed(session)
+        elif args.scenario == "integrated-real-sources":
+            paths = [
+                os.environ.get(name)
+                for name in (
+                    "BROWSER_PUBLIC_MARKET_MANIFEST",
+                    "BROWSER_CONSENSUS_RECEIPT",
+                    "BROWSER_SEC_RECORDING_MANIFEST",
+                )
+            ]
+            if not all(paths):
+                parser.error("All three private source recording paths are required")
+            metadata = prepare_integrated_sources(
+                engine, settings, *(Path(str(path)) for path in paths)
+            )
+            metadata["schema"] = schema
+            reader = fixture_read_engine(url, schema, settings)
+        elif args.scenario == "real-consensus":
+            path = os.environ.get("BROWSER_CONSENSUS_RECEIPT")
+            if not path:
+                parser.error("Private BROWSER_CONSENSUS_RECEIPT is required")
+            metadata = prepare_real_estimates(engine, settings, Path(path))
+            metadata["schema"] = schema
+            reader = fixture_read_engine(url, schema, settings)
+        elif args.scenario == "public-market-refresh":
+            path = os.environ.get("BROWSER_PUBLIC_MARKET_MANIFEST")
+            if not path:
+                parser.error("Private BROWSER_PUBLIC_MARKET_MANIFEST is required")
+            refresh = PublicMarketReplay(engine, settings, Path(path))
+            metadata, settings = refresh.metadata, refresh.settings
+            metadata["schema"] = schema
+        elif recording is not None:
+            metadata = prepare_real_sec_data(engine, recording)
+            refresh = RefreshRehearsal(engine, settings, metadata, recording=recording)
+            settings = refresh.settings
+            metadata["schema"] = schema
         else:
             with TemporaryDirectory(prefix="portfolio-browser-") as directory:
                 metadata = prepare_portfolio_data(
                     engine,
                     Path(directory),
-                    "unpriced"
-                    if args.scenario.startswith("sec-")
-                    or args.scenario in {"ledger-review", "ledger-owned", "ledger-publication"}
-                    else cast(PortfolioDataState, args.scenario),
+                    (
+                        "valued"
+                        if args.scenario == "return-hurdle"
+                        else "unpriced"
+                        if args.scenario.startswith(("sec-", "return-hurdle-"))
+                        or args.scenario in {"ledger-review", "ledger-owned", "ledger-publication"}
+                        else cast(PortfolioDataState, args.scenario)
+                    ),
                     settings,
                 )
-                if args.scenario.startswith("sec-"):
+                if args.scenario == "sec-refresh-workflow":
+                    metadata["scenario"] = args.scenario
+                    refresh = RefreshRehearsal(engine, settings, metadata)
+                    settings = refresh.settings
+                elif args.scenario.startswith("sec-"):
                     prepare_sec_data(engine, metadata, args.scenario)
+                if args.scenario.startswith("return-hurdle"):
+                    prepare_return_hurdle(engine, metadata, args.scenario)
             if args.scenario in {"ledger-owned", "ledger-publication"}:
                 prepare_ledger_ownership(engine, metadata, publish=args.scenario == "ledger-owned")
             metadata["schema"] = schema
-            reader = fixture_read_engine(url, schema, settings)
+            if refresh is None:
+                reader = fixture_read_engine(url, schema, settings)
         if args.scenario == "ledger-review":
             assert metadata is not None
             with Session(engine) as session, session.begin():
@@ -418,12 +506,16 @@ def main(argv: list[str] | None = None) -> None:
             metadata["ledger_publication_only"] = True
             ledger_writer = fixture_ledger_writer(url, schema, publication=True)
         application = fixture_application(
-            reader or engine, settings, metadata, ledger_writer=ledger_writer
+            reader or engine, settings, metadata, ledger_writer=ledger_writer, refresh=refresh
         )
         port = int(os.environ.get("BROWSER_API_PORT", "8000"))
         server = uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port))
         lifetime = args.lifetime_seconds or (120 if metadata is not None else None)
-        print("Isolated fictional browser fixtures ready.")
+        print(
+            "Isolated recorded financial-source data with fictional portfolio context ready."
+            if recording or args.scenario in {"real-consensus", "integrated-real-sources"}
+            else "Isolated fictional browser fixtures ready."
+        )
         if lifetime:
             print(f"Fixture lifetime {lifetime} seconds. Normal shutdown removes its test schema.")
         deadline = Timer(lifetime, setattr, (server, "should_exit", True)) if lifetime else None
@@ -431,7 +523,8 @@ def main(argv: list[str] | None = None) -> None:
             deadline.daemon = True
             deadline.start()
         try:
-            server.run()
+            with refresh.running() if refresh else nullcontext():
+                server.run()
         finally:
             if deadline is not None:
                 deadline.cancel()

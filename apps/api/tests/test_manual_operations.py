@@ -90,6 +90,9 @@ def test_company_job_history_filters_before_limit_and_keeps_active_first(
         assert len(rows) == 30
         assert {row["id"] for row in rows[:2]} == set(active_ids)
         assert all(row["company_id"] == str(issuer_id) for row in rows)
+        all_rows = client.get("/v1/operations/job-requests?limit=30").json()
+        assert len(all_rows) == 30
+        assert {row["id"] for row in all_rows[:2]} == set(active_ids)
         assert client.get(f"/v1/companies/{other_id}/job-requests?limit=101").status_code == 422
         assert client.get(f"/v1/companies/{uuid4()}/job-requests").status_code == 404
     with Session(postgres_engine) as session:
@@ -140,6 +143,25 @@ def test_requests_are_scoped_deduplicated_and_company_lifecycle_is_checked(
                 ),
                 now_at=now_at,
             )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("status", ["QUEUED", "RUNNING"])
+@pytest.mark.parametrize("explicit_retry", [False, True])
+def test_active_request_survives_cooldown_without_duplicate_work(
+    postgres_engine: Engine, status: str, explicit_retry: bool
+) -> None:
+    at = datetime.now(UTC)
+    value = OperationalJobRequestCreate(job_name="SEC_FILINGS")
+    with Session(postgres_engine) as session, session.begin():
+        original, _ = create_job_request(session, value, now_at=at - timedelta(days=2))
+        original.status = status
+        session.flush()
+        repeated, duplicate = create_job_request(
+            session, value, now_at=at, bypass_cooldown=explicit_retry
+        )
+        assert duplicate and repeated.id == original.id
+        assert len(list(session.scalars(select(OperationalJobRequest)))) == 1
 
 
 @pytest.mark.integration

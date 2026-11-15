@@ -109,6 +109,7 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
           <CompanyRefreshAction
             key={detail.company.id}
             companyId={detail.company.id}
+            secOnly
           />
         }
       />

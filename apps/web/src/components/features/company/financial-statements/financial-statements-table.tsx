@@ -5,7 +5,12 @@ import type {
   FinancialStatementRow,
 } from "@/lib/domain-contracts";
 import { formatCompactFinancial, quantity } from "@/lib/display";
-import { rowLabel, sourceLabels, unitLabel } from "./financial-series";
+import {
+  consensusProviderLabel,
+  rowLabel,
+  sourceLabels,
+  unitLabel,
+} from "./financial-series";
 
 export function FinancialStatementsTable({
   data,
@@ -38,7 +43,7 @@ export function FinancialStatementsTable({
         role="region"
         aria-label="Financial statements table, scrollable periods"
         aria-describedby="statement-table-help"
-        className="max-h-[620px] overflow-auto rounded-xl border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative max-h-[620px] overflow-auto rounded-xl border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <table className="w-full border-separate border-spacing-0 text-sm tabular-nums">
           <caption className="sr-only">
@@ -118,7 +123,7 @@ export function FinancialStatementsTable({
                         <span className="mt-1 block text-[10px] text-muted-foreground">
                           {sourceLabels[row.source_kind]}
                           {row.source_kind !== "REPORTED_ACTUAL"
-                            ? ` · ${row.source_name}`
+                            ? ` · ${row.source_kind === "CONSENSUS" ? consensusProviderLabel(row.source_name) : row.source_name}`
                             : ""}
                           {row.scenario ? ` · ${row.scenario}` : ""}
                         </span>

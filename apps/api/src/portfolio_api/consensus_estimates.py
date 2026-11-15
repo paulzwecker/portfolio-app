@@ -464,21 +464,30 @@ def persist_provider_response(
     session: Session,
     record: RawProviderRecord,
     mapping: ConsensusEstimateProviderMapping,
+    *,
+    normalizer: DomainNormalizer[tuple[CanonicalConsensusEstimate, ...]] | None = None,
 ) -> dict[str, Any]:
-    """Persist raw FMP response and normalized immutable snapshots idempotently."""
+    """Persist a versioned consensus response with the existing immutable contracts."""
     if record.retrieved_at.tzinfo is None:
         raise ValueError("Provider retrieved_at must be timezone-aware")
-    if mapping.provider_id != record.provider_id or record.source_record_id is None:
-        raise ValueError("Provider response must match the exact provider mapping")
+    if (
+        mapping.provider_id != record.provider_id
+        or record.source_record_id is None
+        or record.domain != ExternalDataDomain.CONSENSUS_ESTIMATES
+    ):
+        raise ValueError("Provider response must match the exact consensus provider mapping")
     assert record.payload is not None
     digest = hashlib.sha256(
         f"{record.provider_id}:{record.source_record_id}:{record.payload_sha256}".encode()
     ).hexdigest()
     snapshot = record.retrieved_at.astimezone(UTC)
+    adapter = normalizer or FmpConsensusNormalizer(mapping, snapshot.date())
+    if adapter.domain != ExternalDataDomain.CONSENSUS_ESTIMATES or not adapter.version:
+        raise ValueError("A versioned consensus normalizer is required")
     existing = session.scalar(
         select(ConsensusEstimateBatch).where(
             ConsensusEstimateBatch.source_digest == digest,
-            ConsensusEstimateBatch.normalizer_version == NORMALIZER_VERSION,
+            ConsensusEstimateBatch.normalizer_version == adapter.version,
             ConsensusEstimateBatch.observed_at == snapshot,
         )
     )
@@ -489,9 +498,19 @@ def persist_provider_response(
             "facts_inserted": 0,
             "reconciliation": existing.reconciliation,
         }
-    normalized_result = FmpConsensusNormalizer(mapping, snapshot.date()).normalize(record)
+    normalized_result = adapter.normalize(record)
     normalized = [item.model_dump(mode="python") for item in (normalized_result.observation or ())]
     issues = normalized_result.issues
+    if any(
+        item["company_id"] != mapping.company_id
+        or item["listing_id"] != mapping.listing_id
+        or item["provider_mapping_id"] != mapping.id
+        or item["provider_id"] != mapping.provider_id
+        or item["observed_at"] != snapshot
+        or item["snapshot_date"] != snapshot.date()
+        for item in normalized
+    ):
+        raise ValueError("Normalized estimates changed their mapped identity or observation time")
     try:
         response_rows = len(json.loads(record.payload))
     except (json.JSONDecodeError, TypeError):
@@ -507,7 +526,7 @@ def persist_provider_response(
         id=batch_id,
         provider_id=record.provider_id,
         provider_schema_version=record.provider_schema_version,
-        normalizer_version=NORMALIZER_VERSION,
+        normalizer_version=adapter.version,
         domain=ExternalDataDomain.CONSENSUS_ESTIMATES.value,
         source_kind="PROVIDER_RESPONSE",
         source_digest=digest,

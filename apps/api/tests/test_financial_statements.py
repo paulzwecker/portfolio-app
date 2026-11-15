@@ -1,6 +1,6 @@
 import hashlib
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -449,7 +449,10 @@ def test_unknown_consensus_metadata_never_becomes_an_available_aligned_line(
         value=Decimal(120),
         data_quality="PASS",
         quality_reason=None,
-        observed_at=None if missing == "observed" else datetime.now(UTC),
+        # Alignment assesses this observation's age, not a neighboring provider row.
+        observed_at=None
+        if missing == "observed"
+        else datetime.now(UTC) - timedelta(days=15 if missing == "stale" else 0),
     )  # type: ignore[call-arg]
     period = s.ConsensusEstimatePeriodRead.model_construct(
         metric="REVENUE",
@@ -479,6 +482,7 @@ def test_unknown_consensus_metadata_never_becomes_an_available_aligned_line(
         consensus_rows = [row for row in view.rows if row.source_kind == "CONSENSUS"]
         if missing == "stale":
             assert consensus_rows[0].cells[0].status == "DATA_CHECK"
+            assert "STALE" in (consensus_rows[0].cells[0].reason or "")
         else:
             assert consensus_rows == []
             assert any(item.reference_id == observation.id for item in view.limitations)

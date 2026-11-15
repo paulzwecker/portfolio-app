@@ -6,6 +6,26 @@ import { PortfolioHoldingsSection } from "./portfolio-holdings-section";
 import { PortfolioOverviewSection } from "./portfolio-overview-section";
 
 describe("Portfolio valuation evidence", () => {
+  it("discloses a native mark and indicative source without recomputing valuation", () => {
+    const overview = portfolioFixture();
+    const position = overview.companies[0].positions[0];
+    position.valuation_price_basis = "UNADJUSTED_NATIVE_CLOSE";
+    position.price_provider = "EODHD_DEMO";
+    const rows = portfolioHoldingRows(overview);
+    expect(rows[0].latestPrice).toBe(position.latest_price);
+    expect(rows[0].baseMarketValue).toBe(position.base_market_value);
+    const html = renderToStaticMarkup(
+      <PortfolioHoldingsSection
+        overview={overview}
+        rows={rows}
+        onConfirmed={() => {}}
+      />,
+    );
+    expect(html).toContain("Unadjusted native close");
+    expect(html).toContain("Indicative test-drive data");
+    expect(html).toContain("EODHD_DEMO");
+  });
+
   it("labels listing disclosures and company-level targets", () => {
     const overview = portfolioFixture();
     const html = renderToStaticMarkup(

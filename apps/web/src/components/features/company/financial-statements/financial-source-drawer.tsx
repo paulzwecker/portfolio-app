@@ -11,7 +11,11 @@ import type {
   ResearchRevision,
 } from "@/lib/domain-contracts";
 import { dateOnly, dateTime, quantity } from "@/lib/display";
-import { rowLabel, unitLabel } from "./financial-series";
+import {
+  consensusProviderLabel,
+  rowLabel,
+  unitLabel,
+} from "./financial-series";
 
 export type FinancialCellSelection = { rowId: string; periodEnd: string };
 
@@ -83,7 +87,11 @@ function ReportedSource({
   );
 }
 
-function ConsensusSource({ item }: { item: ConsensusEstimateObservation }) {
+export function ConsensusSource({
+  item,
+}: {
+  item: ConsensusEstimateObservation;
+}) {
   return (
     <article className="space-y-2 rounded-lg border p-3 text-xs">
       <div className="flex flex-wrap gap-2">
@@ -94,8 +102,18 @@ function ConsensusSource({ item }: { item: ConsensusEstimateObservation }) {
         <StatusIndicator status={item.data_quality} />
       </div>
       <p>
-        {item.provider_id} · {item.forecast_period} · ends{" "}
-        {item.period_end ?? "unknown"}
+        {consensusProviderLabel(item.provider_id)} · {item.metric} ·{" "}
+        {item.forecast_period} · ends {item.period_end ?? "unknown"}
+      </p>
+      <p className="tabular-nums">
+        Analyst range:{" "}
+        {item.low_value === null ? "Unavailable" : quantity(item.low_value)}
+        {" – "}
+        {item.high_value === null
+          ? "Unavailable"
+          : quantity(item.high_value)}{" "}
+        {item.currency ?? "currency unknown"}
+        {item.unit === "CURRENCY_PER_SHARE" ? " / share" : ""}
       </p>
       <p>
         {item.analyst_count ?? "Unknown"} analysts · snapshot{" "}
@@ -304,8 +322,12 @@ export function FinancialSourceDrawer({
             </h3>
             <p className="text-xs text-muted-foreground">
               {data.consensus.continuity_status.replaceAll("_", " ")} · selected
-              provider {data.consensus.selected_provider_id ?? "none"}.
-              Providers are never blended.
+              provider{" "}
+              {data.consensus.selected_provider_id
+                ? consensusProviderLabel(data.consensus.selected_provider_id)
+                : "none"}
+              . Providers are never blended. Captured snapshots record retrieval
+              time; a forecast period is not an earlier observation date.
             </p>
             {!data.consensus.providers.length && (
               <p className="text-sm">No consensus provider mapping.</p>
@@ -316,9 +338,9 @@ export function FinancialSourceDrawer({
                 className="rounded-lg border p-3"
               >
                 <summary className="cursor-pointer text-sm font-medium">
-                  {provider.provider_id} · {provider.role} ·{" "}
-                  {provider.freshness} · {provider.observation_count}{" "}
-                  observations
+                  {consensusProviderLabel(provider.provider_id)} ·{" "}
+                  {provider.role} · {provider.freshness} ·{" "}
+                  {provider.observation_count} observations
                 </summary>
                 <p className="my-2 text-xs">
                   {provider.provider_symbol} ·{" "}

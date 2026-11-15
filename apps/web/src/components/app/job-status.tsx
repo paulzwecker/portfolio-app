@@ -84,6 +84,53 @@ export function JobStatus({
           {job.error_message ?? statusLabel(job.error_code)}
         </p>
       )}
+      {["SEC_FILINGS", "SEC_FUNDAMENTALS"].includes(job.job_name) && (
+        <details className="rounded-md border bg-muted/30 p-2 text-xs">
+          <summary className="cursor-pointer font-medium">
+            Refresh receipt and source details
+          </summary>
+          <dl className="mt-2 space-y-2">
+            <div>
+              <dt className="text-muted-foreground">Request ID</dt>
+              <dd className="break-all font-mono">{job.id}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Source</dt>
+              <dd>SEC EDGAR · reviewed issuer mappings</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Scope</dt>
+              <dd>
+                {job.scope_kind === "COMPANY"
+                  ? "This company only"
+                  : "Held and Watchlist issuers; up to 30 mapped issuers per domain"}
+              </dd>
+            </div>
+            {job.started_at && (
+              <div>
+                <dt className="text-muted-foreground">Started</dt>
+                <dd>{dateTime(job.started_at)}</dd>
+              </div>
+            )}
+          </dl>
+          {job.attempts.length > 0 && (
+            <>
+              <p className="mt-3 text-muted-foreground">
+                Recorded provider outcomes include skipped subjects, coverage
+                gaps and failures. A completed request does not imply complete
+                financial history.
+              </p>
+              <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words">
+                {JSON.stringify(
+                  job.attempts.map((attempt) => attempt.result),
+                  null,
+                  2,
+                )}
+              </pre>
+            </>
+          )}
+        </details>
+      )}
       {!compact && job.attempts.length === 0 && active && (
         <p className="text-xs text-muted-foreground">
           {manualRunnerEnabled

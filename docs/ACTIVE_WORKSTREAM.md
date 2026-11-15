@@ -1,73 +1,104 @@
 # Active workstream
 
-## Investor research journey — acceptance frozen (2026-11-14)
+## Integrated Portfolio Research delivery — INTEGRATE, 2026-11-15
 
-`codex/investor-research-journey` starts at main `ddbacbc` after owner-merged
-PRs #34, #36 and #35; integrated main `9a27353` with the owner-merged recovery
-package [PR #37](https://github.com/paulzwecker/portfolio-app/pull/37). No ingestion/scheduler changes belong here.
+Owner explicitly requested consolidation of Agents 1–8. Integration on
+`codex/integrated-delivery` was fast-forwarded into the existing
+[PR #39](https://github.com/paulzwecker/portfolio-app/pull/39), not a competing PR.
+Main `866723e` contains recovery tooling (#37) and investor UI (#38). PR #39
+`69371f1` supplies SEC/manual/scheduled refresh; market/FX `b432335`, expectations
+`c45f4e6` and investment return-hurdle `33cedff` remain preserved. Other branches,
+worktrees, owner edits and stash are untouched. No protected merge or deployment.
 
-Acceptance for this milestone:
+### Frozen acceptance before integration
 
-- Portfolio → exact held listing → financials/prices/valuation/evidence → holdings
-  or allocation retains company and listing context, including reload/navigation.
-- Quote and price history use the same canonical listing; missing prices never
-  select a different listing silently. Held but unvalued is not “not held”.
-- Useful observations lead. Empty optional research panels, unsupported exposure
-  controls and unavailable portfolio performance do not dominate normal workflows.
-  Missing, stale, partial, conflicting and failed-source states remain inspectable.
-- Shared slate/orange/teal components; keyboard navigation and desktop/mobile,
-  light/dark review. Existing financial meaning, APIs and data authority unchanged.
-- Relevant integration checks and one cohesive PR. No production writes,
-  deployment, migrations, scheduler activation or financial acceptance.
+1. Preserve the existing Portfolio → exact company → prices → Financials/filings
+   and expectations → valuation/research → portfolio navigation using shared UI.
+2. Compose one private real-source isolated journey with the same AMZN identity for
+   market observations and estimates; keep supported SEC issuers distinct. Verify
+   native-price/dated-FX EUR valuation against raw evidence and fictional quantities.
+3. Retain reported observations, provider forecasts, uncertain EPS and accepted
+   model assumptions as separate categories. Do not infer fiscal anchors, transactions,
+   historical portfolio performance, adjustments or absent data.
+4. Integrate the already-complete read-only return-hurdle explorer. Independently
+   verify native-model economics, scenario probabilities, quote provenance and
+   unchanged accepted state with explicitly fictional model fixtures.
+5. Rerun existing real SEC and market manual/scheduled refresh journeys; durable
+   identity survives reloads, bounded work persists observations and partial/failure
+   states remain visible. No new worker, scheduler or consensus UI refresh endpoint.
+6. Run comprehensive relevant backend integration, unit/contract/schema/deployment
+   checks, production-build browser tests and desktop/mobile light/dark review.
+   Fix proven in-scope blockers only, then freeze one updated owner-reviewable PR.
 
-Implementation is complete; [PR #38](https://github.com/paulzwecker/portfolio-app/pull/38)
-is frozen for owner review, with latest-head CI required before merge. Exact listing and
-portfolio origin survive tabs, reload and same-company overview/evidence/source
-links. Missing market history never substitutes another listing. Coverage labels
-replace successfully empty optional cards; source errors and partial/conflicting
-observations remain inspectable. Shared chart sizing preserves mobile axes and
-historical chart colors now use the actual theme token format.
+### Known data and operational limits
 
-Verification: 483 web tests; lint/types/contracts and 21 deployment tests pass.
-Full managed production-build browser suite: 147 passed, 51 scenario-gated skips.
-Final relevant production-build rerun after link review: 8 passed. Ten additional
-SEC/API-backed desktop/mobile journeys pass against disposable PostgreSQL with
-read-only financial data and mocked job transitions; protected fingerprints remain
-unchanged. Empty Financials also passed a real-API browser check. Light/dark and
-390/1440px views were inspected; existing Portfolio checks also cover 320px. All
-screenshots use fictional fixtures, not production observations.
+Prior evidence: isolated MSCI 1,596 facts/310 filing references; Microsoft 1,909/428;
+AMZN 255 native closes and USD/EUR + DKK/EUR 518 FX observations through November 13;
+eight AMZN revenue/EPS forecasts across four periods captured November 15.
+All four private source API replays pass on the integrated code. Authentic recordings/screenshots remain
+private where source redistribution terms require it. Surrounding holdings, cash,
+targets and native-model examples are fictional, never live owner observations.
 
-[Before](design/screenshots/investor-journey-before.png) ·
-[Overview](design/screenshots/investor-journey-overview.png) ·
-[Prices](design/screenshots/investor-journey-prices.png) ·
-[Mobile dark](design/screenshots/investor-journey-mobile-dark.png).
+ECB/SEC public access is usable within existing policies. EODHD documented demo
+supports bounded private evaluation only; production execution stays rejected.
+Broader zero-cost equity/consensus access is unverified. EPS basis remains DATA_CHECK;
+one estimates capture is not a historical revision series. FMP and Yahoo remain
+inactive without verified free entitlement. No paid dependencies are required.
 
-Second-pass review resolved source-link context loss and verified exact-listing,
-held/unvalued, empty-assessment, error, conflict, keyboard and source-disclosure
-behavior. No remaining engineering blocker for this UI deliverable. No API,
-migration, ingestion, scheduler, deployment configuration or financial calculation
-changes relative to latest main. Main `9a27353` integrated without history rewriting;
-owner checkout edits, stash and other branches remain intact.
+Fresh guarded read-only checks at 01:14–01:19 UTC on November 15 verify exact Neon
+primary identity, schema `b59f16c8a203`, accepted canonical receipt and the 22-listing,
+two-pair approved market window. All six observation categories remain zero;
+22 holdings, two cash rows, one target revision and 16 targets are unchanged.
+The live API is ready/current and its authenticated portfolio read returns one
+portfolio. SEC preview is blocked: zero reviewed CIK mappings for 21 held issuers.
 
-Release classification: CONFIGURATION_REQUIRED. The November 14 read-only Neon
-check and unchanged migration graph match `b59f16c8a203`; the schema gate passes.
-This PR adds no API dependency. Hosted Render/Vercel SHAs and release/freeze controls
-are not freshly verified. Owner must verify those controls before merge/release;
-this work does not authorize deployment. Latest-head CI must pass before owner merge.
+No production backup is established by #37. A destination, key custody and isolated
+restore target still need approval and the existing interactive rehearsal. The old
+Neon branch expires November 15 at 14:18:37 CET; the configured recovery connection
+does not match current endpoint inventory, so fresh recovery readback stopped.
+Four disposable database archive/encryption/restore checks pass, which does not
+establish production recovery. No credentials, settings or production data changed.
 
-Deferred: new analytics, performance without transaction history, expanded price
-history beyond the existing 252-observation read, provider activation and further
-UI redesign. The next highest-value task is the approved recovery/provider sequence
-below, followed by genuine price/FX and fundamentals readback in these views.
+Live Render is `9a27353`; Vercel production is `866723e`. Render Auto-Deploy after
+checks and Blueprint Auto Sync are enabled; Vercel's schema hook permits production
+builds. **Deployment is not frozen.** Direct Render service write/ingestion/manual/
+recurring/workbook/FMP flags are false and Sheets polling is zero. SEC contact is
+absent directly on the service; linked environment-group contact remains unverified.
 
-Production activation evidence preserved from merged #37 (November 14): exact Neon
-identity and `b59f16c8a203` matched; 22 accepted positions, two cash rows and one
-target revision. Prices, FX, reported facts, filing records and consensus are zero.
-Market preview READY: 22 listings + DKK/EUR and USD/EUR, 2025-11-10–2026-11-09,
-no provider requests/writes. No reviewed production CIK mappings. No durable backup
-has been executed. The expiring November 8 recovery branch is not durable protection.
+### Release boundary and next action
 
-Use the merged [encrypted recovery runbook](encrypted-production-recovery.md) and
-[provider decision matrix](financial-data-provider-decision.md). Next operational
-step remains an owner-approved encrypted destination/key custody and isolated
-restore rehearsal, then verified provider access and one guarded checkpoint.
+Local integration passes: 1,092 backend units (two platform skips), 530 web tests,
+four source-backed PostgreSQL/API replays, four cross-feature native-price/model
+boundary cases, four archive/encrypted recovery checks, and 157 authenticated
+production-build browser cases (61 explicit opt-ins skipped). Six real-source
+desktop/mobile journeys pass in light/dark themes: the combined investor journey,
+market manual/scheduled increment and Microsoft SEC manual/scheduled refresh.
+Types (256 Python files and TypeScript), lint, formatting, contracts, build and 21
+deployment checks pass. Production dependency audit reports zero vulnerabilities.
+
+The broad local database sweep was stopped after fixture errors during concurrent
+shared-server work; it is not a full pass. Both affected files pass serially (13
+cases) without application changes. Separate parallel cleanup had exhausted the
+test server's lock budget; no server configuration was changed. The complete
+569-case PostgreSQL suite is a required CI gate on the PR's exact head, alongside
+Quality/contracts/build and Windows migration compatibility. Consult current PR
+checks for the final result; prior-head checks never substitute. Scope is frozen
+with no remaining code blocker; ENGINEERING_READY requires all three gates green.
+Independent financial/isolation and visual reviews found no remaining A-class
+blocker. Existing single-snapshot history-panel clutter is deferred B-class polish.
+
+The new `GET /v1/financial-models/{id}/return-hurdle` endpoint and additive native-price
+fields require an API-first release. No migration is introduced. Release is
+**REQUIRES_COORDINATED_RELEASE; RELEASE_READY=false; DATA_OPERATIONALLY_VERIFIED=false**.
+Before merge the owner must freeze Vercel production, authorize the API-first
+release and verify the matching Render API, then separately release the frontend.
+CI success is not release or data-operational readiness. PR #39's description and
+checks hold the current review verdict; do not merge while live release controls
+would cause an unauthorized deployment.
+Live authenticated UI readback is unverified because frontend Basic Auth credentials
+are not present locally; no authentication was guessed or bypassed.
+
+After this milestone: approved recovery rehearsal, then exact SEC/ECB production
+activation through existing guards. Broader source coverage, guidance ingestion,
+model fiscal alignment, new comparison analytics, Sheets publication and generic
+infrastructure are deferred rather than blockers for the selected journey.

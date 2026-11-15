@@ -32,12 +32,16 @@ from portfolio_api.consensus_estimates import (
 )
 from portfolio_api.database import create_database_engine
 from portfolio_api.domain.models import (
+    Company,
     CompanyProviderIdentifier,
     ConsensusEstimateProviderMapping,
     CurrentLifecycle,
     ExternalIngestionAttempt,
     ExternalIngestionRun,
     LifecycleEvent,
+    Listing,
+    PriceObservation,
+    Security,
 )
 from portfolio_api.external_data import (
     CanonicalSubjectKind,
@@ -54,6 +58,7 @@ from portfolio_api.market_data_ingestion import (
     active_market_listings,
     apply_provider_import,
     build_provider_import,
+    market_provider_batch_plan,
     portfolio_fx_requirements,
 )
 from portfolio_api.reported_fundamentals import (
@@ -260,13 +265,17 @@ def _sec_mapping_scope(session: Session, company_ids: list[UUID]) -> list[dict[s
 
 
 def _fmp_mappings(
-    session: Session, company_ids: list[UUID], *, mapping_ids: list[UUID] | None = None
+    session: Session,
+    company_ids: list[UUID],
+    *,
+    mapping_ids: list[UUID] | None = None,
+    provider_id: str = FMP_PROVIDER_ID,
 ) -> list[ConsensusEstimateProviderMapping]:
     if not company_ids:
         return []
     current = datetime.now(UTC)
     statement = select(ConsensusEstimateProviderMapping).where(
-        ConsensusEstimateProviderMapping.provider_id == FMP_PROVIDER_ID,
+        ConsensusEstimateProviderMapping.provider_id == provider_id,
         ConsensusEstimateProviderMapping.effective_from <= current,
         ConsensusEstimateProviderMapping.company_id.in_(company_ids),
     )
@@ -299,6 +308,8 @@ def _scope_for_domain(
     lookback_days: int,
     company_ids: set[UUID] | None = None,
     yahoo_crosswalk: YahooListingCrosswalk | None = None,
+    fx_provider: str = YAHOO_PROVIDER_ID,
+    consensus_provider: str = FMP_PROVIDER_ID,
 ) -> dict[str, Any]:
     if domain in {
         ExternalDataDomain.FX,
@@ -322,6 +333,16 @@ def _scope_for_domain(
                     for listing, _security, _company in selected
                     if base_currency and listing.currency and listing.currency != base_currency
                 }
+            if fx_provider == "ECB_REFERENCE":
+                if base_currency is not None:
+                    required_fx_pairs.update(
+                        (listing.currency, base_currency)
+                        for listing, _security, _company in selected
+                        if listing.currency and listing.currency != base_currency
+                    )
+                scope["provider_id"] = fx_provider
+                scope["required_fx_pairs"] = [list(pair) for pair in sorted(required_fx_pairs)]
+                return scope
             if company_ids is None and ("TWD", "EUR") in FX_SYMBOLS:
                 required_fx_pairs.add(("TWD", "EUR"))
             crosswalk = yahoo_crosswalk or load_yahoo_crosswalk(CROSSWALK_PATH)
@@ -363,6 +384,12 @@ def _scope_for_domain(
     if domain in {ExternalDataDomain.REPORTED_FUNDAMENTALS, ExternalDataDomain.SOURCE_DOCUMENTS}:
         company_scope["verified_cik_mappings"] = _sec_mapping_scope(session, scoped_company_ids)
     elif domain == ExternalDataDomain.CONSENSUS_ESTIMATES:
+        if consensus_provider == "eodhd_demo_estimates":
+            company_scope["provider_id"] = consensus_provider
+            company_scope["consensus_identity"] = _demo_consensus_identity(
+                session, scoped_company_ids
+            )
+            return company_scope
         company_scope["fmp_mapping_ids"] = [
             str(item.id) for item in _fmp_mappings(session, scoped_company_ids)
         ]
@@ -639,6 +666,8 @@ def _execute_cycle(
             session.commit()
             if will_retry:
                 time.sleep(retry_delay_seconds(max(attempt_numbers.values()), retry_after))
+            else:
+                return
 
 
 def _coverage_outcome(
@@ -898,6 +927,101 @@ def _source_documents_operation(
         issue_count=issue_count,
         no_mapping_code="NO_VERIFIED_CIK_MAPPINGS",
         no_success_code="NO_SOURCE_DOCUMENTS_NORMALIZED",
+    )
+
+
+def _demo_consensus_identity(session: Session, company_ids: list[UUID]) -> list[dict[str, Any]]:
+    """Freeze one explicitly mapped demo issuer; never infer a provider assignment."""
+    from portfolio_api.market_data_bootstrap import _listing_identity
+
+    identities = []
+    for mapping in _fmp_mappings(session, company_ids, provider_id="eodhd_demo_estimates"):
+        listing = session.get(Listing, mapping.listing_id) if mapping.listing_id else None
+        security = session.get(Security, listing.security_id) if listing else None
+        company = session.get(Company, mapping.company_id)
+        if (
+            listing is None
+            or security is None
+            or company is None
+            or security.company_id != mapping.company_id
+            or listing.ticker != "AMZN"
+            or listing.venue != "NASDAQ"
+            or listing.currency != "USD"
+            or security.security_type != "COMMON_STOCK"
+            or company.reporting_currency != "USD"
+            or company.name.casefold().replace(",", "").replace(" ", "").rstrip(".")
+            not in {"amazon", "amazon.cominc"}
+            or mapping.provider_symbol != "AMZN.US"
+            or mapping.currency != "USD"
+            or not mapping.currency_evidence_source
+        ):
+            raise ValueError("Consensus demo requires the reviewed Amazon/NASDAQ/USD identity")
+        identities.append(
+            {
+                "mapping_id": str(mapping.id),
+                "identity": _listing_identity(listing, security, company, None),
+                "reporting_currency": company.reporting_currency,
+                "currency_evidence": mapping.currency_evidence_source,
+                "identity_evidence": mapping.evidence_source,
+            }
+        )
+    if len(identities) > 1:
+        raise ValueError("Consensus demo is bounded to one exact issuer mapping")
+    return identities
+
+
+def _demo_consensus_operation(
+    session: Session, settings: Settings, scope: dict[str, Any]
+) -> DomainOutcome:
+    from portfolio_api.eodhd_consensus import EodhdConsensusNormalizer, EodhdConsensusProvider
+
+    company_ids = [UUID(value) for value in scope["company_ids"]]
+    identities = _demo_consensus_identity(session, company_ids)
+    if identities != scope.get("consensus_identity"):
+        raise ValueError("Frozen consensus issuer identity changed")
+    if not identities:
+        return DomainOutcome(
+            "BLOCKED",
+            {"status": "BLOCKED", "reason": "NO_DEMO_MAPPING"},
+            "NO_DEMO_MAPPING",
+            "No reviewed AMZN demo estimate mapping.",
+        )
+    mapping = session.get(ConsensusEstimateProviderMapping, UUID(identities[0]["mapping_id"]))
+    assert mapping is not None
+    provider = EodhdConsensusProvider(settings, mapping)
+    query = ProviderQuery(
+        domain=ExternalDataDomain.CONSENSUS_ESTIMATES,
+        subjects=(CanonicalSubjectRef(kind=CanonicalSubjectKind.COMPANY, id=mapping.company_id),),
+        requested_at=datetime.now(UTC),
+    )
+    records = asyncio.run(provider.fetch(query))
+    results = [
+        persist_provider_response(
+            session, record, mapping, normalizer=EodhdConsensusNormalizer(mapping)
+        )
+        for record in records
+    ]
+    normalized = sum(int(item["reconciliation"].get("normalized_facts", 0)) for item in results)
+    checks = sum(int(item["reconciliation"].get("data_check_facts", 0)) for item in results)
+    return _coverage_outcome(
+        report={
+            "provider_id": "eodhd_demo_estimates",
+            "provider_batches": results,
+            "normalized_estimate_count": normalized,
+            "data_check_estimate_count": checks,
+            "request_budget": 1,
+            "provider_credit_budget": 10,
+            "history_policy": "Retrieved snapshots only; lookback fields are not history.",
+            "unmapped_active_company_ids": [
+                str(value) for value in company_ids if value != mapping.company_id
+            ],
+        },
+        target_count=len(company_ids),
+        mapped_count=1,
+        successful_count=int(normalized > 0),
+        issue_count=checks,
+        no_mapping_code="NO_DEMO_MAPPING",
+        no_success_code="NO_FORWARD_ESTIMATES",
     )
 
 
@@ -1219,6 +1343,103 @@ def _yahoo_operation(
     return {domain: _domain_status_for_yahoo(domain, report, persisted) for domain in YAHOO_DOMAINS}
 
 
+def _eodhd_demo_operation(session: Session, scope: dict[str, Any]) -> DomainOutcome:
+    """One exact, isolated test-drive instrument; no automatic provider fallback."""
+    from portfolio_api.eodhd_demo import (
+        EODHD_DEMO_PROVIDER_ID,
+        EODHD_DEMO_SCHEMA_VERSION,
+        EodhdDemoMapping,
+        EodhdDemoNormalizer,
+        EodhdDemoProvider,
+        fetch_demo_metadata,
+    )
+    from portfolio_api.market_data_bootstrap import _listing_identity
+
+    company_ids = (
+        {UUID(value) for value in scope["company_ids"]} if "company_ids" in scope else None
+    )
+    selected, _ = active_market_listings(session, company_ids)
+    if [_listing_identity(*row, None) for row in selected] != scope.get("listing_identities"):
+        raise ValueError("The frozen demo company/security/listing identity changed")
+    expected_keys = {(item["venue"], item["ticker"]) for item in scope["listing_keys"]}
+    if {(listing.venue, listing.ticker) for listing, _, _ in selected} != expected_keys:
+        raise ValueError("The frozen demo listing scope changed")
+    eligible = [
+        (listing, security, company)
+        for listing, security, company in selected
+        if listing.ticker == "AMZN"
+        and listing.venue == "NASDAQ"
+        and listing.currency == "USD"
+        and security.security_type == "COMMON_STOCK"
+        and company is not None
+        and company.name.casefold().replace(",", "").replace(" ", "").rstrip(".")
+        in {"amazon", "amazon.cominc"}
+    ]
+    report: dict[str, Any] = {
+        "provider_id": EODHD_DEMO_PROVIDER_ID,
+        "plans": [],
+        "market_data_batches": [],
+        "fx_batches": [],
+        "unresolved_listings": [
+            {"listing_id": str(listing.id), "reason": "NO_VERIFIED_FREE_DEMO_COVERAGE"}
+            for listing, _, _ in selected
+            if listing.id not in {item[0].id for item in eligible}
+        ],
+    }
+    if len(eligible) == 1:
+        listing, security, company = eligible[0]
+        mapping = EodhdDemoMapping(
+            listing_id=listing.id, security_id=security.id, company_id=company.id
+        )
+        end = min(
+            date.fromisoformat(scope["end_date"]), datetime.now(UTC).date() - timedelta(days=1)
+        )
+        latest = session.scalar(
+            select(func.max(PriceObservation.market_date)).where(
+                PriceObservation.listing_id == listing.id,
+                PriceObservation.provider == EODHD_DEMO_PROVIDER_ID,
+            )
+        )
+        start = (
+            date.fromisoformat(scope["start_date"])
+            if scope.get("start_date")
+            else latest.date() - timedelta(days=3)
+            if latest
+            else end - timedelta(days=min(int(scope["lookback_days"]), 365))
+        )
+        query = ProviderQuery(
+            domain=ExternalDataDomain.MARKET_DATA,
+            subjects=(CanonicalSubjectRef(kind=CanonicalSubjectKind.LISTING, id=listing.id),),
+            start_date=start,
+            end_date=end,
+            requested_at=datetime.now(UTC),
+        )
+        metadata = fetch_demo_metadata()
+        records = list(asyncio.run(EodhdDemoProvider(mapping, metadata).fetch(query)))
+        plan = market_provider_batch_plan(
+            query,
+            records,
+            EodhdDemoNormalizer(mapping, metadata, query),
+            provider_id=EODHD_DEMO_PROVIDER_ID,
+            provider_schema_version=EODHD_DEMO_SCHEMA_VERSION,
+            evidence_records=[metadata],
+        )
+        if plan is not None:
+            report["plans"] = [plan]
+            report["market_data_batches"] = [plan["report"]]
+    applied = apply_provider_import(session, report)
+    successful = sum(batch["accepted_subjects"] for batch in applied["market_data_batches"])
+    return _coverage_outcome(
+        report=applied,
+        target_count=len(selected),
+        mapped_count=len(eligible),
+        successful_count=successful,
+        issue_count=int(applied["status"] == "PARTIAL"),
+        no_mapping_code="NO_VERIFIED_FREE_DEMO_COVERAGE",
+        no_success_code="NO_DEMO_OBSERVATIONS",
+    )
+
+
 def _run_result(session: Session, claim: RunClaim) -> dict[str, Any]:
     run = session.get(ExternalIngestionRun, claim.run_id)
     if run is None:
@@ -1325,6 +1546,56 @@ def run_scheduled(
     end_date = end_date or datetime.now(UTC).date()
     run_date = run_date or datetime.now(UTC).date()
     selected = _selected_domains(domains)
+    providers = {
+        **PROVIDERS,
+        ExternalDataDomain.CONSENSUS_ESTIMATES: settings.consensus_provider,
+        ExternalDataDomain.FX: settings.fx_provider,
+        ExternalDataDomain.MARKET_DATA: settings.market_data_provider,
+        ExternalDataDomain.CORPORATE_ACTIONS: settings.market_data_provider,
+    }
+    if (
+        settings.consensus_provider == "eodhd_demo_estimates"
+        and ExternalDataDomain.CONSENSUS_ESTIMATES in selected
+        and (
+            settings.app_env == "production" or settings.database_target_environment == "production"
+        )
+    ):
+        raise ValueError("EODHD consensus demo cannot execute against production")
+    if replay_of_run_id is not None and ExternalDataDomain.CONSENSUS_ESTIMATES in selected:
+        original = session.get(ExternalIngestionRun, replay_of_run_id)
+        if original is None or original.provider_id != settings.consensus_provider:
+            raise ValueError("Consensus replay cannot replace its provider")
+    if (
+        settings.market_data_provider == "EODHD_DEMO"
+        and selected & YAHOO_MARKET_DOMAINS
+        and (
+            settings.app_env == "production"
+            or settings.database_target_environment == "production"
+            or frozen_yahoo_crosswalk is not None
+            or replay_of_run_id is not None
+            or retry_failed
+        )
+    ):
+        raise ValueError("Demo history cannot execute in production or replace frozen recovery")
+    if (
+        replay_scope is not None
+        and replay_of_run_id is not None
+        and ExternalDataDomain.FX in selected
+    ):
+        original_fx = session.get(ExternalIngestionRun, replay_of_run_id)
+        if original_fx is None or original_fx.provider_id != settings.fx_provider:
+            raise ValueError("An FX replay cannot change its recorded provider")
+    if settings.fx_provider == "ECB_REFERENCE" and ExternalDataDomain.FX in selected:
+        if frozen_yahoo_crosswalk is not None or retry_failed:
+            raise ValueError("Frozen Yahoo cloud recovery cannot change its FX provider")
+        if replay_scope is not None and replay_of_run_id is not None:
+            original_fx = session.get(ExternalIngestionRun, replay_of_run_id)
+            if (
+                original_fx is None
+                or original_fx.provider_id != settings.fx_provider
+                or replay_scope.get("provider_id") != settings.fx_provider
+            ):
+                raise ValueError("An FX replay cannot change its recorded provider")
     if retry_failed and (
         not selected.issubset(YAHOO_DOMAINS)
         or frozen_yahoo_crosswalk is None
@@ -1417,9 +1688,33 @@ def run_scheduled(
                 lookback_days=lookback_days,
                 company_ids=company_ids,
                 yahoo_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
+                fx_provider=settings.fx_provider,
+                consensus_provider=settings.consensus_provider,
             )
         if domain == ExternalDataDomain.FX and fx_pair_filter is not None:
             scope["required_fx_pairs"] = [list(pair) for pair in sorted(fx_pair_filter)]
+        if providers[domain] == "EODHD_DEMO":
+            from portfolio_api.market_data_bootstrap import _listing_identity
+
+            selected_listings, _ = active_market_listings(session, company_ids)
+            scope["listing_identities"] = [
+                _listing_identity(*row, None) for row in selected_listings
+            ]
+            scope["provider_id"] = "EODHD_DEMO"
+            if request_nonce is not None:
+                scope["operational_request_id"] = str(request_nonce)
+                prior_scope = session.scalar(
+                    select(ExternalIngestionRun.request_scope)
+                    .where(
+                        ExternalIngestionRun.provider_id == "EODHD_DEMO",
+                        ExternalIngestionRun.domain == domain.value,
+                        ExternalIngestionRun.request_scope["operational_request_id"].as_string()
+                        == str(request_nonce),
+                    )
+                    .limit(1)
+                )
+                if prior_scope is not None:
+                    scope = prior_scope
         if domain in YAHOO_MARKET_DOMAINS and listing_key_filter is not None:
             scope["scope"] = "listings"
             scope["listing_keys"] = [
@@ -1430,7 +1725,7 @@ def run_scheduled(
         scopes[domain] = scope
         claim = _claim_run(
             session,
-            PROVIDERS[domain],
+            providers[domain],
             domain,
             scope,
             run_date=run_date,
@@ -1444,7 +1739,9 @@ def run_scheduled(
     # The Yahoo adapter requests price/action and FX facts in one provider cycle,
     # then records separate run outcomes for each canonical domain.
     yahoo_claims = [
-        claims[domain] for domain in ordered if domain in YAHOO_DOMAINS and domain in claims
+        claims[domain]
+        for domain in ordered
+        if domain in YAHOO_DOMAINS and domain in claims and providers[domain] == YAHOO_PROVIDER_ID
     ]
     if yahoo_claims:
         market_claim = next(
@@ -1506,9 +1803,94 @@ def run_scheduled(
         _execute_cycle(session, yahoo_claims, yahoo_cycle, single_attempt=retry_failed)
 
     for domain in ordered:
-        if domain not in claims or domain in YAHOO_DOMAINS:
+        if domain not in claims:
             continue
         claim = claims[domain]
+        if claim.provider_id == "eodhd_demo_estimates":
+
+            def estimates_cycle(claim: RunClaim = claim) -> dict[ExternalDataDomain, DomainOutcome]:
+                return {
+                    ExternalDataDomain.CONSENSUS_ESTIMATES: _demo_consensus_operation(
+                        session, settings, claim.request_scope
+                    )
+                }
+
+            _execute_cycle(session, [claim], estimates_cycle, single_attempt=True)
+            continue
+        if claim.provider_id == "EODHD_DEMO":
+
+            def demo_cycle(
+                domain: ExternalDataDomain = domain,
+                claim: RunClaim = claim,
+            ) -> dict[ExternalDataDomain, DomainOutcome]:
+                return {domain: _eodhd_demo_operation(session, claim.request_scope)}
+
+            def no_action_cycle(
+                domain: ExternalDataDomain = domain,
+            ) -> dict[ExternalDataDomain, DomainOutcome]:
+                return {
+                    domain: DomainOutcome(
+                        "NOT_APPLICABLE",
+                        {
+                            "status": "NOT_APPLICABLE",
+                            "reason": "DEMO_ACTIONS_UNVERIFIED",
+                            "message": "This demo slice supplies no confirmed corporate actions.",
+                        },
+                    )
+                }
+
+            _execute_cycle(
+                session,
+                [claim],
+                demo_cycle if domain == ExternalDataDomain.MARKET_DATA else no_action_cycle,
+            )
+            continue
+        if domain == ExternalDataDomain.FX and claim.provider_id == "ECB_REFERENCE":
+            from portfolio_api.ecb_reference import build_ecb_fx_report
+
+            def ecb_cycle(claim: RunClaim = claim) -> dict[ExternalDataDomain, DomainOutcome]:
+                scope = claim.request_scope
+                raw_start = scope.get("start_date")
+                report = asyncio.run(
+                    build_ecb_fx_report(
+                        session,
+                        start_date=date.fromisoformat(raw_start) if raw_start else None,
+                        end_date=date.fromisoformat(scope["end_date"]),
+                        lookback_days=int(scope["lookback_days"]),
+                        fx_pairs={(pair[0], pair[1]) for pair in scope["required_fx_pairs"]},
+                    )
+                )
+                failures = report.get("fx_fetch_failures", [])
+                if failures and not report["plans"]:
+                    failure = failures[0]
+                    raise ProviderTransportError(
+                        "ECB_REFERENCE",
+                        failure["code"],
+                        failure["message"],
+                        retryable=bool(failure.get("retryable")),
+                        retry_after_seconds=failure.get("retry_after_seconds"),
+                    )
+                applied = apply_provider_import(session, report)
+                successful = sum(
+                    len(batch["accepted_pairs"]) for batch in applied.get("fx_batches", [])
+                )
+                return {
+                    ExternalDataDomain.FX: _coverage_outcome(
+                        report=applied,
+                        target_count=len(scope["required_fx_pairs"]),
+                        mapped_count=len(scope["required_fx_pairs"])
+                        - len(applied.get("unmapped_fx_pairs", [])),
+                        successful_count=successful,
+                        issue_count=int(applied["status"] == "PARTIAL"),
+                        no_mapping_code="NO_SUPPORTED_ECB_PAIRS",
+                        no_success_code="NO_ECB_OBSERVATIONS",
+                    )
+                }
+
+            _execute_cycle(session, [claim], ecb_cycle)
+            continue
+        if domain in YAHOO_DOMAINS:
+            continue
         if states is None:
             states = active_company_states(session)
         state_snapshot = dict(states)
@@ -1586,7 +1968,7 @@ def run_scheduled(
     for domain in reused_domains:
         scope = scopes[domain]
         key = _idempotency_key(
-            PROVIDERS[domain], domain, scope, run_date, request_nonce or replay_of_run_id
+            providers[domain], domain, scope, run_date, request_nonce or replay_of_run_id
         )
         existing = session.scalar(
             select(ExternalIngestionRun).where(ExternalIngestionRun.idempotency_key == key)
@@ -1595,7 +1977,7 @@ def run_scheduled(
             report_rows.append(
                 {
                     "domain": domain.value,
-                    "provider_id": PROVIDERS[domain],
+                    "provider_id": providers[domain],
                     "status": existing.status,
                     "run_id": str(existing.id),
                     "attempt_count": existing.attempt_count,
@@ -1642,6 +2024,18 @@ def status_report(session: Session, *, now_at: datetime | None = None) -> dict[s
     domains: list[dict[str, Any]] = []
     for domain in DAILY_DOMAINS:
         provider = PROVIDERS[domain]
+        if domain in YAHOO_DOMAINS or domain == ExternalDataDomain.CONSENSUS_ESTIMATES:
+            provider = (
+                session.scalar(
+                    select(ExternalIngestionRun.provider_id)
+                    .where(ExternalIngestionRun.domain == domain.value)
+                    .order_by(
+                        ExternalIngestionRun.created_at.desc(), ExternalIngestionRun.id.desc()
+                    )
+                    .limit(1)
+                )
+                or provider
+            )
         latest = session.scalar(
             select(ExternalIngestionRun)
             .where(

@@ -85,9 +85,12 @@ it("preserves broad active-lifecycle action while Operations stays SEC scoped", 
   expect(
     renderToStaticMarkup(<CompanyRefreshAction companyId={id} />),
   ).toContain("Refresh this company");
-  expect(
-    renderToStaticMarkup(<CompanyRefreshAction companyId={id} secOnly />),
-  ).not.toContain("Refresh this company");
+  const scoped = renderToStaticMarkup(
+    <CompanyRefreshAction companyId={id} secOnly />,
+  );
+  expect(scoped).not.toContain("Refresh this company");
+  expect(scoped).toContain("Refresh SEC fundamentals");
+  expect(scoped).toContain("Refresh SEC filings");
 });
 it("keeps disabled execution and missing eligibility fail-closed", () => {
   state.data = { ...held, execution_mode: "DISABLED" };

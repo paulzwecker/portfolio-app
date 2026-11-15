@@ -575,7 +575,21 @@ test("company refresh history restores multiple active jobs and rejects a mismat
   const optionsPath = `/api/research/companies/${fixture.company_id}/refresh-options`;
   const options = await (await request.get(optionsPath)).json();
   await page.route(`**${optionsPath}`, (route) =>
-    route.fulfill({ json: { ...options, execution_mode: "OPERATOR" } }),
+    route.fulfill({
+      json: {
+        ...options,
+        execution_mode: "OPERATOR",
+        lifecycle: "PORTFOLIO",
+        sec_eligibility_basis: "ACTIVE_LIFECYCLE",
+        portfolio_id: null,
+        holding_snapshot_id: null,
+        eligible_job_names: [
+          "COMPANY_REFRESH",
+          "SEC_FUNDAMENTALS",
+          "SEC_FILINGS",
+        ],
+      },
+    }),
   );
   const at = new Date().toISOString();
   const job = (id: string, job_name: string, status: string) => ({
@@ -623,6 +637,15 @@ test("company refresh history restores multiple active jobs and rejects a mismat
     name: "Company refresh requests",
     exact: true,
   });
+  await expect(
+    controls.getByRole("button", { name: "Refresh this company", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    controls.getByRole("button", {
+      name: "Refresh SEC fundamentals",
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(controls.getByText("QUEUED", { exact: true })).toBeVisible();
   await expect(controls.getByText("RUNNING", { exact: true })).toBeVisible();
   await controls.screenshot({

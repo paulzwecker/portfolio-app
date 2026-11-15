@@ -8,6 +8,7 @@ import sys
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from portfolio_api.database import create_database_engine
@@ -18,7 +19,12 @@ from portfolio_api.database_write_target import (
 from portfolio_api.domain.models import OperationalJobRequest
 from portfolio_api.domain.schemas import OperationalJobRequestCreate
 from portfolio_api.manual_operations import JOB_DOMAINS, create_job_request
-from portfolio_api.recurring_operations import JOB_STALE_AFTER, process_manual_job_requests
+from portfolio_api.recurring_operations import (
+    JOB_STALE_AFTER,
+    LOCK_KEY,
+    LOCK_NAMESPACE,
+    process_manual_job_requests,
+)
 from portfolio_api.settings import Settings
 
 
@@ -140,7 +146,31 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Only a queued or recoverable interrupted request can run.")
             if queued_request.job_name == "WORKBOOK_SYNC" and not settings.workbook_sync_enabled:
                 raise ValueError("Workbook synchronization is disabled in this environment.")
-        result = process_manual_job_requests(engine, settings, request_id=request_id)
+        with engine.connect() as connection:
+            acquired: bool = connection.execute(
+                text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"),
+                {"namespace": LOCK_NAMESPACE, "lock_key": LOCK_KEY},
+            ).scalar_one()
+            connection.commit()
+            if not acquired:
+                print(
+                    json.dumps(
+                        {
+                            "status": "DEFERRED",
+                            "request_id": str(request_id),
+                            "reason": "Another operations worker is active; no work was claimed.",
+                        },
+                        sort_keys=True,
+                    )
+                )
+                return 1
+            try:
+                result = process_manual_job_requests(engine, settings, request_id=request_id)
+            finally:
+                connection.execute(
+                    text("SELECT pg_advisory_unlock(:namespace, :lock_key)"),
+                    {"namespace": LOCK_NAMESPACE, "lock_key": LOCK_KEY},
+                )
         print(json.dumps(_summary(result, request_id), sort_keys=True, indent=2))
         return 0 if result.get("status") in {"SUCCEEDED", "PARTIAL", "BLOCKED"} else 1
     except (DatabaseWriteTargetError, ValueError) as error:
