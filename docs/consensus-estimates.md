@@ -2,6 +2,9 @@
 
 ## Canonical observation and time semantics
 
+The November 15 isolated EODHD evaluation below adds one genuine, free-access
+example. It does not establish a free production consensus feed for the portfolio.
+
 `consensus_estimate_observations` stores immutable provider-specific forward estimates for
 revenue and EPS. Values use `NUMERIC(38,12)`. Annual and quarterly facts retain a
 forecast-period label and, when the provider supplies one, the fiscal period-end date.
@@ -178,3 +181,47 @@ the provider's terms. The published terms do not clearly establish retention
 and redisplay rights for canonical app storage, so clarify those rights before
 any import. Its current lack of a live key means no source fields are yet
 verified.
+
+## Bounded EODHD private evaluation (2026-11-15)
+
+`CONSENSUS_PROVIDER=eodhd_demo_estimates` selects the documented no-signup
+`v1.1/fundamentals/AMZN.US` demo, filtered to `General,Earnings::Trend`. It is
+isolated-only: production configuration and execution reject it. Defaults and the
+existing FMP activation gate are unchanged; no paid account or service is required.
+The existing external-ingestion CLI and scheduled service share durable runs,
+advisory locking, frozen identity, partial receipts and immutable consensus storage.
+One invocation permits one request (ten provider credits), with no endpoint fallback
+or in-cycle retry. No scheduler or Company Explorer refresh action is activated.
+
+The only accepted mapping is an explicitly evidenced Amazon common-stock listing
+on NASDAQ, `AMZN.US`, with USD reporting and listing currencies and December year end.
+Provider metadata must confirm legal name, CIK `0001018724`, exchange and currency.
+The [provider-owned endpoint reference](https://github.com/EodHistoricalData/eodhd-claude-skills/blob/main/skills/eodhd-api/references/endpoints/fundamentals-data.md)
+specifies reporting currency. Its [glossary](https://eodhd.com/financial-academy/financial-faq/fundamentals-glossary-common-stock)
+instead describes `General.CurrencyCode` as trading currency. This fixed slice
+uses independently checked Amazon USD reporting and USD listing evidence, where
+both interpretations agree; it does not infer estimate currency for other issuers.
+That basis remains visible on each observation. EPS stays `DATA_CHECK` because
+row-level GAAP versus adjusted methodology is unverified; it cannot become a
+reported-EPS comparison or accepted model assumption.
+
+One private response captured November 15 produced eight observations: revenue and
+EPS for FY2026, FY2027, FY2026 Q4 and FY2027 Q1. Means, ranges and analyst counts
+are retained. Forty-seven ended fiscal rows are excluded. Fiscal dates, relative
+period labels and 7/30/60/90-day fields do not establish historical observation
+timestamps. This is one snapshot, with no demonstrated real revision history.
+Future permitted captures can accumulate dated snapshots under the existing
+provider-specific revision contract; offline replay never advances source time.
+
+Company Explorer's existing Financials table/chart shows eligible revenue;
+uncertain EPS remains inspectable through source evidence. The source drawer shows
+period, currency, mean, range, analyst count, retrieval time and quality reasons.
+Freshness is assessed per observation, so uncertain EPS cannot hide valid revenue
+and one fresh period cannot make an old period current. No model values change.
+
+Access and private storage follow the [documented demo](https://eodhd.com/financial-apis/stock-etfs-fundamental-data-feeds),
+[personal-use](https://eodhd.com/help/personal-use), [storage](https://eodhd.com/help/storage)
+and [private automation](https://eodhd.com/help/ai-tools) guidance. Real values,
+screenshots and derived outputs stay outside public Git. This evaluation does not
+establish production entitlement, service reliability or broader holdings coverage.
+Reproduction uses the private receipt in [Testing](testing.md#private-consensus-source-rehearsal).

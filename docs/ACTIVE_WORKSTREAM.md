@@ -1,110 +1,91 @@
 # Active workstream
 
-## Free market/FX vertical slice — 2026-11-15
+## Free analyst expectations — frozen local slice, 2026-11-15
 
-Branch `codex/official-fx-valuation` is based on `69371f1` from the completed,
-frozen [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39). Preserve that
-SEC review and its commits. This independent market slice has no competing PR;
-integrate after the owner resolves #39. Main remains `866723e`. Other worktrees,
-owner edits and the existing stash remain intact.
+`codex/free-expectations` is stacked on `codex/official-fx-valuation` (`b432335`),
+which retains frozen [PR #39](https://github.com/paulzwecker/portfolio-app/pull/39)
+head `69371f1`. Preserve that independently reviewed SEC milestone. This work has
+no competing PR; reconcile the stack after owner integration. Main remains
+`866723e`. Owner worktree edits, branches and stash remain untouched.
 
-Frozen acceptance: one exact held listing with permitted real daily observations,
-USD/EUR and DKK/EUR reference history, durable manual and scheduled ingestion,
-canonical reconciliation, honest native-price charts and current EUR valuation.
-No broad universe/provider framework, new tables, migrations or paid dependency.
+### Frozen outcome and source truth
 
-### Source and production truth
+One exact Amazon/NASDAQ/USD mapping → documented free EODHD demo → existing
+immutable consensus storage → API → Company Explorer Financials. No new queue,
+table, migration, paid dependency, guidance framework or production activation.
 
-Fresh guarded production read-only verification at 00:18 UTC on November 15 passed:
-exact configured Neon primary identity, schema `b59f16c8a203`, accepted canonical
-receipt, 22 held listings matching the existing crosswalk, two required FX pairs,
-and the approved 2025-11-10–2026-11-09 window. It planned 24 logical requests but
-made zero provider requests/writes. Production still has **zero prices, FX,
-corporate actions, fundamentals, filing references and estimates**; 22 positions,
-two cash rows, one target revision and 16 targets are preserved. Exact evidence
-and identities remain in the private report store.
+One authorized public demo request on November 15 at 00:51:48 UTC produced eight
+real observations: revenue and EPS for FY2026, FY2027, FY2026 Q4 and FY2027 Q1.
+Means, analyst ranges and counts are retained. Four revenue observations are
+eligible; four EPS observations remain DATA_CHECK because accounting basis is
+unverified. Forty-seven ended-period rows are excluded. One snapshot establishes
+no historical revision series; relative EPS lookback fields are not dated history.
 
-EODHD's documented no-signup demo supplies AMZN.US, the only held listing in its
-reviewed equity demo set. Exact NASDAQ/USD/common-stock metadata and Amazon CIK
-agree with the canonical listing and official SEC cover. Four bounded source
-requests captured metadata, history, incremental history and empty split evidence.
-Private evaluation/storage is permitted; data, screenshots and derived outputs
-must not enter public Git. Demo access is not approved production entitlement.
-ECB's official bounded CSV service permits free reuse with attribution and explicit
-reciprocal-conversion disclosure. Six requests included one DKK timeout, which was
-retried once; five succeeded. No accounts, paid tiers or cloud changes were used.
+USD is supported only for this constrained issuer by independently reviewed USD
+reporting/listing identity and the provider's reporting-currency endpoint policy.
+The conflicting generic CurrencyCode wording is disclosed in the canonical
+[consensus reference](consensus-estimates.md#bounded-eodhd-private-evaluation-2026-11-15)
+and observation evidence; never generalize it to ADRs or other issuers.
+Demo evaluation/storage is permitted, but production entitlement and sustainable
+broader coverage are not established. Authentic payloads, values and screenshots
+remain in the private report store, never public Git.
 
-| Isolated canonical coverage | Initial window             | After controlled increment |
-| --------------------------- | -------------------------- | -------------------------- |
-| AMZN native daily closes    | 251, 2025-11-10–2026-11-09 | 255 through 2026-11-13     |
-| USD/EUR reference rates     | 255, same window           | 259 through 2026-11-13     |
-| DKK/EUR reference rates     | 255, same window           | 259 through 2026-11-13     |
+### What works and verification
 
-Source bytes/timestamps are retained unchanged in private replay. No weekend rows
-are fabricated. Portfolio quantities, cash and targets in the isolated example
-are explicitly fictional; its EUR value is not the owner's production value.
+`CONSENSUS_PROVIDER=eodhd_demo_estimates` is explicit and isolated-only. Existing
+external-ingestion CLI and scheduled entry share durable runs, exact frozen identity,
+advisory locking and a one-request/ten-credit bound. Missing mappings, identity
+changes and production targets stop before fetch. Partial receipts expose EPS
+uncertainty and unmapped companies. Replays cannot replace a provider. Default FMP
+configuration and existing activation gates remain unchanged.
 
-### Implementation and verification
+The source-backed isolated PostgreSQL/API check verifies all eight raw values,
+ranges/counts, annual/quarterly periods, per-observation freshness, immutable
+retrieval time, same-day reuse, later scheduled replay, pre-capture knowledge cutoff
+and unchanged full-content hashes of unrelated tables. The later replay uses the
+same recording, not a new source observation. Fictional research context is never
+presented as the owner's production portfolio. The browser is read-only; no new
+consensus UI refresh action or unattended timer is enabled.
 
-`FX_PROVIDER=ECB_REFERENCE` explicitly selects the new narrow adapter; existing
-Yahoo defaults remain unchanged. `MARKET_DATA_PROVIDER=EODHD_DEMO` supports only
-the reviewed isolated AMZN example and rejects production configuration/execution.
-Manual requests and the existing `cloud_cron --scope public-market-data` share
-provider services, durable daily ingestion identity, advisory locks and bounded
-retries. The scope drains at most one eligible request and excludes SEC, FMP,
-Sheets, models and research jobs. With only ECB selected it performs FX only.
-No scheduler is registered; an existing-host daily trigger remains owner-gated.
+Desktop/mobile browser journeys pass in light/dark themes: chartable revenue,
+explicit uncertain EPS, sources/ranges/counts, reload persistence, no page errors
+or overflow and unchanged protected state. Independent accounting/ingestion review
+found no remaining blocker. Reproduction: [private rehearsal](testing.md#private-consensus-source-rehearsal).
 
-Native close and total-return-adjusted price remain distinct; split-adjusted close
-stays unavailable. Current position value may use an explicitly validated native
-close times current quantity, then dated FX. Native history is separate from
-split-adjusted analytics/models/IRR. Missing, conflicting or stale data remains
-unavailable. The approved history alone is stale on November 15; the controlled
-increment establishes current isolated valuation. Pre-capture historical queries
-cannot see later observations. ECB original units per EUR are preserved and
-converted reciprocally to EUR per foreign unit, rounded to canonical precision.
+Final checks: 1,059 backend unit tests (two skips), 500 web tests, 62 relevant
+PostgreSQL/adapter checks, the private source-backed API replay and two real-source
+desktop/mobile journeys pass. Lint, formatting, Python/TypeScript types, OpenAPI
+contracts, production frontend build, documentation/source-data policy and 21
+deployment checks pass. Review/deploy schema gates match `b59f16c8a203` with no
+pending revision and unchanged fingerprint
+`de9fb593f76ec72261ef40bb3d88a12751b0e114c81fc48f08f96dee48be73f2`.
+The fresh feature branch has no remote CI claim; those are local verification results.
 
-Local source-backed API acceptance passes: manual queue → provider replay →
-PostgreSQL → API, then a scheduled incremental pass, same-day reuse, exact EUR
-position/cash/portfolio reconciliation, unchanged protected-table content hashes.
-Focused failures cover currency conflicts, unavailable pairs, no Yahoo fallback,
-nonretryable single attempts and bounded retryable attempts. An existing retry
-loop's missing terminal return was fixed after a failing test proved redundant
-nonretryable requests. Independent review also fixed latest and historical native
-price conflicts: unresolved latest evidence withholds valuation; an older conflict
-withholds only the chart. Explicit corrections retain knowledge-cutoff semantics.
-Frozen identity drift fails before any provider fetch or observation write.
+### Release and operational boundary
 
-Verification: 1,038 backend unit tests, 495 web tests, 143 selected PostgreSQL
-integration checks, and 19 final source-replay/identity/native-valuation checks pass.
-Desktop and mobile UI journeys pass with light/dark visual review: queued identity
-survives navigation/reload, new observations update charts/values, delayed scheduled
-work executes once, same-day repeats add no calls or rows. Private screenshots and
-API readbacks remain outside Git; test schemas and servers were cleaned up.
-Types (246 Python files and TypeScript), lint, formatting, OpenAPI contracts, frontend
-production build, documentation, source-data policy and 21 deployment checks pass.
-Review/deploy schema gates match `b59f16c8a203` with no pending revision and unchanged
-migration fingerprint `de9fb593f76ec72261ef40bb3d88a12751b0e114c81fc48f08f96dee48be73f2`.
-The private replay preserves actual capture times: future freshness checks require
-a contemporaneous source bundle, not retimestamped observations.
+**CONFIGURATION_REQUIRED for release; production ingestion NOT STARTED.** No
+schema or API-shape changes in this increment. The inherited market slice requires
+API-first deployment for its additive fields. Current hosted commits/control
+settings were not reverified, so this is not SAFE_TO_MERGE_AND_DEPLOY or a deployment
+approval. Production demo execution is deliberately rejected.
 
-### Release and next action
+The latest production readback remains the prior November 15 00:18 UTC guarded
+check: exact target/schema `b59f16c8a203`, canonical receipt, 22 holdings and two FX
+pairs matched; prices, FX, corporate actions, facts, filings and estimates were all
+zero. No fresh production query or write occurred in this estimates run. Accepted
+holdings, cash, targets and models remain unchanged.
 
-**CONFIGURATION_REQUIRED; production data operations NOT STARTED.** No migrations
-or production changes. New API fields are additive/defaulted; deploy API before
-using new native-price UI behavior. Hosted commit/control attestation remains
-unverified this run. PR #39 remains unchanged and owner-controlled. Latest remote
-main is already an ancestor; the separate feature branch is preserved for review
-after #39, with no competing PR and no remote CI claim for this new slice.
+Production still needs an approved encrypted off-provider backup destination, key
+custody and isolated restore target, then the existing guarded backup/restore
+rehearsal. The expiring Neon branch is not durable recovery. No source, cloud,
+credential, Sheets, model-acceptance or scheduler setting was changed.
 
-The first operator action is still approval of the encrypted off-provider backup
-destination, key custody and isolated restore target, then the existing guarded
-backup/restore rehearsal. The old Neon branch expires November 15 at 14:18 CET
-and is not durable recovery. ECB production source selection and a precise FX-only
-write scope need separate approval; do not relabel it as the approved Yahoo run.
-EODHD demo remains isolated-only. The other 21 held listings lack verified free
-price coverage; do not silently fall back to Yahoo or paid data. SEC activation
-proposals from #39 remain ready for separate mapping/recovery approval.
+### Next and deferred
 
-Next highest-value task: activate the reviewed ECB FX-only scope after recovery,
-and establish permitted non-demo equity coverage for exact held instruments.
+Next highest-value outcome: execute the already-prepared real SEC and ECB scopes
+once exact mapping/source and recovery approvals exist. Agent 7's isolated 255 AMZN
+native closes and 518 ECB FX observations through November 13 remain preserved on
+the parent branch. Do not expand this narrow estimates slice while those operational
+gates wait. Broader lawful free estimates, verified EPS basis, actual/model
+comparisons and real prospective revisions remain explicit coverage gaps, not
+mandatory blockers for the demonstrated local workflow.

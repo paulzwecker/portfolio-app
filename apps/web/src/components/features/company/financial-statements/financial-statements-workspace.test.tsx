@@ -192,3 +192,68 @@ it("does not claim an out-of-window forecast is aligned or chartable", () => {
   expect(html).toMatch(/Forward rows<\/[^>]+>.*?>0<\/[^>]+>/);
   expect(html).toMatch(/<input[^>]*disabled=""[^>]*aria-label="Chart Revenue/);
 });
+
+it("labels private demo consensus and keeps checked EPS out of charts", () => {
+  const revenue = {
+    ...row("AVAILABLE", "120"),
+    source_kind: "CONSENSUS",
+    source_name: "eodhd_demo_estimates",
+  };
+  const eps = {
+    ...row("DATA_CHECK", "2.5"),
+    id: "consensus-eps",
+    metric: "EPS",
+    label: "EPS",
+    source_kind: "CONSENSUS",
+    source_name: "eodhd_demo_estimates",
+    unit: "currency_per_share",
+  };
+  state.data = {
+    ...base,
+    periods: [period],
+    rows: [revenue, eps],
+    consensus: {
+      providers: [
+        {
+          selected: true,
+          provider_id: "eodhd_demo_estimates",
+          observation_count: 2,
+          latest_observed_at: "2026-11-15T00:00:00Z",
+        },
+      ],
+    },
+  };
+  const html = renderToStaticMarkup(
+    <FinancialStatementsWorkspace companyId={base.company_id} />,
+  );
+  expect(html).toContain("EODHD demo · private evaluation");
+  expect(html).toContain("EPS accounting basis is unresolved");
+  expect(html).toContain("Revision history starts with captured snapshots");
+  expect(html).toContain("Latest estimate retrieval");
+  expect(html).not.toContain("Latest reported observation");
+  expect(html).toContain("Chart is available: Revenue");
+  expect(html).not.toContain("Chart is available: Revenue, EPS");
+  expect(html).toContain(
+    "EPS, FY2025, 2.5 USD / share, DATA_CHECK, inspect source",
+  );
+});
+
+it("does not advertise a demo feed when the mapped stream has no observations", () => {
+  state.data = {
+    ...base,
+    consensus: {
+      providers: [
+        {
+          selected: true,
+          provider_id: "eodhd_demo_estimates",
+          observation_count: 0,
+        },
+      ],
+    },
+  };
+  const html = renderToStaticMarkup(
+    <FinancialStatementsWorkspace companyId={base.company_id} />,
+  );
+  expect(html).toContain("No aligned financial periods");
+  expect(html).not.toContain("EODHD demo · private evaluation");
+});

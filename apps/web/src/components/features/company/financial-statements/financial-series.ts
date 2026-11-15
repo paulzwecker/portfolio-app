@@ -10,6 +10,12 @@ export const sourceLabels = {
   AGENT_FORECAST: "Agent forecast",
 } as const;
 
+export function consensusProviderLabel(providerId: string) {
+  return providerId === "eodhd_demo_estimates"
+    ? "EODHD demo · private evaluation"
+    : providerId;
+}
+
 export type FinancialComparisonMode = "SEPARATE" | "INDEXED";
 
 export function unitLabel(
@@ -21,7 +27,7 @@ export function unitLabel(
 }
 
 export function rowLabel(row: FinancialStatementRow) {
-  return `${row.label} · ${row.source_name}${row.scenario ? ` · ${row.scenario}` : ""} · ${unitLabel(row)}`;
+  return `${row.label} · ${row.source_kind === "CONSENSUS" ? consensusProviderLabel(row.source_name) : row.source_name}${row.scenario ? ` · ${row.scenario}` : ""} · ${unitLabel(row)}`;
 }
 
 /** Plot geometry only. Missing/checked values and missing reporting windows break the path. */

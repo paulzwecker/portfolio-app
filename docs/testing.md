@@ -213,3 +213,43 @@ Review desktop/mobile and light/dark themes. Real screenshots/readbacks remain p
 default CI uses synthetic data and skips this recording. Freshness assertions require
 a contemporaneous recording bundle; never alter original capture timestamps to make
 old provider data appear current.
+
+## Private consensus source rehearsal
+
+Set `TEST_DATABASE_URL` to the existing disposable loopback PostgreSQL `_test`
+database and `BROWSER_CONSENSUS_RECEIPT` to the off-repository capture receipt.
+The receipt binds the fixed EODHD AMZN demo URL, original retrieval timestamp,
+payload path and SHA256. Source files must remain inside the private bundle.
+Missing evidence fails; this test never fetches a replacement from the network.
+
+```powershell
+node scripts/uv.mjs run --locked --project apps/api pytest apps/api/tests/test_real_consensus.py -q
+```
+
+The source-data test seeds fictional isolated research context, then exercises the
+existing durable ingestion service, same-day reuse and a later scheduled replay.
+It independently compares raw forward-period means, ranges and analyst counts
+against canonical PostgreSQL and both consensus/financial-statement APIs. It checks
+the pre-capture knowledge cutoff and hashes all unrelated tables before/after.
+The delayed replay preserves original source time and proves idempotence, not a
+second real snapshot or newly changed forecasts. Ordinary CI excludes this test.
+
+For browser review set a free `BROWSER_API_PORT` and start:
+
+```powershell
+node scripts/uv.mjs run --locked --project apps/api python apps/api/tests/browser_server.py --scenario real-consensus --lifetime-seconds 600
+```
+
+In another terminal set matching loopback `API_BASE_URL`, `BROWSER_API_PORT`, a free
+`E2E_WEB_PORT`, `E2E_REAL_CONSENSUS_API=1`, and `CONSENSUS_ARTIFACT_DIR` to a private
+off-repository directory. Run the existing harness:
+
+```powershell
+node node_modules/@playwright/test/cli.js test --config apps/web/playwright.config.ts real-consensus.spec.ts --project desktop --workers 1
+```
+
+Repeat mobile with a fresh fixture. The test checks annual/quarterly revenue,
+source ranges/counts, explicit uncertain EPS, reload persistence, light/dark themes,
+no browser writes and unchanged protected state. Source screenshots remain private.
+The local fixture cleans up its own schema on normal shutdown. Use a contemporaneous
+recording for freshness checks; never rewrite capture timestamps to keep it fresh.

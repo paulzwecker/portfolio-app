@@ -20,6 +20,7 @@ from alembic import command
 from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
 from browser_public_market_data import PublicMarketReplay
+from browser_real_estimates import prepare_real_estimates
 from browser_real_sec_data import SecRecording, prepare_real_sec_data
 from browser_refresh_data import RefreshRehearsal
 from browser_sec_data import prepare_sec_data
@@ -370,6 +371,7 @@ def main(argv: list[str] | None = None) -> None:
             "sec-refresh-workflow",
             "sec-real-refresh",
             "public-market-refresh",
+            "real-consensus",
         ),
         default="demo",
     )
@@ -410,6 +412,13 @@ def main(argv: list[str] | None = None) -> None:
         if args.scenario == "demo":
             with Session(engine) as session, session.begin():
                 seed(session)
+        elif args.scenario == "real-consensus":
+            path = os.environ.get("BROWSER_CONSENSUS_RECEIPT")
+            if not path:
+                parser.error("Private BROWSER_CONSENSUS_RECEIPT is required")
+            metadata = prepare_real_estimates(engine, settings, Path(path))
+            metadata["schema"] = schema
+            reader = fixture_read_engine(url, schema, settings)
         elif args.scenario == "public-market-refresh":
             path = os.environ.get("BROWSER_PUBLIC_MARKET_MANIFEST")
             if not path:
@@ -476,8 +485,8 @@ def main(argv: list[str] | None = None) -> None:
         server = uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port))
         lifetime = args.lifetime_seconds or (120 if metadata is not None else None)
         print(
-            "Isolated recorded official SEC data with fictional portfolio context ready."
-            if recording
+            "Isolated recorded financial-source data with fictional portfolio context ready."
+            if recording or args.scenario == "real-consensus"
             else "Isolated fictional browser fixtures ready."
         )
         if lifetime:

@@ -11,6 +11,7 @@ import type {
 } from "@/lib/domain-contracts";
 import { formatCompactFinancial, quantity } from "@/lib/display";
 import {
+  consensusProviderLabel,
   financialSegments,
   indexedFinancialSegments,
   rowLabel,
@@ -99,7 +100,7 @@ export function FinancialSeriesChart({
               />
               {row.label} · {unitLabel(row)}
               {row.source_kind !== "REPORTED_ACTUAL"
-                ? ` · ${row.source_name}`
+                ? ` · ${row.source_kind === "CONSENSUS" ? consensusProviderLabel(row.source_name) : row.source_name}`
                 : ""}
               {row.scenario ? ` · ${row.scenario}` : ""}
               <span aria-hidden="true">×</span>

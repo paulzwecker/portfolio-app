@@ -6,31 +6,28 @@ Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field                    | Current value                                                                                                                          |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint        | Free market/FX source-to-valuation slice; [handoff](docs/ACTIVE_WORKSTREAM.md).                                                        |
-| Branch / PR              | `codex/official-fx-valuation` stacked on frozen PR #39 head `69371f1`; no competing PR.                                                |
-| Actual isolated coverage | AMZN: 255 native-price sessions; USD/EUR + DKK/EUR: 518 observations through November 13.                                              |
-| User outcome             | Real-source price chart and EUR mark-to-market for explicitly fictional holdings; manual/scheduled incremental proof.                  |
-| Production               | November 15 read-only verification: exact target/schema/22 holdings/2 FX pairs matched; all observation counts remain zero.            |
-| Next operator action     | Approve durable backup destination/key custody/restore target; run existing recovery rehearsal, then separately scoped ECB activation. |
-| Deferred                 | Non-demo free prices for remaining holdings, additional SEC issuers, consensus, Sheets and generic infrastructure.                     |
+| Field                    | Current value                                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint        | Free Amazon analyst expectations, frozen local source-to-UI slice; [handoff](docs/ACTIVE_WORKSTREAM.md).                                             |
+| Branch / PR              | `codex/free-expectations` stacked on `b432335` market/FX work and frozen PR #39 head `69371f1`; no competing PR.                                     |
+| Actual isolated coverage | One genuine snapshot: eight revenue/EPS observations for FY2026/FY2027 and Q4 2026/Q1 2027; four EPS rows remain DATA_CHECK.                         |
+| User outcome             | Annual/quarterly revenue expectations in Financials, analyst ranges/counts and source evidence; uncertain EPS stays separate from actuals/models.    |
+| Verification             | Real private recording → durable ingestion → PostgreSQL → API → desktop/mobile light/dark UI; replay and protected-state checks pass.                |
+| Production               | Prior November 15 00:18 UTC readback: all observation counts zero. No production writes or new readback in this estimates run.                       |
+| Next operator action     | Approve durable recovery destination/key custody/restore target; execute existing rehearsal, then exact SEC/ECB activation scopes.                   |
+| Deferred                 | Broader free estimates/prices, verified EPS methodology, real revision history, comparisons without aligned data, Sheets and generic infrastructure. |
 
-Official ECB reference rates and documented EODHD AMZN demo access provide the
-selected isolated slice at zero subscription cost. Immutable private recordings
-support initial and incremental ingestion, canonical reconciliation, dated FX and
-native-close valuation. Data gaps remain explicit; no split-only history, corporate
-transactions or historical portfolio performance are inferred. EODHD demo cannot
-execute in production. Accepted portfolio/model state remains unchanged.
+The documented EODHD AMZN demo permits this bounded private evaluation at zero
+subscription cost; it is not an approved production consensus feed. Exact issuer,
+USD currency basis, analyst coverage, fiscal periods and retrieval timestamps remain
+explicit. Forty-seven ended-period rows and relative lookback fields do not become
+historical consensus. Source values/screenshots remain outside public Git.
 
-PR #39's MSCI/Microsoft SEC workflow remains frozen and independently reviewable.
-This separate branch preserves its history and introduces no migration or new
-service. Release is CONFIGURATION_REQUIRED, not production activation. Real-source
-values and screenshots remain private under the provider's redistribution terms.
-Desktop/mobile manual-to-chart and scheduled-to-EUR-valuation journeys pass;
-143 selected PostgreSQL checks and 19 final source/identity/valuation checks pass,
-alongside unit tests, contracts, types, build and deployment/schema gates. Scope is
-frozen; the remaining production prerequisites are external operator gates.
+No new service, table, migration or API shape. Existing ingestion and Financials
+components are reused. Individual observation freshness prevents uncertain EPS from
+hiding valid revenue or a fresh neighbor from legitimizing a stale forecast.
+Demo configuration/execution rejects production. Release is CONFIGURATION_REQUIRED;
+PR #39 remains owner-controlled and unchanged, with separate stacked work preserved.
 
 ## Prior implementation evidence
 

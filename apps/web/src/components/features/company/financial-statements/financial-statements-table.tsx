@@ -5,7 +5,12 @@ import type {
   FinancialStatementRow,
 } from "@/lib/domain-contracts";
 import { formatCompactFinancial, quantity } from "@/lib/display";
-import { rowLabel, sourceLabels, unitLabel } from "./financial-series";
+import {
+  consensusProviderLabel,
+  rowLabel,
+  sourceLabels,
+  unitLabel,
+} from "./financial-series";
 
 export function FinancialStatementsTable({
   data,
@@ -118,7 +123,7 @@ export function FinancialStatementsTable({
                         <span className="mt-1 block text-[10px] text-muted-foreground">
                           {sourceLabels[row.source_kind]}
                           {row.source_kind !== "REPORTED_ACTUAL"
-                            ? ` · ${row.source_name}`
+                            ? ` · ${row.source_kind === "CONSENSUS" ? consensusProviderLabel(row.source_name) : row.source_name}`
                             : ""}
                           {row.scenario ? ` · ${row.scenario}` : ""}
                         </span>

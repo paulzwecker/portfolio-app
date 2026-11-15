@@ -48,6 +48,32 @@ restriction. Keep source identity immutable; never label an alternative feed as 
 
 ## Smallest activation steps
 
+### Analyst estimates: one isolated example, no broad free feed
+
+The November 15 review found a concrete no-signup EODHD AMZN fundamentals demo,
+including annual/quarterly revenue and EPS means, ranges and analyst counts. One
+bounded request captured four forward periods, with eight canonical observations.
+The ten-credit request is distinct from ten HTTP requests. Private access/storage
+terms above permit the local evaluation; demo availability is not production-feed
+entitlement or a reliability commitment. Exact Amazon USD identity is constrained
+and disclosed; EPS accounting basis remains unverified. No historical revisions
+are claimed from one capture. See [consensus semantics](consensus-estimates.md#bounded-eodhd-private-evaluation-2026-11-15).
+
+| Alternative                    | Finding                                                                                                                                                       | Decision                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ASML investor relations        | [Analyst coverage](https://www.asml.com/en/investors/shares/analyst-coverage) lists analysts, not a verified numeric consensus feed.                          | No automated numeric integration.                                                          |
+| Equibles                       | [Pricing](https://equibles.com/pricing) places forecasts behind paid access.                                                                                  | Excluded by zero-cost policy.                                                              |
+| Alpha Vantage / FMP            | No verified free estimate entitlement plus storage/display rights for this use. No new requests or accounts.                                                  | Existing adapters/probes remain inactive.                                                  |
+| Yahoo / open-source collectors | Visible values and collector code do not grant source automation rights.                                                                                      | No unofficial endpoint probing or restricted scraping.                                     |
+| Issuer guidance                | Amazon's [SEC-hosted release](https://www.sec.gov/Archives/edgar/data/1018724/000101872426000038/amzn-20260930xex991.htm) contains dated management guidance. | Possible separate evidence category; not analyst consensus and not imported in this slice. |
+
+No sustainable zero-cost production consensus source for all holdings has been
+verified. Keep that coverage gap explicit. Do not expand this milestone into a new
+guidance framework or a paid fallback. Existing SEC/ECB activation is the higher-value
+operational next step once recovery and exact production approvals are satisfied.
+
+### Existing SEC activation sequence
+
 1. **Locally verified:** three official SEC requests captured MSCI Company Facts,
    submissions and one index-linked history file using the existing contact.
    Unchanged private recordings reconcile 1,596 facts and 310 filing references

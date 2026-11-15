@@ -83,6 +83,12 @@ export function FinancialStatementsWorkspace({
     isCompanyFinancialStatements,
   );
   const data = state.data;
+  const demoEstimates = data?.consensus?.providers.find(
+    (provider) =>
+      provider.selected &&
+      provider.provider_id === "eodhd_demo_estimates" &&
+      provider.observation_count > 0,
+  );
   const allRows = (data?.rows ?? [])
     .slice()
     .sort(
@@ -223,9 +229,9 @@ export function FinancialStatementsWorkspace({
           </p>
         )}
         <p className="text-xs leading-4 text-muted-foreground">
-          Columns use the reported period end. Fiscal-year and quarter labels
-          appear only when the canonical filing evidence supports them; an
-          ambiguous period stays date-only.
+          Columns use the source fiscal period end. Fiscal-year and quarter
+          labels appear only when canonical evidence supports them; an ambiguous
+          period stays date-only.
         </p>
         {!data ? (
           <PendingOrError {...state} />
@@ -235,15 +241,38 @@ export function FinancialStatementsWorkspace({
               <span>
                 {cutoff
                   ? `Known in the app by ${cutoff} · publication cutoff also applied`
-                  : "Latest known filings and accepted research"}
+                  : "Latest known filings, analyst estimates and accepted research"}
               </span>
-              {hasAlignedCells && (
+              {hasAlignedCells && data.latest_observed_at && (
                 <span>
                   Latest reported observation{" "}
                   {dateTime(data.latest_observed_at)}
                 </span>
               )}
+              {demoEstimates?.latest_observed_at && (
+                <span>
+                  Latest estimate retrieval{" "}
+                  {dateTime(demoEstimates.latest_observed_at)}
+                </span>
+              )}
             </div>
+            {demoEstimates && (
+              <p
+                role="note"
+                className="rounded-lg border bg-muted/30 p-3 text-xs leading-5 text-muted-foreground"
+              >
+                <strong className="text-foreground">
+                  EODHD demo · private evaluation.
+                </strong>{" "}
+                Provider-reported analyst expectations remain separate from
+                company guidance and accepted model assumptions.{" "}
+                {demoEstimates.currency === null &&
+                  "Estimate currency is unverified; captured values remain in Sources & alignment, excluded from aligned comparisons. "}
+                EPS accounting basis is unresolved, so EPS comparisons remain
+                unavailable. Revision history starts with captured snapshots;
+                earlier values are not reconstructed.
+              </p>
+            )}
             {hasAlignedCells && (
               <MetricGroup label="Financial statement coverage" columns={4}>
                 <MetricCard
