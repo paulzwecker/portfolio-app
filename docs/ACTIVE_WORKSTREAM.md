@@ -35,7 +35,7 @@ worktrees, owner edits and stash are untouched. No protected merge or deployment
 Prior evidence: isolated MSCI 1,596 facts/310 filing references; Microsoft 1,909/428;
 AMZN 255 native closes and USD/EUR + DKK/EUR 518 FX observations through November 13;
 eight AMZN revenue/EPS forecasts across four periods captured November 15.
-Fresh integrated reconciliation is pending. Authentic recordings/screenshots remain
+All four private source API replays pass on the integrated code. Authentic recordings/screenshots remain
 private where source redistribution terms require it. Surrounding holdings, cash,
 targets and native-model examples are fictional, never live owner observations.
 
@@ -45,19 +45,47 @@ Broader zero-cost equity/consensus access is unverified. EPS basis remains DATA_
 one estimates capture is not a historical revision series. FMP and Yahoo remain
 inactive without verified free entitlement. No paid dependencies are required.
 
-Current production read-only verification is in progress. No production backup is
-established by #37: a destination, key custody and isolated restore target still
-need owner approval and the existing interactive rehearsal. The old Neon branch
-expires November 15 and is not durable recovery. All write/activation gates remain.
+Fresh guarded read-only checks at 01:14–01:19 UTC on November 15 verify exact Neon
+primary identity, schema `b59f16c8a203`, accepted canonical receipt and the 22-listing,
+two-pair approved market window. All six observation categories remain zero;
+22 holdings, two cash rows, one target revision and 16 targets are unchanged.
+The live API is ready/current and its authenticated portfolio read returns one
+portfolio. SEC preview is blocked: zero reviewed CIK mappings for 21 held issuers.
+
+No production backup is established by #37. A destination, key custody and isolated
+restore target still need approval and the existing interactive rehearsal. The old
+Neon branch expires November 15 at 14:18:37 CET; the configured recovery connection
+does not match current endpoint inventory, so fresh recovery readback stopped.
+Four disposable database archive/encryption/restore checks pass, which does not
+establish production recovery. No credentials, settings or production data changed.
+
+Live Render is `9a27353`; Vercel production is `866723e`. Render Auto-Deploy after
+checks and Blueprint Auto Sync are enabled; Vercel's schema hook permits production
+builds. **Deployment is not frozen.** Direct Render service write/ingestion/manual/
+recurring/workbook/FMP flags are false and Sheets polling is zero. SEC contact is
+absent directly on the service; linked environment-group contact remains unverified.
 
 ### Release boundary and next action
 
-Engineering evidence is being refreshed; do not yet claim ENGINEERING_READY.
+Local integration passes: 1,092 backend units (two platform skips), 530 web tests,
+four source-backed PostgreSQL/API replays, four cross-feature native-price/model
+boundary cases, four archive/encrypted recovery checks, and 157 authenticated
+production-build browser cases (61 explicit opt-ins skipped). The two new combined
+real-source desktop/mobile journeys pass in light/dark themes. Types (256 Python
+files and TypeScript), lint, contracts, build and 21 deployment checks pass. Full
+PostgreSQL CI and refreshed source-specific UI refresh runs are still in progress.
+Independent financial/isolation and visual reviews found no remaining A-class
+blocker. Existing single-snapshot history-panel clutter is deferred B-class polish.
+
 The new `GET /v1/financial-models/{id}/return-hurdle` endpoint and additive native-price
-fields require an API-first release. No migration is introduced. Keep Vercel
-production frozen until the owner authorizes and verifies the matching Render API,
-then separately releases the frontend. Actual hosted commits/settings must be
-verified; CI success is not release or data-operational readiness.
+fields require an API-first release. No migration is introduced. Release is
+**REQUIRES_COORDINATED_RELEASE; RELEASE_READY=false; DATA_OPERATIONALLY_VERIFIED=false**.
+Before merge the owner must freeze Vercel production, authorize the API-first
+release and verify the matching Render API, then separately release the frontend.
+CI success is not release or data-operational readiness. PR #39 is temporarily
+draft while its expanded integration evidence and latest-head CI are refreshed.
+Live authenticated UI readback is unverified because frontend Basic Auth credentials
+are not present locally; no authentication was guessed or bypassed.
 
 After this milestone: approved recovery rehearsal, then exact SEC/ECB production
 activation through existing guards. Broader source coverage, guidance ingestion,

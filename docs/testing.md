@@ -290,3 +290,29 @@ source ranges/counts, explicit uncertain EPS, reload persistence, light/dark the
 no browser writes and unchanged protected state. Source screenshots remain private.
 The local fixture cleans up its own schema on normal shutdown. Use a contemporaneous
 recording for freshness checks; never rewrite capture timestamps to keep it fresh.
+
+## Integrated private investor journey
+
+`browser_server.py --scenario integrated-real-sources --lifetime-seconds 600`
+composes the existing private market, consensus and SEC recordings in one disposable
+schema. Set all three existing manifest variables (`BROWSER_PUBLIC_MARKET_MANIFEST`,
+`BROWSER_CONSENSUS_RECEIPT`, `BROWSER_SEC_RECORDING_MANIFEST`) and the usual loopback
+`TEST_DATABASE_URL` / `BROWSER_API_PORT`. Amazon market and estimates reuse the exact
+same company/security/listing. The verified SEC issuer stays separate; fictional
+holdings and cash never become source observations or accepted owner data.
+
+Run `integrated-real-sources.spec.ts` through the existing Playwright harness with
+`E2E_INTEGRATED_REAL_SOURCES_API=1`, matching loopback `API_BASE_URL`, a free
+`E2E_WEB_PORT` and private off-repository `INTEGRATED_SOURCE_ARTIFACT_DIR`.
+Desktop/mobile traverse Portfolio value → company prices → expectations → missing
+native-model state → Holdings → exact SEC issuer statements/filings. Ingestion
+preparation reconciles raw counts and unchanged protected state; browser access
+then uses the existing enforced read-only database connection. Original retrieval
+times and source-quality warnings remain visible. No live network fallback exists.
+
+Existing `public-market-refresh.spec.ts` and `real-sec-refresh.spec.ts` separately
+exercise actual UI refresh requests against fresh mutable isolated fixtures;
+return-hurdle scenarios use explicitly fictional accepted-model inputs. Do not
+mix those hypotheses into the authentic market/fundamentals dataset. The new
+`test_integrated_financial_boundaries.py` proves native closes may value holdings
+without becoming model reference prices/current IRRs across all native methods.

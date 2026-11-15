@@ -9,6 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+from uuid import UUID
 
 from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
@@ -20,8 +21,12 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services
 from portfolio_api.domain.models import (
     Actor,
+    Company,
     ConsensusEstimateObservation,
     ConsensusEstimateSourceRole,
+    Listing,
+    Portfolio,
+    Security,
 )
 from portfolio_api.eodhd_consensus import EodhdConsensusProvider
 from portfolio_api.external_data import ExternalDataDomain, ProviderQuery
@@ -53,7 +58,11 @@ def protected_estimate_state(engine: Engine) -> str:
 
 
 def prepare_real_estimates(
-    engine: Engine, settings: Settings, receipt_path: Path
+    engine: Engine,
+    settings: Settings,
+    receipt_path: Path,
+    *,
+    context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     receipt = json.loads(receipt_path.read_bytes())
     path = Path(receipt["file"]).resolve()
@@ -76,32 +85,55 @@ def prepare_real_estimates(
         raise ValueError("The recorded estimate URL is not the reviewed fixed endpoint")
     settings = settings.model_copy(update={"consensus_provider": "eodhd_demo_estimates"})
     with Session(engine, expire_on_commit=False) as session, session.begin():
-        company = services.create_company(
-            session, s.CompanyCreate(name="Amazon", reporting_currency="USD")
-        )
-        security = services.create_security(
-            session,
-            company.id,
-            s.SecurityCreate(name="Amazon common stock", security_type="COMMON_STOCK"),
-        )
-        listing = services.create_listing(
-            session, security.id, s.ListingCreate(ticker="AMZN", venue="NASDAQ", currency="USD")
-        )
-        services.transition_lifecycle(
-            session,
-            company.id,
-            s.LifecycleChange(
-                new_state="WATCHLIST",
-                expected_event_id=None,
-                actor=Actor.IMPORT,
-                effective_at=datetime.now(UTC),
-                reason="Fictional isolated research context; genuine recorded estimates",
-                source="private-estimate-rehearsal",
-            ),
-        )
-        portfolio = services.create_portfolio(
-            session, s.PortfolioCreate(name="Isolated expectations research", base_currency="EUR")
-        )
+        if context is None:
+            company = services.create_company(
+                session, s.CompanyCreate(name="Amazon", reporting_currency="USD")
+            )
+            security = services.create_security(
+                session,
+                company.id,
+                s.SecurityCreate(name="Amazon common stock", security_type="COMMON_STOCK"),
+            )
+            listing = services.create_listing(
+                session, security.id, s.ListingCreate(ticker="AMZN", venue="NASDAQ", currency="USD")
+            )
+            services.transition_lifecycle(
+                session,
+                company.id,
+                s.LifecycleChange(
+                    new_state="WATCHLIST",
+                    expected_event_id=None,
+                    actor=Actor.IMPORT,
+                    effective_at=datetime.now(UTC),
+                    reason="Fictional isolated research context; genuine recorded estimates",
+                    source="private-estimate-rehearsal",
+                ),
+            )
+            portfolio = services.create_portfolio(
+                session,
+                s.PortfolioCreate(name="Isolated expectations research", base_currency="EUR"),
+            )
+        else:
+            existing_company = session.get(Company, UUID(context["company_id"]))
+            existing_listing = session.get(Listing, UUID(context["listing_id"]))
+            existing_portfolio = session.get(Portfolio, UUID(context["portfolio_id"]))
+            existing_security = (
+                session.get(Security, existing_listing.security_id) if existing_listing else None
+            )
+            if (
+                existing_company is None
+                or existing_listing is None
+                or existing_portfolio is None
+                or existing_security is None
+                or existing_company.name != "Amazon"
+                or existing_company.reporting_currency != "USD"
+                or existing_security.company_id != existing_company.id
+                or existing_security.security_type != "COMMON_STOCK"
+                or (existing_listing.ticker, existing_listing.venue, existing_listing.currency)
+                != ("AMZN", "NASDAQ", "USD")
+            ):
+                raise ValueError("Combined rehearsal requires the exact existing Amazon identity")
+            company, listing, portfolio = existing_company, existing_listing, existing_portfolio
         mapping = add_provider_mapping(
             session,
             company_id=company.id,

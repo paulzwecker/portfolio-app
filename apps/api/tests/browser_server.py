@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 
 import uvicorn
 from alembic import command
+from browser_integrated_sources import prepare_integrated_sources
 from browser_ledger_ownership import prepare_ledger_ownership
 from browser_portfolio_data import PortfolioDataState, prepare_portfolio_data
 from browser_public_market_data import PublicMarketReplay
@@ -373,6 +374,7 @@ def main(argv: list[str] | None = None) -> None:
             "sec-real-refresh",
             "public-market-refresh",
             "real-consensus",
+            "integrated-real-sources",
             "return-hurdle",
             "return-hurdle-unpriced",
         ),
@@ -415,6 +417,22 @@ def main(argv: list[str] | None = None) -> None:
         if args.scenario == "demo":
             with Session(engine) as session, session.begin():
                 seed(session)
+        elif args.scenario == "integrated-real-sources":
+            paths = [
+                os.environ.get(name)
+                for name in (
+                    "BROWSER_PUBLIC_MARKET_MANIFEST",
+                    "BROWSER_CONSENSUS_RECEIPT",
+                    "BROWSER_SEC_RECORDING_MANIFEST",
+                )
+            ]
+            if not all(paths):
+                parser.error("All three private source recording paths are required")
+            metadata = prepare_integrated_sources(
+                engine, settings, *(Path(str(path)) for path in paths)
+            )
+            metadata["schema"] = schema
+            reader = fixture_read_engine(url, schema, settings)
         elif args.scenario == "real-consensus":
             path = os.environ.get("BROWSER_CONSENSUS_RECEIPT")
             if not path:
@@ -495,7 +513,7 @@ def main(argv: list[str] | None = None) -> None:
         lifetime = args.lifetime_seconds or (120 if metadata is not None else None)
         print(
             "Isolated recorded financial-source data with fictional portfolio context ready."
-            if recording or args.scenario == "real-consensus"
+            if recording or args.scenario in {"real-consensus", "integrated-real-sources"}
             else "Isolated fictional browser fixtures ready."
         )
         if lifetime:
