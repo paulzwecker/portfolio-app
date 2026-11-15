@@ -56,6 +56,10 @@ replay); all four MSCI/Microsoft desktop/mobile journeys pass. Types, lint,
 formatting, contracts and schema/deployment gates are checked at integration;
 latest-head CI results are maintained in PR #39. Independent accounting/identity
 and visual reviews found no A-class blocker. [Reproduction](testing.md#recorded-official-sec-responses-through-the-investor-ui).
+CI exposed two existing same-day scheduler tests crossing midnight when they added
+one minute to the wall clock. Their fixture timestamps are now fixed at UTC noon;
+production day-boundary/retry behavior is unchanged. All 21 recurring-operations
+checks and the existing explicit next-day SEC integration check pass.
 Screenshots: [annual desktop](design/screenshots/microsoft-annual-desktop.png),
 [quarterly mobile](design/screenshots/microsoft-quarterly-mobile.png),
 [filing history](design/screenshots/microsoft-filings-desktop.png).

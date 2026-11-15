@@ -443,7 +443,8 @@ def test_sec_retryable_partial_result_is_retried_before_daily_cadence(
 def test_sec_job_reuses_same_day_manual_partial_without_fetching_again(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    now_at = datetime.now(UTC)
+    # The one-minute advance must stay within the UTC day, including midnight CI runs.
+    now_at = datetime(2026, 11, 14, 12, tzinfo=UTC)
     with Session(postgres_engine) as session:
         run = ExternalIngestionRun(
             provider_id=PROVIDERS[ExternalDataDomain.REPORTED_FUNDAMENTALS],
@@ -511,7 +512,8 @@ def test_retry_after_override_is_recorded_for_partial_job(postgres_engine: Engin
 def test_sec_retry_does_not_exceed_two_same_day_replays(
     postgres_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    now_at = datetime.now(UTC)
+    # The one-minute advance must stay within the UTC day, including midnight CI runs.
+    now_at = datetime(2026, 11, 14, 12, tzinfo=UTC)
     provider_id = PROVIDERS[ExternalDataDomain.REPORTED_FUNDAMENTALS]
     with Session(postgres_engine) as session:
         original = ExternalIngestionRun(
