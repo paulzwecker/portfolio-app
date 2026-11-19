@@ -254,6 +254,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/agent-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Agent Context */
+        get: operations["get_company_agent_context_v1_companies__company_id__agent_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/candidate-pipeline": {
         parameters: {
             query?: never;
@@ -2810,6 +2827,46 @@ export interface components {
              */
             valuation_listing_id: string;
         };
+        /** AgentContextCoverage */
+        AgentContextCoverage: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "PARTIAL" | "NO_DATA" | "AMBIGUOUS" | "UNSUPPORTED";
+            /** Reason */
+            reason?: string | null;
+            /** Latest Recorded At */
+            latest_recorded_at?: string | null;
+            /** Truncated */
+            truncated?: boolean;
+        };
+        /** AgentContextNativeModel */
+        AgentContextNativeModel: {
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Model Name */
+            model_name: string;
+            /** Model Type */
+            model_type: string;
+            /**
+             * Valuation Listing Id
+             * Format: uuid
+             */
+            valuation_listing_id: string;
+            /** Model Currency */
+            model_currency: string;
+            accepted_revision: components["schemas"]["FinancialModelRevisionSummary"];
+            /** Driver Projections */
+            driver_projections: components["schemas"]["FinancialModelDriverProjectionRead"][];
+            /** Drivers Truncated */
+            drivers_truncated: boolean;
+            /** Revision History Href */
+            revision_history_href: string;
+        };
         /** AgentOwnerCashFlowProposalMethod */
         "AgentOwnerCashFlowProposalMethod-Input": {
             inputs: components["schemas"]["OwnerCashFlowInput-Input"];
@@ -3231,6 +3288,84 @@ export interface components {
              * @enum {string}
              */
             valuation_status: "VALUED" | "FX_UNAVAILABLE" | "BALANCE_UNAVAILABLE";
+        };
+        /** CompanyAgentContextV1 */
+        CompanyAgentContextV1: {
+            /**
+             * Contract Type
+             * @default CompanyAgentContextV1
+             * @constant
+             */
+            contract_type: "CompanyAgentContextV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Known At
+             * Format: date-time
+             */
+            known_at: string;
+            identity: components["schemas"]["AgentContextCoverage"];
+            company: components["schemas"]["CompanyRead"];
+            /** Securities */
+            securities: components["schemas"]["SecurityRead"][];
+            /** Listings */
+            listings: components["schemas"]["ListingRead"][];
+            portfolio_status: components["schemas"]["AgentContextCoverage"];
+            /** Portfolio Id */
+            portfolio_id: string | null;
+            /** Portfolio Snapshot Id */
+            portfolio_snapshot_id: string | null;
+            /** Portfolio Target Revision Id */
+            portfolio_target_revision_id: string | null;
+            /** Portfolio Holdings Authority */
+            portfolio_holdings_authority: components["schemas"]["HoldingsAuthorityRead"] | null;
+            /** Portfolio */
+            portfolio: components["schemas"]["CompanyPortfolioContext"] | null;
+            metrics_status: components["schemas"]["AgentContextCoverage"];
+            /** Metric Definitions */
+            metric_definitions: components["schemas"]["CompanyMetricDefinitionRead"][];
+            /** Metric Observations */
+            metric_observations: components["schemas"]["CompanyMetricObservationRead"][];
+            guidance_status: components["schemas"]["AgentContextCoverage"];
+            /** Guidance Observations */
+            guidance_observations: components["schemas"]["CompanyGuidanceObservationRead"][];
+            consensus_status: components["schemas"]["AgentContextCoverage"];
+            /** Consensus Continuity Status */
+            consensus_continuity_status: string;
+            /** Consensus Provider Id */
+            consensus_provider_id: string | null;
+            /** Consensus Periods */
+            consensus_periods: components["schemas"]["ConsensusEstimatePeriodRead"][];
+            research_status: components["schemas"]["AgentContextCoverage"];
+            /** Current Research */
+            current_research: components["schemas"]["ResearchRevisionRead"][];
+            thesis_status: components["schemas"]["AgentContextCoverage"];
+            /** Current Theses */
+            current_theses: components["schemas"]["InvestmentThesisRevisionRead"][];
+            native_models_status: components["schemas"]["AgentContextCoverage"];
+            /** Native Models */
+            native_models: components["schemas"]["AgentContextNativeModel"][];
+            imported_outputs_status: components["schemas"]["AgentContextCoverage"];
+            /** Imported Model Outputs */
+            imported_model_outputs: components["schemas"]["CompanyModelOutputsCurrentRead"] | null;
+            /** Resource Links */
+            resource_links: {
+                [key: string]: string;
+            };
         };
         /** CompanyCandidatePipelineRead */
         CompanyCandidatePipelineRead: {
@@ -14242,6 +14377,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_agent_context_v1_companies__company_id__agent_context_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyAgentContextV1"];
                 };
             };
             /** @description Validation Error */

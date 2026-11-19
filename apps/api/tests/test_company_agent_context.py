@@ -87,6 +87,7 @@ def test_future_target_guidance_is_visible_when_already_known(
     before = reported - timedelta(hours=1)
     with Session(postgres_engine) as session, session.begin():
         company = _company(session)
+        company.created_at = reported - timedelta(days=3)
         definition = CompanyMetricDefinition(
             metric_key="synthetic.context.trips",
             company_id=company.id,
@@ -98,6 +99,7 @@ def test_future_target_guidance_is_visible_when_already_known(
             actuals_allowed=True, guidance_allowed=True,
             consensus_allowed=False, model_driver_allowed=False,
             active=True, description="Synthetic", source_reference="https://example.com/metric",
+            created_at=reported - timedelta(days=2),
         )
         session.add(definition)
         session.flush()

@@ -337,7 +337,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -445,7 +445,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -542,6 +542,116 @@
           "candidate_revision"
         ],
         "title": "AdditionalModelPortableContractV2",
+        "type": "object"
+      },
+      "AgentContextCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "latest_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latest Recorded At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "PARTIAL",
+              "NO_DATA",
+              "AMBIGUOUS",
+              "UNSUPPORTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AgentContextCoverage",
+        "type": "object"
+      },
+      "AgentContextNativeModel": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_revision": {
+            "$ref": "#/components/schemas/FinancialModelRevisionSummary",
+            "title": "Accepted Revision"
+          },
+          "driver_projections": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelDriverProjectionRead"
+            },
+            "title": "Driver Projections",
+            "type": "array"
+          },
+          "drivers_truncated": {
+            "title": "Drivers Truncated",
+            "type": "boolean"
+          },
+          "model_currency": {
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_type": {
+            "title": "Model Type",
+            "type": "string"
+          },
+          "revision_history_href": {
+            "title": "Revision History Href",
+            "type": "string"
+          },
+          "valuation_listing_id": {
+            "format": "uuid",
+            "title": "Valuation Listing Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "model_name",
+          "model_type",
+          "valuation_listing_id",
+          "model_currency",
+          "accepted_revision",
+          "driver_projections",
+          "drivers_truncated",
+          "revision_history_href"
+        ],
+        "title": "AgentContextNativeModel",
         "type": "object"
       },
       "AgentOwnerCashFlowProposalMethod-Input": {
@@ -1895,6 +2005,267 @@
           "valuation_status"
         ],
         "title": "CashValuation",
+        "type": "object"
+      },
+      "CompanyAgentContextV1": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyRead",
+            "title": "Company"
+          },
+          "consensus_continuity_status": {
+            "title": "Consensus Continuity Status",
+            "type": "string"
+          },
+          "consensus_periods": {
+            "items": {
+              "$ref": "#/components/schemas/ConsensusEstimatePeriodRead"
+            },
+            "title": "Consensus Periods",
+            "type": "array"
+          },
+          "consensus_provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Provider Id"
+          },
+          "consensus_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Consensus Status"
+          },
+          "contract_type": {
+            "const": "CompanyAgentContextV1",
+            "default": "CompanyAgentContextV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "current_research": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchRevisionRead"
+            },
+            "title": "Current Research",
+            "type": "array"
+          },
+          "current_theses": {
+            "items": {
+              "$ref": "#/components/schemas/InvestmentThesisRevisionRead"
+            },
+            "title": "Current Theses",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "guidance_observations": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyGuidanceObservationRead"
+            },
+            "title": "Guidance Observations",
+            "type": "array"
+          },
+          "guidance_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Guidance Status"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Identity"
+          },
+          "imported_model_outputs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyModelOutputsCurrentRead"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Model Outputs"
+          },
+          "imported_outputs_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Imported Outputs Status"
+          },
+          "known_at": {
+            "format": "date-time",
+            "title": "Known At",
+            "type": "string"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/ListingRead"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "metric_definitions": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMetricDefinitionRead"
+            },
+            "title": "Metric Definitions",
+            "type": "array"
+          },
+          "metric_observations": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMetricObservationRead"
+            },
+            "title": "Metric Observations",
+            "type": "array"
+          },
+          "metrics_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Metrics Status"
+          },
+          "native_models": {
+            "items": {
+              "$ref": "#/components/schemas/AgentContextNativeModel"
+            },
+            "title": "Native Models",
+            "type": "array"
+          },
+          "native_models_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Native Models Status"
+          },
+          "portfolio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyPortfolioContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio"
+          },
+          "portfolio_holdings_authority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldingsAuthorityRead"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Holdings Authority"
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Id"
+          },
+          "portfolio_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Snapshot Id"
+          },
+          "portfolio_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Portfolio Status"
+          },
+          "portfolio_target_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Target Revision Id"
+          },
+          "research_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Research Status"
+          },
+          "resource_links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Resource Links",
+            "type": "object"
+          },
+          "securities": {
+            "items": {
+              "$ref": "#/components/schemas/SecurityRead"
+            },
+            "title": "Securities",
+            "type": "array"
+          },
+          "thesis_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage",
+            "title": "Thesis Status"
+          }
+        },
+        "required": [
+          "generated_at",
+          "as_of",
+          "known_at",
+          "identity",
+          "company",
+          "securities",
+          "listings",
+          "portfolio_status",
+          "portfolio_id",
+          "portfolio_snapshot_id",
+          "portfolio_target_revision_id",
+          "portfolio_holdings_authority",
+          "portfolio",
+          "metrics_status",
+          "metric_definitions",
+          "metric_observations",
+          "guidance_status",
+          "guidance_observations",
+          "consensus_status",
+          "consensus_continuity_status",
+          "consensus_provider_id",
+          "consensus_periods",
+          "research_status",
+          "current_research",
+          "thesis_status",
+          "current_theses",
+          "native_models_status",
+          "native_models",
+          "imported_outputs_status",
+          "imported_model_outputs",
+          "resource_links"
+        ],
+        "title": "CompanyAgentContextV1",
         "type": "object"
       },
       "CompanyCandidatePipelineRead": {
@@ -6586,8 +6957,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10.0,
-            "minimum": 6.0,
+            "maximum": 10,
+            "minimum": 6,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -6619,8 +6990,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10.0,
-            "minimum": 6.0,
+            "maximum": 10,
+            "minimum": 6,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -6644,8 +7015,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10.0,
-            "minimum": 6.0,
+            "maximum": 10,
+            "minimum": 6,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -6745,8 +7116,8 @@
             "title": "Ebit Margin"
           },
           "forecast_year": {
-            "maximum": 5.0,
-            "minimum": 1.0,
+            "maximum": 5,
+            "minimum": 1,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -6848,8 +7219,8 @@
             "type": "string"
           },
           "forecast_year": {
-            "maximum": 5.0,
-            "minimum": 1.0,
+            "maximum": 5,
+            "minimum": 1,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -6927,8 +7298,8 @@
             "type": "string"
           },
           "forecast_year": {
-            "maximum": 5.0,
-            "minimum": 1.0,
+            "maximum": 5,
+            "minimum": 1,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -10977,7 +11348,7 @@
             "type": "string"
           },
           "revision_number": {
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Revision Number",
             "type": "integer"
           }
@@ -12910,7 +13281,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -13042,7 +13413,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -14924,15 +15295,15 @@
           },
           "limit": {
             "default": 10,
-            "maximum": 10.0,
-            "minimum": 1.0,
+            "maximum": 10,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           },
           "offset": {
             "default": 0,
-            "maximum": 5000.0,
-            "minimum": 0.0,
+            "maximum": 5000,
+            "minimum": 0,
             "title": "Offset",
             "type": "integer"
           },
@@ -16990,15 +17361,15 @@
         "properties": {
           "limit": {
             "default": 50,
-            "maximum": 100.0,
-            "minimum": 1.0,
+            "maximum": 100,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           },
           "offset": {
             "default": 0,
-            "maximum": 5000.0,
-            "minimum": 0.0,
+            "maximum": 5000,
+            "minimum": 0,
             "title": "Offset",
             "type": "integer"
           }
@@ -19061,8 +19432,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19125,8 +19496,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19269,8 +19640,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19332,8 +19703,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19421,8 +19792,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           },
@@ -19511,8 +19882,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           },
@@ -20818,8 +21189,8 @@
             "title": "Quantity"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           }
@@ -20887,8 +21258,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           }
@@ -21083,8 +21454,8 @@
             "title": "Quantity"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           },
@@ -21196,8 +21567,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Sequence",
             "type": "integer"
           },
@@ -24598,8 +24969,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10.0,
-            "minimum": 1.0,
+            "maximum": 10,
+            "minimum": 1,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -24648,8 +25019,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10.0,
-            "minimum": 1.0,
+            "maximum": 10,
+            "minimum": 1,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -29060,15 +29431,15 @@
           },
           "limit": {
             "default": 50,
-            "maximum": 50.0,
-            "minimum": 1.0,
+            "maximum": 50,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           },
           "offset": {
             "default": 0,
-            "maximum": 5000.0,
-            "minimum": 0.0,
+            "maximum": 5000,
+            "minimum": 0,
             "title": "Offset",
             "type": "integer"
           },
@@ -29482,8 +29853,8 @@
             "type": "string"
           },
           "fiscal_year": {
-            "maximum": 2200.0,
-            "minimum": 1800.0,
+            "maximum": 2200,
+            "minimum": 1800,
             "title": "Fiscal Year",
             "type": "integer"
           },
@@ -32049,8 +32420,8 @@
             "type": "string"
           },
           "forecast_year": {
-            "maximum": 10.0,
-            "minimum": 1.0,
+            "maximum": 10,
+            "minimum": 1,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -33794,7 +34165,7 @@
             "type": "string"
           },
           "provider_request_count": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Provider Request Count",
             "type": "integer"
           },
@@ -33861,7 +34232,7 @@
             ]
           },
           "data_check_count": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Data Check Count",
             "type": "integer"
           },
@@ -33914,7 +34285,7 @@
             "title": "Latest Retrieved At"
           },
           "record_count": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Record Count",
             "type": "integer"
           },
@@ -33945,17 +34316,17 @@
         "additionalProperties": false,
         "properties": {
           "matching_cik": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Matching Cik",
             "type": "integer"
           },
           "other_cik": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Other Cik",
             "type": "integer"
           },
           "unverified": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Unverified",
             "type": "integer"
           }
@@ -34005,8 +34376,8 @@
         "additionalProperties": false,
         "properties": {
           "attempt_count": {
-            "maximum": 3.0,
-            "minimum": 0.0,
+            "maximum": 3,
+            "minimum": 0,
             "title": "Attempt Count",
             "type": "integer"
           },
@@ -34081,7 +34452,7 @@
           "mapped_company_count": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -34117,14 +34488,14 @@
             "type": "string"
           },
           "scope_company_count": {
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Scope Company Count",
             "type": "integer"
           },
           "source_record_count": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -34501,8 +34872,8 @@
           "fiscal_year": {
             "anyOf": [
               {
-                "maximum": 2200.0,
-                "minimum": 1800.0,
+                "maximum": 2200,
+                "minimum": 1800,
                 "type": "integer"
               },
               {
@@ -37513,6 +37884,100 @@
           }
         },
         "summary": "Get Company",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/agent-context": {
+      "get": {
+        "operationId": "get_company_agent_context_v1_companies__company_id__agent_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "portfolio_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyAgentContextV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Agent Context",
         "tags": [
           "Portfolio research"
         ]

@@ -12,7 +12,6 @@ from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services
 from portfolio_api.domain.models import (
-    Company,
     FinancialModel,
     FinancialModelRevision,
     InvestmentThesisRevision,
@@ -111,7 +110,7 @@ def company_agent_context(
     day = as_of or (known_at.astimezone(UTC).date() if known_at else requested_at.date())
     # No implicit knowledge from after the requested as-of day.
     as_of_end = datetime.combine(day, time.max, UTC)
-    cutoff = min(known_at.astimezone(UTC) if known_at else requested_at, as_of_end)
+    cutoff = min(known_at.astimezone(UTC) if known_at else requested_at, as_of_end, requested_at)
     day = min(day, cutoff.date())
 
     company = services.company(session, company_id)
@@ -166,6 +165,8 @@ def company_agent_context(
         portfolio_view = next(
             (item for item in view.companies if item.company.id == company_id), None
         )
+        if portfolio_view is not None and (as_of is not None or known_at is not None):
+            portfolio_view = portfolio_view.model_copy(update={"company": company_read})
         snapshot_id = view.snapshot.id if view.snapshot else None
         target_revision_id = view.target_revision.id if view.target_revision else None
         holdings_authority = view.holdings_authority
@@ -175,7 +176,10 @@ def company_agent_context(
             latest_recorded_at=view.snapshot.recorded_at if view.snapshot else None,
         )
 
-    definitions = observations.metric_definitions(session, company_id)
+    definitions = [
+        item for item in observations.metric_definitions(session, company_id)
+        if item.created_at <= cutoff
+    ]
     actuals = observations.company_metric_history(
         session, company_id, as_of=day, known_at=cutoff, limit=MAX_OBSERVATIONS + 1
     )
@@ -307,7 +311,12 @@ def company_agent_context(
                 "models": imported_outputs.models[:MAX_MODELS],
             })
         imported_status = _coverage(
-            len(imported_outputs.models), truncated=imported_truncated,
+            len(imported_outputs.models),
+            truncated=imported_truncated or imported_outputs.status != "AVAILABLE",
+            reason=(
+                None if imported_outputs.status == "AVAILABLE"
+                else imported_outputs.status
+            ),
         )
 
     root = f"/v1/companies/{company_id}"
