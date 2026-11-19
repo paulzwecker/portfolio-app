@@ -18,8 +18,7 @@ def _role(request: Request, supplied: str) -> tuple[Role, str]:
     if (
         request.method != "GET"
         and (
-            settings.app_env == "production"
-            or settings.database_target_environment == "production"
+            settings.app_env == "production" or settings.database_target_environment == "production"
         )
         and not settings.database_production_writes_authorized
     ):
@@ -39,8 +38,12 @@ def _role(request: Request, supplied: str) -> tuple[Role, str]:
         ),
     )
     for role, token, identity in roles:
-        if token is not None and identity is not None and hmac.compare_digest(
-            supplied.encode("utf-8"), token.get_secret_value().encode("utf-8")
+        if (
+            token is not None
+            and identity is not None
+            and hmac.compare_digest(
+                supplied.encode("utf-8"), token.get_secret_value().encode("utf-8")
+            )
         ):
             return role, identity
     if any(token is None or identity is None for _, token, identity in roles):

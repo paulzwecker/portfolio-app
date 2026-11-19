@@ -39,8 +39,16 @@ Period = Literal["DATE", "MONTH", "QUARTER", "FY", "TTM", "EVENT"]
 Qualifier = Literal["EQ", "APPROX", "GT", "GTE", "LT", "LTE"]
 BatchStatus = Literal["PENDING", "READY", "CONFLICT", "INVALID", "ACCEPTED", "REJECTED"]
 MetricCategory = Literal[
-    "OPERATING", "CUSTOMER", "CAPACITY", "PRODUCT", "MARKET_SHARE",
-    "MARKET_EXPOSURE", "SEGMENT", "BACKLOG", "QUALITY", "OTHER",
+    "OPERATING",
+    "CUSTOMER",
+    "CAPACITY",
+    "PRODUCT",
+    "MARKET_SHARE",
+    "MARKET_EXPOSURE",
+    "SEGMENT",
+    "BACKLOG",
+    "QUALITY",
+    "OTHER",
 ]
 Url = Annotated[str, Field(pattern=r"^https://", min_length=9, max_length=2000)]
 Key = Annotated[str, Field(min_length=1, max_length=160, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")]
@@ -117,7 +125,8 @@ class GuidanceObservationItem(ObservationItem):
         ):
             raise ValueError("Non-withdrawn guidance requires a value")
         if (
-            self.lower_value is not None and self.upper_value is not None
+            self.lower_value is not None
+            and self.upper_value is not None
             and self.lower_value > self.upper_value
         ):
             raise ValueError("Guidance lower bound must not exceed upper bound")
@@ -293,9 +302,13 @@ def submit(
             raise DomainError("External batch ID reused with different content", 409)
         return ObservationProposalSubmissionRead(proposal=_read(prior), replayed=True)
     candidate = CompanyObservationProposal(
-        company_id=batch.company_id, producer_id=producer_id,
-        external_batch_id=batch.external_batch_id, contract_type=batch.contract_type,
-        payload_data=payload, content_fingerprint=fingerprint, status="PENDING",
+        company_id=batch.company_id,
+        producer_id=producer_id,
+        external_batch_id=batch.external_batch_id,
+        contract_type=batch.contract_type,
+        payload_data=payload,
+        content_fingerprint=fingerprint,
+        status="PENDING",
     )
     session.add(candidate)
     session.flush()
@@ -310,8 +323,11 @@ def get(session: Session, proposal_id: UUID) -> ObservationProposalRead:
 
 
 def list_proposals(
-    session: Session, *, company_id: UUID | None = None,
-    status: BatchStatus | None = None, limit: int = 50,
+    session: Session,
+    *,
+    company_id: UUID | None = None,
+    status: BatchStatus | None = None,
+    limit: int = 50,
 ) -> list[ObservationProposalRead]:
     statement = select(CompanyObservationProposal)
     if company_id is not None:
@@ -319,7 +335,8 @@ def list_proposals(
     if status is not None:
         statement = statement.where(CompanyObservationProposal.status == status)
     statement = statement.order_by(
-        CompanyObservationProposal.submitted_at.desc(), CompanyObservationProposal.id,
+        CompanyObservationProposal.submitted_at.desc(),
+        CompanyObservationProposal.id,
     ).limit(limit)
     return [_read(item) for item in session.scalars(statement)]
 
@@ -342,57 +359,79 @@ def _preflight(
             )
             dependencies.append((key, str(prior.id) if prior else None))
             if prior is not None:
-                issues.append(ObservationProposalIssue(
-                    row_index=index, code="CONFLICT", detail="Metric key is already registered"
-                ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index, code="CONFLICT", detail="Metric key is already registered"
+                    )
+                )
             operation: Literal["CREATE", "SUPERSEDE"] = "CREATE"
             predecessor: UUID | None = None
         else:
             identity = json.dumps(
-                [key, item.period_type, item.period_start.isoformat(),
-                 item.period_end.isoformat(), item.scope_json], sort_keys=True,
+                [
+                    key,
+                    item.period_type,
+                    item.period_start.isoformat(),
+                    item.period_end.isoformat(),
+                    item.scope_json,
+                ],
+                sort_keys=True,
             )
             definition = session.scalar(
                 select(CompanyMetricDefinition).where(CompanyMetricDefinition.metric_key == key)
             )
             if definition is None:
-                issues.append(ObservationProposalIssue(
-                    row_index=index, code="INVALID", detail="Metric key is not registered"
-                ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index, code="INVALID", detail="Metric key is not registered"
+                    )
+                )
                 dependencies.append((key, None))
                 continue
-            dependencies.append((
-                key, str(definition.id), definition.active,
-                definition.deprecated_at.isoformat() if definition.deprecated_at else None,
-            ))
+            dependencies.append(
+                (
+                    key,
+                    str(definition.id),
+                    definition.active,
+                    definition.deprecated_at.isoformat() if definition.deprecated_at else None,
+                )
+            )
             enabled = (
-                definition.actuals_allowed if isinstance(item, KPIObservationItem)
+                definition.actuals_allowed
+                if isinstance(item, KPIObservationItem)
                 else definition.guidance_allowed
             )
             if (
-                not definition.active or definition.deprecated_at is not None
-                or definition.company_id not in (None, batch.company_id) or not enabled
+                not definition.active
+                or definition.deprecated_at is not None
+                or definition.company_id not in (None, batch.company_id)
+                or not enabled
                 or item.unit != definition.canonical_unit
                 or item.scale != definition.canonical_scale
                 or set(item.scope_json) - set(definition.scope_dimensions)
                 or (definition.currency_policy == "REQUIRED" and item.currency is None)
                 or (definition.currency_policy == "NONE" and item.currency is not None)
             ):
-                issues.append(ObservationProposalIssue(
-                    row_index=index, code="INVALID",
-                    detail="Metric scope, usage, unit, scale or currency violates its definition",
-                ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index,
+                        code="INVALID",
+                        detail="Metric scope, usage, unit, scale or currency violates its definition",
+                    )
+                )
             if isinstance(item, KPIObservationItem):
                 model: Any = CompanyMetricObservation
                 external_column = model.external_observation_id
                 external_id = item.external_observation_id
                 predecessor = item.supersedes_observation_id
                 if item.period_end > date.today():
-                    issues.append(ObservationProposalIssue(
-                        row_index=index,
-                        code="INVALID",
-                        detail="KPI actual period ends in the future",
-                    ))
+                    issues.append(
+                        ObservationProposalIssue(
+                            row_index=index,
+                            code="INVALID",
+                            detail="KPI actual period ends in the future",
+                        )
+                    )
                 source_at = item.reported_at
             else:
                 model = CompanyGuidanceObservation
@@ -401,84 +440,137 @@ def _preflight(
                 predecessor = item.supersedes_guidance_id
                 source_at = item.issued_at
             if source_at.tzinfo is None or source_at.utcoffset() is None or source_at > now():
-                issues.append(ObservationProposalIssue(
-                    row_index=index, code="INVALID", detail="Publication time is missing or future",
-                ))
-            existing = list(session.scalars(
-                select(model).where(
-                    model.company_id == batch.company_id,
-                    model.metric_definition_id == definition.id,
-                    model.period_start == item.period_start,
-                    model.period_end == item.period_end,
-                ).order_by(model.id)
-            ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index,
+                        code="INVALID",
+                        detail="Publication time is missing or future",
+                    )
+                )
+            existing = list(
+                session.scalars(
+                    select(model)
+                    .where(
+                        model.company_id == batch.company_id,
+                        model.metric_definition_id == definition.id,
+                        model.period_start == item.period_start,
+                        model.period_end == item.period_end,
+                    )
+                    .order_by(model.id)
+                )
+            )
             external = session.scalar(select(model).where(external_column == external_id))
             if external_id in seen_external_ids:
-                issues.append(ObservationProposalIssue(
-                    row_index=index,
-                    code="INVALID",
-                    detail="Duplicate external observation ID within batch",
-                ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index,
+                        code="INVALID",
+                        detail="Duplicate external observation ID within batch",
+                    )
+                )
             seen_external_ids.add(external_id)
-            dependencies.append((
-                external_id, str(external.id) if external else None,
-                [(str(row.id), str(row.supersedes_observation_id)
-                  if isinstance(row, CompanyMetricObservation)
-                  else str(row.supersedes_guidance_id)) for row in existing],
-            ))
+            dependencies.append(
+                (
+                    external_id,
+                    str(external.id) if external else None,
+                    [
+                        (
+                            str(row.id),
+                            str(row.supersedes_observation_id)
+                            if isinstance(row, CompanyMetricObservation)
+                            else str(row.supersedes_guidance_id),
+                        )
+                        for row in existing
+                    ],
+                )
+            )
             if external is not None:
-                issues.append(ObservationProposalIssue(
-                    row_index=index,
-                    code="CONFLICT",
-                    detail="External observation ID already exists",
-                ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index,
+                        code="CONFLICT",
+                        detail="External observation ID already exists",
+                    )
+                )
             current = [row for row in existing if row.scope_json == item.scope_json]
             predecessor_row = session.get(model, predecessor) if predecessor else None
             if predecessor is not None:
                 if predecessor_row is None or predecessor_row not in current:
-                    issues.append(ObservationProposalIssue(
-                        row_index=index,
-                        code="CONFLICT",
-                        detail="Superseded observation identity mismatches",
-                    ))
-                else:
-                    successors = list(session.scalars(select(model.id).where(
-                        (model.supersedes_observation_id if isinstance(item, KPIObservationItem)
-                         else model.supersedes_guidance_id) == predecessor
-                    )))
-                    dependencies.append((str(predecessor), [str(value) for value in successors]))
-                    if successors:
-                        issues.append(ObservationProposalIssue(
+                    issues.append(
+                        ObservationProposalIssue(
                             row_index=index,
                             code="CONFLICT",
-                            detail="Superseded observation is no longer current",
-                        ))
+                            detail="Superseded observation identity mismatches",
+                        )
+                    )
+                else:
+                    successors = list(
+                        session.scalars(
+                            select(model.id).where(
+                                (
+                                    model.supersedes_observation_id
+                                    if isinstance(item, KPIObservationItem)
+                                    else model.supersedes_guidance_id
+                                )
+                                == predecessor
+                            )
+                        )
+                    )
+                    dependencies.append((str(predecessor), [str(value) for value in successors]))
+                    if successors:
+                        issues.append(
+                            ObservationProposalIssue(
+                                row_index=index,
+                                code="CONFLICT",
+                                detail="Superseded observation is no longer current",
+                            )
+                        )
             elif current:
-                issues.append(ObservationProposalIssue(
-                    row_index=index, code="CONFLICT",
-                    detail="Existing observation for this period and scope "
-                    "requires explicit supersession",
-                ))
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=index,
+                        code="CONFLICT",
+                        detail="Existing observation for this period and scope "
+                        "requires explicit supersession",
+                    )
+                )
             operation = "SUPERSEDE" if predecessor else "CREATE"
         if identity in seen:
-            issues.append(ObservationProposalIssue(
-                row_index=index, code="INVALID", detail="Duplicate identity within batch"
-            ))
+            issues.append(
+                ObservationProposalIssue(
+                    row_index=index, code="INVALID", detail="Duplicate identity within batch"
+                )
+            )
         seen.add(identity)
-        changes.append(ObservationProposalChange(
-            row_index=index, metric_key=key, operation=operation, previous_id=predecessor,
-        ))
+        changes.append(
+            ObservationProposalChange(
+                row_index=index,
+                metric_key=key,
+                operation=operation,
+                previous_id=predecessor,
+            )
+        )
     status: Literal["READY", "CONFLICT", "INVALID"] = (
-        "INVALID" if any(i.code == "INVALID" for i in issues)
-        else "CONFLICT" if issues else "READY"
+        "INVALID" if any(i.code == "INVALID" for i in issues) else "CONFLICT" if issues else "READY"
     )
-    fingerprint = _hash({
-        "proposal": candidate.content_fingerprint, "dependencies": dependencies,
-        "issues": [issue.model_dump(mode="json") for issue in issues],
-    }) if status == "READY" else None
+    fingerprint = (
+        _hash(
+            {
+                "proposal": candidate.content_fingerprint,
+                "dependencies": dependencies,
+                "issues": [issue.model_dump(mode="json") for issue in issues],
+            }
+        )
+        if status == "READY"
+        else None
+    )
+
     return ObservationProposalPreviewRead(
-        proposal_id=candidate.id, status=status, issues=issues,
-        changes=changes, preview_fingerprint=fingerprint,
+        proposal_id=candidate.id,
+        status=status,
+        issues=issues,
+        changes=changes,
+        preview_fingerprint=fingerprint,
     )
 
 
@@ -497,8 +589,11 @@ def preview(session: Session, proposal_id: UUID) -> ObservationProposalPreviewRe
 
 
 def accept(
-    session: Session, proposal_id: UUID,
-    request: ObservationProposalDecisionRequest, *, reviewer_id: str,
+    session: Session,
+    proposal_id: UUID,
+    request: ObservationProposalDecisionRequest,
+    *,
+    reviewer_id: str,
 ) -> ObservationProposalDecisionRead:
     candidate = session.get(CompanyObservationProposal, proposal_id)
     if candidate is None:
@@ -507,7 +602,8 @@ def accept(
     session.scalar(select(Company).where(Company.id == candidate.company_id).with_for_update())
     candidate = session.scalar(
         select(CompanyObservationProposal)
-        .where(CompanyObservationProposal.id == proposal_id).with_for_update()
+        .where(CompanyObservationProposal.id == proposal_id)
+        .with_for_update()
     )
     if candidate is None:
         raise DomainError("Company observation proposal not found", 404)
@@ -523,7 +619,9 @@ def accept(
         candidate.issue = "Accepted source state changed since reviewer preview"
         candidate.preview_fingerprint = None
         return ObservationProposalDecisionRead(
-            status="PREVIEW_CHANGED", proposal=_read(candidate), preview=result,
+            status="PREVIEW_CHANGED",
+            proposal=_read(candidate),
+            preview=result,
         )
     batch = BATCH_ADAPTER.validate_python(candidate.payload_data)
     accepted_ids: list[UUID] = []
@@ -531,15 +629,24 @@ def accept(
         if isinstance(item, MetricDefinitionItem):
             record: CompanyMetricDefinition | CompanyMetricObservation | CompanyGuidanceObservation
             record = CompanyMetricDefinition(
-                metric_key=item.metric_key, company_id=batch.company_id,
-                display_name=item.display_name, category=item.category, value_kind=item.value_kind,
-                canonical_unit=item.canonical_unit, canonical_scale=item.canonical_scale,
+                metric_key=item.metric_key,
+                company_id=batch.company_id,
+                display_name=item.display_name,
+                category=item.category,
+                value_kind=item.value_kind,
+                canonical_unit=item.canonical_unit,
+                canonical_scale=item.canonical_scale,
                 currency_policy=item.currency_policy,
                 aggregation_semantics=item.aggregation_semantics,
-                default_period_type=item.default_period_type, default_basis=item.default_basis,
-                scope_dimensions=item.scope_dimensions, actuals_allowed=item.actuals_allowed,
-                guidance_allowed=item.guidance_allowed, consensus_allowed=False,
-                model_driver_allowed=False, active=True, description=item.description,
+                default_period_type=item.default_period_type,
+                default_basis=item.default_basis,
+                scope_dimensions=item.scope_dimensions,
+                actuals_allowed=item.actuals_allowed,
+                guidance_allowed=item.guidance_allowed,
+                consensus_allowed=False,
+                model_driver_allowed=False,
+                active=True,
+                description=item.description,
                 source_reference=item.source_reference,
             )
         else:
@@ -551,27 +658,42 @@ def accept(
             if definition is None:
                 raise DomainError("Accepted metric definition disappeared during review", 409)
             shared = dict(
-                company_id=batch.company_id, metric_definition_id=definition.id,
-                period_type=item.period_type, period_start=item.period_start,
-                period_end=item.period_end, fiscal_year=item.fiscal_year,
-                fiscal_quarter=item.fiscal_quarter, unit=item.unit, scale=item.scale,
-                currency=item.currency, basis=item.basis, scope_json=item.scope_json,
-                source_type=item.source_type, source_reference=item.source_reference,
+                company_id=batch.company_id,
+                metric_definition_id=definition.id,
+                period_type=item.period_type,
+                period_start=item.period_start,
+                period_end=item.period_end,
+                fiscal_year=item.fiscal_year,
+                fiscal_quarter=item.fiscal_quarter,
+                unit=item.unit,
+                scale=item.scale,
+                currency=item.currency,
+                basis=item.basis,
+                scope_json=item.scope_json,
+                source_type=item.source_type,
+                source_reference=item.source_reference,
             )
             if isinstance(item, KPIObservationItem):
                 record = CompanyMetricObservation(
-                    **shared, external_observation_id=item.external_observation_id,
-                    value=item.value, value_qualifier=item.value_qualifier,
-                    reported_at=item.reported_at, quality_status=item.quality_status,
+                    **shared,
+                    external_observation_id=item.external_observation_id,
+                    value=item.value,
+                    value_qualifier=item.value_qualifier,
+                    reported_at=item.reported_at,
+                    quality_status=item.quality_status,
                     quality_reason=item.quality_reason,
                     supersedes_observation_id=item.supersedes_observation_id,
                 )
             else:
                 record = CompanyGuidanceObservation(
-                    **shared, external_guidance_id=item.external_guidance_id,
-                    lower_value=item.lower_value, midpoint_value=item.midpoint_value,
-                    upper_value=item.upper_value, value_qualifier=item.value_qualifier,
-                    issued_at=item.issued_at, status=item.status,
+                    **shared,
+                    external_guidance_id=item.external_guidance_id,
+                    lower_value=item.lower_value,
+                    midpoint_value=item.midpoint_value,
+                    upper_value=item.upper_value,
+                    value_qualifier=item.value_qualifier,
+                    issued_at=item.issued_at,
+                    status=item.status,
                     supersedes_guidance_id=item.supersedes_guidance_id,
                 )
         session.add(record)
@@ -587,11 +709,16 @@ def accept(
 
 
 def reject(
-    session: Session, proposal_id: UUID, reason: str, *, reviewer_id: str,
+    session: Session,
+    proposal_id: UUID,
+    reason: str,
+    *,
+    reviewer_id: str,
 ) -> ObservationProposalDecisionRead:
     candidate = session.scalar(
         select(CompanyObservationProposal)
-        .where(CompanyObservationProposal.id == proposal_id).with_for_update()
+        .where(CompanyObservationProposal.id == proposal_id)
+        .with_for_update()
     )
     if candidate is None:
         raise DomainError("Company observation proposal not found", 404)

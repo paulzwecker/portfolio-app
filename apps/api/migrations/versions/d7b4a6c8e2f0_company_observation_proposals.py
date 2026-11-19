@@ -34,13 +34,15 @@ def upgrade() -> None:
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
-            ["company_id"], ["companies.id"],
+            ["company_id"],
+            ["companies.id"],
             name=op.f("fk_company_observation_proposals_company_id_companies"),
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_company_observation_proposals")),
         sa.UniqueConstraint(
-            "producer_id", "external_batch_id",
+            "producer_id",
+            "external_batch_id",
             name="uq_company_observation_producer_batch",
         ),
         sa.CheckConstraint(
@@ -50,7 +52,8 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_company_observation_proposals_company_status",
-        "company_observation_proposals", ["company_id", "status"],
+        "company_observation_proposals",
+        ["company_id", "status"],
     )
 
 

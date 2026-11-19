@@ -171,30 +171,47 @@ def test_contract_rejects_agent_supplied_authority_and_floats() -> None:
 
 def test_role_permissions_and_default_off_without_database() -> None:
     with TestClient(create_app(_settings())) as client:
-        assert client.post(
-            "/v1/company-observation-proposals",
-            json={}, headers=_auth(REVIEWER_TOKEN),
-        ).status_code == 401
+        assert (
+            client.post(
+                "/v1/company-observation-proposals",
+                json={},
+                headers=_auth(REVIEWER_TOKEN),
+            ).status_code
+            == 401
+        )
         assert client.get("/v1/company-observation-proposals").status_code == 401
-        assert client.post(
-            f"/v1/company-observation-proposals/{uuid4()}/preview",
-            headers=_auth(AGENT_TOKEN),
-        ).status_code == 401
-        assert client.post(
-            f"/v1/company-observation-proposals/{uuid4()}/accept",
-            headers=_auth(AGENT_TOKEN),
-            json={"preview_fingerprint": "a" * 64, "decision_note": "Not permitted"},
-        ).status_code == 401
+        assert (
+            client.post(
+                f"/v1/company-observation-proposals/{uuid4()}/preview",
+                headers=_auth(AGENT_TOKEN),
+            ).status_code
+            == 401
+        )
+        assert (
+            client.post(
+                f"/v1/company-observation-proposals/{uuid4()}/accept",
+                headers=_auth(AGENT_TOKEN),
+                json={"preview_fingerprint": "a" * 64, "decision_note": "Not permitted"},
+            ).status_code
+            == 401
+        )
     with TestClient(create_app(_settings(acceptance=False))) as client:
-        assert client.post(
-            f"/v1/company-observation-proposals/{uuid4()}/accept",
-            headers=_auth(REVIEWER_TOKEN),
-            json={"preview_fingerprint": "a" * 64, "decision_note": "No acceptance"},
-        ).status_code == 403
+        assert (
+            client.post(
+                f"/v1/company-observation-proposals/{uuid4()}/accept",
+                headers=_auth(REVIEWER_TOKEN),
+                json={"preview_fingerprint": "a" * 64, "decision_note": "No acceptance"},
+            ).status_code
+            == 403
+        )
     with TestClient(create_app(Settings(_env_file=None))) as client:
-        assert client.get(
-            "/v1/company-observation-proposals", headers=_auth(REVIEWER_TOKEN),
-        ).status_code == 503
+        assert (
+            client.get(
+                "/v1/company-observation-proposals",
+                headers=_auth(REVIEWER_TOKEN),
+            ).status_code
+            == 503
+        )
 
 
 def test_definition_kpi_guidance_and_correction_flow(postgres_engine: Engine) -> None:
@@ -222,9 +239,12 @@ def test_definition_kpi_guidance_and_correction_flow(postgres_engine: Engine) ->
         assert replay.status_code == 200
         assert replay.json()["replayed"] is True
         mutated = _kpi(company_id, "kpi-v1", "changed-id")
-        assert client.post(
-            "/v1/company-observation-proposals", json=mutated, headers=_auth(AGENT_TOKEN)
-        ).status_code == 409
+        assert (
+            client.post(
+                "/v1/company-observation-proposals", json=mutated, headers=_auth(AGENT_TOKEN)
+            ).status_code
+            == 409
+        )
 
         guidance_id = _submit_preview_accept(client, _guidance(company_id))
         context = client.get(f"/v1/companies/{company_id}/agent-context")
