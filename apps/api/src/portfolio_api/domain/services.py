@@ -99,7 +99,7 @@ def _validate_model_proposal_evidence(
     proposal: s.FinancialModelProposalProvenance | None,
     evidence: list[s.FinancialModelEvidenceReference],
 ) -> None:
-    version_requires_evidence = contract_version in {"1.2.0", "2.1.0"}
+    version_requires_evidence = contract_version in {"1.2.0", "1.3.0", "2.1.0"}
     if version_requires_evidence and proposal is None:
         raise DomainError(
             "INSUFFICIENT_EVIDENCE: proposal author, timestamp and source reference are required",
@@ -1488,9 +1488,11 @@ def import_additional_model_contract(
 
 
 def _contract_digest(value: s.FinancialModelContractV1) -> str:
-    canonical = json.dumps(
-        value.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    data = value.model_dump(mode="json")
+    # Preserve immutable digests for already accepted v1.0–v1.2 contracts.
+    if value.contract_version != "1.3.0":
+        data.pop("driver_projections", None)
+    canonical = json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
 
 
@@ -1719,6 +1721,12 @@ def _financial_model_contract_preview(
         value.proposal,
         value.supporting_evidence,
     )
+    from portfolio_api.model_driver_publications import validate_driver_inputs
+
+    try:
+        validate_driver_inputs(session, model, value.driver_projections)
+    except ValueError as error:
+        raise DomainError(str(error), 422) from None
 
     source_id = value.candidate_revision.source_revision_id
     digest = _contract_digest(value)
@@ -1823,6 +1831,22 @@ def _financial_model_contract_preview(
         for key in sorted(old_fields.keys() | new_fields.keys())
         if old_fields.get(key) != new_fields.get(key)
     ]
+    if value.contract_version == "1.3.0":
+        from portfolio_api.model_driver_publications import (
+            accepted_driver_snapshot,
+            proposed_driver_snapshot,
+        )
+
+        previous_drivers = accepted_driver_snapshot(session, model.id, base_row.id)
+        proposed_drivers = proposed_driver_snapshot(value.driver_projections)
+        if previous_drivers != proposed_drivers:
+            changes.append(
+                s.FinancialModelContractFieldChange(
+                    path="driver_projections",
+                    previous=json.dumps(previous_drivers, sort_keys=True),
+                    proposed=json.dumps(proposed_drivers, sort_keys=True),
+                )
+            )
     changed_model_inputs = any(
         not change.path.startswith("revision.rationale") for change in changes
     )
@@ -1954,6 +1978,13 @@ def import_financial_model_contract(
         contract_digest=digest,
         proposal=value.proposal,
     )
+    if value.contract_version == "1.3.0" and value.driver_projections:
+        from portfolio_api.model_driver_publications import publish_model_drivers
+
+        try:
+            publish_model_drivers(session, model, revision.id, value.driver_projections)
+        except ValueError as error:
+            raise DomainError(str(error), 409) from None
     if value.supporting_evidence:
         listing = session.get(Listing, model.valuation_listing_id)
         security = session.get(Security, listing.security_id) if listing else None

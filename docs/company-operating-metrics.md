@@ -151,3 +151,9 @@ metric enum/API is extended. Providers must never be blended to fill gaps.
   into observations.
 - No paid data source is required by this domain.
 - Missing history stays missing; it is never reconstructed from charts or prose.
+
+The financial-model publication `1.3.0` contract can now carry a bounded
+explicit `driver_projections[]` path into accepted immutable revision rows,
+using the metric dictionary permission `model_driver_allowed`. Source evidence
+and scenario/period/scale remain explicit. See [model publications](model-publications.md)
+and [Company Explorer operating KPI view](company-operating-drivers-view.md).

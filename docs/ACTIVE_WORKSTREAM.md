@@ -43,6 +43,14 @@ Completed code slices on this branch (development state, not production claims):
   revision-scoped Bear/Base/Bull driver paths. Strict period/scope/unit checks
   prevent misleading comparison. No new data provider or schema.
 
+- **Native driver publication v1.3:** optional explicit company operating
+  driver paths in the existing DCF portable model contract, validated against
+  the canonical metric dictionary, surfaced in the reviewed model input diff
+  and appended only with the accepted revision. The Company Explorer Operating
+  KPIs tab reads those accepted paths; no new inference or financial calculation.
+  Synthetic model publication/replay/negative permission tests added. No live
+  model or Sheets edit performed.
+
 Known follow-ons: verify read scope and integration edge cases, regenerate checked-in
 OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove
 a read-only real-company Data & Universe Steward pilot before exposing proposal

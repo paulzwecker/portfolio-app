@@ -5,7 +5,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from decimal import localcontext
+from decimal import Decimal, localcontext
 from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
@@ -28,6 +28,13 @@ from test_google_sheets_sync import (
     _publish_research_evidence,
 )
 
+from portfolio_api.company_agent_context import company_agent_context
+from portfolio_api.company_observations import (
+    CompanyMetricDefinition,
+    FinancialModelDriverProjection,
+    model_driver_projections,
+)
+from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     FinancialModelRevision,
     GoogleSheetsSyncCandidate,
@@ -265,6 +272,68 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                 "Synthetic evidence supports revised growth."
             )
             contract["candidate_revision"]["scenarios"][1]["years"][0]["revenue_growth"] = "0.21"
+            if ticker == "SYNTHA":
+                with Session(postgres_engine) as definition_db, definition_db.begin():
+                    definition_db.add(
+                        CompanyMetricDefinition(
+                            metric_key="synthetic.synthia.bookings",
+                            company_id=UUID(company["id"]),
+                            display_name="Gross Bookings",
+                            category="OPERATING",
+                            value_kind="CURRENCY",
+                            canonical_unit="currency",
+                            canonical_scale=Decimal("1000000"),
+                            currency_policy="REQUIRED",
+                            aggregation_semantics="PERIOD_FLOW",
+                            default_period_type="FY",
+                            default_basis="REPORTED",
+                            scope_dimensions=[],
+                            actuals_allowed=True,
+                            guidance_allowed=True,
+                            consensus_allowed=False,
+                            model_driver_allowed=True,
+                            active=True,
+                            description="Synthetic company gross bookings metric.",
+                            source_reference="https://research.example.test/bookings",
+                        )
+                    )
+                contract["contract_version"] = "1.3.0"
+                contract["driver_projections"] = [
+                    {
+                        "external_driver_id": f"bookings-{scenario.lower()}-2027",
+                        "metric_key": "synthetic.synthia.bookings",
+                        "scenario": scenario,
+                        "forecast_year": 1,
+                        "period_type": "FY",
+                        "period_start": "2027-01-01",
+                        "period_end": "2027-12-31",
+                        "value": value,
+                        "value_qualifier": "EQ",
+                        "unit": "currency",
+                        "scale": "1000000",
+                        "currency": "USD",
+                        "basis": "MODEL_DRIVER",
+                        "scope_json": {},
+                        "rationale": "Synthetic company operating driver supported by research.",
+                    }
+                    for scenario, value in (
+                        ("BEAR", "180"),
+                        ("BASE", "200"),
+                        ("BULL", "240"),
+                    )
+                ]
+                with pytest.raises(ValidationError, match="1.3.0"):
+                    s.FinancialModelContractV1.model_validate(
+                        {**contract, "contract_version": "1.2.0"}
+                    )
+                invalid_driver_contract = copy.deepcopy(contract)
+                invalid_driver_contract["driver_projections"][0]["scale"] = "1000"
+                invalid_driver_preview = client.post(
+                    f"/v1/financial-models/{model['id']}/contract/preview",
+                    json=invalid_driver_contract,
+                )
+                assert invalid_driver_preview.status_code == 422
+                assert "scale" in invalid_driver_preview.text
             proposed = client.post(
                 f"/v1/financial-models/{model['id']}/contract/preview", json=contract
             )
@@ -373,6 +442,34 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                     preview_fingerprint=preview.preview_fingerprint,
                 )
                 assert accepted.status == "ACCEPTED"
+                if ticker == "SYNTHA":
+                    assert accepted.accepted_revision_id is not None
+                    records = model_driver_projections(
+                        db, UUID(model["id"]), accepted.accepted_revision_id
+                    )
+                    assert {item.scenario for item in records} == {"BEAR", "BASE", "BULL"}
+                    assert {item.metric_id for item in records} == {
+                        "synthetic.synthia.bookings"
+                    }
+                    assert {item.revision_id for item in records} == {
+                        accepted.accepted_revision_id
+                    }
+                    assert (
+                        db.scalar(
+                            select(func.count())
+                            .select_from(FinancialModelDriverProjection)
+                            .where(
+                                FinancialModelDriverProjection.revision_id
+                                == accepted.accepted_revision_id
+                            )
+                        )
+                        == 3
+                    )
+                    context = company_agent_context(db, UUID(company["id"]))
+                    assert any(
+                        len(native.driver_projections) == 3
+                        for native in context.native_models
+                    )
                 assert (
                     accept_sync_candidate(
                         db, candidate_id, "synthetic-reviewer"
@@ -444,6 +541,14 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                     json.loads(stored.contract_text)["contract_sha256"]
                     == envelope["contract_sha256"]
                 )
+            if ticker == "SYNTHA":
+                assert accepted.accepted_revision_id is not None
+                api_drivers = client.get(
+                    f"/v1/financial-models/{model['id']}/revisions/"
+                    f"{accepted.accepted_revision_id}/driver-projections"
+                )
+                assert api_drivers.status_code == 200, api_drivers.text
+                assert len(api_drivers.json()) == 3
             # The API carries the same reviewed-preview requirement as the domain service.
             for approval in ({}, {"preview_fingerprint": "0" * 64}):
                 rejected = client.post(
@@ -685,3 +790,32 @@ def test_one_company_methods_publish_and_advance_independent_revisions(
         calculations = history["current_calculations"]
         assert {item["model_id"] for item in calculations} == {item["id"] for item in models}
         assert len({item["outputs"]["return_methodology"]["code"] for item in calculations}) == 3
+
+
+def test_driver_projection_contract_rejects_floats_bad_periods_and_duplicate_semantics() -> None:
+    sample = {
+        "external_driver_id": "bookings-base-fy2027",
+        "metric_key": "synthetic.bookings",
+        "scenario": "BASE",
+        "forecast_year": 1,
+        "period_type": "FY",
+        "period_start": "2027-01-01",
+        "period_end": "2027-12-31",
+        "value": "180",
+        "unit": "currency",
+        "scale": "1000000",
+        "currency": "USD",
+        "basis": "MODEL_DRIVER",
+        "rationale": "Source-supported, explicit operating projection.",
+    }
+    assert s.FinancialModelDriverProjectionInput.model_validate(sample).value == Decimal("180")
+    with pytest.raises(ValidationError, match="decimal"):
+        s.FinancialModelDriverProjectionInput.model_validate({**sample, "value": 180.5})
+    with pytest.raises(ValidationError, match="period"):
+        s.FinancialModelDriverProjectionInput.model_validate(
+            {**sample, "period_start": "2028-01-01"}
+        )
+    with pytest.raises(ValidationError, match="basis"):
+        s.FinancialModelDriverProjectionInput.model_validate(
+            {**sample, "basis": "REPORTED"}
+        )
