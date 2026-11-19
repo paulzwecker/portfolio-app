@@ -82,6 +82,11 @@ def upgrade() -> None:
         "company_metric_definitions",
         ["company_id", "active"],
     )
+    op.create_index(
+        "ix_company_metric_definitions_company_id",
+        "company_metric_definitions",
+        ["company_id"],
+    )
 
     op.create_table(
         "company_metric_observations",
@@ -182,6 +187,16 @@ def upgrade() -> None:
         "ix_company_metric_observations_company_recorded",
         "company_metric_observations",
         ["company_id", "recorded_at"],
+    )
+    op.create_index(
+        "ix_company_metric_observations_company_id",
+        "company_metric_observations",
+        ["company_id"],
+    )
+    op.create_index(
+        "ix_company_metric_observations_metric_definition_id",
+        "company_metric_observations",
+        ["metric_definition_id"],
     )
 
     op.create_table(
@@ -289,6 +304,16 @@ def upgrade() -> None:
         "company_guidance_observations",
         ["company_id", "metric_definition_id", "period_end"],
     )
+    op.create_index(
+        "ix_company_guidance_observations_company_id",
+        "company_guidance_observations",
+        ["company_id"],
+    )
+    op.create_index(
+        "ix_company_guidance_observations_metric_definition_id",
+        "company_guidance_observations",
+        ["metric_definition_id"],
+    )
 
     op.create_table(
         "financial_model_driver_projections",
@@ -370,19 +395,62 @@ def upgrade() -> None:
         "financial_model_driver_projections",
         ["revision_id", "metric_definition_id", "forecast_year"],
     )
+    op.create_index(
+        "ix_financial_model_driver_projections_model_id",
+        "financial_model_driver_projections",
+        ["model_id"],
+    )
+    op.create_index(
+        "ix_financial_model_driver_projections_revision_id",
+        "financial_model_driver_projections",
+        ["revision_id"],
+    )
+    op.create_index(
+        "ix_financial_model_driver_projections_metric_definition_id",
+        "financial_model_driver_projections",
+        ["metric_definition_id"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(
+        "ix_financial_model_driver_projections_metric_definition_id",
+        table_name="financial_model_driver_projections",
+    )
+    op.drop_index(
+        "ix_financial_model_driver_projections_revision_id",
+        table_name="financial_model_driver_projections",
+    )
+    op.drop_index(
+        "ix_financial_model_driver_projections_model_id",
+        table_name="financial_model_driver_projections",
+    )
     op.drop_index(
         "ix_financial_model_driver_revision_metric",
         table_name="financial_model_driver_projections",
     )
     op.drop_table("financial_model_driver_projections")
     op.drop_index(
+        "ix_company_guidance_observations_metric_definition_id",
+        table_name="company_guidance_observations",
+    )
+    op.drop_index(
+        "ix_company_guidance_observations_company_id",
+        table_name="company_guidance_observations",
+    )
+    op.drop_index(
         "ix_company_guidance_company_metric_period",
         table_name="company_guidance_observations",
     )
     op.drop_table("company_guidance_observations")
+    op.drop_index(
+        "ix_company_metric_observations_metric_definition_id",
+        table_name="company_metric_observations",
+    )
+    op.drop_index(
+        "ix_company_metric_observations_company_id",
+        table_name="company_metric_observations",
+    )
     op.drop_index(
         "ix_company_metric_observations_company_recorded",
         table_name="company_metric_observations",
@@ -392,6 +460,10 @@ def downgrade() -> None:
         table_name="company_metric_observations",
     )
     op.drop_table("company_metric_observations")
+    op.drop_index(
+        "ix_company_metric_definitions_company_id",
+        table_name="company_metric_definitions",
+    )
     op.drop_index(
         "ix_company_metric_definitions_company_active",
         table_name="company_metric_definitions",
