@@ -45,6 +45,18 @@ export function comparableOperatingValues(
   );
 }
 
+/** Compare exact decimals without rounding through JavaScript Number. */
+function compareExactDecimals(left: string, right: string): -1 | 0 | 1 | null {
+  if (!/^-?\\d+(?:\\.\\d+)?$/.test(left) || !/^-?\\d+(?:\\.\\d+)?$/.test(right))
+    return null;
+  const [leftInt, leftFraction = ""] = left.split(".");
+  const [rightInt, rightFraction = ""] = right.split(".");
+  const scale = Math.max(leftFraction.length, rightFraction.length);
+  const a = BigInt(leftInt + leftFraction.padEnd(scale, "0"));
+  const b = BigInt(rightInt + rightFraction.padEnd(scale, "0"));
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /** Never convert unlike units, currencies, fiscal windows or qualified actuals. */
 export function actualVsGuidance(
   actual: Actual,
@@ -52,38 +64,25 @@ export function actualVsGuidance(
 ): "ABOVE" | "WITHIN" | "BELOW" | null {
   if (
     !comparableOperatingValues(actual, guidance) ||
-    guidance.value_qualifier !== "RANGE"
+    guidance.value_qualifier !== "RANGE" ||
+    guidance.lower_value === null ||
+    guidance.upper_value === null
   )
     return null;
-  const actualValue = Number(actual.value);
-  const lower =
-    guidance.lower_value === null ? null : Number(guidance.lower_value);
-  const upper =
-    guidance.upper_value === null ? null : Number(guidance.upper_value);
-  if (
-    ![actualValue, lower, upper].every(
-      (value) => value === null || Number.isFinite(value),
-    )
-  )
-    return null;
-  if (lower !== null && actualValue < lower) return "BELOW";
-  if (upper !== null && actualValue > upper) return "ABOVE";
-  return lower !== null && upper !== null ? "WITHIN" : null;
+  const low = compareExactDecimals(actual.value, guidance.lower_value);
+  const high = compareExactDecimals(actual.value, guidance.upper_value);
+  if (low === null || high === null) return null;
+  return low < 0 ? "BELOW" : high > 0 ? "ABOVE" : "WITHIN";
 }
 
 export function actualVsDriver(
   actual: Actual,
   driver: Driver,
 ): "ABOVE" | "ON" | "BELOW" | null {
-  if (
-    !comparableOperatingValues(actual, driver) ||
-    driver.value_qualifier !== "EQ"
-  )
+  if (!comparableOperatingValues(actual, driver) || driver.value_qualifier !== "EQ")
     return null;
-  const observed = Number(actual.value);
-  const projected = Number(driver.value);
-  if (!Number.isFinite(observed) || !Number.isFinite(projected)) return null;
-  return observed > projected ? "ABOVE" : observed < projected ? "BELOW" : "ON";
+  const result = compareExactDecimals(actual.value, driver.value);
+  return result === null ? null : result > 0 ? "ABOVE" : result < 0 ? "BELOW" : "ON";
 }
 
 function formatDecimal(raw: string | null) {

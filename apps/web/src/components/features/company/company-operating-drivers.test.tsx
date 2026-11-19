@@ -120,6 +120,18 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
     expect(
       actualVsGuidance(actual, { ...guidance, value_qualifier: "APPROX" }),
     ).toBeNull();
+    expect(
+      actualVsGuidance(
+        { ...actual, value: "9007199254740993.000000000001" },
+        { ...guidance, lower_value: "9007199254740993", upper_value: "9007199254740993.000000000002" },
+      ),
+    ).toBe("WITHIN");
+    expect(
+      actualVsDriver(
+        { ...actual, value: "9007199254740993.000000000002" },
+        { ...driver, value: "9007199254740993.000000000001" },
+      ),
+    ).toBe("ABOVE");
   });
 
   it("groups data by economic period instead of mixing future guidance with prior actuals", () => {
