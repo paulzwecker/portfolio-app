@@ -57,60 +57,66 @@ def _payload(company_id: UUID, domain: str) -> dict[str, Any]:
         "rationale": "Cited company source for operator-reviewable observation.",
     }
     if domain == "MetricDefinitionBatchV1":
-        common["items"] = [{
-            "metric_key": "synthetic.trips",
-            "display_name": "Trips",
-            "category": "OPERATING",
-            "value_kind": "COUNT",
-            "canonical_unit": "trips",
-            "canonical_scale": "1000000",
-            "currency_policy": "NONE",
-            "aggregation_semantics": "PERIOD_FLOW",
-            "default_period_type": "QUARTER",
-            "default_basis": "REPORTED",
-            "scope_dimensions": [],
-            "actuals_allowed": True,
-            "guidance_allowed": True,
-            "description": "Synthetic quarterly trip count in millions.",
-            "source_reference": SOURCE,
-        }]
+        common["items"] = [
+            {
+                "metric_key": "synthetic.trips",
+                "display_name": "Trips",
+                "category": "OPERATING",
+                "value_kind": "COUNT",
+                "canonical_unit": "trips",
+                "canonical_scale": "1000000",
+                "currency_policy": "NONE",
+                "aggregation_semantics": "PERIOD_FLOW",
+                "default_period_type": "QUARTER",
+                "default_basis": "REPORTED",
+                "scope_dimensions": [],
+                "actuals_allowed": True,
+                "guidance_allowed": True,
+                "description": "Synthetic quarterly trip count in millions.",
+                "source_reference": SOURCE,
+            }
+        ]
     elif domain == "KPIObservationBatchV1":
-        common["items"] = [{
-            "external_observation_id": "synthetic-trips-q3",
-            "metric_key": "synthetic.trips",
-            "period_type": "QUARTER",
-            "period_start": "2026-07-01",
-            "period_end": "2026-09-30",
-            "fiscal_year": 2026,
-            "fiscal_quarter": 3,
-            "value": "4061",
-            "unit": "trips",
-            "scale": "1000000",
-            "basis": "REPORTED",
-            "source_type": "EARNINGS_RELEASE",
-            "source_reference": SOURCE,
-            "reported_at": None,
-        }]
+        common["items"] = [
+            {
+                "external_observation_id": "synthetic-trips-q3",
+                "metric_key": "synthetic.trips",
+                "period_type": "QUARTER",
+                "period_start": "2026-07-01",
+                "period_end": "2026-09-30",
+                "fiscal_year": 2026,
+                "fiscal_quarter": 3,
+                "value": "4061",
+                "unit": "trips",
+                "scale": "1000000",
+                "basis": "REPORTED",
+                "source_type": "EARNINGS_RELEASE",
+                "source_reference": SOURCE,
+                "reported_at": None,
+            }
+        ]
     else:
         assert domain == "GuidanceObservationBatchV1"
-        common["items"] = [{
-            "external_guidance_id": "synthetic-trips-q4-guidance",
-            "metric_key": "synthetic.trips",
-            "period_type": "QUARTER",
-            "period_start": "2026-10-01",
-            "period_end": "2026-12-31",
-            "fiscal_year": 2026,
-            "fiscal_quarter": 4,
-            "lower_value": "4200",
-            "upper_value": "4500",
-            "value_qualifier": "RANGE",
-            "unit": "trips",
-            "scale": "1000000",
-            "basis": "COMPANY_GUIDANCE",
-            "source_type": "EARNINGS_RELEASE",
-            "source_reference": SOURCE,
-            "issued_at": None,
-        }]
+        common["items"] = [
+            {
+                "external_guidance_id": "synthetic-trips-q4-guidance",
+                "metric_key": "synthetic.trips",
+                "period_type": "QUARTER",
+                "period_start": "2026-10-01",
+                "period_end": "2026-12-31",
+                "fiscal_year": 2026,
+                "fiscal_quarter": 4,
+                "lower_value": "4200",
+                "upper_value": "4500",
+                "value_qualifier": "RANGE",
+                "unit": "trips",
+                "scale": "1000000",
+                "basis": "COMPANY_GUIDANCE",
+                "source_type": "EARNINGS_RELEASE",
+                "source_reference": SOURCE,
+                "issued_at": None,
+            }
+        ]
     return common
 
 
@@ -125,9 +131,7 @@ def _block(payload: dict[str, Any], row: int) -> ContractBlock:
 
 
 class FixtureReader:
-    def __init__(
-        self, blocks: list[ContractBlock], *, available: bool = True
-    ) -> None:
+    def __init__(self, blocks: list[ContractBlock], *, available: bool = True) -> None:
         self.blocks = blocks
         self.available = available
         self.calls = 0
@@ -162,9 +166,7 @@ def test_chunked_observation_contract_and_strict_decimal_validation() -> None:
     with pytest.raises(ValueError, match="Typed observation contract invalid"):
         parse_observation_block(_block(bad, 10))
     mismatch = _block(payload, 12)
-    mismatch = ContractBlock(
-        mismatch.publish_id, "different-batch", 12, mismatch.contract_text
-    )
+    mismatch = ContractBlock(mismatch.publish_id, "different-batch", 12, mismatch.contract_text)
     with pytest.raises(ValueError, match="external batch ID"):
         parse_observation_block(mismatch)
     with pytest.raises(ValueError, match="sequence"):
@@ -177,9 +179,7 @@ def test_sync_disabled_by_default_and_requires_canonical_proposal_gate() -> None
     with pytest.raises(ValidationError, match="requires observation proposals"):
         Settings(_env_file=None, observation_sheets_inbox_enabled=True)
     with pytest.raises(DomainError, match="disabled"):
-        check_observation_inbox(
-            Session(), _settings(enabled=False), FixtureReader([])
-        )
+        check_observation_inbox(Session(), _settings(enabled=False), FixtureReader([]))
 
 
 @pytest.mark.integration
@@ -190,9 +190,7 @@ def test_sheet_candidates_are_identical_to_api_review_flow(postgres_engine: Engi
         session.flush()
         cid = company.id
 
-    domains = [
-        "MetricDefinitionBatchV1", "KPIObservationBatchV1", "GuidanceObservationBatchV1"
-    ]
+    domains = ["MetricDefinitionBatchV1", "KPIObservationBatchV1", "GuidanceObservationBatchV1"]
     blocks = [_block(_payload(cid, name), 2 + index) for index, name in enumerate(domains)]
     fixture = FixtureReader(blocks)
     settings = _settings()
@@ -209,7 +207,8 @@ def test_sheet_candidates_are_identical_to_api_review_flow(postgres_engine: Engi
         assert first.status == "READY"
         assert first.preview_fingerprint is not None
         proposals.accept(
-            session, first.proposal_id,
+            session,
+            first.proposal_id,
             proposals.ObservationProposalDecisionRequest(
                 preview_fingerprint=first.preview_fingerprint,
                 decision_note="Reviewed the synthetic metric semantics and source.",
@@ -221,7 +220,8 @@ def test_sheet_candidates_are_identical_to_api_review_flow(postgres_engine: Engi
             assert preview.status == "READY"
             assert preview.preview_fingerprint is not None
             outcome = proposals.accept(
-                session, proposal_id,
+                session,
+                proposal_id,
                 proposals.ObservationProposalDecisionRequest(
                     preview_fingerprint=preview.preview_fingerprint,
                     decision_note="Verified the source, unit and reporting period.",
@@ -254,9 +254,7 @@ def test_invalid_and_conflicting_sheet_rows_do_not_block_other_batches(
     changed["items"][0]["description"] = "Different definition with same external batch ID."
     invalid = ContractBlock("bad-json", "bad", 6, "not-json")
     mismatched = ContractBlock("wrong-id", "other", 8, json.dumps(definition))
-    fixture = FixtureReader([
-        _block(definition, 2), _block(changed, 4), invalid, mismatched
-    ])
+    fixture = FixtureReader([_block(definition, 2), _block(changed, 4), invalid, mismatched])
     with Session(postgres_engine) as session, session.begin():
         scanned = check_observation_inbox(session, _settings(), fixture)
         assert scanned.status == "PARTIAL"
@@ -280,9 +278,7 @@ def test_failed_sheet_read_and_oversized_inbox_produce_no_proposals(
         cid = company.id
 
     with Session(postgres_engine) as session, session.begin():
-        failed = check_observation_inbox(
-            session, _settings(), FixtureReader([], available=False)
-        )
+        failed = check_observation_inbox(session, _settings(), FixtureReader([], available=False))
         assert failed.status == "SOURCE_UNAVAILABLE"
         assert failed.source_error_code == "NETWORK_ERROR"
         assert failed.created_count == 0
@@ -329,7 +325,6 @@ def test_operator_trigger_endpoint_is_protected_and_uses_same_service(
         assert rows[0].status == "PENDING"
 
 
-
 def test_observation_sheet_check_requires_broad_proxy_auth_in_preview() -> None:
     settings = Settings(
         _env_file=None,
@@ -351,16 +346,22 @@ def test_observation_sheet_check_requires_broad_proxy_auth_in_preview() -> None:
     ):
         path = "/v1/google-sheets-observation-sync/check"
         assert client.post(path).status_code == 401
-        assert client.post(
-            path, headers={
-                "X-Data-Universe-Read-Token": "data-only-synthetic-token-00000000000000000"
-            },
-        ).status_code == 403
-        assert client.post(
-            path, headers={
-                "X-API-ACCESS-TOKEN": "operator-proxy-test-token-000000000000000000"
-            },
-        ).status_code == 503
+        assert (
+            client.post(
+                path,
+                headers={
+                    "X-Data-Universe-Read-Token": "data-only-synthetic-token-00000000000000000"
+                },
+            ).status_code
+            == 403
+        )
+        assert (
+            client.post(
+                path,
+                headers={"X-API-ACCESS-TOKEN": "operator-proxy-test-token-000000000000000000"},
+            ).status_code
+            == 503
+        )
 
 
 @pytest.mark.integration

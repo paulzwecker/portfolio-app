@@ -25711,6 +25711,113 @@
         "title": "ObservationProposalSubmissionRead",
         "type": "object"
       },
+      "ObservationSheetCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_count": {
+            "title": "Checked Count",
+            "type": "integer"
+          },
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "created_proposal_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Created Proposal Ids",
+            "type": "array"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationSheetIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "replayed_count": {
+            "title": "Replayed Count",
+            "type": "integer"
+          },
+          "source_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Error Code"
+          },
+          "spreadsheet_id": {
+            "title": "Spreadsheet Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SUCCEEDED",
+              "PARTIAL",
+              "SOURCE_UNAVAILABLE",
+              "SYNC_IN_PROGRESS"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tab": {
+            "title": "Tab",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "spreadsheet_id",
+          "tab",
+          "checked_count",
+          "created_count",
+          "replayed_count",
+          "issues",
+          "created_proposal_ids"
+        ],
+        "title": "ObservationSheetCheck",
+        "type": "object"
+      },
+      "ObservationSheetIssue": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "INVALID",
+              "CONFLICT",
+              "NOT_FOUND"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "publish_id": {
+            "title": "Publish Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "publish_id",
+          "code",
+          "reason"
+        ],
+        "title": "ObservationSheetIssue",
+        "type": "object"
+      },
       "OperationalJobAttemptRead": {
         "additionalProperties": false,
         "properties": {
@@ -43967,6 +44074,27 @@
           }
         },
         "summary": "Post Google Sheets Agent Work Publish",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/google-sheets-observation-sync/check": {
+      "post": {
+        "operationId": "post_google_sheets_observation_sync_check_v1_google_sheets_observation_sync_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationSheetCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Post Google Sheets Observation Sync Check",
         "tags": [
           "Portfolio research"
         ]

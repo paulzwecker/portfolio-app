@@ -94,9 +94,8 @@ def check_observation_inbox(
     if not settings.observation_proposals_enabled or not settings.observation_sheets_inbox_enabled:
         raise DomainError("The observation Sheets proposal inbox is disabled", 503)
     if (
-        (settings.app_env == "production" or settings.database_target_environment == "production")
-        and not settings.database_production_writes_authorized
-    ):
+        settings.app_env == "production" or settings.database_target_environment == "production"
+    ) and not settings.database_production_writes_authorized:
         raise DomainError("Production proposal imports require separate owner authorization", 403)
     spreadsheet_id = settings.google_sheets_spreadsheet_id
     if not spreadsheet_id:
@@ -141,9 +140,12 @@ def check_observation_inbox(
 
     # A stable source identity isolates Sheet submissions from API agent tokens,
     # and preserves idempotency even if the workbook title changes.
-    producer_id = "sheets-observation:" + hashlib.sha256(
-        f"{spreadsheet_id}:{snapshot.connection.sheet_id}".encode()
-    ).hexdigest()[:32]
+    producer_id = (
+        "sheets-observation:"
+        + hashlib.sha256(f"{spreadsheet_id}:{snapshot.connection.sheet_id}".encode()).hexdigest()[
+            :32
+        ]
+    )
     issues: list[ObservationSheetIssue] = []
     created: list[UUID] = []
     replayed = 0

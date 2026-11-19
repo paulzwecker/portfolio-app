@@ -1280,6 +1280,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/google-sheets-observation-sync/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Observation Sync Check */
+        post: operations["post_google_sheets_observation_sync_check_v1_google_sheets_observation_sync_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/google-sheets-research-sync/candidates": {
         parameters: {
             query?: never;
@@ -10635,6 +10652,44 @@ export interface components {
             /** Replayed */
             replayed: boolean;
         };
+        /** ObservationSheetCheck */
+        ObservationSheetCheck: {
+            /** Checked Count */
+            checked_count: number;
+            /** Created Count */
+            created_count: number;
+            /** Created Proposal Ids */
+            created_proposal_ids: string[];
+            /** Issues */
+            issues: components["schemas"]["ObservationSheetIssue"][];
+            /** Replayed Count */
+            replayed_count: number;
+            /** Source Error Code */
+            source_error_code?: string | null;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SUCCEEDED" | "PARTIAL" | "SOURCE_UNAVAILABLE" | "SYNC_IN_PROGRESS";
+            /** Tab */
+            tab: string;
+        };
+        /** ObservationSheetIssue */
+        ObservationSheetIssue: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "INVALID" | "CONFLICT" | "NOT_FOUND";
+            /** Publish Id */
+            publish_id: string;
+            /** Reason */
+            reason: string;
+            /** Row Number */
+            row_number: number;
+        };
         /** OperationalJobAttemptRead */
         OperationalJobAttemptRead: {
             /** Affected Domains */
@@ -17321,6 +17376,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_observation_sync_check_v1_google_sheets_observation_sync_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationSheetCheck"];
                 };
             };
         };
