@@ -730,4 +730,6 @@ def protect_company_observation_history(
                 if state.attrs[attr.key].history.has_changes()
             }
             if changed - mutable:
-                raise ValueError("Metric definition semantics are immutable; create a new metric_id")
+                raise ValueError(
+                    "Metric definition semantics are immutable; create a new metric_id"
+                )
