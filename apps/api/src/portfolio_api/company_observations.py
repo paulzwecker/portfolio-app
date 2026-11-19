@@ -738,11 +738,57 @@ def model_driver_projections(
     ]
 
 
+def _validate_new_metric_use(
+    session: Session,
+    item: CompanyMetricObservation | CompanyGuidanceObservation | FinancialModelDriverProjection,
+) -> None:
+    definition = session.get(CompanyMetricDefinition, item.metric_definition_id)
+    if definition is None:
+        return
+    if not definition.active or definition.deprecated_at is not None:
+        raise ValueError("Deprecated metric definitions cannot receive new observations")
+    if isinstance(item, CompanyMetricObservation):
+        company_id = item.company_id
+        allowed = definition.actuals_allowed
+        use_name = "actuals"
+    elif isinstance(item, CompanyGuidanceObservation):
+        company_id = item.company_id
+        allowed = definition.guidance_allowed
+        use_name = "guidance"
+    else:
+        model = session.get(FinancialModel, item.model_id)
+        if model is None:
+            return
+        company_id = model.company_id
+        allowed = definition.model_driver_allowed
+        use_name = "model drivers"
+    if definition.company_id is not None and definition.company_id != company_id:
+        raise ValueError("Company-scoped metric definition belongs to another company")
+    if not allowed:
+        raise ValueError(f"Metric definition does not allow {use_name}")
+    currency = item.currency
+    if definition.currency_policy == "REQUIRED" and currency is None:
+        raise ValueError("Metric definition requires an observation currency")
+    if definition.currency_policy == "NONE" and currency is not None:
+        raise ValueError("Metric definition does not allow an observation currency")
+
+
 @event.listens_for(Session, "before_flush")
 def protect_company_observation_history(
     session: Session, flush_context: object, instances: object
 ) -> None:
     """Accepted metric observations and model-driver paths are append-only."""
+
+    for item in session.new:
+        if isinstance(
+            item,
+            (
+                CompanyMetricObservation,
+                CompanyGuidanceObservation,
+                FinancialModelDriverProjection,
+            ),
+        ):
+            _validate_new_metric_use(session, item)
 
     immutable = (
         CompanyMetricObservation,
