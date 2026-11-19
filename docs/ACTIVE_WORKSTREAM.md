@@ -51,6 +51,12 @@ Completed code slices on this branch (development state, not production claims):
   Synthetic model publication/replay/negative permission tests added. No live
   model or Sheets edit performed.
 
+- **End-to-end operating-data reviewer UI:** Next.js server proxy now
+  allowlists the canonical agent-context read and dedicated observation
+  reviewer operations, using a separate server-only reviewer token.
+  Company Explorer exposes the existing review queue and two-step decisions
+  without creating another acceptance path. No live credential configured.
+
 Known follow-ons: verify read scope and integration edge cases, regenerate checked-in
 OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove
 a read-only real-company Data & Universe Steward pilot before exposing proposal

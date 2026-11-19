@@ -660,3 +660,5 @@ PR never grants production, source-edit, acceptance, migration or activation aut
 - 2026-11-19 — PR #42: Company Explorer operating-KPI/driver read view with evidence, coverage, selected-provider consensus (financial metrics isolated) and exact period/scope/unit comparison. UI and contract tests pending; no production deployment. Next: publish explicit driver paths through accepted model revision contract v1.3.
 
 - 2026-11-19 — PR #42: portable UFCF DCF 1.3.0 explicit driver projections (Bear/Base/Bull), existing model sync/manual review and fair-value parity; same accepted revision model-driver table, no migration. Company Explorer operating KPI comparisons render only exact matched units/periods. Focused integration and client validation pending; no production writes.
+
+- 2026-11-19 — PR #42: close Next.js proxy agent-context access gap, add scoped observation proposal review to Operating KPIs with source/preview/confirmation and server-only reviewer token. No agent self-acceptance. Tests and generated contracts being verified.

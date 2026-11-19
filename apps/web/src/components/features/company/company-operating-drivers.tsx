@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PendingOrError } from "@/components/app/empty-state";
 import { useResearch } from "@/hooks/use-research";
+import { ObservationProposalReview } from "@/components/features/company/company-observation-review";
 import {
   isCompanyAgentContext,
   type CompanyAgentContext,
@@ -570,5 +571,10 @@ export function CompanyOperatingDriversWorkspace({
     isCompanyAgentContext,
   );
   if (!state.data) return <PendingOrError {...state} />;
-  return <OperatingDriversPanel context={state.data} />;
+  return (
+    <div className="space-y-8">
+      <OperatingDriversPanel context={state.data} />
+      <ObservationProposalReview companyId={companyId} />
+    </div>
+  );
 }

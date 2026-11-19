@@ -86,3 +86,24 @@ accepted financial-model operating paths. It defaults to `false`. This
 permission is still subject to independent human proposal preview/acceptance;
 it is not inferred from an existing KPI or activated by importing an agent
 forecast. Provider consensus remains independently disabled.
+
+## Company Explorer reviewer workflow
+
+The Operating KPIs tab provides a human review panel for the same canonical
+observation proposal table used by API agents and the Sheets inbox. The
+server-only Next.js API proxy forwards reviewer requests with
+`OBSERVATION_PROPOSAL_REVIEWER_TOKEN`, never exposing the token to the browser.
+Only exact `GET /company-observation-proposals` and reviewer
+`POST /{id}/preview|accept|reject` paths are allowlisted. Browser submission
+using the reviewer role is intentionally **not** supported.
+
+The reviewer sees proposal source and metrics, runs a deterministic preview,
+provides a decision note and confirms accept/reject with a second button press.
+The app updates its accepted operating KPIs only after the API reports actual
+acceptance. The API still requires `OBSERVATION_ACCEPTANCE_ENABLED` for canonical
+changes and owner-approved production write authorization.
+
+When reviewer credentials or the feature are disabled, the review queue is
+unavailable rather than silently granting broader API access. No credentials
+are stored in public Git or sent to browser code. This feature introduces no
+new review role, database state or scheduling.
