@@ -125,19 +125,29 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
       actualVsGuidance(actual, { ...guidance, value_qualifier: "APPROX" }),
     ).toBeNull();
     expect(
-      actualVsGuidance(actual, { ...guidance, recorded_at: "2026-11-05T00:00:00Z" }),
+      actualVsGuidance(actual, {
+        ...guidance,
+        recorded_at: "2026-11-05T00:00:00Z",
+      }),
     ).toBeNull();
     expect(
       actualVsGuidance(actual, { ...guidance, status: "WITHDRAWN" }),
     ).toBeNull();
     expect(
-      actualVsDriver(actual, { ...driver, recorded_at: "2026-11-05T00:00:00Z" }),
+      actualVsDriver(actual, {
+        ...driver,
+        recorded_at: "2026-11-05T00:00:00Z",
+      }),
     ).toBeNull();
 
     expect(
       actualVsGuidance(
         { ...actual, value: "9007199254740993.000000000001" },
-        { ...guidance, lower_value: "9007199254740993", upper_value: "9007199254740993.000000000002" },
+        {
+          ...guidance,
+          lower_value: "9007199254740993",
+          upper_value: "9007199254740993.000000000002",
+        },
       ),
     ).toBe("WITHIN");
     expect(

@@ -62,7 +62,11 @@ function priorExpectation(actual: Actual, publishedAt: string | null): boolean {
   const known = actual.reported_at ?? actual.recorded_at;
   const publication = publishedAt ? Date.parse(publishedAt) : Number.NaN;
   const observed = known ? Date.parse(known) : Number.NaN;
-  return Number.isFinite(publication) && Number.isFinite(observed) && publication <= observed;
+  return (
+    Number.isFinite(publication) &&
+    Number.isFinite(observed) &&
+    publication <= observed
+  );
 }
 
 /** Never convert unlike units, currencies, fiscal windows or qualified actuals. */
@@ -96,7 +100,13 @@ export function actualVsDriver(
   )
     return null;
   const result = compareExactDecimals(actual.value, driver.value);
-  return result === null ? null : result > 0 ? "ABOVE" : result < 0 ? "BELOW" : "ON";
+  return result === null
+    ? null
+    : result > 0
+      ? "ABOVE"
+      : result < 0
+        ? "BELOW"
+        : "ON";
 }
 
 function formatDecimal(raw: string | null) {
