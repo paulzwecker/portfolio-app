@@ -32,7 +32,6 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from portfolio_api.database import Base
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import Company, FinancialModel, FinancialModelRevision, now
-from portfolio_api.domain.services import DomainError
 
 ObservationDecimal = Annotated[
     s.FixedDecimal,
@@ -45,6 +44,14 @@ QUALIFIERS = ("EQ", "APPROX", "GT", "GTE", "LT", "LTE")
 QUALITY_STATES = ("VERIFIED", "PROVISIONAL", "CONFLICTED", "RESTATED")
 GUIDANCE_STATES = ("ACTIVE", "SUPERSEDED", "WITHDRAWN", "ACHIEVED")
 DRIVER_SCENARIOS = ("BEAR", "BASE", "BULL")
+
+
+def _not_found(detail: str) -> Exception:
+    # Import lazily so ORM metadata registration never imports the service layer
+    # while domain schemas are still being initialized.
+    from portfolio_api.domain.services import DomainError
+
+    return DomainError(detail, 404)
 
 
 class CompanyMetricDefinition(Base):
@@ -447,7 +454,7 @@ def metric_definitions(
     include_deprecated: bool = False,
 ) -> list[CompanyMetricDefinitionRead]:
     if company_id is not None and session.get(Company, company_id) is None:
-        raise DomainError("Company not found", 404)
+        raise _not_found("Company not found")
     statement = select(CompanyMetricDefinition)
     if company_id is not None:
         statement = statement.where(
@@ -479,7 +486,7 @@ def company_metric_history(
     limit: int = 500,
 ) -> list[CompanyMetricObservationRead]:
     if session.get(Company, company_id) is None:
-        raise DomainError("Company not found", 404)
+        raise _not_found("Company not found")
     statement = (
         select(CompanyMetricObservation, CompanyMetricDefinition)
         .join(
@@ -566,7 +573,7 @@ def company_guidance_history(
     limit: int = 500,
 ) -> list[CompanyGuidanceObservationRead]:
     if session.get(Company, company_id) is None:
-        raise DomainError("Company not found", 404)
+        raise _not_found("Company not found")
     statement = (
         select(CompanyGuidanceObservation, CompanyMetricDefinition)
         .join(
@@ -654,10 +661,10 @@ def model_driver_projections(
 ) -> list[FinancialModelDriverProjectionRead]:
     model = session.get(FinancialModel, model_id)
     if model is None:
-        raise DomainError("Financial model not found", 404)
+        raise _not_found("Financial model not found")
     revision = session.get(FinancialModelRevision, revision_id)
     if revision is None or revision.model_id != model.id:
-        raise DomainError("Financial model revision not found", 404)
+        raise _not_found("Financial model revision not found")
     rows = session.execute(
         select(FinancialModelDriverProjection, CompanyMetricDefinition)
         .join(
