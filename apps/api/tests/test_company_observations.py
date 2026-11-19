@@ -320,3 +320,139 @@ def test_company_observation_read_endpoints_preserve_units_sources_and_qualifier
         assert payload[0]["unit"] == "trips"
         assert payload[0]["scale"] == "1000000000.000000000000"
         assert payload[0]["source_reference"] == "https://example.com/q3"
+
+
+def test_known_at_does_not_see_future_supersession(postgres_engine) -> None:
+    original_time = datetime(2026, 11, 19, 10, tzinfo=UTC)
+    correction_time = original_time + timedelta(hours=2)
+    with Session(postgres_engine) as session, session.begin():
+        company, _ = seed_company(session)
+        definition = metric(session, company)
+        original = CompanyMetricObservation(
+            external_observation_id="smob-q3-point-in-time-v1",
+            company_id=company.id,
+            metric_definition_id=definition.id,
+            period_type="QUARTER",
+            period_start=date(2026, 7, 1),
+            period_end=date(2026, 9, 30),
+            fiscal_year=2026,
+            fiscal_quarter=3,
+            value=Decimal("59.8"),
+            value_qualifier="EQ",
+            unit="currency",
+            scale=Decimal("1000000000"),
+            currency="USD",
+            basis="REPORTED",
+            scope_json={},
+            reported_at=original_time,
+            source_type="EARNINGS_RELEASE",
+            source_reference="https://example.com/q3",
+            quality_status="VERIFIED",
+            quality_reason=None,
+            recorded_at=original_time,
+        )
+        session.add(original)
+        session.flush()
+        session.add(
+            CompanyMetricObservation(
+                external_observation_id="smob-q3-point-in-time-v2",
+                company_id=company.id,
+                metric_definition_id=definition.id,
+                period_type="QUARTER",
+                period_start=date(2026, 7, 1),
+                period_end=date(2026, 9, 30),
+                fiscal_year=2026,
+                fiscal_quarter=3,
+                value=Decimal("60.1"),
+                value_qualifier="EQ",
+                unit="currency",
+                scale=Decimal("1000000000"),
+                currency="USD",
+                basis="RESTATED",
+                scope_json={},
+                reported_at=correction_time,
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/q3-corrected",
+                quality_status="RESTATED",
+                quality_reason="Synthetic later correction",
+                supersedes_observation_id=original.id,
+                recorded_at=correction_time,
+            )
+        )
+        guidance = CompanyGuidanceObservation(
+            external_guidance_id="smob-q4-point-in-time-v1",
+            company_id=company.id,
+            metric_definition_id=definition.id,
+            period_type="QUARTER",
+            period_start=date(2026, 10, 1),
+            period_end=date(2026, 12, 31),
+            fiscal_year=2026,
+            fiscal_quarter=4,
+            lower_value=Decimal("63"),
+            midpoint_value=None,
+            upper_value=Decimal("65"),
+            value_qualifier="RANGE",
+            unit="currency",
+            scale=Decimal("1000000000"),
+            currency="USD",
+            basis="COMPANY_GUIDANCE",
+            scope_json={},
+            issued_at=original_time,
+            source_type="EARNINGS_RELEASE",
+            source_reference="https://example.com/q3",
+            status="ACTIVE",
+            recorded_at=original_time,
+        )
+        session.add(guidance)
+        session.flush()
+        session.add(
+            CompanyGuidanceObservation(
+                external_guidance_id="smob-q4-point-in-time-v2",
+                company_id=company.id,
+                metric_definition_id=definition.id,
+                period_type="QUARTER",
+                period_start=date(2026, 10, 1),
+                period_end=date(2026, 12, 31),
+                fiscal_year=2026,
+                fiscal_quarter=4,
+                lower_value=Decimal("64"),
+                midpoint_value=None,
+                upper_value=Decimal("66"),
+                value_qualifier="RANGE",
+                unit="currency",
+                scale=Decimal("1000000000"),
+                currency="USD",
+                basis="COMPANY_GUIDANCE",
+                scope_json={},
+                issued_at=correction_time,
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/q3-update",
+                status="ACTIVE",
+                supersedes_guidance_id=guidance.id,
+                recorded_at=correction_time,
+            )
+        )
+        company_id = company.id
+
+    cutoff = original_time + timedelta(hours=1)
+    with Session(postgres_engine) as session:
+        actuals = company_metric_history(
+            session,
+            company_id,
+            "synthetic.gross_bookings",
+            known_at=cutoff,
+        )
+        assert len(actuals) == 1
+        assert actuals[0].external_observation_id == "smob-q3-point-in-time-v1"
+        assert actuals[0].is_current
+
+        guidance_rows = company_guidance_history(
+            session,
+            company_id,
+            "synthetic.gross_bookings",
+            known_at=cutoff,
+            current_only=True,
+        )
+        assert len(guidance_rows) == 1
+        assert guidance_rows[0].external_guidance_id == "smob-q4-point-in-time-v1"
+        assert guidance_rows[0].is_current
