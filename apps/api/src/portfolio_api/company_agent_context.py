@@ -281,17 +281,17 @@ def company_agent_context(
     )
     thesis_truncated = len(thesis_rows) > MAX_STREAMS
     current_theses: list[s.InvestmentThesisRevisionRead] = []
-    for row in thesis_rows[:MAX_STREAMS]:
-        current = thesis_revision_read(session, row)
-        if len(current.claims) > 20 or len(current.trigger_references) > 20:
+    for thesis_row in thesis_rows[:MAX_STREAMS]:
+        thesis_current = thesis_revision_read(session, thesis_row)
+        if len(thesis_current.claims) > 20 or len(thesis_current.trigger_references) > 20:
             thesis_truncated = True
         claims = []
-        for claim in current.claims[:20]:
+        for claim in thesis_current.claims[:20]:
             if len(claim.evidence) > 10:
                 thesis_truncated = True
             claims.append(claim.model_copy(update={"evidence": claim.evidence[:10]}))
         current_theses.append(
-            current.model_copy(
+            thesis_current.model_copy(
                 update={
                     "claims": claims,
                     "trigger_references": current.trigger_references[:20],
