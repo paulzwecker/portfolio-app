@@ -19,8 +19,12 @@ Completed code slices on this branch (development state, not production claims):
 - Synthetic PostgreSQL tests for accepted definition → KPI → guidance → correction,
   idempotency/conflicts/stale reviewer previews; public Uber Q3 2026 IR numbers
   used only in an **isolated test fixture**.
+- Dedicated, default-off, allowlisted DATA_UNIVERSE_STEWARD read-only credential
+  for GET CompanyAgentContextV1, with private portfolio/research/model sections
+  suppressed; broad application proxy authorization is unchanged. Credentials
+  are not provisioned, no new app or agent has been activated.
 
-Known follow-ons: fix any targeted type/integration failures, regenerate checked-in
+Known follow-ons: verify read scope and integration edge cases, regenerate checked-in
 OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove
 a read-only real-company Data & Universe Steward pilot before exposing proposal
 writes beyond isolation. Owner instructed that full CI green is a **merge gate**,

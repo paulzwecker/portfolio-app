@@ -1247,13 +1247,20 @@ def get_company(company_id: UUID, db: Db) -> s.CompanyDetail:
 )
 def get_company_agent_context(
     company_id: UUID,
+    request: Request,
     db: LedgerDb,
     portfolio_id: UUID | None = None,
     as_of: date | None = None,
     known_at: datetime | None = None,
 ) -> agent_context_ops.CompanyAgentContextV1:
     _validate_market_cutoffs(as_of, known_at)
-    return agent_context_ops.company_agent_context(db, company_id, portfolio_id, as_of, known_at)
+    data_universe_only = bool(getattr(request.state, "data_universe_scoped", False))
+    if data_universe_only and portfolio_id is not None:
+        raise HTTPException(403, "Portfolio access is outside the Data Universe read scope")
+    return agent_context_ops.company_agent_context(
+        db, company_id, portfolio_id, as_of, known_at,
+        data_universe_only=data_universe_only,
+    )
 
 
 @router.get("/companies/{company_id}/research", response_model=s.CompanyResearchRead)

@@ -112,6 +112,7 @@ def company_agent_context(
     portfolio_id: UUID | None = None,
     as_of: date | None = None,
     known_at: datetime | None = None,
+    data_universe_only: bool = False,
 ) -> CompanyAgentContextV1:
     """Compose accepted domains; do not infer data or mutate canonical state."""
     requested_at = now()
@@ -161,16 +162,26 @@ def company_agent_context(
             }
         )
 
-    portfolios = list(
-        session.scalars(
-            select(Portfolio.id)
-            .where(Portfolio.created_at <= cutoff)
-            .order_by(Portfolio.created_at, Portfolio.id)
-            .limit(2)
+    portfolios: list[UUID] = []
+    if not data_universe_only:
+        portfolios = list(
+            session.scalars(
+                select(Portfolio.id)
+                .where(Portfolio.created_at <= cutoff)
+                .order_by(Portfolio.created_at, Portfolio.id)
+                .limit(2)
+            )
         )
+
+    selected_portfolio_id = None if data_universe_only else portfolio_id
+    portfolio_status = AgentContextCoverage(
+        status="UNSUPPORTED" if data_universe_only else "NO_DATA",
+        reason=(
+            "Outside Data & Universe read scope"
+            if data_universe_only
+            else "No portfolio exists"
+        ),
     )
-    selected_portfolio_id = portfolio_id
-    portfolio_status = AgentContextCoverage(status="NO_DATA", reason="No portfolio exists")
     portfolio_view: s.CompanyPortfolioContext | None = None
     snapshot_id: UUID | None = None
     target_revision_id: UUID | None = None
@@ -229,19 +240,22 @@ def company_agent_context(
         for item in consensus_periods[:MAX_CONSENSUS_PERIODS]
     ]
 
-    research_rows = list(
-        session.scalars(
-            select(ResearchRevision)
-            .where(
-                ResearchRevision.company_id == company_id,
-                ResearchRevision.observed_at <= cutoff,
-                ResearchRevision.recorded_at <= cutoff,
+    research_rows: list[ResearchRevision] = []
+    if not data_universe_only:
+        research_rows = list(
+            session.scalars(
+                select(ResearchRevision)
+                .where(
+                    ResearchRevision.company_id == company_id,
+                    ResearchRevision.observed_at <= cutoff,
+                    ResearchRevision.recorded_at <= cutoff,
+                )
+                .distinct(ResearchRevision.stream_key)
+                .order_by(ResearchRevision.stream_key, ResearchRevision.revision_number.desc())
+                .limit(MAX_STREAMS + 1)
             )
-            .distinct(ResearchRevision.stream_key)
-            .order_by(ResearchRevision.stream_key, ResearchRevision.revision_number.desc())
-            .limit(MAX_STREAMS + 1)
         )
-    )
+
     research_truncated = len(research_rows) > MAX_STREAMS
     current_research: list[s.ResearchRevisionRead] = []
     for row in research_rows[:MAX_STREAMS]:
@@ -264,21 +278,25 @@ def company_agent_context(
             )
         )
 
-    thesis_rows = list(
-        session.scalars(
-            select(InvestmentThesisRevision)
-            .where(
-                InvestmentThesisRevision.company_id == company_id,
-                InvestmentThesisRevision.observed_at <= cutoff,
-                InvestmentThesisRevision.recorded_at <= cutoff,
+    thesis_rows: list[InvestmentThesisRevision] = []
+    if not data_universe_only:
+        thesis_rows = list(
+            session.scalars(
+                select(InvestmentThesisRevision)
+                .where(
+                    InvestmentThesisRevision.company_id == company_id,
+                    InvestmentThesisRevision.observed_at <= cutoff,
+                    InvestmentThesisRevision.recorded_at <= cutoff,
+                )
+                .distinct(InvestmentThesisRevision.stream_key)
+                .order_by(
+                    InvestmentThesisRevision.stream_key,
+                    InvestmentThesisRevision.revision_number.desc(),
+                )
+                .limit(MAX_STREAMS + 1)
             )
-            .distinct(InvestmentThesisRevision.stream_key)
-            .order_by(
-                InvestmentThesisRevision.stream_key, InvestmentThesisRevision.revision_number.desc()
-            )
-            .limit(MAX_STREAMS + 1)
         )
-    )
+
     thesis_truncated = len(thesis_rows) > MAX_STREAMS
     current_theses: list[s.InvestmentThesisRevisionRead] = []
     for thesis_row in thesis_rows[:MAX_STREAMS]:
@@ -294,23 +312,26 @@ def company_agent_context(
             thesis_current.model_copy(
                 update={
                     "claims": claims,
-                    "trigger_references": current.trigger_references[:20],
+                    "trigger_references": thesis_current.trigger_references[:20],
                 }
             )
         )
 
-    model_rows = list(
-        session.scalars(
-            select(FinancialModel)
-            .where(
-                FinancialModel.company_id == company_id,
-                FinancialModel.created_at <= cutoff,
-                FinancialModel.current_revision_id.is_not(None),
+    model_rows: list[FinancialModel] = []
+    if not data_universe_only:
+        model_rows = list(
+            session.scalars(
+                select(FinancialModel)
+                .where(
+                    FinancialModel.company_id == company_id,
+                    FinancialModel.created_at <= cutoff,
+                    FinancialModel.current_revision_id.is_not(None),
+                )
+                .order_by(FinancialModel.model_name, FinancialModel.id)
+                .limit(MAX_MODELS + 1)
             )
-            .order_by(FinancialModel.model_name, FinancialModel.id)
-            .limit(MAX_MODELS + 1)
         )
-    )
+
     models_truncated = len(model_rows) > MAX_MODELS
     models: list[AgentContextNativeModel] = []
     for model in model_rows[:MAX_MODELS]:
@@ -354,7 +375,11 @@ def company_agent_context(
         )
 
     imported_outputs: s.CompanyModelOutputsCurrentRead | None = None
-    if as_of is not None or known_at is not None:
+    if data_universe_only:
+        imported_status = AgentContextCoverage(
+            status="UNSUPPORTED", reason="Outside Data & Universe read scope"
+        )
+    elif as_of is not None or known_at is not None:
         imported_status = AgentContextCoverage(
             status="UNSUPPORTED",
             reason="Imported current snapshots have no verified point-in-time context read",
@@ -376,6 +401,9 @@ def company_agent_context(
         )
 
     root = f"/v1/companies/{company_id}"
+    restricted = AgentContextCoverage(
+        status="UNSUPPORTED", reason="Outside Data & Universe read scope"
+    )
     return CompanyAgentContextV1(
         generated_at=requested_at,
         as_of=day,
@@ -420,27 +448,39 @@ def company_agent_context(
         consensus_continuity_status=consensus.continuity_status,
         consensus_provider_id=consensus.selected_provider_id,
         consensus_periods=consensus_periods,
-        research_status=_coverage(
-            len(current_research),
-            truncated=research_truncated,
-            latest=max((item.recorded_at for item in current_research), default=None),
+        research_status=(
+            restricted
+            if data_universe_only
+            else _coverage(
+                len(current_research),
+                truncated=research_truncated,
+                latest=max((item.recorded_at for item in current_research), default=None),
+            )
         ),
         current_research=current_research,
-        thesis_status=_coverage(
-            len(current_theses),
-            truncated=thesis_truncated,
-            latest=max((item.recorded_at for item in current_theses), default=None),
+        thesis_status=(
+            restricted
+            if data_universe_only
+            else _coverage(
+                len(current_theses),
+                truncated=thesis_truncated,
+                latest=max((item.recorded_at for item in current_theses), default=None),
+            )
         ),
         current_theses=current_theses,
-        native_models_status=_coverage(
-            len(models),
-            truncated=models_truncated,
-            latest=max((item.accepted_revision.recorded_at for item in models), default=None),
+        native_models_status=(
+            restricted
+            if data_universe_only
+            else _coverage(
+                len(models),
+                truncated=models_truncated,
+                latest=max((item.accepted_revision.recorded_at for item in models), default=None),
+            )
         ),
         native_models=models,
         imported_outputs_status=imported_status,
         imported_model_outputs=imported_outputs,
-        resource_links={
+        resource_links={} if data_universe_only else {
             "company": root,
             "financial_statements": f"{root}/financial-statements",
             "reported_fundamentals": f"{root}/reported-fundamentals",

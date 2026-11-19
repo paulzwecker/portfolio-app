@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from uuid import UUID
 from typing import Literal
 
 from pydantic import SecretStr, field_validator, model_validator
@@ -45,6 +46,9 @@ class Settings(BaseSettings):
     observation_proposal_agent_id: str | None = None
     observation_proposal_reviewer_token: SecretStr | None = None
     observation_proposal_reviewer_id: str | None = None
+    data_universe_read_enabled: bool = False
+    data_universe_read_token: SecretStr | None = None
+    data_universe_read_company_ids: str | None = None
     cloud_ingestion_enabled: bool = False
     sec_user_agent: str | None = None
     fmp_api_key: SecretStr | None = None
@@ -186,6 +190,37 @@ class Settings(BaseSettings):
             and self.observation_proposal_agent_id == self.observation_proposal_reviewer_id
         ):
             raise ValueError("Observation agent/reviewer identities must be distinct")
+        # Narrow, opt-in read token for DATA_UNIVERSE_STEWARD. Reject absent,
+        # malformed or ambiguous company scope at configuration time.
+        token = self.data_universe_read_token
+        ids = self.data_universe_read_company_ids
+        if self.data_universe_read_enabled and (token is None or not ids):
+            raise ValueError("DATA_UNIVERSE_READ requires a token and a company allowlist")
+        if token is not None:
+            secret = token.get_secret_value()
+            if len(secret) < 32:
+                raise ValueError("DATA_UNIVERSE_READ_TOKEN must have at least 32 characters")
+            for other in (
+                self.api_access_token,
+                self.model_proposal_agent_token,
+                self.model_proposal_reviewer_token,
+                self.observation_proposal_agent_token,
+                self.observation_proposal_reviewer_token,
+            ):
+                if other is not None and secret == other.get_secret_value():
+                    raise ValueError("Data Universe read token must be a dedicated credential")
+        if ids is not None:
+            company_ids = [part.strip() for part in ids.split(",")]
+            if not 1 <= len(company_ids) <= 25 or any(not part for part in company_ids):
+                raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS must contain 1–25 UUIDs")
+            try:
+                parsed = [UUID(part) for part in company_ids]
+            except ValueError as error:
+                raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS contains an invalid UUID") from error
+            if len(set(parsed)) != len(parsed) or any(
+                str(value) != supplied for value, supplied in zip(parsed, company_ids)
+            ):
+                raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS must be unique canonical UUIDs")
         if self.app_env in {"preview", "production"}:
             if self.database_url is None:
                 raise ValueError("DATABASE_URL is required for remote deployments")

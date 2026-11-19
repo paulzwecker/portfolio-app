@@ -61,12 +61,23 @@ context read. When a historical cutoff is requested they are explicitly marked
 
 ## Security and operations
 
-The endpoint inherits the existing API proxy authentication outside local
-development. Model-proposal credentials do not grant context-reading rights.
-Do not put general proxy secrets into third-party automation prompts or Sheets.
-Agent-scoped hosted read access requires a separate reviewed least-privilege
-authorization design. No database migrations, canonical writes, production
-activation, or workbook edits are needed for this slice.
+The normal app endpoint retains the trusted local and server proxy behavior;
+model-proposal credentials do not grant context-reading rights. A separate,
+disabled-by-default `DATA_UNIVERSE_STEWARD` token can be configured for
+a strict allowlist of company UUIDs. It works only for the exact company
+`GET /agent-context` route, never for arbitrary resource links, write
+endpoints or the broader portfolio API. For this role, the response keeps
+company identity, KPI definitions/actuals, management guidance and selected
+consensus; it never queries or returns portfolio holdings/targets, research
+or thesis content, native models, or imported model outputs. Restricted sections
+are explicitly `UNSUPPORTED`, not missing data; links requiring broader
+authorization are omitted. Full details and safe activation instructions:
+[data-universe-read-access](data-universe-read-access.md).
+
+Do not put proxy secrets or read tokens in ChatGPT prompts, workbook cells,
+source documents or public Git. Credentials must be provisioned through an
+approved operator secret store. This code introduces no migration, production
+activation or live-source permission.
 
 The implementation reuses the existing portfolio overview and selected-provider
 consensus readers. Those readers still traverse portfolio and provider history;

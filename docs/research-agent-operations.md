@@ -118,8 +118,12 @@ inbox. In the currently connected workbook, the separate Thesis Watch Feed tab i
 trigger and context are included in Sentinel work items. Keep application credentials outside the
 workbook and repository. Data Steward findings can be reported as acknowledgments with source URL
 and reason, but canonical factual observations still require a supported provider/import pipeline;
-there is no general agent-authored fact inbox. Direct model revision proposal APIs are implemented with dedicated model
-agent/reviewer roles. Other remote APIs use the server proxy boundary. Hosted
-configuration and producer access require separate verification and authorization.
-The workbook transport remains available independently. See
+typed company observation proposal batches are implemented with separate, disabled-by-default
+agent/reviewer roles. A `DATA_UNIVERSE_STEWARD` can also use an opt-in, allowlisted
+company-context read credential, without the general server proxy token. Its
+rights do not include model or observation proposals, portfolio information,
+or other API routes. All hosted configuration and producer access require separate
+operator review/authorization. Workbook transport remains independent.
+See [company observation proposals](company-observation-proposals.md),
+[Data Universe read access](data-universe-read-access.md), and
 [model proposal roles](agent-model-revision-proposals.md).

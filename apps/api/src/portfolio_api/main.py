@@ -5,11 +5,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import cast
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.engine import Engine
 from starlette.middleware.base import RequestResponseEndpoint
 
+from portfolio_api.data_universe_read_auth import authorize_data_universe_read
 from portfolio_api.database import create_database_engine
 from portfolio_api.domain.routes import router
 from portfolio_api.health import HealthResponse, LivenessResponse, check_readiness
@@ -52,6 +53,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def require_server_proxy_token(
         request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        # A separately scoped company-read token cannot be used on any other
+        # endpoint or method, even in development; general API credentials
+        # retain their existing behavior.
+        if "x-data-universe-read-token" in request.headers:
+            try:
+                authorize_data_universe_read(
+                    configured_settings,
+                    token=request.headers["x-data-universe-read-token"],
+                    method=request.method,
+                    path=request.url.path,
+                )
+            except HTTPException as error:
+                return JSONResponse(
+                    {"detail": error.detail},
+                    status_code=error.status_code,
+                    headers={"Cache-Control": "no-store"},
+                )
+            request.state.data_universe_scoped = True
+            response = await call_next(request)
+            response.headers["Cache-Control"] = "no-store"
+            return response
         # Proposal routes have their own mandatory role credentials, including in
         # development. They must not require the broader web/API proxy credential.
         proposal_api = (
