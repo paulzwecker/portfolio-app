@@ -646,3 +646,5 @@ PR never grants production, source-edit, acceptance, migration or activation aut
   producer; PostgreSQL remains canonical accepted state.
 - Next slice: explicit Sheets/agent proposal capture, preview and human acceptance,
   then Company Explorer KPI/guidance/model-driver visualization.
+
+- 2026-11-19 — PR #42 CompanyAgentContextV1 read slice: bounded canonical company context, explicit portfolio identity, point-in-time data/guidance, accepted research/thesis/native models, and linked detailed resources. Pending integration/contract-generation verification; no production operations.

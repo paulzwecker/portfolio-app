@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from portfolio_api import candidate_pipeline as candidate_research
 from portfolio_api import company_observations as company_observation_ops
+from portfolio_api import company_agent_context as agent_context_ops
 from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api import portfolio_ledger as ledger
@@ -1209,6 +1210,21 @@ def post_company(value: s.CompanyCreate, db: Db) -> s.CompanyRead:
 @router.get("/companies/{company_id}", response_model=s.CompanyDetail)
 def get_company(company_id: UUID, db: Db) -> s.CompanyDetail:
     return q.detail(db, company_id)
+
+
+@router.get(
+    "/companies/{company_id}/agent-context",
+    response_model=agent_context_ops.CompanyAgentContextV1,
+)
+def get_company_agent_context(
+    company_id: UUID,
+    db: LedgerDb,
+    portfolio_id: UUID | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> agent_context_ops.CompanyAgentContextV1:
+    _validate_market_cutoffs(as_of, known_at)
+    return agent_context_ops.company_agent_context(db, company_id, portfolio_id, as_of, known_at)
 
 
 @router.get("/companies/{company_id}/research", response_model=s.CompanyResearchRead)
