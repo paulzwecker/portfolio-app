@@ -3,6 +3,7 @@
 from alembic import context
 from sqlalchemy.engine import Connection
 
+from portfolio_api import company_observations as _company_observations  # noqa: F401
 from portfolio_api.database import Base, create_database_engine
 from portfolio_api.domain import models  # noqa: F401 -- register domain metadata
 from portfolio_api.settings import Settings
