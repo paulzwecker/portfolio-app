@@ -1,5 +1,6 @@
 """Least-privilege Data & Universe Steward company-context read boundary."""
 
+from typing import Any
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
@@ -44,7 +45,7 @@ def _read_headers(token: str = READ_TOKEN) -> dict[str, str]:
 def test_read_scope_requires_dedicated_token_and_explicit_companies() -> None:
     company_id = str(uuid4())
     assert _settings(company_id).data_universe_read_enabled
-    for kwargs in [
+    cases: list[dict[str, Any]] = [
         {"data_universe_read_enabled": True},
         {"data_universe_read_enabled": True, "data_universe_read_token": SecretStr(READ_TOKEN)},
         {"data_universe_read_enabled": True, "data_universe_read_company_ids": company_id},
@@ -58,7 +59,8 @@ def test_read_scope_requires_dedicated_token_and_explicit_companies() -> None:
             "data_universe_read_token": SecretStr(READ_TOKEN),
             "data_universe_read_company_ids": "bad-identity",
         },
-    ]:
+    ]
+    for kwargs in cases:
         with pytest.raises(ValidationError):
             Settings(_env_file=None, **kwargs)
     with pytest.raises(ValidationError, match="dedicated credential"):
