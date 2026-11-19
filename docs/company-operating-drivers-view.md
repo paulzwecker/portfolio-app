@@ -12,7 +12,11 @@ accepted `CompanyAgentContextV1` response into a working evidence review:
 - "Above/within/below" guidance and "above/on/below" model-driver badges only
   when exact metric, fiscal period, scope, unit, scale and currency align.
   Actuals must be exact EQ and VERIFIED/RESTATED. Unknown or qualified
-  comparisons are withheld rather than guessed.
+  comparisons are withheld rather than guessed. The comparison uses exact
+  fixed-decimal arithmetic, not rounded JavaScript Numbers. A model driver or
+  guidance observation accepted **after the actual became known** is displayed
+  but does not receive a predictive performance verdict. Withdrawn guidance
+  is not benchmarked.
 - Provider consensus revenue/EPS is shown separately; it is **not** treated as
   company-specific operating guidance or model drivers.
 - Partial history, unsupported coverage and missing definitions are explicit.
