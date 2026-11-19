@@ -117,6 +117,22 @@ class CompanyMetricObservation(Base):
             "external_observation_id",
             name="uq_company_metric_observation_external_id",
         ),
+        UniqueConstraint(
+            "company_id",
+            "metric_definition_id",
+            "id",
+            name="uq_company_metric_observation_identity",
+        ),
+        ForeignKeyConstraint(
+            ["company_id", "metric_definition_id", "supersedes_observation_id"],
+            [
+                "company_metric_observations.company_id",
+                "company_metric_observations.metric_definition_id",
+                "company_metric_observations.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_company_metric_observation_supersession",
+        ),
         CheckConstraint(
             "period_type IN ('DATE','MONTH','QUARTER','FY','TTM','EVENT')",
             name="period_type",
@@ -175,7 +191,6 @@ class CompanyMetricObservation(Base):
     quality_status: Mapped[str] = mapped_column(String(16), default="VERIFIED")
     quality_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     supersedes_observation_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("company_metric_observations.id", ondelete="RESTRICT"),
         unique=True,
         nullable=True,
     )
@@ -188,6 +203,22 @@ class CompanyGuidanceObservation(Base):
     __tablename__ = "company_guidance_observations"
     __table_args__ = (
         UniqueConstraint("external_guidance_id", name="uq_company_guidance_external_id"),
+        UniqueConstraint(
+            "company_id",
+            "metric_definition_id",
+            "id",
+            name="uq_company_guidance_identity",
+        ),
+        ForeignKeyConstraint(
+            ["company_id", "metric_definition_id", "supersedes_guidance_id"],
+            [
+                "company_guidance_observations.company_id",
+                "company_guidance_observations.metric_definition_id",
+                "company_guidance_observations.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_company_guidance_supersession",
+        ),
         CheckConstraint(
             "period_type IN ('DATE','MONTH','QUARTER','FY','TTM','EVENT')",
             name="period_type",
@@ -251,7 +282,6 @@ class CompanyGuidanceObservation(Base):
     source_reference: Mapped[str] = mapped_column(String(2000))
     status: Mapped[str] = mapped_column(String(16), default="ACTIVE")
     supersedes_guidance_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("company_guidance_observations.id", ondelete="RESTRICT"),
         unique=True,
         nullable=True,
     )
