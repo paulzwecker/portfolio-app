@@ -17,12 +17,21 @@ def _role(request: Request, supplied: str) -> tuple[Role, str]:
         raise HTTPException(503, "Observation proposal workflow is disabled.")
     if (
         request.method != "GET"
-        and (settings.app_env == "production" or settings.database_target_environment == "production")
+        and (
+            settings.app_env == "production"
+            or settings.database_target_environment == "production"
+        )
         and not settings.database_production_writes_authorized
     ):
-        raise HTTPException(403, "Production observation proposal writes require owner authorization.")
+        raise HTTPException(
+            403, "Production observation proposal writes require owner authorization."
+        )
     roles: tuple[tuple[Role, SecretStr | None, str | None], ...] = (
-        ("AGENT", settings.observation_proposal_agent_token, settings.observation_proposal_agent_id),
+        (
+            "AGENT",
+            settings.observation_proposal_agent_token,
+            settings.observation_proposal_agent_id,
+        ),
         (
             "REVIEWER",
             settings.observation_proposal_reviewer_token,

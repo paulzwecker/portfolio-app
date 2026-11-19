@@ -11,7 +11,17 @@ from typing import Annotated, Any, Literal, Self, cast
 from uuid import UUID, uuid4
 
 from pydantic import Field, TypeAdapter, field_validator, model_validator
-from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, select
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    select,
+)
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from portfolio_api.company_observations import (
@@ -158,7 +168,9 @@ BATCH_ADAPTER: TypeAdapter[ObservationBatchV1] = TypeAdapter(ObservationBatchV1)
 class CompanyObservationProposal(Base):
     __tablename__ = "company_observation_proposals"
     __table_args__ = (
-        UniqueConstraint("producer_id", "external_batch_id", name="uq_company_observation_producer_batch"),
+        UniqueConstraint(
+            "producer_id", "external_batch_id", name="uq_company_observation_producer_batch"
+        ),
         Index("ix_company_observation_proposals_company_status", "company_id", "status"),
         CheckConstraint(
             "status IN ('PENDING','READY','CONFLICT','INVALID','ACCEPTED','REJECTED')",
@@ -224,7 +236,9 @@ class ObservationProposalPreviewRead(s.Contract):
 
 
 class ObservationProposalDecisionRequest(s.Contract):
-    preview_fingerprint: Annotated[str, Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")]
+    preview_fingerprint: Annotated[
+        str, Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+    ]
     decision_note: Annotated[str, Field(min_length=1, max_length=2000)]
 
 
@@ -318,6 +332,7 @@ def _preflight(
     changes: list[ObservationProposalChange] = []
     dependencies: list[object] = []
     seen: set[str] = set()
+    seen_external_ids: set[str] = set()
     for index, item in enumerate(batch.items):
         key = item.metric_key
         if isinstance(item, MetricDefinitionItem):
@@ -357,7 +372,8 @@ def _preflight(
             if (
                 not definition.active or definition.deprecated_at is not None
                 or definition.company_id not in (None, batch.company_id) or not enabled
-                or item.unit != definition.canonical_unit or item.scale != definition.canonical_scale
+                or item.unit != definition.canonical_unit
+                or item.scale != definition.canonical_scale
                 or set(item.scope_json) - set(definition.scope_dimensions)
                 or (definition.currency_policy == "REQUIRED" and item.currency is None)
                 or (definition.currency_policy == "NONE" and item.currency is not None)
@@ -373,7 +389,9 @@ def _preflight(
                 predecessor = item.supersedes_observation_id
                 if item.period_end > date.today():
                     issues.append(ObservationProposalIssue(
-                        row_index=index, code="INVALID", detail="KPI actual period ends in the future",
+                        row_index=index,
+                        code="INVALID",
+                        detail="KPI actual period ends in the future",
                     ))
                 source_at = item.reported_at
             else:
@@ -395,6 +413,13 @@ def _preflight(
                 ).order_by(model.id)
             ))
             external = session.scalar(select(model).where(external_column == external_id))
+            if external_id in seen_external_ids:
+                issues.append(ObservationProposalIssue(
+                    row_index=index,
+                    code="INVALID",
+                    detail="Duplicate external observation ID within batch",
+                ))
+            seen_external_ids.add(external_id)
             dependencies.append((
                 external_id, str(external.id) if external else None,
                 [(str(row.id), str(row.supersedes_observation_id)
@@ -403,14 +428,18 @@ def _preflight(
             ))
             if external is not None:
                 issues.append(ObservationProposalIssue(
-                    row_index=index, code="CONFLICT", detail="External observation ID already exists",
+                    row_index=index,
+                    code="CONFLICT",
+                    detail="External observation ID already exists",
                 ))
             current = [row for row in existing if row.scope_json == item.scope_json]
             predecessor_row = session.get(model, predecessor) if predecessor else None
             if predecessor is not None:
                 if predecessor_row is None or predecessor_row not in current:
                     issues.append(ObservationProposalIssue(
-                        row_index=index, code="CONFLICT", detail="Superseded observation identity mismatches",
+                        row_index=index,
+                        code="CONFLICT",
+                        detail="Superseded observation identity mismatches",
                     ))
                 else:
                     successors = list(session.scalars(select(model.id).where(
@@ -420,12 +449,15 @@ def _preflight(
                     dependencies.append((str(predecessor), [str(value) for value in successors]))
                     if successors:
                         issues.append(ObservationProposalIssue(
-                            row_index=index, code="CONFLICT", detail="Superseded observation is no longer current",
+                            row_index=index,
+                            code="CONFLICT",
+                            detail="Superseded observation is no longer current",
                         ))
             elif current:
                 issues.append(ObservationProposalIssue(
                     row_index=index, code="CONFLICT",
-                    detail="Existing observation for this period and scope requires explicit supersession",
+                    detail="Existing observation for this period and scope "
+                    "requires explicit supersession",
                 ))
             operation = "SUPERSEDE" if predecessor else "CREATE"
         if identity in seen:
@@ -502,7 +534,8 @@ def accept(
                 metric_key=item.metric_key, company_id=batch.company_id,
                 display_name=item.display_name, category=item.category, value_kind=item.value_kind,
                 canonical_unit=item.canonical_unit, canonical_scale=item.canonical_scale,
-                currency_policy=item.currency_policy, aggregation_semantics=item.aggregation_semantics,
+                currency_policy=item.currency_policy,
+                aggregation_semantics=item.aggregation_semantics,
                 default_period_type=item.default_period_type, default_basis=item.default_basis,
                 scope_dimensions=item.scope_dimensions, actuals_allowed=item.actuals_allowed,
                 guidance_allowed=item.guidance_allowed, consensus_allowed=False,

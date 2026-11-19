@@ -36,7 +36,9 @@ from psycopg import sql
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError
 
-from portfolio_api import company_observation_proposals as _company_observation_proposals  # noqa: F401
+from portfolio_api import (
+    company_observation_proposals as _company_observation_proposals,  # noqa: F401
+)
 from portfolio_api import company_observations as _company_observations  # noqa: F401
 from portfolio_api.database import Base
 from portfolio_api.domain import models  # noqa: F401 -- register mapped tables
