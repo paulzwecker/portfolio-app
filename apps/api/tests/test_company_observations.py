@@ -464,47 +464,52 @@ def test_supersession_must_preserve_company_and_metric_identity(
     postgres_engine: Engine,
 ) -> None:
     observed = datetime(2026, 11, 19, 12, tzinfo=UTC)
-    with Session(postgres_engine) as session, session.begin():
-        company, _ = seed_company(session)
-        bookings = metric(session, company)
-        trips = metric(
-            session,
-            company,
-            key="synthetic.trips.identity",
-            display_name="Trips",
-            value_kind="COUNT",
-            canonical_unit="trips",
-        )
-        original = CompanyMetricObservation(
-            external_observation_id="smob-identity-bookings-v1",
-            company_id=company.id,
-            metric_definition_id=bookings.id,
-            period_type="QUARTER",
-            period_start=date(2026, 7, 1),
-            period_end=date(2026, 9, 30),
-            fiscal_year=2026,
-            fiscal_quarter=3,
-            value=Decimal("59.8"),
-            value_qualifier="EQ",
-            unit="currency",
-            scale=Decimal("1000000000"),
-            currency="USD",
-            basis="REPORTED",
-            scope_json={},
-            reported_at=observed,
-            source_type="EARNINGS_RELEASE",
-            source_reference="https://example.com/q3",
-            quality_status="VERIFIED",
-            quality_reason=None,
-            recorded_at=observed,
-        )
-        session.add(original)
-        session.flush()
+    with Session(postgres_engine) as session:
+        with session.begin():
+            company, _ = seed_company(session)
+            bookings = metric(session, company)
+            trips = metric(
+                session,
+                company,
+                key="synthetic.trips.identity",
+                display_name="Trips",
+                value_kind="COUNT",
+                canonical_unit="trips",
+            )
+            original = CompanyMetricObservation(
+                external_observation_id="smob-identity-bookings-v1",
+                company_id=company.id,
+                metric_definition_id=bookings.id,
+                period_type="QUARTER",
+                period_start=date(2026, 7, 1),
+                period_end=date(2026, 9, 30),
+                fiscal_year=2026,
+                fiscal_quarter=3,
+                value=Decimal("59.8"),
+                value_qualifier="EQ",
+                unit="currency",
+                scale=Decimal("1000000000"),
+                currency="USD",
+                basis="REPORTED",
+                scope_json={},
+                reported_at=observed,
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/q3",
+                quality_status="VERIFIED",
+                quality_reason=None,
+                recorded_at=observed,
+            )
+            session.add(original)
+            session.flush()
+            company_id = company.id
+            trips_id = trips.id
+            original_id = original.id
+
         session.add(
             CompanyMetricObservation(
                 external_observation_id="smob-identity-trips-v2",
-                company_id=company.id,
-                metric_definition_id=trips.id,
+                company_id=company_id,
+                metric_definition_id=trips_id,
                 period_type="QUARTER",
                 period_start=date(2026, 7, 1),
                 period_end=date(2026, 9, 30),
@@ -522,29 +527,34 @@ def test_supersession_must_preserve_company_and_metric_identity(
                 source_reference="https://example.com/q3-corrected",
                 quality_status="RESTATED",
                 quality_reason="Invalid cross-metric supersession",
-                supersedes_observation_id=original.id,
+                supersedes_observation_id=original_id,
                 recorded_at=observed + timedelta(hours=1),
             )
         )
         with pytest.raises(IntegrityError):
             session.flush()
+        session.rollback()
 
 
 def test_company_scoped_metric_cannot_be_attached_to_another_company(
     postgres_engine: Engine,
 ) -> None:
     observed = datetime(2026, 11, 19, 12, tzinfo=UTC)
-    with Session(postgres_engine) as session, session.begin():
-        owner, _ = seed_company(session)
-        definition = metric(session, owner)
-        other = Company(name="Other Synthetic Mobility", reporting_currency="USD")
-        session.add(other)
-        session.flush()
+    with Session(postgres_engine) as session:
+        with session.begin():
+            owner, _ = seed_company(session)
+            definition = metric(session, owner)
+            other = Company(name="Other Synthetic Mobility", reporting_currency="USD")
+            session.add(other)
+            session.flush()
+            definition_id = definition.id
+            other_id = other.id
+
         session.add(
             CompanyMetricObservation(
                 external_observation_id="other-company-wrong-metric",
-                company_id=other.id,
-                metric_definition_id=definition.id,
+                company_id=other_id,
+                metric_definition_id=definition_id,
                 period_type="QUARTER",
                 period_start=date(2026, 7, 1),
                 period_end=date(2026, 9, 30),
@@ -567,3 +577,5 @@ def test_company_scoped_metric_cannot_be_attached_to_another_company(
         )
         with pytest.raises(ValueError, match="another company"):
             session.flush()
+        session.rollback()
+
