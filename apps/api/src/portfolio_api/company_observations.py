@@ -507,9 +507,7 @@ def company_metric_history(
             CompanyMetricObservation.id,
         ).limit(limit)
     ).all()
-    supersession_statement = select(
-        CompanyMetricObservation.supersedes_observation_id
-    ).where(
+    supersession_statement = select(CompanyMetricObservation.supersedes_observation_id).where(
         CompanyMetricObservation.company_id == company_id,
         CompanyMetricObservation.supersedes_observation_id.is_not(None),
     )
@@ -596,9 +594,7 @@ def company_guidance_history(
             CompanyGuidanceObservation.id,
         ).limit(limit)
     ).all()
-    supersession_statement = select(
-        CompanyGuidanceObservation.supersedes_guidance_id
-    ).where(
+    supersession_statement = select(CompanyGuidanceObservation.supersedes_guidance_id).where(
         CompanyGuidanceObservation.company_id == company_id,
         CompanyGuidanceObservation.supersedes_guidance_id.is_not(None),
     )
