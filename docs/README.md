@@ -56,6 +56,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Canonical Portfolio Bootstrap (14B-R.4)](canonical-portfolio-bootstrap.md)
 - [Cloud-native canonical baseline runbook](cloud-native-bootstrap-runbook.md)
 - [Canonical consensus estimates](consensus-estimates.md)
+- [Canonical company operating metrics and guidance](company-operating-metrics.md)
 - [Canonical external-data architecture](external-data-architecture.md)
 - [External-data ingestion operations](external-data-operations.md)
 - [Financial statements and evidence bootstrap](fundamentals-source-bootstrap.md)
