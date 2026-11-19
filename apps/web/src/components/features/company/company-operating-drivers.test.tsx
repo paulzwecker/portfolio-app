@@ -30,6 +30,8 @@ const actual = {
   basis: "REPORTED",
   is_current: true,
   source_reference: "https://example.com/source",
+  reported_at: "2026-11-04T15:00:00Z",
+  recorded_at: "2026-11-04T15:05:00Z",
 } as Actual;
 
 const guidance = {
@@ -40,6 +42,7 @@ const guidance = {
   midpoint_value: null,
   value_qualifier: "RANGE",
   status: "ACTIVE",
+  recorded_at: "2026-10-15T15:00:00Z",
 } as unknown as Guidance;
 
 const driver = {
@@ -50,6 +53,7 @@ const driver = {
   value_qualifier: "EQ",
   forecast_year: 1,
   rationale: "Test projection supported by source",
+  recorded_at: "2026-10-15T15:00:00Z",
 } as unknown as Driver;
 
 function context(): CompanyAgentContext {
@@ -120,6 +124,16 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
     expect(
       actualVsGuidance(actual, { ...guidance, value_qualifier: "APPROX" }),
     ).toBeNull();
+    expect(
+      actualVsGuidance(actual, { ...guidance, recorded_at: "2026-11-05T00:00:00Z" }),
+    ).toBeNull();
+    expect(
+      actualVsGuidance(actual, { ...guidance, status: "WITHDRAWN" }),
+    ).toBeNull();
+    expect(
+      actualVsDriver(actual, { ...driver, recorded_at: "2026-11-05T00:00:00Z" }),
+    ).toBeNull();
+
     expect(
       actualVsGuidance(
         { ...actual, value: "9007199254740993.000000000001" },

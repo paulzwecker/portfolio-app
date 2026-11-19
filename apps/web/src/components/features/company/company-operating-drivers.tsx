@@ -57,6 +57,14 @@ function compareExactDecimals(left: string, right: string): -1 | 0 | 1 | null {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/** Compare only expectations recorded before the issuer result was known. */
+function priorExpectation(actual: Actual, publishedAt: string | null): boolean {
+  const known = actual.reported_at ?? actual.recorded_at;
+  const publication = publishedAt ? Date.parse(publishedAt) : Number.NaN;
+  const observed = known ? Date.parse(known) : Number.NaN;
+  return Number.isFinite(publication) && Number.isFinite(observed) && publication <= observed;
+}
+
 /** Never convert unlike units, currencies, fiscal windows or qualified actuals. */
 export function actualVsGuidance(
   actual: Actual,
@@ -65,6 +73,8 @@ export function actualVsGuidance(
   if (
     !comparableOperatingValues(actual, guidance) ||
     guidance.value_qualifier !== "RANGE" ||
+    guidance.status !== "ACTIVE" ||
+    !priorExpectation(actual, guidance.recorded_at) ||
     guidance.lower_value === null ||
     guidance.upper_value === null
   )
@@ -79,7 +89,11 @@ export function actualVsDriver(
   actual: Actual,
   driver: Driver,
 ): "ABOVE" | "ON" | "BELOW" | null {
-  if (!comparableOperatingValues(actual, driver) || driver.value_qualifier !== "EQ")
+  if (
+    !comparableOperatingValues(actual, driver) ||
+    driver.value_qualifier !== "EQ" ||
+    !priorExpectation(actual, driver.recorded_at)
+  )
     return null;
   const result = compareExactDecimals(actual.value, driver.value);
   return result === null ? null : result > 0 ? "ABOVE" : result < 0 ? "BELOW" : "ON";
