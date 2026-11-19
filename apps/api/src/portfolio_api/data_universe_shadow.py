@@ -64,9 +64,16 @@ def _fingerprint(value: object) -> str:
 
 def _same_definition(existing: dict[str, Any], proposed: MetricDefinitionItem) -> bool:
     keys = (
-        "display_name", "category", "value_kind", "canonical_unit", "currency_policy",
-        "aggregation_semantics", "default_period_type", "default_basis",
-        "actuals_allowed", "guidance_allowed",
+        "display_name",
+        "category",
+        "value_kind",
+        "canonical_unit",
+        "currency_policy",
+        "aggregation_semantics",
+        "default_period_type",
+        "default_basis",
+        "actuals_allowed",
+        "guidance_allowed",
     )
     candidate = proposed.model_dump(mode="json")
     return (
@@ -117,28 +124,31 @@ def _batch(
     pack: EvidencePackV1,
 ) -> dict[str, Any]:
     fields = [item.model_dump(mode="json") for item in items]
-    identity = _fingerprint({
-        "company_id": str(company_id),
-        "contract": contract_type,
-        "items": fields,
-        "authored_at": pack.authored_at.isoformat(),
-    })
-    batch = BATCH_ADAPTER.validate_python({
-        "contract_type": contract_type,
-        "contract_version": "1.0.0",
-        "company_id": str(company_id),
-        "external_batch_id": f"shadow-{identity}",
-        "authored_at": pack.authored_at.isoformat(),
-        "rationale": (
-            f"Source-backed shadow review of {pack.issuer_ticker}; no automatic acceptance."
-        ),
-        "items": fields,
-    })
+    identity = _fingerprint(
+        {
+            "company_id": str(company_id),
+            "contract": contract_type,
+            "items": fields,
+            "authored_at": pack.authored_at.isoformat(),
+        }
+    )
+    batch = BATCH_ADAPTER.validate_python(
+        {
+            "contract_type": contract_type,
+            "contract_version": "1.0.0",
+            "company_id": str(company_id),
+            "external_batch_id": f"shadow-{identity}",
+            "authored_at": pack.authored_at.isoformat(),
+            "rationale": (
+                f"Source-backed shadow review of {pack.issuer_ticker}; no automatic acceptance."
+            ),
+            "items": fields,
+        }
+    )
     return batch.model_dump(mode="json")
 
-def compare_source_pack(
-    context: CompanyAgentContextV1, pack: EvidencePackV1
-) -> dict[str, Any]:
+
+def compare_source_pack(context: CompanyAgentContextV1, pack: EvidencePackV1) -> dict[str, Any]:
     """Compare a verified source pack with bounded canonical read state.
 
     Absence in a truncated context is not proof that a record is missing.
@@ -188,7 +198,8 @@ def compare_source_pack(
             raise ValueError("Duplicate metric definition in reviewed evidence pack")
         staged_keys.add(key)
         if context.metrics_status.truncated or context.metrics_status.status not in (
-            "AVAILABLE", "NO_DATA"
+            "AVAILABLE",
+            "NO_DATA",
         ):
             incomplete = True
             note("DEFINITION", key, "INCOMPLETE_CONTEXT", "Cannot establish missing definitions")
@@ -206,7 +217,8 @@ def compare_source_pack(
     ) -> list[dict[str, Any]]:
         records = actuals if domain == "KPI" else guidance
         return [
-            row for row in records
+            row
+            for row in records
             if row["metric_id"] == item.metric_key
             and row["period_type"] == item.period_type
             and row["period_start"] == item.period_start.isoformat()
@@ -241,7 +253,8 @@ def compare_source_pack(
                 note(domain, key, "BLOCKED", "Metric definition has conflicting semantics")
                 continue
             if context.metrics_status.truncated or context.metrics_status.status not in (
-                "AVAILABLE", "NO_DATA"
+                "AVAILABLE",
+                "NO_DATA",
             ):
                 incomplete = True
                 note(domain, key, "INCOMPLETE_CONTEXT", "Metric definition coverage is incomplete")
@@ -252,13 +265,10 @@ def compare_source_pack(
                 )
                 continue
             candidates = observation_candidates(domain, item)
-            equivalent = (
-                len(candidates) == 1
-                and (
-                    _same_actual(candidates[0], item)
-                    if isinstance(item, KPIObservationItem)
-                    else _same_guidance(candidates[0], item)
-                )
+            equivalent = len(candidates) == 1 and (
+                _same_actual(candidates[0], item)
+                if isinstance(item, KPIObservationItem)
+                else _same_guidance(candidates[0], item)
             )
             if equivalent:
                 note(domain, key, "MATCHED", "Same canonical period/scope and value")
@@ -269,11 +279,15 @@ def compare_source_pack(
                     missing_actuals.append(item)
                 elif isinstance(item, GuidanceObservationItem):
                     missing_guidance.append(item)
-                prerequisite = " (definition acceptance required first)" if key in {
-                    d.metric_key for d in missing_definitions
-                } else ""
+                prerequisite = (
+                    " (definition acceptance required first)"
+                    if key in {d.metric_key for d in missing_definitions}
+                    else ""
+                )
                 note(
-                    domain, key, "DRAFT",
+                    domain,
+                    key,
+                    "DRAFT",
                     "No current matching canonical observation" + prerequisite,
                 )
 
@@ -290,9 +304,12 @@ def compare_source_pack(
         )
     has_conflict = any(item["outcome"] in ("CONFLICT", "BLOCKED") for item in findings)
     status = (
-        "INCOMPLETE_CONTEXT" if incomplete
-        else "NEEDS_HUMAN_RESOLUTION" if has_conflict
-        else "DRAFTS_PREPARED" if proposals
+        "INCOMPLETE_CONTEXT"
+        if incomplete
+        else "NEEDS_HUMAN_RESOLUTION"
+        if has_conflict
+        else "DRAFTS_PREPARED"
+        if proposals
         else "MATCHED"
     )
     return {

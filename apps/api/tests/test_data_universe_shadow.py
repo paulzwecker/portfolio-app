@@ -27,92 +27,117 @@ def _pack() -> EvidencePackV1:
 
 def _context() -> CompanyAgentContextV1:
     company_id, security_id, listing_id = uuid4(), uuid4(), uuid4()
-    return CompanyAgentContextV1.model_validate({
-        "contract_type": "CompanyAgentContextV1",
-        "contract_version": "1.0.0",
-        "generated_at": "2026-11-19T18:50:00Z",
-        "as_of": "2026-11-19",
-        "known_at": "2026-11-19T18:50:00Z",
-        "identity": {"status": "AVAILABLE"},
-        "company": {
-            "id": str(company_id),
-            "name": "Synthetic Uber",
-            "reporting_currency": "USD",
-            "created_at": "2026-01-01T00:00:00Z",
-            "is_demo": True,
-            "lifecycle": None,
-            "lifecycle_event_id": None,
-        },
-        "securities": [],
-        "listings": [{
-            "id": str(listing_id), "security_id": str(security_id),
-            "venue": "NYSE", "ticker": "UBER", "currency": "USD",
-            "identity_source_ref": None, "is_demo": True,
-        }],
-        "portfolio_status": {
-            "status": "UNSUPPORTED", "reason": "Outside Data & Universe read scope"
-        },
-        "portfolio_id": None,
-        "portfolio_snapshot_id": None,
-        "portfolio_target_revision_id": None,
-        "portfolio_holdings_authority": None,
-        "portfolio": None,
-        "metrics_status": {"status": "NO_DATA"},
-        "metric_definitions": [],
-        "metric_observations": [],
-        "guidance_status": {"status": "NO_DATA"},
-        "guidance_observations": [],
-        "consensus_status": {"status": "NO_DATA"},
-        "consensus_continuity_status": "NO_MAPPING",
-        "consensus_provider_id": None,
-        "consensus_periods": [],
-        "research_status": {"status": "UNSUPPORTED"},
-        "current_research": [],
-        "thesis_status": {"status": "UNSUPPORTED"},
-        "current_theses": [],
-        "native_models_status": {"status": "UNSUPPORTED"},
-        "native_models": [],
-        "imported_outputs_status": {"status": "UNSUPPORTED"},
-        "imported_model_outputs": None,
-        "resource_links": {},
-    })
+    return CompanyAgentContextV1.model_validate(
+        {
+            "contract_type": "CompanyAgentContextV1",
+            "contract_version": "1.0.0",
+            "generated_at": "2026-11-19T18:50:00Z",
+            "as_of": "2026-11-19",
+            "known_at": "2026-11-19T18:50:00Z",
+            "identity": {"status": "AVAILABLE"},
+            "company": {
+                "id": str(company_id),
+                "name": "Synthetic Uber",
+                "reporting_currency": "USD",
+                "created_at": "2026-01-01T00:00:00Z",
+                "is_demo": True,
+                "lifecycle": None,
+                "lifecycle_event_id": None,
+            },
+            "securities": [],
+            "listings": [
+                {
+                    "id": str(listing_id),
+                    "security_id": str(security_id),
+                    "venue": "NYSE",
+                    "ticker": "UBER",
+                    "currency": "USD",
+                    "identity_source_ref": None,
+                    "is_demo": True,
+                }
+            ],
+            "portfolio_status": {
+                "status": "UNSUPPORTED",
+                "reason": "Outside Data & Universe read scope",
+            },
+            "portfolio_id": None,
+            "portfolio_snapshot_id": None,
+            "portfolio_target_revision_id": None,
+            "portfolio_holdings_authority": None,
+            "portfolio": None,
+            "metrics_status": {"status": "NO_DATA"},
+            "metric_definitions": [],
+            "metric_observations": [],
+            "guidance_status": {"status": "NO_DATA"},
+            "guidance_observations": [],
+            "consensus_status": {"status": "NO_DATA"},
+            "consensus_continuity_status": "NO_MAPPING",
+            "consensus_provider_id": None,
+            "consensus_periods": [],
+            "research_status": {"status": "UNSUPPORTED"},
+            "current_research": [],
+            "thesis_status": {"status": "UNSUPPORTED"},
+            "current_theses": [],
+            "native_models_status": {"status": "UNSUPPORTED"},
+            "native_models": [],
+            "imported_outputs_status": {"status": "UNSUPPORTED"},
+            "imported_model_outputs": None,
+            "resource_links": {},
+        }
+    )
 
 
 def _accepted_data(context: CompanyAgentContextV1, pack: EvidencePackV1) -> None:
     for definition in pack.metric_definitions:
         fields = definition.model_dump(mode="json")
         fields.pop("metric_key")
-        fields.update({
-            "id": str(uuid4()), "company_id": str(context.company.id),
-            "metric_id": definition.metric_key,
-            "consensus_allowed": False, "model_driver_allowed": False,
-            "active": True, "created_at": "2026-11-18T00:00:00Z",
-            "deprecated_at": None,
-        })
+        fields.update(
+            {
+                "id": str(uuid4()),
+                "company_id": str(context.company.id),
+                "metric_id": definition.metric_key,
+                "consensus_allowed": False,
+                "model_driver_allowed": False,
+                "active": True,
+                "created_at": "2026-11-18T00:00:00Z",
+                "deprecated_at": None,
+            }
+        )
         from portfolio_api.company_observations import CompanyMetricDefinitionRead
 
         context.metric_definitions.append(CompanyMetricDefinitionRead.model_validate(fields))
     for item in pack.kpi_observations:
         fields = item.model_dump(mode="json")
         fields.pop("metric_key")
-        fields.update({
-            "id": str(uuid4()), "company_id": str(context.company.id),
-            "metric_id": item.metric_key, "metric_definition_id": str(uuid4()),
-            "recorded_at": "2026-11-19T18:45:00Z", "is_current": True,
-            "quality_reason": None, "supersedes_observation_id": None,
-        })
+        fields.update(
+            {
+                "id": str(uuid4()),
+                "company_id": str(context.company.id),
+                "metric_id": item.metric_key,
+                "metric_definition_id": str(uuid4()),
+                "recorded_at": "2026-11-19T18:45:00Z",
+                "is_current": True,
+                "quality_reason": None,
+                "supersedes_observation_id": None,
+            }
+        )
         from portfolio_api.company_observations import CompanyMetricObservationRead
 
         context.metric_observations.append(CompanyMetricObservationRead.model_validate(fields))
     for item in pack.guidance_observations:
         fields = item.model_dump(mode="json")
         fields.pop("metric_key")
-        fields.update({
-            "id": str(uuid4()), "company_id": str(context.company.id),
-            "metric_id": item.metric_key, "metric_definition_id": str(uuid4()),
-            "recorded_at": "2026-11-19T18:45:00Z", "is_current": True,
-            "supersedes_guidance_id": None,
-        })
+        fields.update(
+            {
+                "id": str(uuid4()),
+                "company_id": str(context.company.id),
+                "metric_id": item.metric_key,
+                "metric_definition_id": str(uuid4()),
+                "recorded_at": "2026-11-19T18:45:00Z",
+                "is_current": True,
+                "supersedes_guidance_id": None,
+            }
+        )
         from portfolio_api.company_observations import CompanyGuidanceObservationRead
 
         context.guidance_observations.append(CompanyGuidanceObservationRead.model_validate(fields))
@@ -126,7 +151,9 @@ def test_source_pack_prepares_three_typed_drafts_without_writes() -> None:
     assert report["writes_performed"] is False
     assert report["status"] == "DRAFTS_PREPARED"
     assert [item["contract_type"] for item in report["draft_proposals"]] == [
-        "MetricDefinitionBatchV1", "KPIObservationBatchV1", "GuidanceObservationBatchV1"
+        "MetricDefinitionBatchV1",
+        "KPIObservationBatchV1",
+        "GuidanceObservationBatchV1",
     ]
     assert [len(item["items"]) for item in report["draft_proposals"]] == [2, 2, 1]
     assert report == compare_source_pack(context, pack)
@@ -201,9 +228,15 @@ def test_offline_cli_writes_only_explicit_external_report(tmp_path: Path) -> Non
     context_file.write_text(context.model_dump_json(), encoding="utf-8")
     output = tmp_path / "shadow.json"
     args = [
-        "data_universe_shadow", "--context-file", str(context_file),
-        "--company-id", str(context.company.id),
-        "--source-pack", str(FIXTURE), "--output", str(output),
+        "data_universe_shadow",
+        "--context-file",
+        str(context_file),
+        "--company-id",
+        str(context.company.id),
+        "--source-pack",
+        str(FIXTURE),
+        "--output",
+        str(output),
     ]
     with patch.object(sys, "argv", args):
         main()

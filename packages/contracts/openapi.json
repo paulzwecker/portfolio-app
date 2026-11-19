@@ -557,7 +557,6 @@
                 "type": "null"
               }
             ],
-            "default": null,
             "title": "Latest Recorded At"
           },
           "reason": {
@@ -569,7 +568,6 @@
                 "type": "null"
               }
             ],
-            "default": null,
             "title": "Reason"
           },
           "status": {
@@ -17363,6 +17361,598 @@
         "title": "GoogleSheetsThesisWatchPublishRequest",
         "type": "object"
       },
+      "GuidanceObservationBatchV1-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "GuidanceObservationBatchV1",
+            "default": "GuidanceObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GuidanceObservationItem-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "GuidanceObservationBatchV1",
+        "type": "object"
+      },
+      "GuidanceObservationBatchV1-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "GuidanceObservationBatchV1",
+            "default": "GuidanceObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GuidanceObservationItem-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "GuidanceObservationBatchV1",
+        "type": "object"
+      },
+      "GuidanceObservationItem-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_guidance_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Guidance Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "lower_value": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "decimal_places": 12,
+                "max_digits": 38
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Value"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "midpoint_value": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "decimal_places": 12,
+                "max_digits": 38
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midpoint Value"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "default": "ACTIVE",
+            "enum": [
+              "ACTIVE",
+              "WITHDRAWN",
+              "ACHIEVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_guidance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Guidance Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper_value": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "decimal_places": 12,
+                "max_digits": 38
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Value"
+          },
+          "value_qualifier": {
+            "default": "RANGE",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE",
+              "RANGE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_guidance_id"
+        ],
+        "title": "GuidanceObservationItem",
+        "type": "object"
+      },
+      "GuidanceObservationItem-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_guidance_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Guidance Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "lower_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Value"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "midpoint_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midpoint Value"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "default": "ACTIVE",
+            "enum": [
+              "ACTIVE",
+              "WITHDRAWN",
+              "ACHIEVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_guidance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Guidance Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Value"
+          },
+          "value_qualifier": {
+            "default": "RANGE",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE",
+              "RANGE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_guidance_id"
+        ],
+        "title": "GuidanceObservationItem",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -18873,6 +19463,542 @@
           "history"
         ],
         "title": "InvestmentThesisStreamRead",
+        "type": "object"
+      },
+      "KPIObservationBatchV1-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "KPIObservationBatchV1",
+            "default": "KPIObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KPIObservationItem-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "KPIObservationBatchV1",
+        "type": "object"
+      },
+      "KPIObservationBatchV1-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "KPIObservationBatchV1",
+            "default": "KPIObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KPIObservationItem-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "KPIObservationBatchV1",
+        "type": "object"
+      },
+      "KPIObservationItem-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_observation_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Observation Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "quality_status": {
+            "default": "VERIFIED",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "CONFLICTED",
+              "RESTATED"
+            ],
+            "title": "Quality Status",
+            "type": "string"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "supersedes_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Observation Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_observation_id",
+          "value"
+        ],
+        "title": "KPIObservationItem",
+        "type": "object"
+      },
+      "KPIObservationItem-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_observation_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Observation Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "quality_status": {
+            "default": "VERIFIED",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "CONFLICTED",
+              "RESTATED"
+            ],
+            "title": "Quality Status",
+            "type": "string"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "supersedes_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Observation Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_observation_id",
+          "value"
+        ],
+        "title": "KPIObservationItem",
         "type": "object"
       },
       "LedgerAcceptCreate": {
@@ -22833,6 +23959,418 @@
         "title": "MarketRefreshStatusRead",
         "type": "object"
       },
+      "MetricDefinitionBatchV1-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "MetricDefinitionBatchV1",
+            "default": "MetricDefinitionBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionItem-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "MetricDefinitionBatchV1",
+        "type": "object"
+      },
+      "MetricDefinitionBatchV1-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "MetricDefinitionBatchV1",
+            "default": "MetricDefinitionBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionItem-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "MetricDefinitionBatchV1",
+        "type": "object"
+      },
+      "MetricDefinitionItem-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "actuals_allowed": {
+            "default": true,
+            "title": "Actuals Allowed",
+            "type": "boolean"
+          },
+          "aggregation_semantics": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Aggregation Semantics",
+            "type": "string"
+          },
+          "canonical_scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Canonical Scale"
+          },
+          "canonical_unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Canonical Unit",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "OPERATING",
+              "CUSTOMER",
+              "CAPACITY",
+              "PRODUCT",
+              "MARKET_SHARE",
+              "MARKET_EXPOSURE",
+              "SEGMENT",
+              "BACKLOG",
+              "QUALITY",
+              "OTHER"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "currency_policy": {
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL",
+              "NONE"
+            ],
+            "title": "Currency Policy",
+            "type": "string"
+          },
+          "default_basis": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Basis"
+          },
+          "default_period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Default Period Type",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4000,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guidance_allowed": {
+            "default": false,
+            "title": "Guidance Allowed",
+            "type": "boolean"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "scope_dimensions": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Scope Dimensions",
+            "type": "array"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "value_kind": {
+            "enum": [
+              "CURRENCY",
+              "PERCENT",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Value Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "display_name",
+          "category",
+          "value_kind",
+          "canonical_unit",
+          "canonical_scale",
+          "currency_policy",
+          "aggregation_semantics",
+          "default_period_type",
+          "description",
+          "source_reference"
+        ],
+        "title": "MetricDefinitionItem",
+        "type": "object"
+      },
+      "MetricDefinitionItem-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "actuals_allowed": {
+            "default": true,
+            "title": "Actuals Allowed",
+            "type": "boolean"
+          },
+          "aggregation_semantics": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Aggregation Semantics",
+            "type": "string"
+          },
+          "canonical_scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Canonical Scale",
+            "type": "string"
+          },
+          "canonical_unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Canonical Unit",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "OPERATING",
+              "CUSTOMER",
+              "CAPACITY",
+              "PRODUCT",
+              "MARKET_SHARE",
+              "MARKET_EXPOSURE",
+              "SEGMENT",
+              "BACKLOG",
+              "QUALITY",
+              "OTHER"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "currency_policy": {
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL",
+              "NONE"
+            ],
+            "title": "Currency Policy",
+            "type": "string"
+          },
+          "default_basis": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Basis"
+          },
+          "default_period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Default Period Type",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4000,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guidance_allowed": {
+            "default": false,
+            "title": "Guidance Allowed",
+            "type": "boolean"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "scope_dimensions": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Scope Dimensions",
+            "type": "array"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "value_kind": {
+            "enum": [
+              "CURRENCY",
+              "PERCENT",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Value Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "display_name",
+          "category",
+          "value_kind",
+          "canonical_unit",
+          "canonical_scale",
+          "currency_policy",
+          "aggregation_semantics",
+          "default_period_type",
+          "description",
+          "source_reference"
+        ],
+        "title": "MetricDefinitionItem",
+        "type": "object"
+      },
       "ModelEvidenceRelationship": {
         "enum": [
           "SUPPORTS",
@@ -23821,6 +25359,356 @@
           "replayed"
         ],
         "title": "ModelRevisionProposalSubmissionRead",
+        "type": "object"
+      },
+      "ObservationProposalChange": {
+        "additionalProperties": false,
+        "properties": {
+          "metric_key": {
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "CREATE",
+              "SUPERSEDE"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "previous_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Id"
+          },
+          "row_index": {
+            "title": "Row Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_index",
+          "metric_key",
+          "operation",
+          "previous_id"
+        ],
+        "title": "ObservationProposalChange",
+        "type": "object"
+      },
+      "ObservationProposalDecisionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservationProposalPreviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/ObservationProposalRead"
+          },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "REJECTED",
+              "PREVIEW_CHANGED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "proposal"
+        ],
+        "title": "ObservationProposalDecisionRead",
+        "type": "object"
+      },
+      "ObservationProposalDecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Decision Note",
+            "type": "string"
+          },
+          "preview_fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Preview Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview_fingerprint",
+          "decision_note"
+        ],
+        "title": "ObservationProposalDecisionRequest",
+        "type": "object"
+      },
+      "ObservationProposalIssue": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "CONFLICT",
+              "INVALID"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "row_index": {
+            "title": "Row Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_index",
+          "code",
+          "detail"
+        ],
+        "title": "ObservationProposalIssue",
+        "type": "object"
+      },
+      "ObservationProposalPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationProposalChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationProposalIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
+          },
+          "proposal_id": {
+            "format": "uuid",
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "READY",
+              "CONFLICT",
+              "INVALID"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "status",
+          "issues",
+          "changes",
+          "preview_fingerprint"
+        ],
+        "title": "ObservationProposalPreviewRead",
+        "type": "object"
+      },
+      "ObservationProposalRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_record_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Accepted Record Ids",
+            "type": "array"
+          },
+          "content_fingerprint": {
+            "title": "Content Fingerprint",
+            "type": "string"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
+          },
+          "producer_id": {
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "proposal": {
+            "discriminator": {
+              "mapping": {
+                "GuidanceObservationBatchV1": "#/components/schemas/GuidanceObservationBatchV1-Output",
+                "KPIObservationBatchV1": "#/components/schemas/KPIObservationBatchV1-Output",
+                "MetricDefinitionBatchV1": "#/components/schemas/MetricDefinitionBatchV1-Output"
+              },
+              "propertyName": "contract_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetricDefinitionBatchV1-Output"
+              },
+              {
+                "$ref": "#/components/schemas/KPIObservationBatchV1-Output"
+              },
+              {
+                "$ref": "#/components/schemas/GuidanceObservationBatchV1-Output"
+              }
+            ],
+            "title": "Proposal"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "READY",
+              "CONFLICT",
+              "INVALID",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "producer_id",
+          "proposal",
+          "content_fingerprint",
+          "status",
+          "issue",
+          "preview_fingerprint",
+          "accepted_record_ids",
+          "reviewer_id",
+          "decision_note",
+          "submitted_at",
+          "reviewed_at"
+        ],
+        "title": "ObservationProposalRead",
+        "type": "object"
+      },
+      "ObservationProposalRejectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Decision Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_note"
+        ],
+        "title": "ObservationProposalRejectRequest",
+        "type": "object"
+      },
+      "ObservationProposalSubmissionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "proposal": {
+            "$ref": "#/components/schemas/ObservationProposalRead"
+          },
+          "replayed": {
+            "title": "Replayed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "proposal",
+          "replayed"
+        ],
+        "title": "ObservationProposalSubmissionRead",
         "type": "object"
       },
       "OperationalJobAttemptRead": {
@@ -37875,100 +39763,100 @@
         ]
       }
     },
-      "/v1/companies/{company_id}/agent-context": {
-        "get": {
-          "operationId": "get_company_agent_context_v1_companies__company_id__agent_context_get",
-          "parameters": [
-            {
-              "in": "path",
-              "name": "company_id",
-              "required": true,
-              "schema": {
-                "format": "uuid",
-                "title": "Company Id",
-                "type": "string"
-              }
-            },
-            {
-              "in": "query",
-              "name": "portfolio_id",
-              "required": false,
-              "schema": {
-                "anyOf": [
-                  {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Portfolio Id"
-              }
-            },
-            {
-              "in": "query",
-              "name": "as_of",
-              "required": false,
-              "schema": {
-                "anyOf": [
-                  {
-                    "format": "date",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "As Of"
-              }
-            },
-            {
-              "in": "query",
-              "name": "known_at",
-              "required": false,
-              "schema": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Known At"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/CompanyAgentContextV1"
-                  }
-                }
-              },
-              "description": "Successful Response"
-            },
-            "422": {
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              },
-              "description": "Validation Error"
+    "/v1/companies/{company_id}/agent-context": {
+      "get": {
+        "operationId": "get_company_agent_context_v1_companies__company_id__agent_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
             }
           },
-          "summary": "Get Company Agent Context",
-          "tags": [
-            "Portfolio research"
-          ]
-        }
-      },
+          {
+            "in": "query",
+            "name": "portfolio_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyAgentContextV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Agent Context",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/companies/{company_id}/candidate-pipeline": {
       "get": {
         "operationId": "get_company_candidate_pipeline_v1_companies__company_id__candidate_pipeline_get",
@@ -40741,6 +42629,408 @@
           }
         },
         "summary": "Get Company Metric Definitions",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals": {
+      "get": {
+        "operationId": "get_company_observation_proposals_v1_company_observation_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "READY",
+                    "CONFLICT",
+                    "INVALID",
+                    "ACCEPTED",
+                    "REJECTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObservationProposalRead"
+                  },
+                  "title": "Response Get Company Observation Proposals V1 Company Observation Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Observation Proposals",
+        "tags": [
+          "Portfolio research"
+        ]
+      },
+      "post": {
+        "operationId": "post_company_observation_proposal_v1_company_observation_proposals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "GuidanceObservationBatchV1": "#/components/schemas/GuidanceObservationBatchV1-Input",
+                    "KPIObservationBatchV1": "#/components/schemas/KPIObservationBatchV1-Input",
+                    "MetricDefinitionBatchV1": "#/components/schemas/MetricDefinitionBatchV1-Input"
+                  },
+                  "propertyName": "contract_type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MetricDefinitionBatchV1-Input"
+                  },
+                  {
+                    "$ref": "#/components/schemas/KPIObservationBatchV1-Input"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GuidanceObservationBatchV1-Input"
+                  }
+                ],
+                "title": "Value"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalSubmissionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_company_observation_proposal_v1_company_observation_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Observation Proposal",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}/accept": {
+      "post": {
+        "operationId": "post_company_observation_proposal_accept_v1_company_observation_proposals__proposal_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationProposalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalDecisionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal Accept",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}/preview": {
+      "post": {
+        "operationId": "post_company_observation_proposal_preview_v1_company_observation_proposals__proposal_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal Preview",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "post_company_observation_proposal_reject_v1_company_observation_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationProposalRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalDecisionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal Reject",
         "tags": [
           "Portfolio research"
         ]
