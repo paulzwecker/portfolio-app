@@ -221,6 +221,7 @@ def company_agent_context(
     consensus = q.company_consensus_estimates(session, company_id, as_of=day, known_at=cutoff)
     selected = next((p for p in consensus.providers if p.selected), None)
     consensus_periods = selected.periods if selected else []
+    consensus_periods.sort(key=lambda item: item.period_end or date.min, reverse=True)
     consensus_truncated = len(consensus_periods) > MAX_CONSENSUS_PERIODS
     # Full provider revision history is accessible through the linked domain API.
     consensus_periods = [
@@ -369,7 +370,8 @@ def company_agent_context(
             )
         imported_status = _coverage(
             len(imported_outputs.models),
-            truncated=imported_truncated or imported_outputs.status != "AVAILABLE",
+            truncated=imported_truncated
+            or (bool(imported_outputs.models) and imported_outputs.status != "AVAILABLE"),
             reason=(None if imported_outputs.status == "AVAILABLE" else imported_outputs.status),
         )
 
