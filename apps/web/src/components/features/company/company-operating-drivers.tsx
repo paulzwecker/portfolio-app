@@ -47,7 +47,7 @@ export function comparableOperatingValues(
 
 /** Compare exact decimals without rounding through JavaScript Number. */
 function compareExactDecimals(left: string, right: string): -1 | 0 | 1 | null {
-  if (!/^-?\\d+(?:\\.\\d+)?$/.test(left) || !/^-?\\d+(?:\\.\\d+)?$/.test(right))
+  if (!/^-?\d+(?:\.\d+)?$/.test(left) || !/^-?\d+(?:\.\d+)?$/.test(right))
     return null;
   const [leftInt, leftFraction = ""] = left.split(".");
   const [rightInt, rightFraction = ""] = right.split(".");
