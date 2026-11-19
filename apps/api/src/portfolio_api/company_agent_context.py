@@ -92,18 +92,26 @@ class CompanyAgentContextV1(s.Contract):
 
 
 def _coverage(
-    count: int, *, truncated: bool = False, latest: datetime | None = None,
+    count: int,
+    *,
+    truncated: bool = False,
+    latest: datetime | None = None,
     reason: str | None = None,
 ) -> AgentContextCoverage:
     return AgentContextCoverage(
         status="PARTIAL" if truncated else "AVAILABLE" if count else "NO_DATA",
-        reason=reason, latest_recorded_at=latest, truncated=truncated,
+        reason=reason,
+        latest_recorded_at=latest,
+        truncated=truncated,
     )
 
 
 def company_agent_context(
-    session: Session, company_id: UUID, portfolio_id: UUID | None = None,
-    as_of: date | None = None, known_at: datetime | None = None,
+    session: Session,
+    company_id: UUID,
+    portfolio_id: UUID | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
 ) -> CompanyAgentContextV1:
     """Compose accepted domains; do not infer data or mutate canonical state."""
     requested_at = now()
@@ -117,34 +125,50 @@ def company_agent_context(
     if company.created_at > cutoff:
         raise services.DomainError("Company did not exist at the requested cutoff", 404)
 
-    security_rows = list(session.scalars(
-        select(Security).where(Security.company_id == company_id, Security.created_at <= cutoff)
-        .order_by(Security.name, Security.id)
-    ))
-    listing_rows = list(session.scalars(
-        select(Listing).where(
-            Listing.security_id.in_([row.id for row in security_rows]),
-            Listing.created_at <= cutoff,
-        ).order_by(Listing.ticker, Listing.venue, Listing.id)
-    ))
+    security_rows = list(
+        session.scalars(
+            select(Security)
+            .where(Security.company_id == company_id, Security.created_at <= cutoff)
+            .order_by(Security.name, Security.id)
+        )
+    )
+    listing_rows = list(
+        session.scalars(
+            select(Listing)
+            .where(
+                Listing.security_id.in_([row.id for row in security_rows]),
+                Listing.created_at <= cutoff,
+            )
+            .order_by(Listing.ticker, Listing.venue, Listing.id)
+        )
+    )
     company_read = q.company_read(session, company)
     if as_of is not None or known_at is not None:
         lifecycle = session.scalar(
-            select(LifecycleEvent).where(
+            select(LifecycleEvent)
+            .where(
                 LifecycleEvent.company_id == company_id,
                 LifecycleEvent.effective_at <= cutoff,
                 LifecycleEvent.recorded_at <= cutoff,
-            ).order_by(LifecycleEvent.sequence.desc()).limit(1)
+            )
+            .order_by(LifecycleEvent.sequence.desc())
+            .limit(1)
         )
-        company_read = company_read.model_copy(update={
-            "lifecycle": Lifecycle(lifecycle.new_state) if lifecycle else None,
-            "lifecycle_event_id": lifecycle.id if lifecycle else None,
-        })
+        company_read = company_read.model_copy(
+            update={
+                "lifecycle": Lifecycle(lifecycle.new_state) if lifecycle else None,
+                "lifecycle_event_id": lifecycle.id if lifecycle else None,
+            }
+        )
 
-    portfolios = list(session.scalars(
-        select(Portfolio.id).where(Portfolio.created_at <= cutoff)
-        .order_by(Portfolio.created_at, Portfolio.id).limit(2)
-    ))
+    portfolios = list(
+        session.scalars(
+            select(Portfolio.id)
+            .where(Portfolio.created_at <= cutoff)
+            .order_by(Portfolio.created_at, Portfolio.id)
+            .limit(2)
+        )
+    )
     selected_portfolio_id = portfolio_id
     portfolio_status = AgentContextCoverage(status="NO_DATA", reason="No portfolio exists")
     portfolio_view: s.CompanyPortfolioContext | None = None
@@ -177,7 +201,8 @@ def company_agent_context(
         )
 
     definitions = [
-        item for item in observations.metric_definitions(session, company_id)
+        item
+        for item in observations.metric_definitions(session, company_id)
         if item.created_at <= cutoff
     ]
     actuals = observations.company_metric_history(
@@ -193,9 +218,7 @@ def company_agent_context(
     actuals = actuals[:MAX_OBSERVATIONS]
     guidance = guidance[:MAX_GUIDANCE]
 
-    consensus = q.company_consensus_estimates(
-        session, company_id, as_of=day, known_at=cutoff
-    )
+    consensus = q.company_consensus_estimates(session, company_id, as_of=day, known_at=cutoff)
     selected = next((p for p in consensus.providers if p.selected), None)
     consensus_periods = selected.periods if selected else []
     consensus_truncated = len(consensus_periods) > MAX_CONSENSUS_PERIODS
@@ -205,40 +228,56 @@ def company_agent_context(
         for item in consensus_periods[:MAX_CONSENSUS_PERIODS]
     ]
 
-    research_rows = list(session.scalars(
-        select(ResearchRevision).where(
-            ResearchRevision.company_id == company_id,
-            ResearchRevision.observed_at <= cutoff,
-            ResearchRevision.recorded_at <= cutoff,
-        ).distinct(ResearchRevision.stream_key).order_by(
-            ResearchRevision.stream_key, ResearchRevision.revision_number.desc()
-        ).limit(MAX_STREAMS + 1)
-    ))
+    research_rows = list(
+        session.scalars(
+            select(ResearchRevision)
+            .where(
+                ResearchRevision.company_id == company_id,
+                ResearchRevision.observed_at <= cutoff,
+                ResearchRevision.recorded_at <= cutoff,
+            )
+            .distinct(ResearchRevision.stream_key)
+            .order_by(ResearchRevision.stream_key, ResearchRevision.revision_number.desc())
+            .limit(MAX_STREAMS + 1)
+        )
+    )
     research_truncated = len(research_rows) > MAX_STREAMS
     current_research: list[s.ResearchRevisionRead] = []
     for row in research_rows[:MAX_STREAMS]:
         current = research_revision_read(session, row)
         if (
-            len(current.forecasts) > 30 or len(current.assessments) > 20
-            or len(current.evidence) > 20 or len(current.trigger_references) > 20
+            len(current.forecasts) > 30
+            or len(current.assessments) > 20
+            or len(current.evidence) > 20
+            or len(current.trigger_references) > 20
         ):
             research_truncated = True
-        current_research.append(current.model_copy(update={
-            "forecasts": current.forecasts[:30],
-            "assessments": current.assessments[:20],
-            "evidence": current.evidence[:20],
-            "trigger_references": current.trigger_references[:20],
-        }))
+        current_research.append(
+            current.model_copy(
+                update={
+                    "forecasts": current.forecasts[:30],
+                    "assessments": current.assessments[:20],
+                    "evidence": current.evidence[:20],
+                    "trigger_references": current.trigger_references[:20],
+                }
+            )
+        )
 
-    thesis_rows = list(session.scalars(
-        select(InvestmentThesisRevision).where(
-            InvestmentThesisRevision.company_id == company_id,
-            InvestmentThesisRevision.observed_at <= cutoff,
-            InvestmentThesisRevision.recorded_at <= cutoff,
-        ).distinct(InvestmentThesisRevision.stream_key).order_by(
-            InvestmentThesisRevision.stream_key, InvestmentThesisRevision.revision_number.desc()
-        ).limit(MAX_STREAMS + 1)
-    ))
+    thesis_rows = list(
+        session.scalars(
+            select(InvestmentThesisRevision)
+            .where(
+                InvestmentThesisRevision.company_id == company_id,
+                InvestmentThesisRevision.observed_at <= cutoff,
+                InvestmentThesisRevision.recorded_at <= cutoff,
+            )
+            .distinct(InvestmentThesisRevision.stream_key)
+            .order_by(
+                InvestmentThesisRevision.stream_key, InvestmentThesisRevision.revision_number.desc()
+            )
+            .limit(MAX_STREAMS + 1)
+        )
+    )
     thesis_truncated = len(thesis_rows) > MAX_STREAMS
     current_theses: list[s.InvestmentThesisRevisionRead] = []
     for row in thesis_rows[:MAX_STREAMS]:
@@ -250,52 +289,68 @@ def company_agent_context(
             if len(claim.evidence) > 10:
                 thesis_truncated = True
             claims.append(claim.model_copy(update={"evidence": claim.evidence[:10]}))
-        current_theses.append(current.model_copy(update={
-            "claims": claims, "trigger_references": current.trigger_references[:20],
-        }))
+        current_theses.append(
+            current.model_copy(
+                update={
+                    "claims": claims,
+                    "trigger_references": current.trigger_references[:20],
+                }
+            )
+        )
 
-    model_rows = list(session.scalars(
-        select(FinancialModel).where(
-            FinancialModel.company_id == company_id,
-            FinancialModel.created_at <= cutoff,
-            FinancialModel.current_revision_id.is_not(None),
-        ).order_by(FinancialModel.model_name, FinancialModel.id).limit(MAX_MODELS + 1)
-    ))
+    model_rows = list(
+        session.scalars(
+            select(FinancialModel)
+            .where(
+                FinancialModel.company_id == company_id,
+                FinancialModel.created_at <= cutoff,
+                FinancialModel.current_revision_id.is_not(None),
+            )
+            .order_by(FinancialModel.model_name, FinancialModel.id)
+            .limit(MAX_MODELS + 1)
+        )
+    )
     models_truncated = len(model_rows) > MAX_MODELS
     models: list[AgentContextNativeModel] = []
     for model in model_rows[:MAX_MODELS]:
         revision = session.scalar(
-            select(FinancialModelRevision).where(
+            select(FinancialModelRevision)
+            .where(
                 FinancialModelRevision.model_id == model.id,
                 FinancialModelRevision.effective_at <= cutoff,
                 FinancialModelRevision.recorded_at <= cutoff,
-            ).order_by(FinancialModelRevision.revision_number.desc()).limit(1)
+            )
+            .order_by(FinancialModelRevision.revision_number.desc())
+            .limit(1)
         )
         if revision is None:
             continue
         summary = q._financial_model_revision_summary(session, revision)
         if len(summary.supporting_evidence) > 20:
             models_truncated = True
-            summary = summary.model_copy(update={
-                "supporting_evidence": summary.supporting_evidence[:20]
-            })
+            summary = summary.model_copy(
+                update={"supporting_evidence": summary.supporting_evidence[:20]}
+            )
         drivers = [
-            item for item in observations.model_driver_projections(session, model.id, revision.id)
+            item
+            for item in observations.model_driver_projections(session, model.id, revision.id)
             if item.recorded_at <= cutoff
         ]
         if len(drivers) > MAX_DRIVERS:
             models_truncated = True
-        models.append(AgentContextNativeModel(
-            model_id=model.id,
-            model_name=model.model_name,
-            model_type=model.model_type,
-            valuation_listing_id=model.valuation_listing_id,
-            model_currency=model.model_currency,
-            accepted_revision=summary,
-            driver_projections=drivers[:MAX_DRIVERS],
-            drivers_truncated=len(drivers) > MAX_DRIVERS,
-            revision_history_href=f"/v1/financial-models/{model.id}/revisions",
-        ))
+        models.append(
+            AgentContextNativeModel(
+                model_id=model.id,
+                model_name=model.model_name,
+                model_type=model.model_type,
+                valuation_listing_id=model.valuation_listing_id,
+                model_currency=model.model_currency,
+                accepted_revision=summary,
+                driver_projections=drivers[:MAX_DRIVERS],
+                drivers_truncated=len(drivers) > MAX_DRIVERS,
+                revision_history_href=f"/v1/financial-models/{model.id}/revisions",
+            )
+        )
 
     imported_outputs: s.CompanyModelOutputsCurrentRead | None = None
     if as_of is not None or known_at is not None:
@@ -307,22 +362,22 @@ def company_agent_context(
         imported_outputs = q.company_model_outputs_current(session, company_id)
         imported_truncated = len(imported_outputs.models) > MAX_MODELS
         if imported_truncated:
-            imported_outputs = imported_outputs.model_copy(update={
-                "models": imported_outputs.models[:MAX_MODELS],
-            })
+            imported_outputs = imported_outputs.model_copy(
+                update={
+                    "models": imported_outputs.models[:MAX_MODELS],
+                }
+            )
         imported_status = _coverage(
             len(imported_outputs.models),
             truncated=imported_truncated or imported_outputs.status != "AVAILABLE",
-            reason=(
-                None if imported_outputs.status == "AVAILABLE"
-                else imported_outputs.status
-            ),
+            reason=(None if imported_outputs.status == "AVAILABLE" else imported_outputs.status),
         )
 
     root = f"/v1/companies/{company_id}"
     return CompanyAgentContextV1(
         generated_at=requested_at,
-        as_of=day, known_at=cutoff,
+        as_of=day,
+        known_at=cutoff,
         identity=_coverage(len(security_rows) + len(listing_rows) + 1),
         company=company_read,
         securities=[s.SecurityRead.model_validate(item) for item in security_rows],
@@ -334,40 +389,50 @@ def company_agent_context(
         portfolio_holdings_authority=holdings_authority,
         portfolio=portfolio_view,
         metrics_status=_coverage(
-            len(actuals), truncated=metrics_truncated,
+            len(actuals),
+            truncated=metrics_truncated,
             latest=max((item.recorded_at for item in actuals), default=None),
             reason=None if definitions else "No registered operating metrics",
         ),
         metric_definitions=definitions,
         metric_observations=actuals,
         guidance_status=_coverage(
-            len(guidance), truncated=guidance_truncated,
+            len(guidance),
+            truncated=guidance_truncated,
             latest=max((item.recorded_at for item in guidance), default=None),
         ),
         guidance_observations=guidance,
         consensus_status=_coverage(
-            len(consensus_periods), truncated=consensus_truncated,
-            latest=max((
-                item.current_observation.recorded_at for item in consensus_periods
-                if item.current_observation is not None
-            ), default=None),
+            len(consensus_periods),
+            truncated=consensus_truncated,
+            latest=max(
+                (
+                    item.current_observation.recorded_at
+                    for item in consensus_periods
+                    if item.current_observation is not None
+                ),
+                default=None,
+            ),
             reason=None if selected else consensus.continuity_status,
         ),
         consensus_continuity_status=consensus.continuity_status,
         consensus_provider_id=consensus.selected_provider_id,
         consensus_periods=consensus_periods,
         research_status=_coverage(
-            len(current_research), truncated=research_truncated,
+            len(current_research),
+            truncated=research_truncated,
             latest=max((item.recorded_at for item in current_research), default=None),
         ),
         current_research=current_research,
         thesis_status=_coverage(
-            len(current_theses), truncated=thesis_truncated,
+            len(current_theses),
+            truncated=thesis_truncated,
             latest=max((item.recorded_at for item in current_theses), default=None),
         ),
         current_theses=current_theses,
         native_models_status=_coverage(
-            len(models), truncated=models_truncated,
+            len(models),
+            truncated=models_truncated,
             latest=max((item.accepted_revision.recorded_at for item in models), default=None),
         ),
         native_models=models,

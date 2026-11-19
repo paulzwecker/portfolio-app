@@ -599,8 +599,7 @@
         "additionalProperties": false,
         "properties": {
           "accepted_revision": {
-            "$ref": "#/components/schemas/FinancialModelRevisionSummary",
-            "title": "Accepted Revision"
+            "$ref": "#/components/schemas/FinancialModelRevisionSummary"
           },
           "driver_projections": {
             "items": {
@@ -2016,8 +2015,7 @@
             "type": "string"
           },
           "company": {
-            "$ref": "#/components/schemas/CompanyRead",
-            "title": "Company"
+            "$ref": "#/components/schemas/CompanyRead"
           },
           "consensus_continuity_status": {
             "title": "Consensus Continuity Status",
@@ -2042,8 +2040,7 @@
             "title": "Consensus Provider Id"
           },
           "consensus_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Consensus Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "contract_type": {
             "const": "CompanyAgentContextV1",
@@ -2084,12 +2081,10 @@
             "type": "array"
           },
           "guidance_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Guidance Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "identity": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Identity"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "imported_model_outputs": {
             "anyOf": [
@@ -2099,12 +2094,10 @@
               {
                 "type": "null"
               }
-            ],
-            "title": "Imported Model Outputs"
+            ]
           },
           "imported_outputs_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Imported Outputs Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "known_at": {
             "format": "date-time",
@@ -2133,8 +2126,7 @@
             "type": "array"
           },
           "metrics_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Metrics Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "native_models": {
             "items": {
@@ -2144,8 +2136,7 @@
             "type": "array"
           },
           "native_models_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Native Models Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "portfolio": {
             "anyOf": [
@@ -2155,8 +2146,7 @@
               {
                 "type": "null"
               }
-            ],
-            "title": "Portfolio"
+            ]
           },
           "portfolio_holdings_authority": {
             "anyOf": [
@@ -2166,8 +2156,7 @@
               {
                 "type": "null"
               }
-            ],
-            "title": "Portfolio Holdings Authority"
+            ]
           },
           "portfolio_id": {
             "anyOf": [
@@ -2194,8 +2183,7 @@
             "title": "Portfolio Snapshot Id"
           },
           "portfolio_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Portfolio Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "portfolio_target_revision_id": {
             "anyOf": [
@@ -2210,8 +2198,7 @@
             "title": "Portfolio Target Revision Id"
           },
           "research_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Research Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           },
           "resource_links": {
             "additionalProperties": {
@@ -2228,8 +2215,7 @@
             "type": "array"
           },
           "thesis_status": {
-            "$ref": "#/components/schemas/AgentContextCoverage",
-            "title": "Thesis Status"
+            "$ref": "#/components/schemas/AgentContextCoverage"
           }
         },
         "required": [

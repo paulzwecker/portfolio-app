@@ -2829,20 +2829,30 @@ export interface components {
         };
         /** AgentContextCoverage */
         AgentContextCoverage: {
+            /** Latest Recorded At */
+            latest_recorded_at?: string | null;
+            /** Reason */
+            reason?: string | null;
             /**
              * Status
              * @enum {string}
              */
             status: "AVAILABLE" | "PARTIAL" | "NO_DATA" | "AMBIGUOUS" | "UNSUPPORTED";
-            /** Reason */
-            reason?: string | null;
-            /** Latest Recorded At */
-            latest_recorded_at?: string | null;
-            /** Truncated */
-            truncated?: boolean;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
         };
         /** AgentContextNativeModel */
         AgentContextNativeModel: {
+            accepted_revision: components["schemas"]["FinancialModelRevisionSummary"];
+            /** Driver Projections */
+            driver_projections: components["schemas"]["FinancialModelDriverProjectionRead"][];
+            /** Drivers Truncated */
+            drivers_truncated: boolean;
+            /** Model Currency */
+            model_currency: string;
             /**
              * Model Id
              * Format: uuid
@@ -2852,20 +2862,13 @@ export interface components {
             model_name: string;
             /** Model Type */
             model_type: string;
+            /** Revision History Href */
+            revision_history_href: string;
             /**
              * Valuation Listing Id
              * Format: uuid
              */
             valuation_listing_id: string;
-            /** Model Currency */
-            model_currency: string;
-            accepted_revision: components["schemas"]["FinancialModelRevisionSummary"];
-            /** Driver Projections */
-            driver_projections: components["schemas"]["FinancialModelDriverProjectionRead"][];
-            /** Drivers Truncated */
-            drivers_truncated: boolean;
-            /** Revision History Href */
-            revision_history_href: string;
         };
         /** AgentOwnerCashFlowProposalMethod */
         "AgentOwnerCashFlowProposalMethod-Input": {
@@ -3292,6 +3295,19 @@ export interface components {
         /** CompanyAgentContextV1 */
         CompanyAgentContextV1: {
             /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            company: components["schemas"]["CompanyRead"];
+            /** Consensus Continuity Status */
+            consensus_continuity_status: string;
+            /** Consensus Periods */
+            consensus_periods: components["schemas"]["ConsensusEstimatePeriodRead"][];
+            /** Consensus Provider Id */
+            consensus_provider_id: string | null;
+            consensus_status: components["schemas"]["AgentContextCoverage"];
+            /**
              * Contract Type
              * @default CompanyAgentContextV1
              * @constant
@@ -3303,69 +3319,56 @@ export interface components {
              * @constant
              */
             contract_version: "1.0.0";
+            /** Current Research */
+            current_research: components["schemas"]["ResearchRevisionRead"][];
+            /** Current Theses */
+            current_theses: components["schemas"]["InvestmentThesisRevisionRead"][];
             /**
              * Generated At
              * Format: date-time
              */
             generated_at: string;
-            /**
-             * As Of
-             * Format: date
-             */
-            as_of: string;
+            /** Guidance Observations */
+            guidance_observations: components["schemas"]["CompanyGuidanceObservationRead"][];
+            guidance_status: components["schemas"]["AgentContextCoverage"];
+            identity: components["schemas"]["AgentContextCoverage"];
+            /** Imported Model Outputs */
+            imported_model_outputs: components["schemas"]["CompanyModelOutputsCurrentRead"] | null;
+            imported_outputs_status: components["schemas"]["AgentContextCoverage"];
             /**
              * Known At
              * Format: date-time
              */
             known_at: string;
-            identity: components["schemas"]["AgentContextCoverage"];
-            company: components["schemas"]["CompanyRead"];
-            /** Securities */
-            securities: components["schemas"]["SecurityRead"][];
             /** Listings */
             listings: components["schemas"]["ListingRead"][];
-            portfolio_status: components["schemas"]["AgentContextCoverage"];
-            /** Portfolio Id */
-            portfolio_id: string | null;
-            /** Portfolio Snapshot Id */
-            portfolio_snapshot_id: string | null;
-            /** Portfolio Target Revision Id */
-            portfolio_target_revision_id: string | null;
-            /** Portfolio Holdings Authority */
-            portfolio_holdings_authority: components["schemas"]["HoldingsAuthorityRead"] | null;
-            /** Portfolio */
-            portfolio: components["schemas"]["CompanyPortfolioContext"] | null;
-            metrics_status: components["schemas"]["AgentContextCoverage"];
             /** Metric Definitions */
             metric_definitions: components["schemas"]["CompanyMetricDefinitionRead"][];
             /** Metric Observations */
             metric_observations: components["schemas"]["CompanyMetricObservationRead"][];
-            guidance_status: components["schemas"]["AgentContextCoverage"];
-            /** Guidance Observations */
-            guidance_observations: components["schemas"]["CompanyGuidanceObservationRead"][];
-            consensus_status: components["schemas"]["AgentContextCoverage"];
-            /** Consensus Continuity Status */
-            consensus_continuity_status: string;
-            /** Consensus Provider Id */
-            consensus_provider_id: string | null;
-            /** Consensus Periods */
-            consensus_periods: components["schemas"]["ConsensusEstimatePeriodRead"][];
-            research_status: components["schemas"]["AgentContextCoverage"];
-            /** Current Research */
-            current_research: components["schemas"]["ResearchRevisionRead"][];
-            thesis_status: components["schemas"]["AgentContextCoverage"];
-            /** Current Theses */
-            current_theses: components["schemas"]["InvestmentThesisRevisionRead"][];
-            native_models_status: components["schemas"]["AgentContextCoverage"];
+            metrics_status: components["schemas"]["AgentContextCoverage"];
             /** Native Models */
             native_models: components["schemas"]["AgentContextNativeModel"][];
-            imported_outputs_status: components["schemas"]["AgentContextCoverage"];
-            /** Imported Model Outputs */
-            imported_model_outputs: components["schemas"]["CompanyModelOutputsCurrentRead"] | null;
+            native_models_status: components["schemas"]["AgentContextCoverage"];
+            /** Portfolio */
+            portfolio: components["schemas"]["CompanyPortfolioContext"] | null;
+            /** Portfolio Holdings Authority */
+            portfolio_holdings_authority: components["schemas"]["HoldingsAuthorityRead"] | null;
+            /** Portfolio Id */
+            portfolio_id: string | null;
+            /** Portfolio Snapshot Id */
+            portfolio_snapshot_id: string | null;
+            portfolio_status: components["schemas"]["AgentContextCoverage"];
+            /** Portfolio Target Revision Id */
+            portfolio_target_revision_id: string | null;
+            research_status: components["schemas"]["AgentContextCoverage"];
             /** Resource Links */
             resource_links: {
                 [key: string]: string;
             };
+            /** Securities */
+            securities: components["schemas"]["SecurityRead"][];
+            thesis_status: components["schemas"]["AgentContextCoverage"];
         };
         /** CompanyCandidatePipelineRead */
         CompanyCandidatePipelineRead: {

@@ -48,9 +48,13 @@ def test_agent_context_has_explicit_empty_sections_and_unknown_company_404(
         assert body["portfolio_status"]["status"] == "NO_DATA"
         assert body["resource_links"]["financial_statements"].startswith("/v1/")
         assert client.get(f"/v1/companies/{uuid4()}/agent-context").status_code == 404
-        assert client.get(
-            f"/v1/companies/{company_id}/agent-context", params={"known_at": "2026-10-01T12:00:00"}
-        ).status_code == 422
+        assert (
+            client.get(
+                f"/v1/companies/{company_id}/agent-context",
+                params={"known_at": "2026-10-01T12:00:00"},
+            ).status_code
+            == 422
+        )
 
 
 def test_agent_context_explicit_portfolio_selection(postgres_engine: Engine) -> None:
@@ -74,10 +78,13 @@ def test_agent_context_explicit_portfolio_selection(postgres_engine: Engine) -> 
         assert selected.status_code == 200, selected.text
         assert selected.json()["portfolio_id"] == str(first_id)
         assert selected.json()["portfolio_status"]["status"] == "NO_DATA"
-        assert client.get(
-            f"/v1/companies/{company_id}/agent-context",
-            params={"portfolio_id": str(uuid4())},
-        ).status_code == 404
+        assert (
+            client.get(
+                f"/v1/companies/{company_id}/agent-context",
+                params={"portfolio_id": str(uuid4())},
+            ).status_code
+            == 404
+        )
 
 
 def test_future_target_guidance_is_visible_when_already_known(
@@ -91,43 +98,78 @@ def test_future_target_guidance_is_visible_when_already_known(
         definition = CompanyMetricDefinition(
             metric_key="synthetic.context.trips",
             company_id=company.id,
-            display_name="Trips", category="OPERATING",
-            value_kind="COUNT", canonical_unit="trips",
-            canonical_scale=Decimal(1), currency_policy="NONE",
-            aggregation_semantics="PERIOD_FLOW", default_period_type="QUARTER",
-            default_basis="REPORTED", scope_dimensions=[],
-            actuals_allowed=True, guidance_allowed=True,
-            consensus_allowed=False, model_driver_allowed=False,
-            active=True, description="Synthetic", source_reference="https://example.com/metric",
+            display_name="Trips",
+            category="OPERATING",
+            value_kind="COUNT",
+            canonical_unit="trips",
+            canonical_scale=Decimal(1),
+            currency_policy="NONE",
+            aggregation_semantics="PERIOD_FLOW",
+            default_period_type="QUARTER",
+            default_basis="REPORTED",
+            scope_dimensions=[],
+            actuals_allowed=True,
+            guidance_allowed=True,
+            consensus_allowed=False,
+            model_driver_allowed=False,
+            active=True,
+            description="Synthetic",
+            source_reference="https://example.com/metric",
             created_at=reported - timedelta(days=2),
         )
         session.add(definition)
         session.flush()
-        session.add(CompanyGuidanceObservation(
-            external_guidance_id="context-next-quarter",
-            company_id=company.id,
-            metric_definition_id=definition.id,
-            period_type="QUARTER",
-            period_start=date(2027, 1, 1), period_end=date(2027, 3, 31),
-            fiscal_year=2027, fiscal_quarter=1,
-            lower_value=Decimal("10"), midpoint_value=None, upper_value=Decimal("12"),
-            value_qualifier="RANGE", unit="trips", scale=Decimal(1), currency=None,
-            basis="COMPANY_GUIDANCE", scope_json={}, issued_at=reported,
-            source_type="EARNINGS_RELEASE", source_reference="https://example.com/guidance",
-            status="ACTIVE", recorded_at=reported,
-        ))
-        session.add(CompanyMetricObservation(
-            external_observation_id="context-prior-trips",
-            company_id=company.id, metric_definition_id=definition.id,
-            period_type="QUARTER",
-            period_start=date(2026, 7, 1), period_end=date(2026, 9, 30),
-            fiscal_year=2026, fiscal_quarter=3,
-            value=Decimal("9"), value_qualifier="GT", unit="trips", scale=Decimal(1),
-            currency=None, basis="REPORTED", scope_json={},
-            reported_at=reported, source_type="EARNINGS_RELEASE",
-            source_reference="https://example.com/actual", quality_status="VERIFIED",
-            quality_reason=None, recorded_at=reported,
-        ))
+        session.add(
+            CompanyGuidanceObservation(
+                external_guidance_id="context-next-quarter",
+                company_id=company.id,
+                metric_definition_id=definition.id,
+                period_type="QUARTER",
+                period_start=date(2027, 1, 1),
+                period_end=date(2027, 3, 31),
+                fiscal_year=2027,
+                fiscal_quarter=1,
+                lower_value=Decimal("10"),
+                midpoint_value=None,
+                upper_value=Decimal("12"),
+                value_qualifier="RANGE",
+                unit="trips",
+                scale=Decimal(1),
+                currency=None,
+                basis="COMPANY_GUIDANCE",
+                scope_json={},
+                issued_at=reported,
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/guidance",
+                status="ACTIVE",
+                recorded_at=reported,
+            )
+        )
+        session.add(
+            CompanyMetricObservation(
+                external_observation_id="context-prior-trips",
+                company_id=company.id,
+                metric_definition_id=definition.id,
+                period_type="QUARTER",
+                period_start=date(2026, 7, 1),
+                period_end=date(2026, 9, 30),
+                fiscal_year=2026,
+                fiscal_quarter=3,
+                value=Decimal("9"),
+                value_qualifier="GT",
+                unit="trips",
+                scale=Decimal(1),
+                currency=None,
+                basis="REPORTED",
+                scope_json={},
+                reported_at=reported,
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/actual",
+                quality_status="VERIFIED",
+                quality_reason=None,
+                recorded_at=reported,
+            )
+        )
         company_id = company.id
 
     with TestClient(fixture_application(postgres_engine, fixture_settings())) as client:
