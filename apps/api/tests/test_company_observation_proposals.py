@@ -69,6 +69,7 @@ def _definition(company_id: str) -> dict[str, Any]:
                 "scope_dimensions": [],
                 "actuals_allowed": True,
                 "guidance_allowed": True,
+                "model_driver_allowed": True,
                 "description": "Synthetic mobility trips in billions, excludes unrelated data.",
                 "source_reference": "https://example.com/trips-definition",
             }
@@ -231,6 +232,7 @@ def test_definition_kpi_guidance_and_correction_flow(postgres_engine: Engine) ->
         )
         assert definitions.status_code == 200
         assert definitions.json()[0]["id"] == definition_id
+        assert definitions.json()[0]["model_driver_allowed"] is True
 
         kpi = _kpi(company_id, "kpi-v1", "synthetic-trips-q3")
         accepted_kpi_id = _submit_preview_accept(client, kpi)

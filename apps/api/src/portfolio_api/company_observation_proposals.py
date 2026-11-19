@@ -70,6 +70,7 @@ class MetricDefinitionItem(s.Contract):
     )
     actuals_allowed: bool = True
     guidance_allowed: bool = False
+    model_driver_allowed: bool = False
     description: Annotated[str, Field(min_length=10, max_length=4000)]
     source_reference: Url
 
@@ -649,7 +650,7 @@ def accept(
                 actuals_allowed=item.actuals_allowed,
                 guidance_allowed=item.guidance_allowed,
                 consensus_allowed=False,
-                model_driver_allowed=False,
+                model_driver_allowed=item.model_driver_allowed,
                 active=True,
                 description=item.description,
                 source_reference=item.source_reference,

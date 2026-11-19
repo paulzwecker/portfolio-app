@@ -79,3 +79,10 @@ previews, accepts or rejects proposals. No automatic schedule is enabled.
 
 See [Sheets observation inbox](google-sheets-observation-inbox.md) for the
 five-column chunk format, activation prerequisites and response semantics.
+
+Metric-definition proposal batches may explicitly set
+`model_driver_allowed: true` when a company-specific metric is intended for
+accepted financial-model operating paths. It defaults to `false`. This
+permission is still subject to independent human proposal preview/acceptance;
+it is not inferred from an existing KPI or activated by importing an agent
+forecast. Provider consensus remains independently disabled.
