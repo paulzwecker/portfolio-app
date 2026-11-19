@@ -454,7 +454,11 @@ def test_new_migration_parity_replay_and_downgrade_retain_accepted_ownership(
         before = set(inspect(connection).get_table_names())
         alembic_command.downgrade(config, "a832e94d6f10")
         assert set(inspect(connection).get_table_names()) == before - {
-            "portfolio_ledger_publications"
+            "portfolio_ledger_publications",
+            "company_metric_definitions",
+            "company_metric_observations",
+            "company_guidance_observations",
+            "financial_model_driver_projections",
         }
         alembic_command.upgrade(config, "head")
         alembic_command.upgrade(config, "head")
