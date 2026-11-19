@@ -416,7 +416,7 @@ def _preflight(
                     ObservationProposalIssue(
                         row_index=index,
                         code="INVALID",
-                        detail="Metric scope, usage, unit, scale or currency violates its definition",
+                        detail="Metric scope, units, currency or usage violate its definition",
                     )
                 )
             if isinstance(item, KPIObservationItem):

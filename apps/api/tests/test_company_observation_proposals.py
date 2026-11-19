@@ -288,3 +288,70 @@ def test_definition_kpi_guidance_and_correction_flow(postgres_engine: Engine) ->
         )
         assert rejected.status_code == 200
         assert rejected.json()["status"] == "REJECTED"
+
+
+def test_stale_preview_cannot_accept_competing_kpi(postgres_engine: Engine) -> None:
+    with (
+        patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
+        TestClient(create_app(_settings())) as client,
+    ):
+        company = client.post(
+            "/v1/companies",
+            json={"name": "Conflicting source company", "reporting_currency": "USD"},
+        ).json()
+        company_id = company["id"]
+        _submit_preview_accept(client, _definition(company_id))
+
+        first = client.post(
+            "/v1/company-observation-proposals",
+            json=_kpi(company_id, "first", "competing-source-1"),
+            headers=_auth(AGENT_TOKEN),
+        ).json()["proposal"]["id"]
+        second = client.post(
+            "/v1/company-observation-proposals",
+            json=_kpi(company_id, "second", "competing-source-2"),
+            headers=_auth(AGENT_TOKEN),
+        ).json()["proposal"]["id"]
+        a = client.post(
+            f"/v1/company-observation-proposals/{first}/preview",
+            headers=_auth(REVIEWER_TOKEN),
+        ).json()
+        b = client.post(
+            f"/v1/company-observation-proposals/{second}/preview",
+            headers=_auth(REVIEWER_TOKEN),
+        ).json()
+        assert a["status"] == b["status"] == "READY"
+
+        wrong = client.post(
+            f"/v1/company-observation-proposals/{first}/accept",
+            headers=_auth(REVIEWER_TOKEN),
+            json={"preview_fingerprint": "b" * 64, "decision_note": "Wrong reviewer fingerprint"},
+        )
+        assert wrong.status_code == 409
+
+        accepted = client.post(
+            f"/v1/company-observation-proposals/{first}/accept",
+            headers=_auth(REVIEWER_TOKEN),
+            json={
+                "preview_fingerprint": a["preview_fingerprint"],
+                "decision_note": "Reviewed first sourced observation.",
+            },
+        )
+        assert accepted.status_code == 200
+        assert accepted.json()["status"] == "ACCEPTED"
+
+        stale = client.post(
+            f"/v1/company-observation-proposals/{second}/accept",
+            headers=_auth(REVIEWER_TOKEN),
+            json={
+                "preview_fingerprint": b["preview_fingerprint"],
+                "decision_note": "Attempt stale reviewer acceptance.",
+            },
+        )
+        assert stale.status_code == 200, stale.text
+        assert stale.json()["status"] == "PREVIEW_CHANGED"
+        assert stale.json()["proposal"]["status"] == "CONFLICT"
+
+        history = client.get(f"/v1/companies/{company_id}/metric-observations")
+        assert history.status_code == 200
+        assert len(history.json()) == 1
