@@ -4538,4 +4538,3 @@ def protect_history(session: Session, flush_context: object, instances: object) 
                 and item.snapshot_id not in session.info.get("new_snapshot_ids", set())
             ):
                 raise ValueError("Cannot add positions to a historical snapshot")
-
