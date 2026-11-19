@@ -1,0 +1,38 @@
+name: Temporary exact-comparison formatting (PR 42)
+on:
+  push:
+    branches:
+      - feat/api-first-company-observations
+    paths:
+      - .github/workflows/operating-exact-format-once.yml
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.repository == 'paulzwecker/portfolio-app'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install exact formatter
+        run: npm ci
+      - name: Format only new operating comparator changes
+        run: |
+          npx prettier --write \
+            apps/web/src/components/features/company/company-operating-drivers.tsx \
+            apps/web/src/components/features/company/company-operating-drivers.test.tsx
+      - name: Commit to draft PR #42
+        run: |
+          git add apps/web/src/components/features/company/company-operating-drivers.tsx \
+            apps/web/src/components/features/company/company-operating-drivers.test.tsx
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m 'Format exact operating comparison tests'
+            git push origin HEAD:feat/api-first-company-observations
+          fi
