@@ -28,8 +28,7 @@ def _settings(
         _env_file=None,
         app_env="preview",
         database_url=SecretStr(
-            "postgresql+psycopg://test:test@192.0.2.1:5432/preview"
-            "?sslmode=verify-full"
+            "postgresql+psycopg://test:test@192.0.2.1:5432/preview?sslmode=verify-full"
         ),
         api_access_token=SecretStr(PROXY_TOKEN),
         data_universe_read_enabled=enabled,
@@ -82,39 +81,33 @@ def test_scoped_token_cannot_escape_exact_get_or_sibling_routes() -> None:
         assert authorized.headers["cache-control"] == "no-store"
         assert client.get(path, headers=_read_headers("wrong")).status_code == 401
         assert client.get(path).status_code == 401
-        assert (
-            client.get(
-                path, headers={"X-API-ACCESS-TOKEN": MODEL_TOKEN}
-            ).status_code
-            == 401
-        )
+        assert client.get(path, headers={"X-API-ACCESS-TOKEN": MODEL_TOKEN}).status_code == 401
         # Existing trusted application proxy read remains intact.
+        assert client.get(path, headers={"X-API-ACCESS-TOKEN": PROXY_TOKEN}).status_code == 503
+        assert (
+            client.get(f"/v1/companies/{other}/agent-context", headers=_read_headers()).status_code
+            == 404
+        )
+        assert client.get(f"/v1/companies/{allowed}", headers=_read_headers()).status_code == 403
+        assert (
+            client.get(f"/v1/companies/{allowed}/market-data", headers=_read_headers()).status_code
+            == 403
+        )
         assert (
             client.get(
-                path, headers={"X-API-ACCESS-TOKEN": PROXY_TOKEN}
+                f"/v1/companies/{allowed}/agent-context/extra", headers=_read_headers()
             ).status_code
-            == 503
+            == 403
         )
-        assert client.get(
-            f"/v1/companies/{other}/agent-context", headers=_read_headers()
-        ).status_code == 404
-        assert client.get(
-            f"/v1/companies/{allowed}", headers=_read_headers()
-        ).status_code == 403
-        assert client.get(
-            f"/v1/companies/{allowed}/market-data", headers=_read_headers()
-        ).status_code == 403
-        assert client.get(
-            f"/v1/companies/{allowed}/agent-context/extra", headers=_read_headers()
-        ).status_code == 403
-        assert client.post(
-            path, headers=_read_headers(), json={}
-        ).status_code == 403
-        assert client.post(
-            "/v1/company-observation-proposals",
-            headers=_read_headers(),
-            json={},
-        ).status_code == 403
+        assert client.post(path, headers=_read_headers(), json={}).status_code == 403
+        assert (
+            client.post(
+                "/v1/company-observation-proposals",
+                headers=_read_headers(),
+                json={},
+            ).status_code
+            == 403
+        )
         assert client.get("/health/live", headers=_read_headers()).status_code == 403
 
 
@@ -124,10 +117,13 @@ def test_read_token_is_disabled_by_default_even_if_configured() -> None:
         patch("portfolio_api.main.create_database_engine", return_value=None),
         TestClient(create_app(_settings(str(company_id), enabled=False))) as client,
     ):
-        assert client.get(
-            f"/v1/companies/{company_id}/agent-context",
-            headers=_read_headers(),
-        ).status_code == 401
+        assert (
+            client.get(
+                f"/v1/companies/{company_id}/agent-context",
+                headers=_read_headers(),
+            ).status_code
+            == 401
+        )
 
 
 @pytest.mark.integration
@@ -163,10 +159,14 @@ def test_scoped_context_omits_portfolio_and_research_state(postgres_engine: Engi
         assert payload["current_theses"] == []
         assert payload["resource_links"] == {}
 
-        assert client.get(
-            path, headers=_read_headers(),
-            params={"portfolio_id": str(portfolio_id)},
-        ).status_code == 403
+        assert (
+            client.get(
+                path,
+                headers=_read_headers(),
+                params={"portfolio_id": str(portfolio_id)},
+            ).status_code
+            == 403
+        )
         regular = client.get(path, headers={"X-API-ACCESS-TOKEN": PROXY_TOKEN})
         assert regular.status_code == 200, regular.text
         assert regular.json()["portfolio_id"] == str(portfolio_id)

@@ -15,9 +15,7 @@ from portfolio_api.settings import Settings
 _CONTEXT_PATH = re.compile(r"^/v1/companies/([a-fA-F0-9-]{36})/agent-context$")
 
 
-def authorize_data_universe_read(
-    settings: Settings, *, token: str, method: str, path: str
-) -> UUID:
+def authorize_data_universe_read(settings: Settings, *, token: str, method: str, path: str) -> UUID:
     if not settings.data_universe_read_enabled or settings.data_universe_read_token is None:
         raise HTTPException(401, "Data Universe read access is disabled")
     expected = settings.data_universe_read_token.get_secret_value()

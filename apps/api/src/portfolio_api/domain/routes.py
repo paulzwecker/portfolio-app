@@ -1258,7 +1258,11 @@ def get_company_agent_context(
     if data_universe_only and portfolio_id is not None:
         raise HTTPException(403, "Portfolio access is outside the Data Universe read scope")
     return agent_context_ops.company_agent_context(
-        db, company_id, portfolio_id, as_of, known_at,
+        db,
+        company_id,
+        portfolio_id,
+        as_of,
+        known_at,
         data_universe_only=data_universe_only,
     )
 

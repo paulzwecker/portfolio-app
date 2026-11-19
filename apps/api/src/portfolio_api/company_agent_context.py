@@ -177,9 +177,7 @@ def company_agent_context(
     portfolio_status = AgentContextCoverage(
         status="UNSUPPORTED" if data_universe_only else "NO_DATA",
         reason=(
-            "Outside Data & Universe read scope"
-            if data_universe_only
-            else "No portfolio exists"
+            "Outside Data & Universe read scope" if data_universe_only else "No portfolio exists"
         ),
     )
     portfolio_view: s.CompanyPortfolioContext | None = None
@@ -480,7 +478,9 @@ def company_agent_context(
         native_models=models,
         imported_outputs_status=imported_status,
         imported_model_outputs=imported_outputs,
-        resource_links={} if data_universe_only else {
+        resource_links={}
+        if data_universe_only
+        else {
             "company": root,
             "financial_statements": f"{root}/financial-statements",
             "reported_fundamentals": f"{root}/reported-fundamentals",
