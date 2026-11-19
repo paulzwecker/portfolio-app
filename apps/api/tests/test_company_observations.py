@@ -578,4 +578,3 @@ def test_company_scoped_metric_cannot_be_attached_to_another_company(
         with pytest.raises(ValueError, match="another company"):
             session.flush()
         session.rollback()
-
