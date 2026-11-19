@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from portfolio_api import candidate_pipeline as candidate_research
+from portfolio_api import company_observations as company_observation_ops
 from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api import portfolio_ledger as ledger
@@ -1307,6 +1308,61 @@ def get_company_market_data(
 
 
 @router.get(
+    "/company-metric-definitions",
+    response_model=list[company_observation_ops.CompanyMetricDefinitionRead],
+)
+def get_company_metric_definitions(
+    db: Db,
+    company_id: UUID | None = None,
+    include_deprecated: bool = False,
+) -> list[company_observation_ops.CompanyMetricDefinitionRead]:
+    return company_observation_ops.metric_definitions(db, company_id, include_deprecated)
+
+
+@router.get(
+    "/companies/{company_id}/metric-observations",
+    response_model=list[company_observation_ops.CompanyMetricObservationRead],
+)
+def get_company_metric_observations(
+    company_id: UUID,
+    db: Db,
+    metric_id: str | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
+) -> list[company_observation_ops.CompanyMetricObservationRead]:
+    _validate_market_cutoffs(as_of, known_at)
+    return company_observation_ops.company_metric_history(
+        db, company_id, metric_id, as_of, known_at, limit
+    )
+
+
+@router.get(
+    "/companies/{company_id}/guidance-observations",
+    response_model=list[company_observation_ops.CompanyGuidanceObservationRead],
+)
+def get_company_guidance_observations(
+    company_id: UUID,
+    db: Db,
+    metric_id: str | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+    current_only: bool = False,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
+) -> list[company_observation_ops.CompanyGuidanceObservationRead]:
+    _validate_market_cutoffs(as_of, known_at)
+    return company_observation_ops.company_guidance_history(
+        db,
+        company_id,
+        metric_id,
+        as_of,
+        known_at,
+        current_only,
+        limit,
+    )
+
+
+@router.get(
     "/reported-fundamental-definitions",
     response_model=list[s.ReportedFundamentalDefinitionRead],
 )
@@ -1909,6 +1965,18 @@ def post_financial_model_contract_import(
 )
 def get_financial_model_history(model_id: UUID, db: Db) -> list[s.FinancialModelRevisionSummary]:
     return q.financial_model_revision_history(db, model_id)
+
+
+@router.get(
+    "/financial-models/{model_id}/revisions/{revision_id}/driver-projections",
+    response_model=list[company_observation_ops.FinancialModelDriverProjectionRead],
+)
+def get_financial_model_driver_projections(
+    model_id: UUID,
+    revision_id: UUID,
+    db: Db,
+) -> list[company_observation_ops.FinancialModelDriverProjectionRead]:
+    return company_observation_ops.model_driver_projections(db, model_id, revision_id)
 
 
 @router.get(
