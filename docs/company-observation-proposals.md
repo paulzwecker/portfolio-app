@@ -61,3 +61,21 @@ observations. Google Sheets is not parsed by this API; it will become a producer
 through a later explicit inbox adapter.
 
 The generated OpenAPI/TS contract is authoritative for payload structures.
+
+
+## Google Sheets is another producer, not another acceptance system
+
+The manual, default-off `POST /v1/google-sheets-observation-sync/check` route
+reads **only** the named `Application Observation Inbox` tab using the existing
+read-only Sheets API client. It accepts the same three strict JSON batch types
+as the direct API endpoint and calls the **same** `submit()` service,
+idempotency fingerprint and canonical candidate table.
+
+No separate Sheets-specific canonical acceptance mechanism or shadow model is
+created. The reviewer always uses the existing
+`/v1/company-observation-proposals/{id}/preview|accept|reject` endpoints, and
+only a reviewer role can accept. This bridge never edits workbook cells,
+previews, accepts or rejects proposals. No automatic schedule is enabled.
+
+See [Sheets observation inbox](google-sheets-observation-inbox.md) for the
+five-column chunk format, activation prerequisites and response semantics.

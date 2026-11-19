@@ -58,6 +58,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Canonical consensus estimates](consensus-estimates.md)
 - [Canonical company operating metrics and guidance](company-operating-metrics.md)
 - [Review-gated company observation proposals](company-observation-proposals.md)
+- [Sheets observation proposal inbox](google-sheets-observation-inbox.md)
 - [Uber public-source shadow pilot fixture](agent-shadow-uber-q3-2026.md)
 - [Agent company context v1 (read-only)](company-agent-context.md)
 - [Scoped Data & Universe Steward read access](data-universe-read-access.md)

@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     google_drive_market_data_workbook_file_id: str | None = None
     google_sheets_service_account_file: Path | None = None
     google_sheets_sync_tab: str = "Application Model Sync Inbox"
+    observation_sheets_inbox_enabled: bool = False
+    google_sheets_observation_tab: str = "Application Observation Inbox"
     google_sheets_poll_seconds: int = 0
     google_sheets_request_timeout_seconds: int = 20
     recurring_operations_enabled: bool = False
@@ -83,7 +85,7 @@ class Settings(BaseSettings):
             raise ValueError("Google Drive workbook settings must contain a file ID, not a URL")
         return value
 
-    @field_validator("google_sheets_sync_tab")
+    @field_validator("google_sheets_sync_tab", "google_sheets_observation_tab")
     @classmethod
     def validate_google_sheets_sync_tab(cls, value: str) -> str:
         if not value.strip() or "!" in value or len(value) > 100:
@@ -165,6 +167,8 @@ class Settings(BaseSettings):
             raise ValueError("Agent and reviewer proposal identities must be distinct")
         if self.observation_acceptance_enabled and not self.observation_proposals_enabled:
             raise ValueError("Observation acceptance cannot be enabled without proposals")
+        if self.observation_sheets_inbox_enabled and not self.observation_proposals_enabled:
+            raise ValueError("Observation Sheets inbox requires observation proposals enabled")
         observation_roles = (
             (self.observation_proposal_agent_token, self.observation_proposal_agent_id, "AGENT"),
             (

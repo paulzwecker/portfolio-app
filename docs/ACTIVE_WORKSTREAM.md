@@ -23,6 +23,13 @@ Completed code slices on this branch (development state, not production claims):
   for GET CompanyAgentContextV1, with private portfolio/research/model sections
   suppressed; broad application proxy authorization is unchanged. Credentials
   are not provisioned, no new app or agent has been activated.
+- **New development slice:** one disabled-by-default, manually invoked Google
+  Sheets Observation Inbox bridge. Reuses the existing read-only double-capture
+  Sheets client and typed observation `submit()` service, creating candidates
+  in the same proposal table as API agents. Full review authority remains
+  unchanged. The inbox is never written to by the bridge. Synthetic PostgreSQL
+  tests cover replay, invalid/mismatched IDs, partial scans and reviewer
+  acceptance. Not live-configured; no owner workbook was edited.
 - Read-only `data_universe_shadow` CLI stages structured local draft batches
   from scoped company context + a human-reviewed public issuer evidence pack.
   It refuses incomplete history and duplicate/conflicting facts, uses no

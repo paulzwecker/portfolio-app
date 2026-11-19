@@ -654,3 +654,5 @@ PR never grants production, source-edit, acceptance, migration or activation aut
 - 2026-11-19 — PR #42: Data & Universe Steward least-privilege read gate, restricted CompanyAgentContextV1 company allowlist and role-filtered response, negative auth tests; no token provisioning, endpoint activation or production writes. A new accepted-schema head requires updating its exact deployment test; full CI remains a merge gate.
 
 - 2026-11-19 — PR #42: bounded API-first Data Universe shadow runner and public Uber primary-source pack; deterministic read/compare/draft classification, explicit unknown coverage, no API POST, no production activation. Test evidence pending; host-credential pilot remains gated.
+
+- 2026-11-19 — PR #42: optional Sheets observation inbox bridge to the existing KPI/guidance proposal service. Single manual check, existing read-only Sheets double-capture/chunked schema, source-specific idempotency, bounded issues, no new table/worker/scheduler/acceptance path. Integration check pending; no live Sheet or production activation.

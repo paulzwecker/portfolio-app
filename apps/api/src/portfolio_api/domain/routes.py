@@ -20,6 +20,7 @@ from portfolio_api import company_observation_proposals as observation_proposal_
 from portfolio_api import company_observations as company_observation_ops
 from portfolio_api import model_proposal_auth, observation_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
+from portfolio_api import observation_sheet_sync
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as ledger_contracts
 from portfolio_api import portfolio_ledger_publication as ledger_publication
@@ -279,6 +280,18 @@ def observation_proposal_acceptance_identity(
     token: str = Header(default="", alias="X-Observation-Proposal-Token"),
 ) -> str:
     return observation_proposal_auth.require_acceptance(request, token)
+
+
+@router.post(
+    "/google-sheets-observation-sync/check",
+    response_model=observation_sheet_sync.ObservationSheetCheck,
+)
+def post_google_sheets_observation_sync_check(
+    request: Request,
+    db: Db,
+) -> observation_sheet_sync.ObservationSheetCheck:
+    settings = cast(Settings, request.app.state.settings)
+    return observation_sheet_sync.check_observation_inbox(db, settings)
 
 
 @router.get(
