@@ -337,7 +337,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "exclusiveMinimum": 0,
+            "exclusiveMinimum": 0.0,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -445,7 +445,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "exclusiveMinimum": 0,
+            "exclusiveMinimum": 0.0,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -6957,8 +6957,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10,
-            "minimum": 6,
+            "maximum": 10.0,
+            "minimum": 6.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -6990,8 +6990,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10,
-            "minimum": 6,
+            "maximum": 10.0,
+            "minimum": 6.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -7015,8 +7015,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10,
-            "minimum": 6,
+            "maximum": 10.0,
+            "minimum": 6.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -7116,8 +7116,8 @@
             "title": "Ebit Margin"
           },
           "forecast_year": {
-            "maximum": 5,
-            "minimum": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -7219,8 +7219,8 @@
             "type": "string"
           },
           "forecast_year": {
-            "maximum": 5,
-            "minimum": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -7298,8 +7298,8 @@
             "type": "string"
           },
           "forecast_year": {
-            "maximum": 5,
-            "minimum": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -11348,7 +11348,7 @@
             "type": "string"
           },
           "revision_number": {
-            "exclusiveMinimum": 0,
+            "exclusiveMinimum": 0.0,
             "title": "Revision Number",
             "type": "integer"
           }
@@ -13281,7 +13281,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -13413,7 +13413,7 @@
             "type": "string"
           },
           "base_revision_number": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Base Revision Number",
             "type": "integer"
           },
@@ -15295,15 +15295,15 @@
           },
           "limit": {
             "default": 10,
-            "maximum": 10,
-            "minimum": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
             "title": "Limit",
             "type": "integer"
           },
           "offset": {
             "default": 0,
-            "maximum": 5000,
-            "minimum": 0,
+            "maximum": 5000.0,
+            "minimum": 0.0,
             "title": "Offset",
             "type": "integer"
           },
@@ -17361,15 +17361,15 @@
         "properties": {
           "limit": {
             "default": 50,
-            "maximum": 100,
-            "minimum": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
             "title": "Limit",
             "type": "integer"
           },
           "offset": {
             "default": 0,
-            "maximum": 5000,
-            "minimum": 0,
+            "maximum": 5000.0,
+            "minimum": 0.0,
             "title": "Offset",
             "type": "integer"
           }
@@ -19432,8 +19432,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19496,8 +19496,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19640,8 +19640,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19703,8 +19703,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           }
@@ -19792,8 +19792,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           },
@@ -19882,8 +19882,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           },
@@ -21189,8 +21189,8 @@
             "title": "Quantity"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           }
@@ -21258,8 +21258,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           }
@@ -21454,8 +21454,8 @@
             "title": "Quantity"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           },
@@ -21567,8 +21567,8 @@
             "type": "string"
           },
           "sequence": {
-            "maximum": 1000,
-            "minimum": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           },
@@ -24969,8 +24969,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10,
-            "minimum": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -25019,8 +25019,8 @@
         "additionalProperties": false,
         "properties": {
           "forecast_year": {
-            "maximum": 10,
-            "minimum": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -29431,15 +29431,15 @@
           },
           "limit": {
             "default": 50,
-            "maximum": 50,
-            "minimum": 1,
+            "maximum": 50.0,
+            "minimum": 1.0,
             "title": "Limit",
             "type": "integer"
           },
           "offset": {
             "default": 0,
-            "maximum": 5000,
-            "minimum": 0,
+            "maximum": 5000.0,
+            "minimum": 0.0,
             "title": "Offset",
             "type": "integer"
           },
@@ -29853,8 +29853,8 @@
             "type": "string"
           },
           "fiscal_year": {
-            "maximum": 2200,
-            "minimum": 1800,
+            "maximum": 2200.0,
+            "minimum": 1800.0,
             "title": "Fiscal Year",
             "type": "integer"
           },
@@ -32420,8 +32420,8 @@
             "type": "string"
           },
           "forecast_year": {
-            "maximum": 10,
-            "minimum": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
             "title": "Forecast Year",
             "type": "integer"
           },
@@ -34165,7 +34165,7 @@
             "type": "string"
           },
           "provider_request_count": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Provider Request Count",
             "type": "integer"
           },
@@ -34232,7 +34232,7 @@
             ]
           },
           "data_check_count": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Data Check Count",
             "type": "integer"
           },
@@ -34285,7 +34285,7 @@
             "title": "Latest Retrieved At"
           },
           "record_count": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Record Count",
             "type": "integer"
           },
@@ -34316,17 +34316,17 @@
         "additionalProperties": false,
         "properties": {
           "matching_cik": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Matching Cik",
             "type": "integer"
           },
           "other_cik": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Other Cik",
             "type": "integer"
           },
           "unverified": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Unverified",
             "type": "integer"
           }
@@ -34376,8 +34376,8 @@
         "additionalProperties": false,
         "properties": {
           "attempt_count": {
-            "maximum": 3,
-            "minimum": 0,
+            "maximum": 3.0,
+            "minimum": 0.0,
             "title": "Attempt Count",
             "type": "integer"
           },
@@ -34452,7 +34452,7 @@
           "mapped_company_count": {
             "anyOf": [
               {
-                "minimum": 0,
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -34488,14 +34488,14 @@
             "type": "string"
           },
           "scope_company_count": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Scope Company Count",
             "type": "integer"
           },
           "source_record_count": {
             "anyOf": [
               {
-                "minimum": 0,
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -34872,8 +34872,8 @@
           "fiscal_year": {
             "anyOf": [
               {
-                "maximum": 2200,
-                "minimum": 1800,
+                "maximum": 2200.0,
+                "minimum": 1800.0,
                 "type": "integer"
               },
               {
@@ -37889,100 +37889,100 @@
         ]
       }
     },
-    "/v1/companies/{company_id}/agent-context": {
-      "get": {
-        "operationId": "get_company_agent_context_v1_companies__company_id__agent_context_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "company_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Company Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "portfolio_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Portfolio Id"
-            }
-          },
-          {
-            "in": "query",
-            "name": "as_of",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "date",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "As Of"
-            }
-          },
-          {
-            "in": "query",
-            "name": "known_at",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "date-time",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Known At"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CompanyAgentContextV1"
-                }
+      "/v1/companies/{company_id}/agent-context": {
+        "get": {
+          "operationId": "get_company_agent_context_v1_companies__company_id__agent_context_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "company_id",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Company Id",
+                "type": "string"
               }
             },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+            {
+              "in": "query",
+              "name": "portfolio_id",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Portfolio Id"
               }
             },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Company Agent Context",
-        "tags": [
-          "Portfolio research"
-        ]
-      }
-    },
+            {
+              "in": "query",
+              "name": "as_of",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "As Of"
+              }
+            },
+            {
+              "in": "query",
+              "name": "known_at",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Known At"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CompanyAgentContextV1"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Company Agent Context",
+          "tags": [
+            "Portfolio research"
+          ]
+        }
+      },
     "/v1/companies/{company_id}/candidate-pipeline": {
       "get": {
         "operationId": "get_company_candidate_pipeline_v1_companies__company_id__candidate_pipeline_get",
