@@ -33,8 +33,8 @@ const actual = {
 } as Actual;
 
 const guidance = {
-  id: "guidance-1",
   ...actual,
+  id: "guidance-1",
   lower_value: "4000",
   upper_value: "4200",
   midpoint_value: null,
@@ -43,14 +43,14 @@ const guidance = {
 } as unknown as Guidance;
 
 const driver = {
-  id: "model-driver-1",
   ...actual,
+  id: "model-driver-1",
   scenario: "BASE",
   value: "4000",
   value_qualifier: "EQ",
   forecast_year: 1,
   rationale: "Test projection supported by source",
-} as Driver;
+} as unknown as Driver;
 
 function context(): CompanyAgentContext {
   return {
