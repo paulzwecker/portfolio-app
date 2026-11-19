@@ -40,7 +40,10 @@ def upgrade() -> None:
         sa.Column("source_reference", sa.String(length=2000), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("deprecated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.CheckConstraint("length(metric_key) > 0", name=op.f("ck_company_metric_definitions_metric_key")),
+        sa.CheckConstraint(
+            "length(metric_key) > 0",
+            name=op.f("ck_company_metric_definitions_metric_key"),
+        ),
         sa.CheckConstraint(
             "category IN ('FINANCIAL','CAPITAL_STRUCTURE','OPERATING','CUSTOMER','CAPACITY',"
             "'PRODUCT','MARKET_SHARE','MARKET_EXPOSURE','SEGMENT','BACKLOG','QUALITY','OTHER')",
