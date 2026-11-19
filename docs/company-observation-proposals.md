@@ -14,8 +14,9 @@ management guidance**. There is no new generic workflow engine or data provider.
 All use `contract_version: 1.0.0`, a canonical `company_id`, a stable
 `external_batch_id`, a dated authoring timestamp and rationale, and 1–20
 strictly typed rows. Extra fields are rejected. Numeric values and scales must
-be exact decimal strings, never floating-point inputs. Each observation carries
-its own HTTPS source and publication time. Definition proposals are company-scoped
+be exact decimal strings, never floating-point inputs. Each observation carries its own HTTPS source. Publication timestamps are
+accepted only when known exactly; date-only disclosures remain null rather
+than inventing a time. Definition proposals are company-scoped
 and deliberately exclude normalized statement facts.
 
 The storage table `company_observation_proposals` is a review inbox. Accepted

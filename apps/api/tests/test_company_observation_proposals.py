@@ -1,6 +1,7 @@
 """Synthetic isolated company observation proposal review and safety tests."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
@@ -156,7 +157,7 @@ def _submit_preview_accept(client: TestClient, payload: dict[str, Any]) -> str:
     assert decision.status_code == 200, decision.text
     assert decision.json()["status"] == "ACCEPTED"
     assert decision.json()["proposal"]["accepted_record_ids"]
-    return decision.json()["proposal"]["accepted_record_ids"][0]
+    return str(decision.json()["proposal"]["accepted_record_ids"][0])
 
 
 def test_contract_rejects_agent_supplied_authority_and_floats() -> None:
@@ -355,3 +356,102 @@ def test_stale_preview_cannot_accept_competing_kpi(postgres_engine: Engine) -> N
         history = client.get(f"/v1/companies/{company_id}/metric-observations")
         assert history.status_code == 200
         assert len(history.json()) == 1
+
+
+def test_primary_source_uber_q3_2026_shadow_fixture(postgres_engine: Engine) -> None:
+    """Real disclosed numbers, isolated test identity; no production acceptance or scraping."""
+    source = (
+        "https://investor.uber.com/news-events/news/"
+        "press-release-details/2026/"
+        "Uber-Announces-Results-for-Third-Quarter-2026/default.aspx"
+    )
+    with (
+        patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
+        TestClient(create_app(_settings())) as client,
+    ):
+        company = client.post(
+            "/v1/companies",
+            json={"name": "Uber public-source TEST fixture", "reporting_currency": "USD"},
+        ).json()
+        company_id = company["id"]
+
+        definitions = _definition(company_id)
+        definitions["external_batch_id"] = "uber-source-metric-registry"
+        trip_def = definitions["items"][0]
+        trip_def.update(
+            metric_key="uber.trips",
+            canonical_scale="1000000",
+            source_reference=source,
+            description="Completed Mobility rides and Delivery orders in the reporting period.",
+        )
+        booking_def = {
+            **trip_def,
+            "metric_key": "uber.gross_bookings",
+            "display_name": "Gross Bookings",
+            "value_kind": "CURRENCY",
+            "canonical_unit": "currency",
+            "currency_policy": "REQUIRED",
+            "description": "Total platform Gross Bookings, not recognized GAAP revenue.",
+        }
+        definitions["items"] = [trip_def, booking_def]
+        _submit_preview_accept(client, definitions)
+
+        actuals = _kpi(company_id, "uber-q3-2026-source-actuals", "uber-trips-2026q3")
+        trip = actuals["items"][0]
+        trip.update(
+            metric_key="uber.trips",
+            value="4061",
+            scale="1000000",
+            value_qualifier="EQ",
+            source_reference=source,
+            reported_at=None,  # IR release supplies date, not a precise timestamp.
+        )
+        bookings = {
+            **trip,
+            "external_observation_id": "uber-gross-bookings-2026q3",
+            "metric_key": "uber.gross_bookings",
+            "value": "59819",
+            "unit": "currency",
+            "currency": "USD",
+        }
+        actuals["items"] = [trip, bookings]
+        _submit_preview_accept(client, actuals)
+
+        guidance = _guidance(company_id)
+        guidance["external_batch_id"] = "uber-q4-2026-source-guidance"
+        g = guidance["items"][0]
+        g.update(
+            external_guidance_id="uber-q4-2026-gross-bookings-guidance",
+            metric_key="uber.gross_bookings",
+            period_start="2026-10-01",
+            period_end="2026-12-31",
+            fiscal_year=2026,
+            fiscal_quarter=4,
+            lower_value="63250",
+            upper_value="65250",
+            scale="1000000",
+            unit="currency",
+            currency="USD",
+            issued_at=None,  # Source publication time is not inferred.
+            source_reference=source,
+        )
+        _submit_preview_accept(client, guidance)
+
+        result = client.get(f"/v1/companies/{company_id}/agent-context")
+        assert result.status_code == 200, result.text
+        observed = {
+            row["metric_id"]: row for row in result.json()["metric_observations"]
+        }
+        assert set(observed) == {"uber.trips", "uber.gross_bookings"}
+        assert Decimal(observed["uber.trips"]["value"]) == Decimal("4061")
+        assert Decimal(observed["uber.gross_bookings"]["value"]) == Decimal("59819")
+        assert observed["uber.gross_bookings"]["currency"] == "USD"
+        assert observed["uber.gross_bookings"]["reported_at"] is None
+        issued = result.json()["guidance_observations"]
+        assert len(issued) == 1
+        assert issued[0]["metric_id"] == "uber.gross_bookings"
+        assert Decimal(issued[0]["lower_value"]) == Decimal("63250")
+        assert Decimal(issued[0]["upper_value"]) == Decimal("65250")
+        assert issued[0]["period_end"] == "2026-12-31"
+        assert issued[0]["issued_at"] is None
+        assert issued[0]["source_reference"] == source

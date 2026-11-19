@@ -102,7 +102,7 @@ class KPIObservationItem(ObservationItem):
     external_observation_id: Annotated[str, Field(min_length=1, max_length=200)]
     value: ObservationDecimal
     value_qualifier: Qualifier = "EQ"
-    reported_at: datetime
+    reported_at: datetime | None = None
     quality_status: Literal["VERIFIED", "PROVISIONAL", "CONFLICTED", "RESTATED"] = "VERIFIED"
     quality_reason: Annotated[str, Field(max_length=1000)] | None = None
     supersedes_observation_id: UUID | None = None
@@ -114,7 +114,7 @@ class GuidanceObservationItem(ObservationItem):
     midpoint_value: ObservationDecimal | None = None
     upper_value: ObservationDecimal | None = None
     value_qualifier: Literal["EQ", "APPROX", "GT", "GTE", "LT", "LTE", "RANGE"] = "RANGE"
-    issued_at: datetime
+    issued_at: datetime | None = None
     status: Literal["ACTIVE", "WITHDRAWN", "ACHIEVED"] = "ACTIVE"
     supersedes_guidance_id: UUID | None = None
 
@@ -166,6 +166,8 @@ class GuidanceObservationBatchV1(ObservationBatchBase):
     contract_type: Literal["GuidanceObservationBatchV1"] = "GuidanceObservationBatchV1"
     items: list[GuidanceObservationItem] = Field(min_length=1, max_length=20)
 
+
+ProposalItem = MetricDefinitionItem | KPIObservationItem | GuidanceObservationItem
 
 ObservationBatchV1 = Annotated[
     MetricDefinitionBatchV1 | KPIObservationBatchV1 | GuidanceObservationBatchV1,
@@ -350,7 +352,7 @@ def _preflight(
     dependencies: list[object] = []
     seen: set[str] = set()
     seen_external_ids: set[str] = set()
-    for index, item in enumerate(batch.items):
+    for index, item in enumerate(cast(list[ProposalItem], batch.items)):
         key = item.metric_key
         if isinstance(item, MetricDefinitionItem):
             identity = key
@@ -439,7 +441,9 @@ def _preflight(
                 external_id = item.external_guidance_id
                 predecessor = item.supersedes_guidance_id
                 source_at = item.issued_at
-            if source_at.tzinfo is None or source_at.utcoffset() is None or source_at > now():
+            if source_at is not None and (
+                source_at.tzinfo is None or source_at.utcoffset() is None or source_at > now()
+            ):
                 issues.append(
                     ObservationProposalIssue(
                         row_index=index,
@@ -447,7 +451,7 @@ def _preflight(
                         detail="Publication time is missing or future",
                     )
                 )
-            existing = list(
+            existing: list[Any] = list(
                 session.scalars(
                     select(model)
                     .where(
@@ -504,7 +508,7 @@ def _preflight(
                         )
                     )
                 else:
-                    successors = list(
+                    successors: list[Any] = list(
                         session.scalars(
                             select(model.id).where(
                                 (
@@ -604,6 +608,7 @@ def accept(
         select(CompanyObservationProposal)
         .where(CompanyObservationProposal.id == proposal_id)
         .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if candidate is None:
         raise DomainError("Company observation proposal not found", 404)
@@ -625,7 +630,7 @@ def accept(
         )
     batch = BATCH_ADAPTER.validate_python(candidate.payload_data)
     accepted_ids: list[UUID] = []
-    for item in batch.items:
+    for item in cast(list[ProposalItem], batch.items):
         if isinstance(item, MetricDefinitionItem):
             record: CompanyMetricDefinition | CompanyMetricObservation | CompanyGuidanceObservation
             record = CompanyMetricDefinition(
