@@ -73,7 +73,7 @@ def metric(
         value_kind=value_kind,
         canonical_unit=canonical_unit,
         canonical_scale=Decimal("1000000000"),
-        currency_policy="REQUIRED",
+        currency_policy="REQUIRED" if value_kind == "CURRENCY" else "NONE",
         aggregation_semantics="PERIOD_FLOW",
         default_period_type="QUARTER",
         default_basis="REPORTED",
@@ -527,4 +527,43 @@ def test_supersession_must_preserve_company_and_metric_identity(
             )
         )
         with pytest.raises(IntegrityError):
+            session.flush()
+
+
+def test_company_scoped_metric_cannot_be_attached_to_another_company(
+    postgres_engine: Engine,
+) -> None:
+    observed = datetime(2026, 11, 19, 12, tzinfo=UTC)
+    with Session(postgres_engine) as session, session.begin():
+        owner, _ = seed_company(session)
+        definition = metric(session, owner)
+        other = Company(name="Other Synthetic Mobility", reporting_currency="USD")
+        session.add(other)
+        session.flush()
+        session.add(
+            CompanyMetricObservation(
+                external_observation_id="other-company-wrong-metric",
+                company_id=other.id,
+                metric_definition_id=definition.id,
+                period_type="QUARTER",
+                period_start=date(2026, 7, 1),
+                period_end=date(2026, 9, 30),
+                fiscal_year=2026,
+                fiscal_quarter=3,
+                value=Decimal("1"),
+                value_qualifier="EQ",
+                unit="currency",
+                scale=Decimal("1000000000"),
+                currency="USD",
+                basis="REPORTED",
+                scope_json={},
+                reported_at=observed,
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/other",
+                quality_status="VERIFIED",
+                quality_reason=None,
+                recorded_at=observed,
+            )
+        )
+        with pytest.raises(ValueError, match="another company"):
             session.flush()
