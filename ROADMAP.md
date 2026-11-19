@@ -648,3 +648,5 @@ PR never grants production, source-edit, acceptance, migration or activation aut
   then Company Explorer KPI/guidance/model-driver visualization.
 
 - 2026-11-19 — PR #42 CompanyAgentContextV1 read slice: bounded canonical company context, explicit portfolio identity, point-in-time data/guidance, accepted research/thesis/native models, and linked detailed resources. Pending integration/contract-generation verification; no production operations.
+
+- 2026-11-19 — PR #42 observation proposal workflow: company-scoped metric-definition/KPI/guidance typed batches, isolated audit candidate table, independent role tokens, deterministic preview/fingerprint, explicit human accept/reject, and default-off activation. Integration verification pending; no production write/activation.

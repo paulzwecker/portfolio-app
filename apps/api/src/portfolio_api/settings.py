@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     model_proposal_agent_id: str | None = None
     model_proposal_reviewer_token: SecretStr | None = None
     model_proposal_reviewer_id: str | None = None
+    observation_proposals_enabled: bool = False
+    observation_acceptance_enabled: bool = False
+    observation_proposal_agent_token: SecretStr | None = None
+    observation_proposal_agent_id: str | None = None
+    observation_proposal_reviewer_token: SecretStr | None = None
+    observation_proposal_reviewer_id: str | None = None
     cloud_ingestion_enabled: bool = False
     sec_user_agent: str | None = None
     fmp_api_key: SecretStr | None = None
@@ -87,7 +93,12 @@ class Settings(BaseSettings):
             raise ValueError("GOOGLE_SHEETS_POLL_SECONDS must be 0 or at least 60")
         return value
 
-    @field_validator("model_proposal_agent_id", "model_proposal_reviewer_id")
+    @field_validator(
+        "model_proposal_agent_id",
+        "model_proposal_reviewer_id",
+        "observation_proposal_agent_id",
+        "observation_proposal_reviewer_id",
+    )
     @classmethod
     def validate_model_proposal_identity(cls, value: str | None) -> str | None:
         if value is None:
@@ -148,6 +159,33 @@ class Settings(BaseSettings):
             and self.model_proposal_agent_id == self.model_proposal_reviewer_id
         ):
             raise ValueError("Agent and reviewer proposal identities must be distinct")
+        if self.observation_acceptance_enabled and not self.observation_proposals_enabled:
+            raise ValueError("Observation acceptance cannot be enabled without proposals")
+        observation_roles = (
+            (self.observation_proposal_agent_token, self.observation_proposal_agent_id, "AGENT"),
+            (
+                self.observation_proposal_reviewer_token,
+                self.observation_proposal_reviewer_id,
+                "REVIEWER",
+            ),
+        )
+        for token, identity, role in observation_roles:
+            if (token is None) != (identity is None):
+                raise ValueError(f"OBSERVATION_PROPOSAL_{role}_TOKEN and _ID must be paired")
+            if token is not None and len(token.get_secret_value()) < 32:
+                raise ValueError(f"OBSERVATION_PROPOSAL_{role}_TOKEN must have 32 characters")
+        if (
+            self.observation_proposal_agent_token is not None
+            and self.observation_proposal_reviewer_token is not None
+            and self.observation_proposal_agent_token.get_secret_value()
+            == self.observation_proposal_reviewer_token.get_secret_value()
+        ):
+            raise ValueError("Observation agent/reviewer credentials must be distinct")
+        if (
+            self.observation_proposal_agent_id is not None
+            and self.observation_proposal_agent_id == self.observation_proposal_reviewer_id
+        ):
+            raise ValueError("Observation agent/reviewer identities must be distinct")
         if self.app_env in {"preview", "production"}:
             if self.database_url is None:
                 raise ValueError("DATABASE_URL is required for remote deployments")

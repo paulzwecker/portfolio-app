@@ -57,6 +57,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         proposal_api = (
             request.url.path == "/v1/model-revision-proposals"
             or request.url.path.startswith("/v1/model-revision-proposals/")
+            or request.url.path == "/v1/company-observation-proposals"
+            or request.url.path.startswith("/v1/company-observation-proposals/")
         )
         if (
             configured_settings.app_env == "development"
