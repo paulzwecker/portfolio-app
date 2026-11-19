@@ -148,14 +148,22 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["supersedes_observation_id"],
-            ["company_metric_observations.id"],
-            name=op.f(
-                "fk_company_metric_observations_supersedes_observation_id_company_metric_observations"
-            ),
+            ["company_id", "metric_definition_id", "supersedes_observation_id"],
+            [
+                "company_metric_observations.company_id",
+                "company_metric_observations.metric_definition_id",
+                "company_metric_observations.id",
+            ],
+            name="fk_company_metric_observation_supersession",
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_company_metric_observations")),
+        sa.UniqueConstraint(
+            "company_id",
+            "metric_definition_id",
+            "id",
+            name="uq_company_metric_observation_identity",
+        ),
         sa.UniqueConstraint(
             "external_observation_id",
             name="uq_company_metric_observation_external_id",
@@ -251,14 +259,22 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["supersedes_guidance_id"],
-            ["company_guidance_observations.id"],
-            name=op.f(
-                "fk_company_guidance_observations_supersedes_guidance_id_company_guidance_observations"
-            ),
+            ["company_id", "metric_definition_id", "supersedes_guidance_id"],
+            [
+                "company_guidance_observations.company_id",
+                "company_guidance_observations.metric_definition_id",
+                "company_guidance_observations.id",
+            ],
+            name="fk_company_guidance_supersession",
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_company_guidance_observations")),
+        sa.UniqueConstraint(
+            "company_id",
+            "metric_definition_id",
+            "id",
+            name="uq_company_guidance_identity",
+        ),
         sa.UniqueConstraint(
             "external_guidance_id",
             name="uq_company_guidance_external_id",
