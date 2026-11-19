@@ -61,6 +61,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Sheets observation proposal inbox](google-sheets-observation-inbox.md)
 - [Uber public-source shadow pilot fixture](agent-shadow-uber-q3-2026.md)
 - [Agent company context v1 (read-only)](company-agent-context.md)
+- [Company Explorer operating KPI and driver comparison](company-operating-drivers-view.md)
 - [Scoped Data & Universe Steward read access](data-universe-read-access.md)
 - [Read-only Data & Universe shadow pilot](data-universe-shadow-pilot.md)
 - [Canonical external-data architecture](external-data-architecture.md)

@@ -37,6 +37,12 @@ Completed code slices on this branch (development state, not production claims):
   outside Git. The published Uber Q3 2026 test pack covers trips, Gross
   Bookings, and Q4 guidance. Live hosted shadow execution remains unverified.
 
+- **Investor-facing Company Explorer:** new Operating KPIs tab reuses the
+  accepted CompanyAgentContextV1 response to show actuals, management
+  guidance, selected financial consensus (separately), and accepted
+  revision-scoped Bear/Base/Bull driver paths. Strict period/scope/unit checks
+  prevent misleading comparison. No new data provider or schema.
+
 Known follow-ons: verify read scope and integration edge cases, regenerate checked-in
 OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove
 a read-only real-company Data & Universe Steward pilot before exposing proposal

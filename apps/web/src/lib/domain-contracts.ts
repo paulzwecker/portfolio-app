@@ -1,5 +1,73 @@
 import type { components } from "@portfolio/contracts";
 
+export type CompanyAgentContext =
+  components["schemas"]["CompanyAgentContextV1"];
+
+export function isCompanyAgentContext(value: unknown): value is CompanyAgentContext {
+  return (
+    isRecord(value) &&
+    value.contract_type === "CompanyAgentContextV1" &&
+    value.contract_version === "1.0.0" &&
+    isCompany(value.company) &&
+    array(
+      value.metric_definitions,
+      (row) =>
+        isRecord(row) &&
+        string(row.metric_id) &&
+        string(row.display_name) &&
+        signedDecimal(row.canonical_scale),
+    ) &&
+    array(
+      value.metric_observations,
+      (row) =>
+        isRecord(row) &&
+        string(row.metric_id) &&
+        signedDecimal(row.value) &&
+        string(row.scale) &&
+        string(row.period_end) &&
+        string(row.period_start) &&
+        typeof row.is_current === "boolean",
+    ) &&
+    array(
+      value.guidance_observations,
+      (row) =>
+        isRecord(row) &&
+        string(row.metric_id) &&
+        string(row.period_start) &&
+        string(row.period_end) &&
+        typeof row.is_current === "boolean",
+    ) &&
+    array(
+      value.native_models,
+      (model) =>
+        isRecord(model) &&
+        string(model.model_name) &&
+        isRecord(model.accepted_revision) &&
+        Array.isArray(model.driver_projections) &&
+        model.driver_projections.every(
+          (row: unknown) =>
+            isRecord(row) &&
+            string(row.metric_id) &&
+            signedDecimal(row.value) &&
+            string(row.period_end) &&
+            string(row.period_start),
+        ),
+    ) &&
+    array(value.consensus_periods, (row) => isRecord(row) && string(row.metric)) &&
+    isRecord(value.metrics_status) &&
+    string(value.metrics_status.status) &&
+    isRecord(value.guidance_status) &&
+    string(value.guidance_status.status) &&
+    isRecord(value.native_models_status) &&
+    string(value.native_models_status.status) &&
+    isRecord(value.consensus_status) &&
+    string(value.consensus_status.status) &&
+    string(value.consensus_continuity_status) &&
+    (value.consensus_provider_id === null || string(value.consensus_provider_id))
+  );
+}
+
+
 export type CompanyFinancialStatements =
   components["schemas"]["CompanyFinancialStatementsRead"];
 export type DcfSensitivity = components["schemas"]["DcfSensitivityRead"];

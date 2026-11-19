@@ -5,6 +5,7 @@ import { useRef } from "react";
 export const companyViews = [
   { id: "overview", label: "Overview" },
   { id: "financials", label: "Financials" },
+  { id: "operating", label: "Operating KPIs" },
   { id: "history", label: "Prices & history" },
   { id: "valuation", label: "Valuation" },
   { id: "thesis", label: "Thesis & risks" },
@@ -19,6 +20,10 @@ const legacyAnchorViews: Record<string, CompanyView> = {
   "investment-quality": "thesis",
   "market-facts": "history",
   "reported-fundamentals": "financials",
+  "operating-metrics": "operating",
+  "company-metric-observations": "operating",
+  "management-guidance": "operating",
+  "model-driver-projections": "operating",
   "source-documents": "research",
   "consensus-estimates": "financials",
   "estimate-momentum": "history",

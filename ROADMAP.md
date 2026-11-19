@@ -656,3 +656,5 @@ PR never grants production, source-edit, acceptance, migration or activation aut
 - 2026-11-19 — PR #42: bounded API-first Data Universe shadow runner and public Uber primary-source pack; deterministic read/compare/draft classification, explicit unknown coverage, no API POST, no production activation. Test evidence pending; host-credential pilot remains gated.
 
 - 2026-11-19 — PR #42: optional Sheets observation inbox bridge to the existing KPI/guidance proposal service. Single manual check, existing read-only Sheets double-capture/chunked schema, source-specific idempotency, bounded issues, no new table/worker/scheduler/acceptance path. Integration check pending; no live Sheet or production activation.
+
+- 2026-11-19 — PR #42: Company Explorer operating-KPI/driver read view with evidence, coverage, selected-provider consensus (financial metrics isolated) and exact period/scope/unit comparison. UI and contract tests pending; no production deployment. Next: publish explicit driver paths through accepted model revision contract v1.3.

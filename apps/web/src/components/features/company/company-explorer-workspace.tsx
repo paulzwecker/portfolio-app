@@ -16,6 +16,7 @@ import {
   type CompanyView,
 } from "@/components/features/company/company-view-tabs";
 import { CompanyOverview } from "@/components/features/company/company-overview";
+import { CompanyOperatingDriversWorkspace } from "@/components/features/company/company-operating-drivers";
 import { CompanyValuationWorkspace } from "@/components/features/company/company-valuation-workspace";
 import { InvestmentQuality as CompanyInvestmentQuality } from "@/components/features/company/company-investment-quality";
 import { FinancialStatementsWorkspace } from "@/components/features/company/financial-statements/financial-statements-workspace";
@@ -131,6 +132,9 @@ export function CompanyExplorerWorkspace({ companyId }: { companyId: string }) {
         )}
         {view === "financials" && (
           <FinancialStatementsWorkspace companyId={detail.company.id} />
+        )}
+        {view === "operating" && (
+          <CompanyOperatingDriversWorkspace companyId={detail.company.id} />
         )}
         {view === "valuation" && (
           <CompanyValuationWorkspace
