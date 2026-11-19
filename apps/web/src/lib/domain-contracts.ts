@@ -3,7 +3,9 @@ import type { components } from "@portfolio/contracts";
 export type CompanyAgentContext =
   components["schemas"]["CompanyAgentContextV1"];
 
-export function isCompanyAgentContext(value: unknown): value is CompanyAgentContext {
+export function isCompanyAgentContext(
+  value: unknown,
+): value is CompanyAgentContext {
   return (
     isRecord(value) &&
     value.contract_type === "CompanyAgentContextV1" &&
@@ -53,7 +55,10 @@ export function isCompanyAgentContext(value: unknown): value is CompanyAgentCont
             string(row.period_start),
         ),
     ) &&
-    array(value.consensus_periods, (row) => isRecord(row) && string(row.metric)) &&
+    array(
+      value.consensus_periods,
+      (row) => isRecord(row) && string(row.metric),
+    ) &&
     isRecord(value.metrics_status) &&
     string(value.metrics_status.status) &&
     isRecord(value.guidance_status) &&
@@ -63,10 +68,10 @@ export function isCompanyAgentContext(value: unknown): value is CompanyAgentCont
     isRecord(value.consensus_status) &&
     string(value.consensus_status.status) &&
     string(value.consensus_continuity_status) &&
-    (value.consensus_provider_id === null || string(value.consensus_provider_id))
+    (value.consensus_provider_id === null ||
+      string(value.consensus_provider_id))
   );
 }
-
 
 export type CompanyFinancialStatements =
   components["schemas"]["CompanyFinancialStatementsRead"];

@@ -134,7 +134,11 @@ def parse_portable_contract(text: str) -> ParsedContract:
     if raw.get("contract_type") == "FinancialModelPublicationV1":
         publication = FinancialModelPublicationV1.model_validate(raw)
         raw = json.loads(publication.contract_json)
-        if not isinstance(raw, dict) or raw.get("contract_version") not in {"1.2.0", "1.3.0", "2.1.0"}:
+        if not isinstance(raw, dict) or raw.get("contract_version") not in {
+            "1.2.0",
+            "1.3.0",
+            "2.1.0",
+        }:
             raise ValueError("Publications require an evidence-capable model contract")
     version = _contract_version(cast(dict[str, object], raw))
     if version not in SUPPORTED_CONTRACT_VERSIONS:

@@ -448,12 +448,8 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                         db, UUID(model["id"]), accepted.accepted_revision_id
                     )
                     assert {item.scenario for item in records} == {"BEAR", "BASE", "BULL"}
-                    assert {item.metric_id for item in records} == {
-                        "synthetic.synthia.bookings"
-                    }
-                    assert {item.revision_id for item in records} == {
-                        accepted.accepted_revision_id
-                    }
+                    assert {item.metric_id for item in records} == {"synthetic.synthia.bookings"}
+                    assert {item.revision_id for item in records} == {accepted.accepted_revision_id}
                     assert (
                         db.scalar(
                             select(func.count())
@@ -467,8 +463,7 @@ def test_two_company_publications_use_one_capture_and_native_review_path(
                     )
                     context = company_agent_context(db, UUID(company["id"]))
                     assert any(
-                        len(native.driver_projections) == 3
-                        for native in context.native_models
+                        len(native.driver_projections) == 3 for native in context.native_models
                     )
                 assert (
                     accept_sync_candidate(
@@ -816,6 +811,4 @@ def test_driver_projection_contract_rejects_floats_bad_periods_and_duplicate_sem
             {**sample, "period_start": "2028-01-01"}
         )
     with pytest.raises(ValidationError, match="basis"):
-        s.FinancialModelDriverProjectionInput.model_validate(
-            {**sample, "basis": "REPORTED"}
-        )
+        s.FinancialModelDriverProjectionInput.model_validate({**sample, "basis": "REPORTED"})

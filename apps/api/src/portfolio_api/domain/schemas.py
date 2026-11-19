@@ -4426,9 +4426,7 @@ class FinancialModelDriverProjectionInput(Contract):
     value: ModelDriverDecimal
     value_qualifier: Literal["EQ", "APPROX", "GT", "GTE", "LT", "LTE"] = "EQ"
     unit: Annotated[str, Field(min_length=1, max_length=64)]
-    scale: Annotated[
-        ModelDriverDecimal, Field(gt=0)
-    ]
+    scale: Annotated[ModelDriverDecimal, Field(gt=0)]
     currency: Currency | None = None
     basis: Literal["MODEL_DRIVER"] = "MODEL_DRIVER"
     scope_json: dict[str, str] = Field(default_factory=dict, max_length=10)

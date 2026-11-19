@@ -6118,7 +6118,9 @@ export interface components {
              * Contract Version
              * @enum {string}
              */
-            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0";
+            /** Driver Projections */
+            driver_projections?: components["schemas"]["FinancialModelDriverProjectionInput-Input"][];
             /**
              * Exported At
              * Format: date-time
@@ -6138,7 +6140,9 @@ export interface components {
              * Contract Version
              * @enum {string}
              */
-            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0";
+            /** Driver Projections */
+            driver_projections?: components["schemas"]["FinancialModelDriverProjectionInput-Output"][];
             /**
              * Exported At
              * Format: date-time
@@ -6169,6 +6173,122 @@ export interface components {
              * Format: uuid
              */
             valuation_listing_id: string;
+        };
+        /**
+         * FinancialModelDriverProjectionInput
+         * @description Explicit company operating path authored with a portable model revision.
+         */
+        "FinancialModelDriverProjectionInput-Input": {
+            /**
+             * Basis
+             * @default MODEL_DRIVER
+             * @constant
+             */
+            basis: "MODEL_DRIVER";
+            /** Currency */
+            currency?: string | null;
+            /** External Driver Id */
+            external_driver_id: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Rationale */
+            rationale: string;
+            /** Scale */
+            scale: number | string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "BEAR" | "BASE" | "BULL";
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: number | string;
+            /**
+             * Value Qualifier
+             * @default EQ
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE";
+        };
+        /**
+         * FinancialModelDriverProjectionInput
+         * @description Explicit company operating path authored with a portable model revision.
+         */
+        "FinancialModelDriverProjectionInput-Output": {
+            /**
+             * Basis
+             * @default MODEL_DRIVER
+             * @constant
+             */
+            basis: "MODEL_DRIVER";
+            /** Currency */
+            currency?: string | null;
+            /** External Driver Id */
+            external_driver_id: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Rationale */
+            rationale: string;
+            /** Scale */
+            scale: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "BEAR" | "BASE" | "BULL";
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /**
+             * Value Qualifier
+             * @default EQ
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE";
         };
         /** FinancialModelDriverProjectionRead */
         FinancialModelDriverProjectionRead: {

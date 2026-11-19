@@ -11,7 +11,8 @@ import { companyViewFromLocation } from "@/components/features/company/company-v
 
 type Actual = CompanyAgentContext["metric_observations"][number];
 type Guidance = CompanyAgentContext["guidance_observations"][number];
-type Driver = CompanyAgentContext["native_models"][number]["driver_projections"][number];
+type Driver =
+  CompanyAgentContext["native_models"][number]["driver_projections"][number];
 
 const actual = {
   id: "actual-1",
@@ -87,27 +88,45 @@ function context(): CompanyAgentContext {
 describe("Operating KPI performance and accepted driver assumptions", () => {
   it("uses a dedicated company tab and legacy deep links", () => {
     expect(companyViewFromLocation("?view=operating", "")).toBe("operating");
-    expect(companyViewFromLocation("", "#management-guidance")).toBe("operating");
+    expect(companyViewFromLocation("", "#management-guidance")).toBe(
+      "operating",
+    );
   });
 
   it("only compares exact same unit, currency, period and scope", () => {
     expect(actualVsGuidance(actual, guidance)).toBe("WITHIN");
     expect(actualVsDriver(actual, driver)).toBe("ABOVE");
-    expect(actualVsGuidance({ ...actual, value: "4300" }, guidance)).toBe("ABOVE");
-    expect(actualVsGuidance({ ...actual, value: "3900" }, guidance)).toBe("BELOW");
+    expect(actualVsGuidance({ ...actual, value: "4300" }, guidance)).toBe(
+      "ABOVE",
+    );
+    expect(actualVsGuidance({ ...actual, value: "3900" }, guidance)).toBe(
+      "BELOW",
+    );
     expect(actualVsDriver({ ...actual, value: "4000" }, driver)).toBe("ON");
     expect(actualVsGuidance({ ...actual, scale: "1000" }, guidance)).toBeNull();
     expect(actualVsDriver({ ...actual, currency: "USD" }, driver)).toBeNull();
-    expect(actualVsDriver({ ...actual, period_end: "2026-10-31" }, driver)).toBeNull();
-    expect(actualVsGuidance({ ...actual, scope_json: { region: "USA" } }, guidance)).toBeNull();
-    expect(actualVsGuidance({ ...actual, quality_status: "PROVISIONAL" }, guidance)).toBeNull();
-    expect(actualVsGuidance({ ...actual, value_qualifier: "GT" }, guidance)).toBeNull();
-    expect(actualVsGuidance(actual, { ...guidance, value_qualifier: "APPROX" })).toBeNull();
+    expect(
+      actualVsDriver({ ...actual, period_end: "2026-10-31" }, driver),
+    ).toBeNull();
+    expect(
+      actualVsGuidance({ ...actual, scope_json: { region: "USA" } }, guidance),
+    ).toBeNull();
+    expect(
+      actualVsGuidance({ ...actual, quality_status: "PROVISIONAL" }, guidance),
+    ).toBeNull();
+    expect(
+      actualVsGuidance({ ...actual, value_qualifier: "GT" }, guidance),
+    ).toBeNull();
+    expect(
+      actualVsGuidance(actual, { ...guidance, value_qualifier: "APPROX" }),
+    ).toBeNull();
   });
 
   it("groups data by economic period instead of mixing future guidance with prior actuals", () => {
     const payload = context();
-    payload.guidance_observations = [{ ...guidance, period_start: "2026-10-01", period_end: "2026-12-31" }];
+    payload.guidance_observations = [
+      { ...guidance, period_start: "2026-10-01", period_end: "2026-12-31" },
+    ];
     const groups = operatingMetricPeriods(payload, "uber.trips");
     expect(groups).toHaveLength(2);
     expect(groups[0].periodEnd).toBe("2026-12-31");
@@ -117,7 +136,9 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
   });
 
   it("shows source-backed actuals, guidance and accepted scenario without synthesizing values", () => {
-    const html = renderToStaticMarkup(<OperatingDriversPanel context={context()} />);
+    const html = renderToStaticMarkup(
+      <OperatingDriversPanel context={context()} />,
+    );
     expect(html).toContain("Operating KPIs &amp; model drivers");
     expect(html).toContain("4,061");
     expect(html).toContain("4,000");
@@ -136,7 +157,9 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
     payload.guidance_observations = [];
     payload.native_models = [];
     payload.metrics_status.truncated = true;
-    const html = renderToStaticMarkup(<OperatingDriversPanel context={payload} />);
+    const html = renderToStaticMarkup(
+      <OperatingDriversPanel context={payload} />,
+    );
     expect(html).toContain("Partial coverage or missing metric definitions");
     expect(html).toContain("No accepted operating metric definitions");
     expect(html).not.toContain("4,061");

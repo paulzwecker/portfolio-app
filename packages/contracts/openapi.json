@@ -11983,10 +11983,19 @@
             "enum": [
               "1.0.0",
               "1.1.0",
-              "1.2.0"
+              "1.2.0",
+              "1.3.0"
             ],
             "title": "Contract Version",
             "type": "string"
+          },
+          "driver_projections": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelDriverProjectionInput-Input"
+            },
+            "maxItems": 60,
+            "title": "Driver Projections",
+            "type": "array"
           },
           "exported_at": {
             "format": "date-time",
@@ -12042,10 +12051,19 @@
             "enum": [
               "1.0.0",
               "1.1.0",
-              "1.2.0"
+              "1.2.0",
+              "1.3.0"
             ],
             "title": "Contract Version",
             "type": "string"
+          },
+          "driver_projections": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelDriverProjectionInput-Output"
+            },
+            "maxItems": 60,
+            "title": "Driver Projections",
+            "type": "array"
           },
           "exported_at": {
             "format": "date-time",
@@ -12134,6 +12152,294 @@
           "initial_revision"
         ],
         "title": "FinancialModelCreate",
+        "type": "object"
+      },
+      "FinancialModelDriverProjectionInput-Input": {
+        "additionalProperties": false,
+        "description": "Explicit company operating path authored with a portable model revision.",
+        "properties": {
+          "basis": {
+            "const": "MODEL_DRIVER",
+            "default": "MODEL_DRIVER",
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_driver_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:-]+$",
+            "title": "External Driver Id",
+            "type": "string"
+          },
+          "forecast_year": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale"
+          },
+          "scenario": {
+            "enum": [
+              "BEAR",
+              "BASE",
+              "BULL"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "external_driver_id",
+          "metric_key",
+          "scenario",
+          "forecast_year",
+          "period_type",
+          "period_start",
+          "period_end",
+          "value",
+          "unit",
+          "scale",
+          "rationale"
+        ],
+        "title": "FinancialModelDriverProjectionInput",
+        "type": "object"
+      },
+      "FinancialModelDriverProjectionInput-Output": {
+        "additionalProperties": false,
+        "description": "Explicit company operating path authored with a portable model revision.",
+        "properties": {
+          "basis": {
+            "const": "MODEL_DRIVER",
+            "default": "MODEL_DRIVER",
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_driver_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:-]+$",
+            "title": "External Driver Id",
+            "type": "string"
+          },
+          "forecast_year": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "BEAR",
+              "BASE",
+              "BULL"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "external_driver_id",
+          "metric_key",
+          "scenario",
+          "forecast_year",
+          "period_type",
+          "period_start",
+          "period_end",
+          "value",
+          "unit",
+          "scale",
+          "rationale"
+        ],
+        "title": "FinancialModelDriverProjectionInput",
         "type": "object"
       },
       "FinancialModelDriverProjectionRead": {
