@@ -1,3 +1,34 @@
+## Active draft integration — PR #42 (2026-11-19)
+
+Single working PR: https://github.com/paulzwecker/portfolio-app/pull/42
+Branch: `feat/api-first-company-observations`. **Do not merge or deploy** without
+owner review; no production migration, Sheet edit, source activation, or real
+canonical observation acceptance is authorized.
+
+Completed code slices on this branch (development state, not production claims):
+- Append-only company metric definitions, operating actuals, management guidance
+  and revision-scoped model-driver records, all separate from reported statements
+  and provider consensus.
+- `CompanyAgentContextV1`: bounded canonical agent company context with explicit
+  portfolio selection, point-in-time controls and source/availability status.
+- Typed `MetricDefinitionBatchV1`, `KPIObservationBatchV1` and
+  `GuidanceObservationBatchV1` candidates sharing one review inbox. Dedicated
+  role credentials, idempotent submission, deterministic preview/fingerprint,
+  owner acceptance/rejection and canonical append-only publication. Default-off
+  proposal and acceptance switches.
+- Synthetic PostgreSQL tests for accepted definition → KPI → guidance → correction,
+  idempotency/conflicts/stale reviewer previews; public Uber Q3 2026 IR numbers
+  used only in an **isolated test fixture**.
+
+Known follow-ons: fix any targeted type/integration failures, regenerate checked-in
+OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove
+a read-only real-company Data & Universe Steward pilot before exposing proposal
+writes beyond isolation. Owner instructed that full CI green is a **merge gate**,
+not a pause between small development increments. Current CI and contract
+generation are not claimed complete.
+
+---
+
 # Active workstream
 
 ## Integrated Portfolio Research delivery — INTEGRATE, 2026-11-15

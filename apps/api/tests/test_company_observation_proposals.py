@@ -439,9 +439,7 @@ def test_primary_source_uber_q3_2026_shadow_fixture(postgres_engine: Engine) -> 
 
         result = client.get(f"/v1/companies/{company_id}/agent-context")
         assert result.status_code == 200, result.text
-        observed = {
-            row["metric_id"]: row for row in result.json()["metric_observations"]
-        }
+        observed = {row["metric_id"]: row for row in result.json()["metric_observations"]}
         assert set(observed) == {"uber.trips", "uber.gross_bookings"}
         assert Decimal(observed["uber.trips"]["value"]) == Decimal("4061")
         assert Decimal(observed["uber.gross_bookings"]["value"]) == Decimal("59819")
