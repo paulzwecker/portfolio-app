@@ -4539,5 +4539,6 @@ def protect_history(session: Session, flush_context: object, instances: object) 
             ):
                 raise ValueError("Cannot add positions to a historical snapshot")
 
+
 # Register the separate company-observation ORM domain with Base.metadata.
 from portfolio_api import company_observations as _company_observations  # noqa: E402,F401
