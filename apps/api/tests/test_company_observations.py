@@ -7,6 +7,7 @@ import pytest
 from browser_server import fixture_application, fixture_settings
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from portfolio_api.company_observations import (
@@ -457,3 +458,73 @@ def test_known_at_does_not_see_future_supersession(postgres_engine: Engine) -> N
         assert len(guidance_rows) == 1
         assert guidance_rows[0].external_guidance_id == "smob-q4-point-in-time-v1"
         assert guidance_rows[0].is_current
+
+
+def test_supersession_must_preserve_company_and_metric_identity(
+    postgres_engine: Engine,
+) -> None:
+    observed = datetime(2026, 11, 19, 12, tzinfo=UTC)
+    with Session(postgres_engine) as session, session.begin():
+        company, _ = seed_company(session)
+        bookings = metric(session, company)
+        trips = metric(
+            session,
+            company,
+            key="synthetic.trips.identity",
+            display_name="Trips",
+            value_kind="COUNT",
+            canonical_unit="trips",
+        )
+        original = CompanyMetricObservation(
+            external_observation_id="smob-identity-bookings-v1",
+            company_id=company.id,
+            metric_definition_id=bookings.id,
+            period_type="QUARTER",
+            period_start=date(2026, 7, 1),
+            period_end=date(2026, 9, 30),
+            fiscal_year=2026,
+            fiscal_quarter=3,
+            value=Decimal("59.8"),
+            value_qualifier="EQ",
+            unit="currency",
+            scale=Decimal("1000000000"),
+            currency="USD",
+            basis="REPORTED",
+            scope_json={},
+            reported_at=observed,
+            source_type="EARNINGS_RELEASE",
+            source_reference="https://example.com/q3",
+            quality_status="VERIFIED",
+            quality_reason=None,
+            recorded_at=observed,
+        )
+        session.add(original)
+        session.flush()
+        session.add(
+            CompanyMetricObservation(
+                external_observation_id="smob-identity-trips-v2",
+                company_id=company.id,
+                metric_definition_id=trips.id,
+                period_type="QUARTER",
+                period_start=date(2026, 7, 1),
+                period_end=date(2026, 9, 30),
+                fiscal_year=2026,
+                fiscal_quarter=3,
+                value=Decimal("4.1"),
+                value_qualifier="EQ",
+                unit="trips",
+                scale=Decimal("1000000000"),
+                currency=None,
+                basis="REPORTED",
+                scope_json={},
+                reported_at=observed + timedelta(hours=1),
+                source_type="EARNINGS_RELEASE",
+                source_reference="https://example.com/q3-corrected",
+                quality_status="RESTATED",
+                quality_reason="Invalid cross-metric supersession",
+                supersedes_observation_id=original.id,
+                recorded_at=observed + timedelta(hours=1),
+            )
+        )
+        with pytest.raises(IntegrityError):
+            session.flush()
