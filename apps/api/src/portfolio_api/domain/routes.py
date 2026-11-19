@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from portfolio_api import candidate_pipeline as candidate_research
+from portfolio_api import company_agent_context
 from portfolio_api import company_observations as company_observation_ops
 from portfolio_api import model_proposal_auth
 from portfolio_api import model_revision_proposals as proposal_operations
@@ -1305,6 +1306,24 @@ def get_company_market_data(
 ) -> list[s.ListingMarketData]:
     _validate_market_cutoffs(as_of, known_at)
     return q.company_market_data(db, company_id, history_limit, as_of, known_at)
+
+
+@router.get(
+    "/companies/{company_id}/agent-context",
+    response_model=company_agent_context.CompanyAgentContextRead,
+)
+def get_company_agent_context(
+    company_id: UUID,
+    db: Db,
+    metric_limit: Annotated[int, Query(ge=1, le=500)] = 250,
+    guidance_limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> company_agent_context.CompanyAgentContextRead:
+    return company_agent_context.current_company_agent_context(
+        db,
+        company_id,
+        metric_limit=metric_limit,
+        guidance_limit=guidance_limit,
+    )
 
 
 @router.get(
