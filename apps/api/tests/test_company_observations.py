@@ -263,7 +263,7 @@ def test_metric_actual_guidance_and_driver_histories_are_explicit_and_append_onl
 
 
 def test_company_observation_read_endpoints_preserve_units_sources_and_qualifiers(
-    postgres_engine,
+    postgres_engine: Engine,
 ) -> None:
     observed = datetime(2026, 11, 19, 12, tzinfo=UTC)
     with Session(postgres_engine) as session, session.begin():
