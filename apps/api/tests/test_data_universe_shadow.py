@@ -124,14 +124,14 @@ def _accepted_data(context: CompanyAgentContextV1, pack: EvidencePackV1) -> None
         from portfolio_api.company_observations import CompanyMetricObservationRead
 
         context.metric_observations.append(CompanyMetricObservationRead.model_validate(fields))
-    for item in pack.guidance_observations:
-        fields = item.model_dump(mode="json")
+    for guidance_item in pack.guidance_observations:
+        fields = guidance_item.model_dump(mode="json")
         fields.pop("metric_key")
         fields.update(
             {
                 "id": str(uuid4()),
                 "company_id": str(context.company.id),
-                "metric_id": item.metric_key,
+                "metric_id": guidance_item.metric_key,
                 "metric_definition_id": str(uuid4()),
                 "recorded_at": "2026-11-19T18:45:00Z",
                 "is_current": True,

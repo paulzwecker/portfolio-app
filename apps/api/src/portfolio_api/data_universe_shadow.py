@@ -170,9 +170,10 @@ def compare_source_pack(context: CompanyAgentContextV1, pack: EvidencePackV1) ->
         raise ValueError("Company identity context is incomplete")
     if pack.issuer_ticker not in {listing.ticker for listing in context.listings}:
         raise ValueError("Evidence issuer ticker does not match canonical company listings")
-    if any(
-        item.source_reference != pack.source_reference
-        for item in (*pack.metric_definitions, *pack.kpi_observations, *pack.guidance_observations)
+    if (
+        any(item.source_reference != pack.source_reference for item in pack.metric_definitions)
+        or any(item.source_reference != pack.source_reference for item in pack.kpi_observations)
+        or any(item.source_reference != pack.source_reference for item in pack.guidance_observations)
     ):
         raise ValueError("Evidence items must cite the reviewed primary source")
     if not (pack.metric_definitions or pack.kpi_observations or pack.guidance_observations):
