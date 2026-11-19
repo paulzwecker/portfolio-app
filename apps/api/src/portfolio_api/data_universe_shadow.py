@@ -173,7 +173,7 @@ def compare_source_pack(context: CompanyAgentContextV1, pack: EvidencePackV1) ->
     if (
         any(item.source_reference != pack.source_reference for item in pack.metric_definitions)
         or any(item.source_reference != pack.source_reference for item in pack.kpi_observations)
-        or any(item.source_reference != pack.source_reference for item in pack.guidance_observations)
+        or any(row.source_reference != pack.source_reference for row in pack.guidance_observations)
     ):
         raise ValueError("Evidence items must cite the reviewed primary source")
     if not (pack.metric_definitions or pack.kpi_observations or pack.guidance_observations):
