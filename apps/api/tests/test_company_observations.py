@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 from browser_server import fixture_application, fixture_settings
 from fastapi.testclient import TestClient
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.company_observations import (
@@ -90,7 +91,7 @@ def metric(
 
 
 def test_metric_actual_guidance_and_driver_histories_are_explicit_and_append_only(
-    postgres_engine,
+    postgres_engine: Engine,
 ) -> None:
     recorded = datetime(2026, 11, 19, 12, tzinfo=UTC)
     with Session(postgres_engine) as session, session.begin():
@@ -322,7 +323,7 @@ def test_company_observation_read_endpoints_preserve_units_sources_and_qualifier
         assert payload[0]["source_reference"] == "https://example.com/q3"
 
 
-def test_known_at_does_not_see_future_supersession(postgres_engine) -> None:
+def test_known_at_does_not_see_future_supersession(postgres_engine: Engine) -> None:
     original_time = datetime(2026, 11, 19, 10, tzinfo=UTC)
     correction_time = original_time + timedelta(hours=2)
     with Session(postgres_engine) as session, session.begin():
