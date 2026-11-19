@@ -507,14 +507,25 @@ def company_metric_history(
             CompanyMetricObservation.id,
         ).limit(limit)
     ).all()
-    superseded = set(
-        session.scalars(
-            select(CompanyMetricObservation.supersedes_observation_id).where(
-                CompanyMetricObservation.company_id == company_id,
-                CompanyMetricObservation.supersedes_observation_id.is_not(None),
-            )
-        )
+    supersession_statement = select(
+        CompanyMetricObservation.supersedes_observation_id
+    ).where(
+        CompanyMetricObservation.company_id == company_id,
+        CompanyMetricObservation.supersedes_observation_id.is_not(None),
     )
+    if as_of is not None:
+        supersession_statement = supersession_statement.where(
+            CompanyMetricObservation.period_end <= as_of
+        )
+    if known_at is not None:
+        supersession_statement = supersession_statement.where(
+            CompanyMetricObservation.recorded_at <= known_at,
+            or_(
+                CompanyMetricObservation.reported_at.is_(None),
+                CompanyMetricObservation.reported_at <= known_at,
+            ),
+        )
+    superseded = set(session.scalars(supersession_statement))
     return [
         CompanyMetricObservationRead(
             id=row.id,
@@ -585,14 +596,25 @@ def company_guidance_history(
             CompanyGuidanceObservation.id,
         ).limit(limit)
     ).all()
-    superseded = set(
-        session.scalars(
-            select(CompanyGuidanceObservation.supersedes_guidance_id).where(
-                CompanyGuidanceObservation.company_id == company_id,
-                CompanyGuidanceObservation.supersedes_guidance_id.is_not(None),
-            )
-        )
+    supersession_statement = select(
+        CompanyGuidanceObservation.supersedes_guidance_id
+    ).where(
+        CompanyGuidanceObservation.company_id == company_id,
+        CompanyGuidanceObservation.supersedes_guidance_id.is_not(None),
     )
+    if as_of is not None:
+        supersession_statement = supersession_statement.where(
+            CompanyGuidanceObservation.period_end <= as_of
+        )
+    if known_at is not None:
+        supersession_statement = supersession_statement.where(
+            CompanyGuidanceObservation.recorded_at <= known_at,
+            or_(
+                CompanyGuidanceObservation.issued_at.is_(None),
+                CompanyGuidanceObservation.issued_at <= known_at,
+            ),
+        )
+    superseded = set(session.scalars(supersession_statement))
     result = [
         CompanyGuidanceObservationRead(
             id=row.id,
