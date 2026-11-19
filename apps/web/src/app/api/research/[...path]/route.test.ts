@@ -1590,3 +1590,44 @@ it.each([
     );
   },
 );
+
+
+it("validates the canonical company agent context through the authenticated proxy", async () => {
+  const response = {
+    contract_type: "CompanyAgentContextV1",
+    contract_version: "1.0.0",
+    company,
+    metric_definitions: [],
+    metric_observations: [],
+    guidance_observations: [],
+    native_models: [],
+    consensus_periods: [],
+    metrics_status: { status: "NO_DATA", truncated: false },
+    guidance_status: { status: "NO_DATA", truncated: false },
+    native_models_status: { status: "NO_DATA", truncated: false },
+    consensus_status: { status: "NO_DATA", truncated: false },
+    consensus_continuity_status: "NO_MAPPING",
+    consensus_provider_id: null,
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json(response));
+  vi.stubGlobal("fetch", mock);
+  const target = ["companies", id, "agent-context"];
+  const value = await GET(
+    new Request(`http://localhost/api/research/companies/${id}/agent-context`),
+    context(target),
+  );
+  expect(value.status).toBe(200);
+  expect((mock.mock.calls[0][0] as URL).pathname).toBe(
+    `/v1/companies/${id}/agent-context`,
+  );
+  expect(value.headers.get("cache-control")).toBe("no-store");
+
+  mock.mockResolvedValueOnce(
+    Response.json({ ...response, contract_version: "unknown" }),
+  );
+  const invalid = await GET(
+    new Request(`http://localhost/api/research/companies/${id}/agent-context`),
+    context(target),
+  );
+  expect(invalid.status).toBe(503);
+});
