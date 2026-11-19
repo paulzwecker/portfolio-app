@@ -634,7 +634,6 @@ in the vision, boundaries in architecture and long results in dated history.
 Reassess C1â€“C7 at integration. Keep completed PRs stable for owner review. A green
 PR never grants production, source-edit, acceptance, migration or activation authority.
 
-
 ## API-first hybrid company-observation foundation
 
 - Issue #40 / #41 foundation: add canonical company metric definitions, append-only
