@@ -2,8 +2,8 @@
 
 import re
 from pathlib import Path
-from uuid import UUID
 from typing import Literal
+from uuid import UUID
 
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -216,9 +216,11 @@ class Settings(BaseSettings):
             try:
                 parsed = [UUID(part) for part in company_ids]
             except ValueError as error:
-                raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS contains an invalid UUID") from error
+                raise ValueError(
+                    "DATA_UNIVERSE_READ_COMPANY_IDS contains an invalid UUID"
+                ) from error
             if len(set(parsed)) != len(parsed) or any(
-                str(value) != supplied for value, supplied in zip(parsed, company_ids)
+                str(value) != supplied for value, supplied in zip(parsed, company_ids, strict=True)
             ):
                 raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS must be unique canonical UUIDs")
         if self.app_env in {"preview", "production"}:
