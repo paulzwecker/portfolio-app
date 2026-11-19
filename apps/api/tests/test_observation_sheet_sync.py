@@ -369,6 +369,9 @@ def test_production_target_requires_separate_owner_write_authorization(
 ) -> None:
     settings = _settings()
     settings.database_target_environment = "production"
-    with Session(postgres_engine) as session, session.begin():
-        with pytest.raises(DomainError, match="owner authorization"):
-            check_observation_inbox(session, settings, FixtureReader([]))
+    with (
+        Session(postgres_engine) as session,
+        session.begin(),
+        pytest.raises(DomainError, match="owner authorization"),
+    ):
+        check_observation_inbox(session, settings, FixtureReader([]))

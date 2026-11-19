@@ -18,9 +18,8 @@ from portfolio_api import candidate_pipeline as candidate_research
 from portfolio_api import company_agent_context as agent_context_ops
 from portfolio_api import company_observation_proposals as observation_proposal_ops
 from portfolio_api import company_observations as company_observation_ops
-from portfolio_api import model_proposal_auth, observation_proposal_auth
+from portfolio_api import model_proposal_auth, observation_proposal_auth, observation_sheet_sync
 from portfolio_api import model_revision_proposals as proposal_operations
-from portfolio_api import observation_sheet_sync
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as ledger_contracts
 from portfolio_api import portfolio_ledger_publication as ledger_publication
