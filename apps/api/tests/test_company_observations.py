@@ -59,14 +59,17 @@ def metric(
     company: Company,
     *,
     key: str = "synthetic.gross_bookings",
+    display_name: str = "Gross Bookings",
+    value_kind: str = "CURRENCY",
+    canonical_unit: str = "currency",
 ) -> CompanyMetricDefinition:
     definition = CompanyMetricDefinition(
         metric_key=key,
         company_id=company.id,
-        display_name="Gross Bookings",
+        display_name=display_name,
         category="OPERATING",
-        value_kind="CURRENCY",
-        canonical_unit="currency",
+        value_kind=value_kind,
+        canonical_unit=canonical_unit,
         canonical_scale=Decimal("1000000000"),
         currency_policy="REQUIRED",
         aggregation_semantics="PERIOD_FLOW",
@@ -264,10 +267,14 @@ def test_company_observation_read_endpoints_preserve_units_sources_and_qualifier
     observed = datetime(2026, 11, 19, 12, tzinfo=UTC)
     with Session(postgres_engine) as session, session.begin():
         company, _ = seed_company(session)
-        definition = metric(session, company, key="synthetic.trips")
-        definition.value_kind = "COUNT"
-        definition.canonical_unit = "trips"
-        definition.canonical_scale = Decimal("1000000000")
+        definition = metric(
+            session,
+            company,
+            key="synthetic.trips",
+            display_name="Trips",
+            value_kind="COUNT",
+            canonical_unit="trips",
+        )
         session.add(
             CompanyMetricObservation(
                 external_observation_id="smob-q3-trips",
