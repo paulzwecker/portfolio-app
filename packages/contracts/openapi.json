@@ -3050,6 +3050,219 @@
         "title": "CompanyForecastAccuracyRead",
         "type": "object"
       },
+      "CompanyGuidanceObservationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_guidance_id": {
+            "title": "External Guidance Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "lower_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Value"
+          },
+          "metric_definition_id": {
+            "format": "uuid",
+            "title": "Metric Definition Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "midpoint_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midpoint Value"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "title": "Period Type",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": true,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_guidance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Guidance Id"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Value"
+          },
+          "value_qualifier": {
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_guidance_id",
+          "company_id",
+          "metric_definition_id",
+          "metric_id",
+          "period_type",
+          "period_start",
+          "period_end",
+          "fiscal_year",
+          "fiscal_quarter",
+          "lower_value",
+          "midpoint_value",
+          "upper_value",
+          "value_qualifier",
+          "unit",
+          "scale",
+          "currency",
+          "basis",
+          "scope_json",
+          "issued_at",
+          "source_type",
+          "source_reference",
+          "status",
+          "supersedes_guidance_id",
+          "is_current",
+          "recorded_at"
+        ],
+        "title": "CompanyGuidanceObservationRead",
+        "type": "object"
+      },
       "CompanyInvestmentThesisRead": {
         "additionalProperties": false,
         "properties": {
@@ -3097,6 +3310,352 @@
           "streams"
         ],
         "title": "CompanyInvestmentThesisRead",
+        "type": "object"
+      },
+      "CompanyMetricDefinitionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "actuals_allowed": {
+            "title": "Actuals Allowed",
+            "type": "boolean"
+          },
+          "aggregation_semantics": {
+            "title": "Aggregation Semantics",
+            "type": "string"
+          },
+          "canonical_scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Canonical Scale",
+            "type": "string"
+          },
+          "canonical_unit": {
+            "title": "Canonical Unit",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "consensus_allowed": {
+            "title": "Consensus Allowed",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency_policy": {
+            "title": "Currency Policy",
+            "type": "string"
+          },
+          "default_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Basis"
+          },
+          "default_period_type": {
+            "title": "Default Period Type",
+            "type": "string"
+          },
+          "deprecated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deprecated At"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guidance_allowed": {
+            "title": "Guidance Allowed",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "model_driver_allowed": {
+            "title": "Model Driver Allowed",
+            "type": "boolean"
+          },
+          "scope_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scope Dimensions",
+            "type": "array"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          },
+          "value_kind": {
+            "title": "Value Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "metric_id",
+          "company_id",
+          "display_name",
+          "category",
+          "value_kind",
+          "canonical_unit",
+          "canonical_scale",
+          "currency_policy",
+          "aggregation_semantics",
+          "default_period_type",
+          "default_basis",
+          "scope_dimensions",
+          "actuals_allowed",
+          "guidance_allowed",
+          "consensus_allowed",
+          "model_driver_allowed",
+          "active",
+          "description",
+          "source_reference",
+          "created_at",
+          "deprecated_at"
+        ],
+        "title": "CompanyMetricDefinitionRead",
+        "type": "object"
+      },
+      "CompanyMetricObservationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_observation_id": {
+            "title": "External Observation Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "metric_definition_id": {
+            "format": "uuid",
+            "title": "Metric Definition Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "title": "Period Type",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "quality_status": {
+            "title": "Quality Status",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": true,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "supersedes_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Observation Id"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_observation_id",
+          "company_id",
+          "metric_definition_id",
+          "metric_id",
+          "period_type",
+          "period_start",
+          "period_end",
+          "fiscal_year",
+          "fiscal_quarter",
+          "value",
+          "value_qualifier",
+          "unit",
+          "scale",
+          "currency",
+          "basis",
+          "scope_json",
+          "reported_at",
+          "source_type",
+          "source_reference",
+          "quality_status",
+          "quality_reason",
+          "supersedes_observation_id",
+          "is_current",
+          "recorded_at"
+        ],
+        "title": "CompanyMetricObservationRead",
         "type": "object"
       },
       "CompanyModelOutputsCurrentRead": {
@@ -11220,6 +11779,140 @@
           "initial_revision"
         ],
         "title": "FinancialModelCreate",
+        "type": "object"
+      },
+      "FinancialModelDriverProjectionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_driver_id": {
+            "title": "External Driver Id",
+            "type": "string"
+          },
+          "forecast_year": {
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metric_definition_id": {
+            "format": "uuid",
+            "title": "Metric Definition Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "BEAR",
+              "BASE",
+              "BULL"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": true,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_driver_id",
+          "model_id",
+          "revision_id",
+          "scenario",
+          "metric_definition_id",
+          "metric_id",
+          "forecast_year",
+          "period_type",
+          "period_start",
+          "period_end",
+          "value",
+          "value_qualifier",
+          "unit",
+          "scale",
+          "currency",
+          "basis",
+          "scope_json",
+          "rationale",
+          "recorded_at"
+        ],
+        "title": "FinancialModelDriverProjectionRead",
         "type": "object"
       },
       "FinancialModelEvidenceRead": {
@@ -38042,6 +38735,125 @@
         ]
       }
     },
+    "/v1/companies/{company_id}/guidance-observations": {
+      "get": {
+        "operationId": "get_company_guidance_observations_v1_companies__company_id__guidance_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "current_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Current Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyGuidanceObservationRead"
+                  },
+                  "title": "Response Get Company Guidance Observations V1 Companies  Company Id  Guidance Observations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Guidance Observations",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/companies/{company_id}/job-requests": {
       "get": {
         "operationId": "get_company_job_requests_v1_companies__company_id__job_requests_get",
@@ -38242,6 +39054,115 @@
           }
         },
         "summary": "Get Company Market Data",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/metric-observations": {
+      "get": {
+        "operationId": "get_company_metric_observations_v1_companies__company_id__metric_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyMetricObservationRead"
+                  },
+                  "title": "Response Get Company Metric Observations V1 Companies  Company Id  Metric Observations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Metric Observations",
         "tags": [
           "Portfolio research"
         ]
@@ -39310,6 +40231,70 @@
         ]
       }
     },
+    "/v1/company-metric-definitions": {
+      "get": {
+        "operationId": "get_company_metric_definitions_v1_company_metric_definitions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_deprecated",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Deprecated",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyMetricDefinitionRead"
+                  },
+                  "title": "Response Get Company Metric Definitions V1 Company Metric Definitions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Metric Definitions",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/execution-pace-runs": {
       "get": {
         "operationId": "get_execution_pace_runs_v1_execution_pace_runs_get",
@@ -39909,6 +40894,63 @@
           }
         },
         "summary": "Get Financial Model Revision",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/financial-models/{model_id}/revisions/{revision_id}/driver-projections": {
+      "get": {
+        "operationId": "get_financial_model_driver_projections_v1_financial_models__model_id__revisions__revision_id__driver_projections_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FinancialModelDriverProjectionRead"
+                  },
+                  "title": "Response Get Financial Model Driver Projections V1 Financial Models  Model Id  Revisions  Revision Id  Driver Projections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Financial Model Driver Projections",
         "tags": [
           "Portfolio research"
         ]

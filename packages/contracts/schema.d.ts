@@ -544,6 +544,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/guidance-observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Guidance Observations */
+        get: operations["get_company_guidance_observations_v1_companies__company_id__guidance_observations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/job-requests": {
         parameters: {
             query?: never;
@@ -587,6 +604,23 @@ export interface paths {
         };
         /** Get Company Market Data */
         get: operations["get_company_market_data_v1_companies__company_id__market_data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/metric-observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Metric Observations */
+        get: operations["get_company_metric_observations_v1_companies__company_id__metric_observations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -868,6 +902,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/company-metric-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Metric Definitions */
+        get: operations["get_company_metric_definitions_v1_company_metric_definitions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/execution-pace-runs": {
         parameters: {
             query?: never;
@@ -1032,6 +1083,23 @@ export interface paths {
         };
         /** Get Financial Model Revision */
         get: operations["get_financial_model_revision_v1_financial_models__model_id__revisions__revision_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/financial-models/{model_id}/revisions/{revision_id}/driver-projections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Financial Model Driver Projections */
+        get: operations["get_financial_model_driver_projections_v1_financial_models__model_id__revisions__revision_id__driver_projections_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3498,6 +3566,81 @@ export interface components {
             /** Truncated */
             truncated: boolean;
         };
+        /** CompanyGuidanceObservationRead */
+        CompanyGuidanceObservationRead: {
+            /** Basis */
+            basis: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Currency */
+            currency: string | null;
+            /** External Guidance Id */
+            external_guidance_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter: number | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Current */
+            is_current: boolean;
+            /** Issued At */
+            issued_at: string | null;
+            /** Lower Value */
+            lower_value: string | null;
+            /**
+             * Metric Definition Id
+             * Format: uuid
+             */
+            metric_definition_id: string;
+            /** Metric Id */
+            metric_id: string;
+            /** Midpoint Value */
+            midpoint_value: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Period Type */
+            period_type: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Scale */
+            scale: string;
+            /** Scope Json */
+            scope_json: {
+                [key: string]: unknown;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /** Status */
+            status: string;
+            /** Supersedes Guidance Id */
+            supersedes_guidance_id: string | null;
+            /** Unit */
+            unit: string;
+            /** Upper Value */
+            upper_value: string | null;
+            /** Value Qualifier */
+            value_qualifier: string;
+        };
         /** CompanyInvestmentThesisRead */
         CompanyInvestmentThesisRead: {
             /** As Of */
@@ -3511,6 +3654,132 @@ export interface components {
             known_at: string | null;
             /** Streams */
             streams: components["schemas"]["InvestmentThesisStreamRead"][];
+        };
+        /** CompanyMetricDefinitionRead */
+        CompanyMetricDefinitionRead: {
+            /** Active */
+            active: boolean;
+            /** Actuals Allowed */
+            actuals_allowed: boolean;
+            /** Aggregation Semantics */
+            aggregation_semantics: string;
+            /** Canonical Scale */
+            canonical_scale: string;
+            /** Canonical Unit */
+            canonical_unit: string;
+            /** Category */
+            category: string;
+            /** Company Id */
+            company_id: string | null;
+            /** Consensus Allowed */
+            consensus_allowed: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency Policy */
+            currency_policy: string;
+            /** Default Basis */
+            default_basis: string | null;
+            /** Default Period Type */
+            default_period_type: string;
+            /** Deprecated At */
+            deprecated_at: string | null;
+            /** Description */
+            description: string;
+            /** Display Name */
+            display_name: string;
+            /** Guidance Allowed */
+            guidance_allowed: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Metric Id */
+            metric_id: string;
+            /** Model Driver Allowed */
+            model_driver_allowed: boolean;
+            /** Scope Dimensions */
+            scope_dimensions: string[];
+            /** Source Reference */
+            source_reference: string | null;
+            /** Value Kind */
+            value_kind: string;
+        };
+        /** CompanyMetricObservationRead */
+        CompanyMetricObservationRead: {
+            /** Basis */
+            basis: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Currency */
+            currency: string | null;
+            /** External Observation Id */
+            external_observation_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter: number | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Current */
+            is_current: boolean;
+            /**
+             * Metric Definition Id
+             * Format: uuid
+             */
+            metric_definition_id: string;
+            /** Metric Id */
+            metric_id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Period Type */
+            period_type: string;
+            /** Quality Reason */
+            quality_reason: string | null;
+            /** Quality Status */
+            quality_status: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Reported At */
+            reported_at: string | null;
+            /** Scale */
+            scale: string;
+            /** Scope Json */
+            scope_json: {
+                [key: string]: unknown;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /** Supersedes Observation Id */
+            supersedes_observation_id: string | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /** Value Qualifier */
+            value_qualifier: string;
         };
         /** CompanyModelOutputsCurrentRead */
         CompanyModelOutputsCurrentRead: {
@@ -5662,6 +5931,75 @@ export interface components {
              * Format: uuid
              */
             valuation_listing_id: string;
+        };
+        /** FinancialModelDriverProjectionRead */
+        FinancialModelDriverProjectionRead: {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency: string | null;
+            /** External Driver Id */
+            external_driver_id: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Metric Definition Id
+             * Format: uuid
+             */
+            metric_definition_id: string;
+            /** Metric Id */
+            metric_id: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Period Type */
+            period_type: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /** Scale */
+            scale: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "BEAR" | "BASE" | "BULL";
+            /** Scope Json */
+            scope_json: {
+                [key: string]: unknown;
+            };
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /** Value Qualifier */
+            value_qualifier: string;
         };
         /** FinancialModelEvidenceRead */
         FinancialModelEvidenceRead: {
@@ -14533,6 +14871,43 @@ export interface operations {
             };
         };
     };
+    get_company_guidance_observations_v1_companies__company_id__guidance_observations_get: {
+        parameters: {
+            query?: {
+                metric_id?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+                current_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyGuidanceObservationRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_company_job_requests_v1_companies__company_id__job_requests_get: {
         parameters: {
             query?: {
@@ -14623,6 +14998,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListingMarketData"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_metric_observations_v1_companies__company_id__metric_observations_get: {
+        parameters: {
+            query?: {
+                metric_id?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyMetricObservationRead"][];
                 };
             };
             /** @description Validation Error */
@@ -15202,6 +15613,38 @@ export interface operations {
             };
         };
     };
+    get_company_metric_definitions_v1_company_metric_definitions_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                include_deprecated?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyMetricDefinitionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_execution_pace_runs_v1_execution_pace_runs_get: {
         parameters: {
             query?: never;
@@ -15573,6 +16016,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinancialModelRevisionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_financial_model_driver_projections_v1_financial_models__model_id__revisions__revision_id__driver_projections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                model_id: string;
+                revision_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialModelDriverProjectionRead"][];
                 };
             };
             /** @description Validation Error */
