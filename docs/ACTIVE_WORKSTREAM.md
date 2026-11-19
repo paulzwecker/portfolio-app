@@ -23,6 +23,12 @@ Completed code slices on this branch (development state, not production claims):
   for GET CompanyAgentContextV1, with private portfolio/research/model sections
   suppressed; broad application proxy authorization is unchanged. Credentials
   are not provisioned, no new app or agent has been activated.
+- Read-only `data_universe_shadow` CLI stages structured local draft batches
+  from scoped company context + a human-reviewed public issuer evidence pack.
+  It refuses incomplete history and duplicate/conflicting facts, uses no
+  observation proposal credentials or write APIs, and stores private output
+  outside Git. The published Uber Q3 2026 test pack covers trips, Gross
+  Bookings, and Q4 guidance. Live hosted shadow execution remains unverified.
 
 Known follow-ons: verify read scope and integration edge cases, regenerate checked-in
 OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove

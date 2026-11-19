@@ -61,6 +61,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Uber public-source shadow pilot fixture](agent-shadow-uber-q3-2026.md)
 - [Agent company context v1 (read-only)](company-agent-context.md)
 - [Scoped Data & Universe Steward read access](data-universe-read-access.md)
+- [Read-only Data & Universe shadow pilot](data-universe-shadow-pilot.md)
 - [Canonical external-data architecture](external-data-architecture.md)
 - [External-data ingestion operations](external-data-operations.md)
 - [Financial statements and evidence bootstrap](fundamentals-source-bootstrap.md)

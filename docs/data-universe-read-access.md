@@ -72,3 +72,12 @@ metric gap and prepares a typed proposal offline. Do not supply it an
 observation-acceptance token or permit production publication. Only expand
 read scopes (filings/financial statements) after demonstrating the need and
 reviewing those resource boundaries.
+
+## Operator-run shadow comparison
+
+After an owner-approved company allowlist and token are configured, the
+`data_universe_shadow` CLI can fetch this exact restricted context and compare
+it with a separately reviewed primary-source evidence pack. It prepares local
+typed drafts only; it does not make API proposal submissions or accepted writes.
+
+See [data-universe-shadow-pilot](data-universe-shadow-pilot.md).

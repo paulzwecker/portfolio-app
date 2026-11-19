@@ -652,3 +652,5 @@ PR never grants production, source-edit, acceptance, migration or activation aut
 - 2026-11-19 — PR #42 observation proposal workflow: company-scoped metric-definition/KPI/guidance typed batches, isolated audit candidate table, independent role tokens, deterministic preview/fingerprint, explicit human accept/reject, and default-off activation. Integration verification pending; no production write/activation.
 
 - 2026-11-19 — PR #42: Data & Universe Steward least-privilege read gate, restricted CompanyAgentContextV1 company allowlist and role-filtered response, negative auth tests; no token provisioning, endpoint activation or production writes. A new accepted-schema head requires updating its exact deployment test; full CI remains a merge gate.
+
+- 2026-11-19 — PR #42: bounded API-first Data Universe shadow runner and public Uber primary-source pack; deterministic read/compare/draft classification, explicit unknown coverage, no API POST, no production activation. Test evidence pending; host-credential pilot remains gated.
