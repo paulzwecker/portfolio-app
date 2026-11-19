@@ -3876,9 +3876,14 @@ export function isObservationProposalRead(
     uuid(value.id) &&
     string(value.producer_id) &&
     /^[0-9a-f]{64}$/.test(String(value.content_fingerprint)) &&
-    ["PENDING", "READY", "CONFLICT", "INVALID", "ACCEPTED", "REJECTED"].includes(
-      value.status as string,
-    ) &&
+    [
+      "PENDING",
+      "READY",
+      "CONFLICT",
+      "INVALID",
+      "ACCEPTED",
+      "REJECTED",
+    ].includes(value.status as string) &&
     nullableString(value.issue) &&
     nullableString(value.preview_fingerprint) &&
     timestamp(value.submitted_at) &&
@@ -3947,7 +3952,9 @@ export function isObservationProposalDecisionRead(
 ): value is ObservationProposalDecisionRead {
   return (
     isRecord(value) &&
-    ["ACCEPTED", "REJECTED", "PREVIEW_CHANGED"].includes(value.status as string) &&
+    ["ACCEPTED", "REJECTED", "PREVIEW_CHANGED"].includes(
+      value.status as string,
+    ) &&
     isObservationProposalRead(value.proposal) &&
     (value.preview === undefined ||
       value.preview === null ||
@@ -4069,7 +4076,9 @@ export function isFinancialModelContract(
   const listing = model.valuation_listing;
   if (!isListingIdentity(listing)) return false;
   if (
-    !["1.0.0", "1.1.0", "1.2.0", "1.3.0"].includes(v.contract_version as string) ||
+    !["1.0.0", "1.1.0", "1.2.0", "1.3.0"].includes(
+      v.contract_version as string,
+    ) ||
     (v.driver_projections !== undefined &&
       !array(
         v.driver_projections,

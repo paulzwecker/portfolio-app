@@ -40,26 +40,57 @@ describe("Canonical operating observation reviewer contracts", () => {
   it("recognizes typed source-backed candidates and rejects malformed replies", () => {
     expect(isObservationProposalRead(proposal)).toBe(true);
     expect(isObservationProposalList([proposal])).toBe(true);
-    expect(isObservationProposalRead({ ...proposal, proposal: { ...proposal.proposal, items: [{ ...item, source_reference: "http://insecure.example" }] } })).toBe(false);
-    expect(isObservationProposalRead({ ...proposal, proposal: { ...proposal.proposal, company_id: "wrong" } })).toBe(false);
+    expect(
+      isObservationProposalRead({
+        ...proposal,
+        proposal: {
+          ...proposal.proposal,
+          items: [{ ...item, source_reference: "http://insecure.example" }],
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isObservationProposalRead({
+        ...proposal,
+        proposal: { ...proposal.proposal, company_id: "wrong" },
+      }),
+    ).toBe(false);
   });
 
   it("requires a valid deterministic fingerprint to enable acceptance", () => {
     const preview = {
       proposal_id: id,
       status: "READY",
-      changes: [{ row_index: 0, metric_key: "synthetic.trips", operation: "CREATE", previous_id: null }],
+      changes: [
+        {
+          row_index: 0,
+          metric_key: "synthetic.trips",
+          operation: "CREATE",
+          previous_id: null,
+        },
+      ],
       issues: [],
       preview_fingerprint: "b".repeat(64),
     };
     expect(isObservationProposalPreviewRead(preview)).toBe(true);
-    expect(isObservationProposalPreviewRead({ ...preview, preview_fingerprint: "wrong" })).toBe(false);
-    expect(isObservationProposalDecisionRead({ status: "ACCEPTED", proposal })).toBe(true);
-    expect(isObservationProposalDecisionRead({ status: "AUTO_ACCEPT", proposal })).toBe(false);
+    expect(
+      isObservationProposalPreviewRead({
+        ...preview,
+        preview_fingerprint: "wrong",
+      }),
+    ).toBe(false);
+    expect(
+      isObservationProposalDecisionRead({ status: "ACCEPTED", proposal }),
+    ).toBe(true);
+    expect(
+      isObservationProposalDecisionRead({ status: "AUTO_ACCEPT", proposal }),
+    ).toBe(false);
   });
 
   it("does not present a write button before a reviewer queue is loaded", () => {
-    const html = renderToStaticMarkup(<ObservationProposalReview companyId={id} />);
+    const html = renderToStaticMarkup(
+      <ObservationProposalReview companyId={id} />,
+    );
     expect(html).toContain("Operating data proposals");
     expect(html).toContain("Loading the review queue");
     expect(html).not.toContain("Accept reviewed facts");

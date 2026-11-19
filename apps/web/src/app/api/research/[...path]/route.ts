@@ -136,7 +136,9 @@ const historicalReconciliationPath = new RegExp(
 );
 const sensitivityPath = new RegExp(`^financial-models/${id}/sensitivity$`);
 const returnHurdlePath = new RegExp(`^financial-models/${id}/return-hurdle$`);
-const observationProposalItemPath = new RegExp(`^company-observation-proposals/${id}$`);
+const observationProposalItemPath = new RegExp(
+  `^company-observation-proposals/${id}$`,
+);
 const observationProposalDecisionPath = new RegExp(
   `^company-observation-proposals/${id}/(preview|accept|reject)$`,
 );
@@ -817,7 +819,9 @@ async function proxy(request: Request, path: string[]) {
       if (
         body.length === 0 &&
         (/^model-revision-proposals\/[0-9a-fA-F-]{36}\/preview$/.test(joined) ||
-          /^company-observation-proposals\/[0-9a-fA-F-]{36}\/preview$/.test(joined))
+          /^company-observation-proposals\/[0-9a-fA-F-]{36}\/preview$/.test(
+            joined,
+          ))
       )
         body = undefined;
       if (

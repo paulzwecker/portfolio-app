@@ -24488,6 +24488,11 @@
             "title": "Metric Key",
             "type": "string"
           },
+          "model_driver_allowed": {
+            "default": false,
+            "title": "Model Driver Allowed",
+            "type": "boolean"
+          },
           "scope_dimensions": {
             "items": {
               "maxLength": 64,
@@ -24632,6 +24637,11 @@
             "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
             "title": "Metric Key",
             "type": "string"
+          },
+          "model_driver_allowed": {
+            "default": false,
+            "title": "Model Driver Allowed",
+            "type": "boolean"
           },
           "scope_dimensions": {
             "items": {

@@ -10309,6 +10309,11 @@ export interface components {
             guidance_allowed: boolean;
             /** Metric Key */
             metric_key: string;
+            /**
+             * Model Driver Allowed
+             * @default false
+             */
+            model_driver_allowed: boolean;
             /** Scope Dimensions */
             scope_dimensions?: string[];
             /** Source Reference */
@@ -10360,6 +10365,11 @@ export interface components {
             guidance_allowed: boolean;
             /** Metric Key */
             metric_key: string;
+            /**
+             * Model Driver Allowed
+             * @default false
+             */
+            model_driver_allowed: boolean;
             /** Scope Dimensions */
             scope_dimensions?: string[];
             /** Source Reference */

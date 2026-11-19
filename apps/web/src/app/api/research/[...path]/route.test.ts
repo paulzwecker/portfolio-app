@@ -1592,7 +1592,6 @@ it.each([
   },
 );
 
-
 it("validates the canonical company agent context through the authenticated proxy", async () => {
   const response = {
     contract_type: "CompanyAgentContextV1",
@@ -1633,7 +1632,6 @@ it("validates the canonical company agent context through the authenticated prox
   expect(invalid.status).toBe(503);
 });
 
-
 it("keeps observation-review credentials server-side and validates reviewer responses", async () => {
   const token = "reviewer-secret-never-sent-to-browser";
   vi.stubEnv("OBSERVATION_PROPOSAL_REVIEWER_TOKEN", token);
@@ -1645,7 +1643,10 @@ it("keeps observation-review credentials server-side and validates reviewer resp
     authored_at: "2026-11-19T12:00:00Z",
     rationale: "Company earnings release explains accepted operating KPI.",
     items: [
-      { metric_key: "synthetic.trips", source_reference: "https://example.com/earnings" },
+      {
+        metric_key: "synthetic.trips",
+        source_reference: "https://example.com/earnings",
+      },
     ],
   };
   const candidate = {
@@ -1671,9 +1672,13 @@ it("keeps observation-review credentials server-side and validates reviewer resp
     context(["company-observation-proposals"]),
   );
   expect(listing.status).toBe(200);
-  expect((mock.mock.calls[0][0] as URL).searchParams.get("company_id")).toBe(id);
+  expect((mock.mock.calls[0][0] as URL).searchParams.get("company_id")).toBe(
+    id,
+  );
   expect((mock.mock.calls[0][0] as URL).searchParams.has("token")).toBe(false);
-  expect(mock.mock.calls[0][1].headers["X-Observation-Proposal-Token"]).toBe(token);
+  expect(mock.mock.calls[0][1].headers["X-Observation-Proposal-Token"]).toBe(
+    token,
+  );
   expect(JSON.stringify(await listing.json())).not.toContain(token);
 
   mock.mockResolvedValueOnce(
@@ -1681,7 +1686,14 @@ it("keeps observation-review credentials server-side and validates reviewer resp
       proposal_id: id,
       status: "READY",
       preview_fingerprint: "b".repeat(64),
-      changes: [{ row_index: 0, metric_key: "synthetic.trips", operation: "CREATE", previous_id: null }],
+      changes: [
+        {
+          row_index: 0,
+          metric_key: "synthetic.trips",
+          operation: "CREATE",
+          previous_id: null,
+        },
+      ],
       issues: [],
     }),
   );
@@ -1694,12 +1706,16 @@ it("keeps observation-review credentials server-side and validates reviewer resp
   );
   expect(preview.status).toBe(200);
   expect(mock.mock.calls[1][1].body).toBeUndefined();
-  expect(mock.mock.calls[1][1].headers["X-Observation-Proposal-Token"]).toBe(token);
+  expect(mock.mock.calls[1][1].headers["X-Observation-Proposal-Token"]).toBe(
+    token,
+  );
 
-  mock.mockResolvedValueOnce(Response.json({
-    status: "ACCEPTED",
-    proposal: { ...candidate, status: "ACCEPTED", reviewer_id: "human" },
-  }));
+  mock.mockResolvedValueOnce(
+    Response.json({
+      status: "ACCEPTED",
+      proposal: { ...candidate, status: "ACCEPTED", reviewer_id: "human" },
+    }),
+  );
   const accepted = await POST(
     new Request(
       `http://localhost/api/research/company-observation-proposals/${id}/accept`,
