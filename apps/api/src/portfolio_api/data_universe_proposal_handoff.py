@@ -24,8 +24,8 @@ from portfolio_api.company_observation_proposals import (
     ObservationProposalSubmissionRead,
 )
 from portfolio_api.data_universe_public_evidence import (
-    verify_official_uber_release,
-    verify_uber_q3_2026_pack,
+    verify_official_source,
+    verify_source_html,
 )
 from portfolio_api.data_universe_shadow import (
     EvidencePackV1,
@@ -187,9 +187,9 @@ def main() -> None:
 
     pack = EvidencePackV1.model_validate_json(args.source_pack.read_text(encoding="utf-8"))
     if args.source_html is None:
-        verification = verify_official_uber_release(pack)
+        verification = verify_official_source(pack)
     else:
-        verification = verify_uber_q3_2026_pack(pack, args.source_html.read_bytes())
+        verification = verify_source_html(pack, args.source_html.read_bytes())
 
     if args.api_base_url is not None:
         context_data = _fetch_scoped_context(args.api_base_url, args.company_id)
