@@ -651,6 +651,61 @@
         "title": "AgentContextNativeModel",
         "type": "object"
       },
+      "AgentContextSecIdentity": {
+        "additionalProperties": false,
+        "description": "Point-in-time reviewed SEC mapping; public issuer identity only.",
+        "properties": {
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cik"
+          },
+          "evidence_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Source"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "status": {
+            "enum": [
+              "MAPPED",
+              "UNMAPPED",
+              "AMBIGUOUS",
+              "INVALID"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AgentContextSecIdentity",
+        "type": "object"
+      },
       "AgentOwnerCashFlowProposalMethod-Input": {
         "additionalProperties": false,
         "properties": {
@@ -2204,6 +2259,16 @@
             },
             "title": "Resource Links",
             "type": "object"
+          },
+          "sec_identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentContextSecIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "securities": {
             "items": {

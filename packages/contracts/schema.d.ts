@@ -2973,6 +2973,23 @@ export interface components {
              */
             valuation_listing_id: string;
         };
+        /**
+         * AgentContextSecIdentity
+         * @description Point-in-time reviewed SEC mapping; public issuer identity only.
+         */
+        AgentContextSecIdentity: {
+            /** Cik */
+            cik?: string | null;
+            /** Evidence Source */
+            evidence_source?: string | null;
+            /** Recorded At */
+            recorded_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MAPPED" | "UNMAPPED" | "AMBIGUOUS" | "INVALID";
+        };
         /** AgentOwnerCashFlowProposalMethod */
         "AgentOwnerCashFlowProposalMethod-Input": {
             inputs: components["schemas"]["OwnerCashFlowInput-Input"];
@@ -3466,6 +3483,7 @@ export interface components {
             resource_links: {
                 [key: string]: string;
             };
+            sec_identity?: components["schemas"]["AgentContextSecIdentity"] | null;
             /** Securities */
             securities: components["schemas"]["SecurityRead"][];
             thesis_status: components["schemas"]["AgentContextCoverage"];

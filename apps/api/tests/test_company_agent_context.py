@@ -192,7 +192,6 @@ def test_future_target_guidance_is_visible_when_already_known(
         assert earlier.json()["metric_observations"] == []
 
 
-
 def test_agent_context_sec_mapping_is_public_and_point_in_time(
     postgres_engine: Engine,
 ) -> None:
@@ -227,9 +226,7 @@ def test_agent_context_sec_mapping_is_public_and_point_in_time(
 
     path = f"/v1/companies/{company_id}/agent-context"
     with TestClient(fixture_application(postgres_engine, fixture_settings())) as client:
-        before = client.get(
-            path, params={"known_at": "2026-10-20T12:00:00Z"}
-        )
+        before = client.get(path, params={"known_at": "2026-10-20T12:00:00Z"})
         assert before.status_code == 200, before.text
         assert before.json()["sec_identity"]["status"] == "UNMAPPED"
         assert before.json()["sec_identity"]["cik"] is None

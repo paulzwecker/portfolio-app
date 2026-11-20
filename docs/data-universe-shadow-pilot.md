@@ -6,7 +6,7 @@ A small, operator-invoked Python CLI reads a **single company** through the
 dedicated read-only API credential and compares the returned canonical KPI
 history/guidance with an explicitly reviewed primary-source evidence pack.
 It prepares typed `MetricDefinitionBatchV1`, `KPIObservationBatchV1`,
-and `GuidanceObservationBatchV1` *drafts* where data is genuinely missing.
+and `GuidanceObservationBatchV1` _drafts_ where data is genuinely missing.
 
 No new framework, database table, scheduler, paid source, agent account, or
 production write privilege is introduced. **The CLI makes only one API GET
@@ -27,7 +27,7 @@ https://investor.uber.com/news-events/news/press-release-details/2026/Uber-Annou
 The release reports **4,061 million trips**, **$59,819 million Gross Bookings**
 (Q3 2026), and **$63.25–65.25 billion Q4 2026 Gross Bookings guidance**.
 Unlike rounded headlines, the actuals retain the detailed millions values.
-The source gives a publication *date*, not an exact UTC publication instant:
+The source gives a publication _date_, not an exact UTC publication instant:
 `reported_at` and `issued_at` remain null instead of being invented.
 
 The fixture's `authored_at` is the synthetic pack preparation timestamp, not
@@ -45,7 +45,7 @@ Gross Bookings range. Values, scale, basis, fiscal period, qualifier, source
 identity and the explicitly unknown publication time must match the reviewed
 `DataUniverseEvidencePackV1` exactly. Any changed, inaccessible, oversized,
 unexpected or ambiguous page **fails closed before the private context GET**.
-This is a *narrow verified profile*, not generic automated issuer scraping.
+This is a _narrow verified profile_, not generic automated issuer scraping.
 
 The resulting private `DataUniverseShadowReportV1` adds
 `source_verification.status=SOURCE_MATCHED`, the public page SHA-256, checked
@@ -79,7 +79,7 @@ The reviewed test pack
 three company-specific operating actuals: **345 million room nights**,
 **21 million flight tickets**, and **USD 54,461 million total gross
 bookings**. These are operating measures, not GAAP revenue. SEC tables
-report them in *millions*, not exact underlying counts or dollars. Every
+report them in _millions_, not exact underlying counts or dollars. Every
 observation therefore preserves `value_qualifier=APPROX` and its scale,
 and `reported_at=null` because the filing date is not an exact public
 release instant. No model driver, guidance or return prediction is inferred.
@@ -93,7 +93,7 @@ The scoped `CompanyAgentContextV1.sec_identity` now returns a time-filtered
 `MAPPED` SEC CIK only when the stored evidence URL and CIK pass existing
 issuer-mapping validation. The shadow comparator **enforces** that the CIK
 equals `0001075531`; missing, invalid or ambiguous mappings fail closed
-*before* any reviewed batch becomes eligible.
+_before_ any reviewed batch becomes eligible.
 A read-only operator can inspect it with the following **SELECT only**,
 alongside the exact security/listing identity:
 
@@ -132,7 +132,7 @@ node scripts/uv.mjs run --locked --project apps/api \\
 ```
 
 The SEC public GET requires an operator-configured contact user-agent
-(`SEC_USER_AGENT`). It uses the *single exact 10-Q URL*, HTTPS, bounded
+(`SEC_USER_AGENT`). It uses the _single exact 10-Q URL_, HTTPS, bounded
 bytes/time, no redirects and no paid provider. Any inaccessible, changed,
 malformed, conflicting or ambiguous source fails closed. The default
 command produces only an owner-only private review plan, not a proposal
@@ -264,7 +264,7 @@ knowledge cutoff, per-metric findings, fully typed local proposal drafts, and
 
 Synthetic unit tests validate the report against accepted, missing, conflicting,
 and truncated-context cases. This proves only deterministic local behavior.
-To demonstrate a *real* API-first steward, an operator must authorize a hosted
+To demonstrate a _real_ API-first steward, an operator must authorize a hosted
 read token/company allowlist, run the CLI on that exact approved company, and
 check the output against the source release and current database state.
 A subsequent agent may research and author the same evidence pack, but must

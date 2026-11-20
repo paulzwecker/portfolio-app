@@ -100,6 +100,7 @@ owner review; no production migration, Sheet edit, source activation, or real
 canonical observation acceptance is authorized.
 
 Completed code slices on this branch (development state, not production claims):
+
 - Append-only company metric definitions, operating actuals, management guidance
   and revision-scoped model-driver records, all separate from reported statements
   and provider consensus.
