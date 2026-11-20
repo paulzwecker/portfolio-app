@@ -29,7 +29,8 @@ accepted `CompanyAgentContextV1` response into a working evidence review:
   review prompt.
 - Provider consensus revenue/EPS is shown separately; it is **not** treated as
   company-specific operating guidance or model drivers.
-- Partial history, unsupported coverage and missing definitions are explicit.
+- Partial history, unsupported coverage, missing definitions (including
+  model-driver metric keys) and per-model truncated driver paths are explicit.
   No data is not zero, and a missing row is not evidence that the issuer did
   not publish it.
 
