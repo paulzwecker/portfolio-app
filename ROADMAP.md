@@ -8,13 +8,13 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field             | Current value                                                                                                     |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | PR #42: BKNG public-source and CIK-locked reviewer pilot. [Handoff](docs/ACTIVE_WORKSTREAM.md).                   |
+| Active checkpoint | PR #42: reviewed BKNG CIK bound in scoped read and reviewer acceptance. [Handoff](docs/ACTIVE_WORKSTREAM.md).     |
 | Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.        |
 | Product outcome   | Tracked issuer → verified operating KPIs → scoped context → human review → research.                              |
-| Integration       | BKNG focused 41 tests + type checks pass; full CI remains a protected merge gate.                                 |
+| Integration       | Scoped CIK 39 tests, reviewer-boundary 25 tests, type/contracts pass; exact-head CI is merge gate.                |
 | Production        | Last verified Nov 15 guarded readback is historical; no activation, migration or real accepted observation write. |
 | Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy.   |
-| Deferred          | Live BKNG canonical read, broader issuer profiles and generic agent infrastructure until approved.                |
+| Deferred          | Live BKNG SEC HTML fetch and hosted canonical UUID/read require operator-approved configuration.                  |
 
 The investor-journey acceptance below records the earlier PR #39 milestone.
 PR #42 is a separately gated, evidence-first extension to the Company Explorer.

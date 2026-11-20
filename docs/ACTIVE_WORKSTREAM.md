@@ -1,5 +1,12 @@
 ## Current slice — fail-closed Booking SEC identity binding (2026-11-20)
 
+**Verification checkpoint:** Scoped identity + Booking integration focused
+checks passed **39 tests** with pinned Ruff, mypy and regenerated
+OpenAPI/TypeScript contracts (run #44719346756). The independent
+SEC reviewer-boundary check passed **25 tests**, Ruff, mypy and contract
+consistency (run #44720683313). These are isolated tests only;
+the exact latest-head full CI remains the owner-reviewed merge gate.
+
 **Second-pass acceptance safeguard:** The observation reviewer API now
 enforces SEC evidence identity for direct agent submissions, not only the
 steward CLI. SEC-hosted or `SEC_10Q` rows require a unique current
