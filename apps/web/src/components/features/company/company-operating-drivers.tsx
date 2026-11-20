@@ -17,6 +17,7 @@ type Driver =
 type Metric = CompanyAgentContext["metric_definitions"][number];
 
 type ModelReviewSignal = {
+  driverId: string;
   metricId: string;
   metricName: string;
   periodEnd: string;
@@ -280,6 +281,7 @@ export function operatingBaseReviewSignals(
         const direction = actualVsDriver(actual, value);
         if (direction !== "ABOVE" && direction !== "BELOW") continue;
         result.push({
+          driverId: value.id,
           metricId: metric.metric_id,
           metricName: metric.display_name,
           periodEnd: period.periodEnd,
@@ -455,7 +457,10 @@ export function OperatingDriversPanel({
   context: CompanyAgentContext;
 }) {
   const [selectedMetric, setSelectedMetric] = useState("ALL");
-  const reviewSignals = useMemo(() => operatingBaseReviewSignals(context), [context]);
+  const reviewSignals = useMemo(
+    () => operatingBaseReviewSignals(context),
+    [context],
+  );
   const metrics = useMemo(() => {
     const found = new Map<string, Metric>();
     for (const definition of context.metric_definitions)
@@ -550,7 +555,7 @@ export function OperatingDriversPanel({
             <ul className="divide-y text-sm">
               {reviewSignals.slice(0, 6).map((signal) => (
                 <li
-                  key={`${signal.metricId}-${signal.periodEnd}-${signal.modelName}-${signal.revisionNumber}`}
+                  key={signal.driverId}
                   className="space-y-1 py-3 first:pt-0"
                 >
                   <button
@@ -566,7 +571,10 @@ export function OperatingDriversPanel({
                     {signal.baseValue} · {signal.modelName} revision{" "}
                     {signal.revisionNumber}
                   </p>
-                  <Source url={signal.sourceReference} label="Verify actual disclosure" />
+                  <Source
+                    url={signal.sourceReference}
+                    label="Verify actual disclosure"
+                  />
                 </li>
               ))}
             </ul>
