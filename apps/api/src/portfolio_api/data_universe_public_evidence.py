@@ -423,14 +423,10 @@ def verify_source_html(pack: EvidencePackV1, html: bytes) -> dict[str, Any]:
     raise ValueError("No approved primary-source profile for issuer")
 
 
-def verify_official_source(pack: EvidencePackV1) -> dict[str, Any]:
-    """Fetch only the public issuer URL in the approved profile."""
-    if pack.issuer_ticker == "UBER":
-        return verify_official_uber_release(pack)
+def fetch_official_booking_filing(pack: EvidencePackV1) -> bytes:
+    """One bounded SEC GET with an operator contact, no redirects or credentials."""
     if pack.issuer_ticker != "BKNG" or pack.source_reference != BKNG_Q3_2026_URL:
         raise ValueError("No approved live issuer source for this evidence pack")
-    # SEC fair-access policy requires an operator-configured contact UA. Do not
-    # fabricate an email or use a broad application credential for this request.
     agent = os.environ.get("SEC_USER_AGENT", "").strip()
     if len(agent) < 12 or "@" not in agent:
         raise ValueError("SEC_USER_AGENT contact must be configured for SEC public reads")
@@ -443,7 +439,14 @@ def verify_official_source(pack: EvidencePackV1) -> dict[str, Any]:
         with build_opener(_NoRedirect).open(request, timeout=15) as response:
             if response.status != 200 or response.headers.get_content_type() != "text/html":
                 raise ValueError("SEC filing is unavailable as HTML")
-            data = response.read(MAX_ISSUER_BYTES + 1)
+            data: bytes = response.read(MAX_ISSUER_BYTES + 1)
     except (HTTPError, URLError, TimeoutError) as error:
         raise ValueError("SEC source could not be verified; no proposal authorized") from error
-    return verify_booking_q3_2026_pack(pack, data)
+    return data
+
+
+def verify_official_source(pack: EvidencePackV1) -> dict[str, Any]:
+    """Fetch only the public issuer URL in the approved profile."""
+    if pack.issuer_ticker == "UBER":
+        return verify_official_uber_release(pack)
+    return verify_booking_q3_2026_pack(pack, fetch_official_booking_filing(pack))

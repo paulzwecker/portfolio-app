@@ -4,6 +4,16 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+## Current milestone — November 20, 2026
+
+The owner accepted the aligned API/Vercel production release on main
+2650c822 after the Neon schema migrated to d7b4a6c8e2f0.
+The new Booking evidence-to-decision BUILD adds source-hashed, rounded-unit-safe
+quarterly KPI comparisons and an explicit human-review handoff. See
+[Booking evidence to decision](docs/booking-evidence-decision.md).
+No live SEC/source-context proof, production write, model acceptance, or
+valuation impact is claimed by this code change.
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |
