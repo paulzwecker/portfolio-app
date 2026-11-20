@@ -101,7 +101,9 @@ def submit_one(
         or url.fragment
         or url.path not in ("", "/")
     ):
-        raise ValueError("Candidate API base must be HTTPS or loopback HTTP without path/credentials")
+        raise ValueError(
+            "Candidate API base must be HTTPS or loopback HTTP without path/credentials"
+        )
     if os.environ.get("DATA_UNIVERSE_PROPOSAL_SUBMIT_ENABLED") != "true":
         raise ValueError("Candidate submission is disabled by default")
     token = os.environ.get("OBSERVATION_PROPOSAL_AGENT_TOKEN", "")
@@ -136,7 +138,9 @@ def submit_one(
     except (HTTPError, URLError, TimeoutError) as exc:
         # The remote system may have committed despite a lost response;
         # replay the same external ID rather than generating a new candidate.
-        raise ValueError("Candidate submission was not confirmed; check/replay same batch ID") from exc
+        raise ValueError(
+            "Candidate submission was not confirmed; check/replay same batch ID"
+        ) from exc
     if len(data) > MAX_RESPONSE_BYTES:
         raise ValueError("Candidate submission response exceeds the byte limit")
     result = ObservationProposalSubmissionRead.model_validate_json(data)
