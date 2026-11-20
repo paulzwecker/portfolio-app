@@ -25,6 +25,7 @@ ISSUER_HTML = (
     Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026_excerpt.html"
 ).read_bytes()
 
+
 def _pack() -> EvidencePackV1:
     return EvidencePackV1.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
 
@@ -122,9 +123,10 @@ def test_public_source_fetch_uses_fixed_https_no_credentials_or_redirects() -> N
 
     not_issuer = copy.deepcopy(_pack())
     not_issuer.source_reference = "https://example.com"
-    with pytest.raises(ValueError, match="approved Uber"), patch(
-        "portfolio_api.data_universe_public_evidence.build_opener"
-    ) as blocked:
+    with (
+        pytest.raises(ValueError, match="approved Uber"),
+        patch("portfolio_api.data_universe_public_evidence.build_opener") as blocked,
+    ):
         verify_official_uber_release(not_issuer)
     blocked.assert_not_called()
 
