@@ -34,6 +34,33 @@ The fixture's `authored_at` is the synthetic pack preparation timestamp, not
 the issuer's publication timestamp. The source pack is reviewed input, not
 proof that an autonomous browser fetched or validated the release.
 
+### Bounded primary-source verification (first issuer profile)
+
+The optional `--verify-public-source` switch performs **one direct HTTP GET**
+against that exact Uber investor-relations URL, with no redirects, cookies,
+token or arbitrary target domain. It parses the main operating table only
+when the issuer, release date, 2025 → 2026 columns and millions units are
+unambiguous. The separately labeled Q4 outlook must contain the complete
+Gross Bookings range. Values, scale, basis, fiscal period, qualifier, source
+identity and the explicitly unknown publication time must match the reviewed
+`DataUniverseEvidencePackV1` exactly. Any changed, inaccessible, oversized,
+unexpected or ambiguous page **fails closed before the private context GET**.
+This is a *narrow verified profile*, not generic automated issuer scraping.
+
+The resulting private `DataUniverseShadowReportV1` adds
+`source_verification.status=SOURCE_MATCHED`, the public page SHA-256, checked
+UTC time, exact source URL and three matched fact IDs. Without the switch the
+report instead explicitly says `NOT_CHECKED`. The hash identifies the fetched
+bytes for operator audit; it is not a publication signature or evidence that
+a later issuer revision remained unchanged. The source-check extracts
+public numbers but never automatically publishes observations.
+
+This is an opt-in source read, not a scheduled scraper, crawler or production
+agent deployment. The isolated tests use a small synthetic HTML excerpt of
+the externally cross-checked disclosed figures; they never issue a network
+request. Live source retrieval is a separate operator-triggered verification
+and may fail on publisher-side blocks.
+
 ## Local operator command
 
 With an approved read token privately configured in the environment and the
@@ -46,6 +73,7 @@ node scripts/uv.mjs run --locked --project apps/api \
   --api-base-url https://your-approved-api-host.example \
   --company-id YOUR-CANONICAL-UBER-UUID \
   --source-pack apps/api/tests/fixtures/data_universe_uber_q3_2026.json \
+  --verify-public-source \
   --output /tmp/uber-shadow-first-run.json
 ```
 
@@ -56,7 +84,15 @@ and running against live accepted state require operator authorization.
 
 For offline synthetic tests, replace `--api-base-url` with
 `--context-file /path/to/isolated-scoped-context.json`, using a matching
-synthetic company UUID and UBER listing. No token or external network is needed.
+synthetic company UUID and UBER listing, and **omit**
+`--verify-public-source`. No token or external network is needed.
+
+An isolated PostgreSQL integration test proves the complete **public values →
+typed local shadow drafts → dedicated agent proposal endpoint → human-role
+preview/fingerprint/acceptance → accepted scoped context → zero duplicate
+drafts** path. Its reviewer decisions and canonical writes occur **only**
+against disposable test data. It does not show that production was migrated,
+that a live owner-company read succeeded or that acceptance was approved.
 
 ## Fail-closed comparison semantics
 
@@ -95,6 +131,9 @@ A subsequent agent may research and author the same evidence pack, but must
 still submit any proposed accepted change through the existing human reviewer
 workflow, not by direct SQL or workbook edits.
 
-The CLI never retrieves issuer pages or scrapes arbitrary websites; source-pack
-authoring and public disclosure verification are intentionally separate from
-the canonical-read and proposal-comparison logic.
+By default, the CLI does not retrieve issuer pages. The optional, one-URL
+Uber verifier is the only public-source GET and is deliberately separate from
+the canonical-read and proposal-comparison logic. It never POSTs agent
+proposals, accepts canonical changes or bypasses the human reviewer. Broader
+company adapters must independently establish source rights, identity and
+unit/period parsing before activation.
