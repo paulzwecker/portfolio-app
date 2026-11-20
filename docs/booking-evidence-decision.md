@@ -10,10 +10,10 @@ The source is Booking Holdings' November 3, 2026 Q3 Form 10-Q:
 https://www.sec.gov/Archives/edgar/data/1075531/000107553126000045/bkng-20260930.htm
 
 | SEC operating metric | 2026 Q3 (millions) | 2025 Q3 (millions) | Issuer-reported YoY |
-| --- | ---: | ---: | ---: |
-| Room nights | 345 | 323 | +6.7% |
-| Flight tickets | 21 | 17 | +19.4% |
-| Gross bookings, USD | 54,461 | 49,668 | +9.6% |
+| -------------------- | -----------------: | -----------------: | ------------------: |
+| Room nights          |                345 |                323 |               +6.7% |
+| Flight tickets       |                 21 |                 17 |              +19.4% |
+| Gross bookings, USD  |             54,461 |             49,668 |               +9.6% |
 
 The displayed quarterly values are rounded to millions, so the brief uses
 the issuer's reported year-on-year percentages, not ratios calculated from

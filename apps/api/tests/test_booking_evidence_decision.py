@@ -100,8 +100,9 @@ def _context() -> CompanyAgentContextV1:
 
 def test_booking_decision_evidence_is_real_reported_growth_not_rounded_quotient() -> None:
     metrics = booking_quarter_signals(_pack(), SOURCE)
-    assert {x.metric_key: (x.reported_2026, x.reported_2025, x.reported_yoy_percent)
-            for x in metrics} == {
+    assert {
+        x.metric_key: (x.reported_2026, x.reported_2025, x.reported_yoy_percent) for x in metrics
+    } == {
         "bkng.room_nights": (Decimal(345), Decimal(323), Decimal("6.7")),
         "bkng.flight_tickets": (Decimal(21), Decimal(17), Decimal("19.4")),
         "bkng.gross_bookings": (Decimal(54461), Decimal(49668), Decimal("9.6")),
@@ -131,7 +132,9 @@ def test_first_brief_identifies_definitions_before_observations_without_model_ch
     assert len(brief.decision_questions) == 3
     assert all(x.proposed_model_change is None for x in brief.decision_questions)
     assert [signal.reported_yoy_percent for signal in brief.quarter_signals] == [
-        Decimal("6.7"), Decimal("19.4"), Decimal("9.6")
+        Decimal("6.7"),
+        Decimal("19.4"),
+        Decimal("9.6"),
     ]
 
 
@@ -140,11 +143,17 @@ def test_accepted_definitions_unlock_only_kpi_proposal_review() -> None:
     for definition in pack.metric_definitions:
         fields = definition.model_dump(mode="json")
         fields.pop("metric_key")
-        fields.update({
-            "id": str(uuid4()), "company_id": str(context.company.id),
-            "metric_id": definition.metric_key, "consensus_allowed": False,
-            "active": True, "created_at": "2026-11-19T00:00:00Z", "deprecated_at": None,
-        })
+        fields.update(
+            {
+                "id": str(uuid4()),
+                "company_id": str(context.company.id),
+                "metric_id": definition.metric_key,
+                "consensus_allowed": False,
+                "active": True,
+                "created_at": "2026-11-19T00:00:00Z",
+                "deprecated_at": None,
+            }
+        )
         context.metric_definitions.append(CompanyMetricDefinitionRead.model_validate(fields))
     context.metrics_status.status = "AVAILABLE"
     brief = build_booking_decision_brief(context, pack, SOURCE)
@@ -185,10 +194,17 @@ def test_report_file_private_and_cli_never_submits(tmp_path: Path) -> None:
     context_file.write_text(context.model_dump_json(), encoding="utf-8")
     output = tmp_path / "brief.json"
     arguments = [
-        "booking-evidence-decision", "--company-id", str(context.company.id),
-        "--source-pack", str(HERE / "data_universe_bkng_q3_2026.json"),
-        "--source-html", str(HERE / "data_universe_bkng_q3_2026_excerpt.html"),
-        "--context-file", str(context_file), "--output", str(output),
+        "booking-evidence-decision",
+        "--company-id",
+        str(context.company.id),
+        "--source-pack",
+        str(HERE / "data_universe_bkng_q3_2026.json"),
+        "--source-html",
+        str(HERE / "data_universe_bkng_q3_2026_excerpt.html"),
+        "--context-file",
+        str(context_file),
+        "--output",
+        str(output),
     ]
     with patch.object(sys, "argv", arguments):
         main()
@@ -206,10 +222,15 @@ def test_live_path_requires_real_sec_and_private_read_token(
 ) -> None:
     output = tmp_path / "live.json"
     arguments = [
-        "booking-evidence-decision", "--company-id", str(uuid4()),
-        "--source-pack", str(HERE / "data_universe_bkng_q3_2026.json"),
-        "--api-base-url", "https://portfolio-api.example.org",
-        "--output", str(output),
+        "booking-evidence-decision",
+        "--company-id",
+        str(uuid4()),
+        "--source-pack",
+        str(HERE / "data_universe_bkng_q3_2026.json"),
+        "--api-base-url",
+        "https://portfolio-api.example.org",
+        "--output",
+        str(output),
     ]
     with (
         patch.dict(os.environ, {"SEC_USER_AGENT": ""}),
@@ -220,4 +241,3 @@ def test_live_path_requires_real_sec_and_private_read_token(
         main()
     opener.assert_not_called()
     assert not output.exists()
-

@@ -138,10 +138,12 @@ def booking_quarter_signals(pack: EvidencePackV1, html: bytes) -> list[BookingQu
             # The company rounds each figure to millions, so the growth
             # computed from the displayed totals can differ materially.
             # Accept only a stated growth that is plausible under rounding.
-            low = ((Decimal(current) - Decimal("0.5")) /
-                   (Decimal(previous) + Decimal("0.5")) - 1) * 100
-            high = ((Decimal(current) + Decimal("0.5")) /
-                    (Decimal(previous) - Decimal("0.5")) - 1) * 100
+            low = (
+                (Decimal(current) - Decimal("0.5")) / (Decimal(previous) + Decimal("0.5")) - 1
+            ) * 100
+            high = (
+                (Decimal(current) + Decimal("0.5")) / (Decimal(previous) - Decimal("0.5")) - 1
+            ) * 100
             if not low - Decimal("0.1") <= growth <= high + Decimal("0.1"):
                 raise ValueError(f"Booking {label} growth contradicts rounded quarter values")
             matches.append((current, previous, growth))
@@ -175,8 +177,11 @@ def build_booking_decision_brief(
     batches = handoff["ready_batches"]
     first = batches[0] if batches else None
     step: Literal[
-        "REVIEW_METRIC_DEFINITIONS", "REVIEW_KPI_OBSERVATIONS", "ALREADY_MATCHED",
-        "RESOLVE_CONFLICT", "CONTEXT_INCOMPLETE",
+        "REVIEW_METRIC_DEFINITIONS",
+        "REVIEW_KPI_OBSERVATIONS",
+        "ALREADY_MATCHED",
+        "RESOLVE_CONFLICT",
+        "CONTEXT_INCOMPLETE",
     ]
     if status == "NEEDS_HUMAN_RESOLUTION":
         step = "RESOLVE_CONFLICT"
@@ -184,9 +189,17 @@ def build_booking_decision_brief(
         step = "CONTEXT_INCOMPLETE"
     elif status == "MATCHED":
         step = "ALREADY_MATCHED"
-    elif len(batches) == 1 and first["contract_type"] == "MetricDefinitionBatchV1":
+    elif (
+        first is not None
+        and len(batches) == 1
+        and first["contract_type"] == "MetricDefinitionBatchV1"
+    ):
         step = "REVIEW_METRIC_DEFINITIONS"
-    elif len(batches) == 1 and first["contract_type"] == "KPIObservationBatchV1":
+    elif (
+        first is not None
+        and len(batches) == 1
+        and first["contract_type"] == "KPIObservationBatchV1"
+    ):
         step = "REVIEW_KPI_OBSERVATIONS"
     else:
         raise ValueError("Unexpected or unsafe observation-review handoff")
@@ -290,4 +303,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
