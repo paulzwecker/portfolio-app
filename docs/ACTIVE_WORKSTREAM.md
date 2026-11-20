@@ -1,5 +1,14 @@
 ## PR #42 release preparation — November 20, 2026
 
+**Focused verification:** The temporary release verifier passed
+[run #44738791075](https://github.com/paulzwecker/portfolio-app/actions/runs/44738791075):
+30 guarded-migration tests, the existing deployment test suite and mypy
+against 276 Python source files. `schema-gate.mjs review` explicitly
+reported `MIGRATION_REQUIRED` with only
+`c6d8e4f1a290` and `d7b4a6c8e2f0` pending. The disposable
+workflow was removed. These checks prove release preparation only;
+the exact-head full CI is still a separate owner merge gate.
+
 **Status: PREPARED, NO PRODUCTION RELEASE AUTHORIZATION.** The previous
 production migration tooling was pinned to `9f2a6d4c81b7 ->
 b59f16c8a203`; it has now been updated to the _actual_, separately
