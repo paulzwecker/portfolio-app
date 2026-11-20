@@ -346,7 +346,7 @@ def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
     context, pack = _context(), _pack()
     verified = _verified_pack(pack)
     batch = prepare_handoff(context, pack, verified)["ready_batches"][0]
-    body = {
+    body: dict[str, Any] = {
         "proposal": {
             "id": str(uuid4()),
             "producer_id": "synthetic-agent",
@@ -391,7 +391,8 @@ def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
             assert request.get_method() == "POST"
             assert request.full_url == "https://localhost.example/v1/company-observation-proposals"
             assert request.get_header("X-observation-proposal-token") is not None
-            assert json.loads(request.data or b"{}")["external_batch_id"] == batch[
+            assert isinstance(request.data, bytes)
+            assert json.loads(request.data)["external_batch_id"] == batch[
                 "external_batch_id"
             ]
             return Response()
