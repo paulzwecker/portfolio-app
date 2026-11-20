@@ -6,6 +6,18 @@ Prepared November 20, 2026. Use this card with
 [encrypted recovery](encrypted-production-recovery.md). This is an
 operator-controlled procedure, not a new scheduler or deploy workflow.
 
+**November 20 production schema update (post-migration verification):**
+The API code from [PR #42](https://github.com/paulzwecker/portfolio-app/pull/42)
+is merged as `04510ec5`. Neon production now reports
+`d7b4a6c8e2f0`, and independent schema comparison against the exact
+Alembic-staged branch is empty. All 98 pre-existing table row-content
+digests matched the staging branch; the five added tables are empty.
+This record supersedes the initial preparatory status below.
+A separate schema-attestation PR must pass GitHub CI and merge before
+the production API deploy. The original recovery branch is preserved;
+no off-provider encrypted backup or restore rehearsal was performed.
+Render and Vercel production releases remain frozen.
+
 ## Verified targets and release boundary
 
 - Draft PR: [#42](https://github.com/paulzwecker/portfolio-app/pull/42),

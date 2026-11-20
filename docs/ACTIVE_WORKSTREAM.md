@@ -1,3 +1,36 @@
+## Production Booking observation schema verification — November 20, 2026
+
+**Verified schema:** The live Neon primary now reports Alembic
+`d7b4a6c8e2f0` and 103 tables. Its schema diff against a separate
+temporary branch prepared from the merged commit's exact Alembic SQL was
+**empty**, confirming that the five new tables, indexes and constraints
+match the reviewed migration. The five new tables contain zero rows;
+no agent proposals, accepted operating observations or model drivers
+were added. All 98 previously existing tables matched the temporary
+migration branch byte-for-byte at the row-content digest level.
+
+**Important chronology:** A change to the live schema was observed
+while verifying the separate staged migration. This operator session
+did not invoke the final Neon migration apply action; do not attribute
+the production migration to that staged test. Exact live schema and
+canonical-content reconciliation—not an assumed actor—are the basis
+for this updated production attestation. The preserved recovery branch
+`recovery-pr42-2026-11-20` still retains the pre-migration
+`b59f16c8a203` state. The owner explicitly elected to defer an
+off-Neon encrypted backup at this early stage.
+
+**Release order:** PR #42 was merged as `04510ec5`. Render Auto-Deploy
+remains OFF and still serves the prior API; Vercel held the corresponding
+production build. This dedicated attestation PR updates only the
+target-bound revision, verified timestamp and SHA-256 of the exact
+repository migration history after direct database verification.
+Run all three checks on this PR and the resulting `main` SHA before
+any Render release. Keep agent proposal and acceptance flags OFF.
+No deployed service or private credential changes belong to this
+attestation PR.
+
+---
+
 ## PR #42 release preparation — November 20, 2026
 
 **Focused verification:** The temporary release verifier passed
