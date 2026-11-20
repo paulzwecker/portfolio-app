@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, build_opener
 from uuid import UUID
 
@@ -88,6 +89,19 @@ def submit_one(
     verification: dict[str, Any],
 ) -> ObservationProposalSubmissionRead:
     """One candidate POST only; no acceptance or reviewer credentials."""
+    url = urlsplit(base_url)
+    if (
+        not url.hostname
+        or (url.scheme != "https" and not (
+            url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1", "::1")
+        ))
+        or url.username
+        or url.password
+        or url.query
+        or url.fragment
+        or url.path not in ("", "/")
+    ):
+        raise ValueError("Candidate API base must be HTTPS or loopback HTTP without path/credentials")
     if os.environ.get("DATA_UNIVERSE_PROPOSAL_SUBMIT_ENABLED") != "true":
         raise ValueError("Candidate submission is disabled by default")
     token = os.environ.get("OBSERVATION_PROPOSAL_AGENT_TOKEN", "")
@@ -199,6 +213,7 @@ def main() -> None:
         handoff["candidate_submission"] = {
             "status": "REPLAYED" if result.replayed else "SUBMITTED",
             "proposal_id": str(result.proposal.id),
+            "proposal_status": result.proposal.status,
             "external_batch_id": args.batch_id,
         }
 
