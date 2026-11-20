@@ -388,6 +388,11 @@ def main() -> None:
     origin.add_argument("--context-file", type=Path, help="Synthetic/offline scoped context JSON")
     parser.add_argument("--company-id", type=UUID, required=True)
     parser.add_argument("--source-pack", type=Path, required=True)
+    parser.add_argument(
+        "--verify-public-source",
+        action="store_true",
+        help="Check the exact approved Uber issuer release by one bounded public GET",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     target = args.output.expanduser().resolve()
@@ -395,6 +400,15 @@ def main() -> None:
         parser.error("Keep shadow reports, which may contain private context, outside the Git repo")
     if target.exists():
         parser.error("Refusing to overwrite an existing shadow report")
+    # Validate and optionally verify public evidence before reading any private API.
+    source_data = json.loads(args.source_pack.read_text(encoding="utf-8"))
+    pack = EvidencePackV1.model_validate(source_data)
+    source_verification: dict[str, Any] = {"status": "NOT_CHECKED"}
+    if args.verify_public_source:
+        from portfolio_api.data_universe_public_evidence import verify_official_uber_release
+
+        source_verification = verify_official_uber_release(pack)
+
     if args.api_base_url is not None:
         context_data = _fetch_scoped_context(args.api_base_url, args.company_id)
     else:
@@ -402,9 +416,8 @@ def main() -> None:
     context = CompanyAgentContextV1.model_validate(context_data)
     if context.company.id != args.company_id:
         raise ValueError("Context company_id does not match the explicitly selected UUID")
-    source_data = json.loads(args.source_pack.read_text(encoding="utf-8"))
-    pack = EvidencePackV1.model_validate(source_data)
     report = compare_source_pack(context, pack)
+    report["source_verification"] = source_verification
     target.parent.mkdir(parents=True, exist_ok=True)
     # Reports may expose private research; never rely on a permissive user umask.
     fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
