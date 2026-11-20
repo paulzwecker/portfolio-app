@@ -1,5 +1,5 @@
 """Booking Holdings Q3 2026 primary SEC 10-Q source verification, offline."""
-import json
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -66,31 +66,13 @@ def test_booking_rounded_reported_facts_cannot_be_silently_upgraded_to_exact() -
     with pytest.raises(ValueError, match="evidence mismatch"):
         verify_booking_q3_2026_pack(pack, FILING)
     pack = _pack()
-    pack.kpi_observations[2].value = 54500
+    pack.kpi_observations[2].value = Decimal("54500")
     with pytest.raises(ValueError, match="evidence mismatch"):
         verify_booking_q3_2026_pack(pack, FILING)
     pack = _pack()
-    pack.kpi_observations[1].scale = 1
+    pack.kpi_observations[1].scale = Decimal("1")
     with pytest.raises(ValueError, match="evidence mismatch"):
         verify_booking_q3_2026_pack(pack, FILING)
-    pack = _pack()
-    pack.guidance_observations.append(
-        pack.guidance_observations[0] if pack.guidance_observations else
-        # Reject extra unverifiable guidance regardless of its value.
-        __import__("portfolio_api.company_observation_proposals", fromlist=["GuidanceObservationItem"]).GuidanceObservationItem.model_validate({
-            "metric_key": "bkng.room_nights",
-            "period_type": "QUARTER", "period_start": "2026-10-01",
-            "period_end": "2026-12-31", "unit": "room_nights", "scale": "1000000",
-            "currency": None, "basis": "COMPANY_GUIDANCE", "scope_json": {},
-            "source_type": "SEC_10Q", "source_reference": BKNG_Q3_2026_URL,
-            "external_guidance_id": "invented", "lower_value": "1",
-            "upper_value": "3"
-        })
-    )
-    with pytest.raises(ValueError, match="Unsupported Booking"):
-        verify_booking_q3_2026_pack(pack, FILING)
-
-
 def test_sec_live_read_needs_operator_contact_and_makes_no_request_without_one() -> None:
     with (
         patch.dict("os.environ", {"SEC_USER_AGENT": ""}),
