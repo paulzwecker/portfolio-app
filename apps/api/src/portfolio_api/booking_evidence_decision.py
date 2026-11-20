@@ -22,8 +22,8 @@ from portfolio_api.data_universe_proposal_handoff import prepare_handoff
 from portfolio_api.data_universe_public_evidence import (
     BKNG_Q3_2026_CIK,
     BKNG_Q3_2026_URL,
-    _ReleaseHTML,
     _booking_filing_values,
+    _ReleaseHTML,
     fetch_official_booking_filing,
     verify_booking_q3_2026_pack,
 )
