@@ -1,3 +1,21 @@
+## Booking-only model import boundary — November 20, 2026
+
+The follow-on BUILD in existing draft PR #46 closes the accidental
+batch-import risk: `--apply` requires `--model-key P-BKNG` for Booking,
+and the standalone model preflight uses a read-only connection with no
+`SELECT FOR UPDATE`. A one-tab parity-only receipt is available without
+a database. Focused tests cover exact tab selection, malformed/unknown
+input, command-level fail-closed behavior, and transaction read-only
+compatibility in isolated PostgreSQL. The previous model analytics
+bootstrap remains an independently gated batch importer.
+
+The read-only production check found one exact NASDAQ BKNG USD listing,
+no accepted Booking native model and no BKNG price observations.
+No production write, source Sheet edit, deployment, or acceptance occurred.
+See docs/native-model-input-migration.md.
+
+---
+
 ## Booking native UFCF model parity — November 20, 2026
 
 Independent of open PR #45, this BUILD corrects the previously blocked

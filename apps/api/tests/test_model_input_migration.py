@@ -166,6 +166,49 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
         assert result["output_reconciliation"]["passed"] == 22
 
 
+def test_booking_only_scoped_import_does_not_accept_other_parity_proven_models(
+    postgres_engine: Engine,
+) -> None:
+    workbook = source_workbook()
+    accepted_at = datetime.now(UTC)
+    with Session(postgres_engine) as session, session.begin():
+        for name, ticker in (("Booking Holdings", "BKNG"), ("Alphabet", "GOOGL")):
+            add_company_listing(
+                session,
+                name=name,
+                reporting_currency="USD",
+                security_name=f"{name} common stock",
+                ticker=ticker,
+                venue="NASDAQ",
+                currency="USD",
+            )
+        preview = import_native_model_inputs(
+            session, workbook, accepted_at=accepted_at, apply=False, model_key="P-BKNG"
+        )
+        assert preview["mode"] == "DRY_RUN"
+        assert preview["selected_model_keys"] == ["P-BKNG"]
+        assert len(preview["models"]) == 1
+        assert preview["models"][0]["apply_status"] == "DRY_RUN_READY"
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 0
+        applied = import_native_model_inputs(
+            session, workbook, accepted_at=accepted_at, apply=True, model_key="P-BKNG"
+        )
+        assert applied["input_sets_imported"] == 1
+        assert applied["selected_model_keys"] == ["P-BKNG"]
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 1
+        model = session.scalar(select(FinancialModel))
+        assert model is not None and model.source_model_key == "P-BKNG"
+
+    with Session(postgres_engine) as session, session.begin():
+        replay = import_native_model_inputs(
+            session, workbook, accepted_at=accepted_at, apply=True, model_key="P-BKNG"
+        )
+        assert replay["input_sets_imported"] == 0
+        assert replay["input_sets_already_imported"] == 1
+        assert replay["selected_model_keys"] == ["P-BKNG"]
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 1
+
+
 def test_source_quote_is_used_only_for_parity_and_keeps_effective_date_unknown() -> None:
     mapped = {
         model.model_key: model

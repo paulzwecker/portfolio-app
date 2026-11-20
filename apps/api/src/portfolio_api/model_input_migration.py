@@ -755,6 +755,19 @@ def _dcf_candidate_mapper(
     return mapper
 
 
+def _model_mappers_for(
+    model_key: str | None,
+) -> list[tuple[str, Callable[[Workbook, datetime], MappedModel]]]:
+    """Select exactly one reviewed model, or retain legacy full-scope assessment."""
+    mappers = _supported_model_mappers()
+    if model_key is None:
+        return mappers
+    matches = [pair for pair in mappers if pair[0] == model_key]
+    if len(matches) != 1:
+        raise ValueError(f"Unknown native-model source key: {model_key!r}")
+    return matches
+
+
 def _supported_model_mappers() -> list[tuple[str, Callable[[Workbook, datetime], MappedModel]]]:
     return [
         ("P-GOOGL", _map_googl),
@@ -1299,17 +1312,20 @@ def _existing_assessment(
 
 
 def _existing_model(
-    session: Session, company_id: UUID, listing_id: UUID, mapped: MappedModel
+    session: Session,
+    company_id: UUID,
+    listing_id: UUID,
+    mapped: MappedModel,
+    *,
+    for_update: bool,
 ) -> FinancialModel | None:
-    return session.scalar(
-        select(FinancialModel)
-        .where(
-            FinancialModel.company_id == company_id,
-            FinancialModel.valuation_listing_id == listing_id,
-            FinancialModel.model_type == mapped.model_type,
-        )
-        .with_for_update()
+    statement = select(FinancialModel).where(
+        FinancialModel.company_id == company_id,
+        FinancialModel.valuation_listing_id == listing_id,
+        FinancialModel.model_type == mapped.model_type,
     )
+    # SELECT FOR UPDATE is a write lock and is not legal in read-only preflight.
+    return session.scalar(statement.with_for_update() if for_update else statement)
 
 
 def _current_application_state(session: Session, model: FinancialModel) -> dict[str, object]:
@@ -1377,6 +1393,7 @@ def import_native_model_inputs(
     *,
     accepted_at: datetime,
     apply: bool,
+    model_key: str | None = None,
 ) -> dict[str, Any]:
     if accepted_at.tzinfo is None or accepted_at.utcoffset() is None:
         raise ValueError("accepted_at must be timezone-aware")
@@ -1384,8 +1401,10 @@ def import_native_model_inputs(
     if workbook.sha256 != inventory_doc["source"]["sha256"]:
         raise ValueError("Workbook hash differs from the model migration inventory source snapshot")
     inventory = _legacy_inventory_rows()
+    selected_mappers = _model_mappers_for(model_key)
     results: list[dict[str, Any]] = []
-    for model_key, mapper in _supported_model_mappers():
+    for selected_key, mapper in selected_mappers:
+        model_key = selected_key
         try:
             mapped = mapper(workbook, accepted_at)
             row = inventory[model_key]
@@ -1438,7 +1457,7 @@ def import_native_model_inputs(
             continue
 
         source_revision_id = mapped.values.source_revision_id
-        existing_model = _existing_model(session, company.id, listing.id, mapped)
+        existing_model = _existing_model(session, company.id, listing.id, mapped, for_update=apply)
         if existing_model is not None:
             existing_revision = session.scalar(
                 select(FinancialModelRevision).where(
@@ -1511,6 +1530,7 @@ def import_native_model_inputs(
         "mapping_version": mapping_versions[0] if len(mapping_versions) == 1 else "MIXED",
         "mapping_versions": mapping_versions,
         "mode": "APPLIED" if apply else "DRY_RUN",
+        "selected_model_keys": [name for name, _ in selected_mappers],
         "workbook": f"reference/workbook/{workbook.path.name}",
         "workbook_sha256": workbook.sha256,
         "source_effective_date": None,
@@ -1529,7 +1549,7 @@ def import_native_model_inputs(
 
 
 def build_native_model_parity_report(
-    workbook: Workbook, *, assessed_at: datetime
+    workbook: Workbook, *, assessed_at: datetime, model_key: str | None = None
 ) -> dict[str, Any]:
     """Create a read-only source-parity receipt without querying application state."""
     if assessed_at.tzinfo is None or assessed_at.utcoffset() is None:
@@ -1538,8 +1558,10 @@ def build_native_model_parity_report(
     if workbook.sha256 != inventory_doc["source"]["sha256"]:
         raise ValueError("Workbook hash differs from the model migration inventory source snapshot")
     inventory = _legacy_inventory_rows()
+    selected_mappers = _model_mappers_for(model_key)
     results: list[dict[str, Any]] = []
-    for model_key, mapper in _supported_model_mappers():
+    for selected_key, mapper in selected_mappers:
+        model_key = selected_key
         try:
             mapped = mapper(workbook, assessed_at)
             report = _base_report(workbook, mapped, inventory[model_key])
@@ -1585,6 +1607,7 @@ def build_native_model_parity_report(
         "mapping_version": mapping_versions[0] if len(mapping_versions) == 1 else "MIXED",
         "mapping_versions": mapping_versions,
         "mode": "PARITY_ONLY",
+        "selected_model_keys": [name for name, _ in selected_mappers],
         "canonical_application_state": "NOT_QUERIED",
         "workbook": f"reference/workbook/{workbook.path.name}",
         "workbook_sha256": workbook.sha256,
@@ -1617,7 +1640,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--workbook", type=Path, default=DEFAULT_WORKBOOK)
     parser.add_argument("--output", type=Path, default=DEFAULT_REPORT)
     parser.add_argument(
-        "--apply", action="store_true", help="accept parity-passing model revisions"
+        "--model-key",
+        choices=EXPECTED_MODEL_KEYS,
+        help="Limit assessment or import to exactly one existing source model tab",
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="accept only the explicitly selected model"
     )
     parser.add_argument(
         "--parity-only",
@@ -1627,12 +1655,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.parity_only and args.apply:
         parser.error("--parity-only cannot be combined with --apply")
+    if args.apply and args.model_key is None:
+        parser.error("--apply requires exactly one explicit --model-key; broad imports are blocked")
 
     assessed_at = datetime.now(UTC)
     try:
         workbook = load_source_workbook(args.workbook)
         if args.parity_only:
-            report = build_native_model_parity_report(workbook, assessed_at=assessed_at)
+            report = build_native_model_parity_report(
+                workbook, assessed_at=assessed_at, model_key=args.model_key
+            )
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(
                 json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -1652,6 +1684,7 @@ def main(argv: list[str] | None = None) -> int:
         settings,
         write_operation="native_model_input_import",
         write_operation_kind="import",
+        read_only=not args.apply,
     )
     if engine is None:
         print(
@@ -1662,7 +1695,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with Session(engine) as session, session.begin():
             report = import_native_model_inputs(
-                session, workbook, accepted_at=assessed_at, apply=args.apply
+                session,
+                workbook,
+                accepted_at=assessed_at,
+                apply=args.apply,
+                model_key=args.model_key,
             )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(

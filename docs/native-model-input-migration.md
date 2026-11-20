@@ -87,6 +87,50 @@ Only then run the existing guarded application import dry-run and,
 with separate production-write authorization, accept an initial
 native revision. Do not merge or apply any change automatically.
 
+## Narrow Booking-only dry-run and acceptance guard — November 20, 2026
+
+The legacy standalone CLI previously applied _every_ eligible model when
+invoked with `--apply`. It now **refuses to apply** without an exact source
+tab `--model-key` (for Booking, `P-BKNG`). It refuses unknown keys rather
+than guessing by ticker or company name. A scoped report returns
+`selected_model_keys = ["P-BKNG"]`, with no other company evaluated or
+written. The default, no-selection **preview** retains its historical
+all-company coverage for ordinary diagnostic reports.
+
+Run a source-only check without a database connection:
+
+```sh
+npm run db:import-native-models -- --parity-only --model-key P-BKNG --output /private/booking-source-parity.json
+```
+
+After separately approved, privately configured **read-only** production
+access, run the target-bound canonical identity/revision preflight:
+
+```sh
+npm run db:import-native-models -- --model-key P-BKNG --output /private/booking-canonical-preview.json
+```
+
+This second command creates a read-only database engine and does not
+obtain `SELECT FOR UPDATE` row locks, even if a native model already exists.
+It never inserts model state or source-price observations. Its output
+must be checked for exactly one selected model, matching source digest,
+listing identity and `DRY_RUN_READY` (or a clearly explained existing
+receipt/conflict). Run only after a fresh input/currency/source-date
+review and before any separate owner acceptance decision.
+
+Only with explicit authorization for the current target and reviewed
+single-model report may an operator use:
+
+```sh
+npm run db:import-native-models -- --model-key P-BKNG --apply --output /private/booking-import-receipt.json
+```
+
+That command still uses the existing production write-target guard,
+immutable revision ancestry and receipt checks. It is **not** authorized
+by this development change. The older batch onboarding orchestration
+(`model_analytics_bootstrap`) remains a separate, explicitly approved
+batch workflow; these CLI guards do not assert its scope.
+
 ## Repeatable workflow
 
 The default command performs a read-only dry run and writes the latest batch report:
@@ -96,10 +140,12 @@ npm run db:import-native-models
 ```
 
 Review `docs/reconciliation/native-model-input-import-batch-2-2026-10-05.json`.
-Accept only the reviewed, parity-passing mappings with:
+To accept a specific reviewed mapping, use the required
+`--model-key` argument and all production-write authorization gates.
+For example, **only after separate owner approval**:
 
 ```powershell
-npm run db:import-native-models -- --apply
+npm run db:import-native-models -- --model-key P-BKNG --apply --output "<private-receipt-path>"
 ```
 
 An applied replay is safe. The source workbook hash, tab key, and mapping version

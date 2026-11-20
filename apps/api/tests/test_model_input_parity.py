@@ -80,6 +80,23 @@ def test_parity_receipt_is_read_only_and_identifies_supported_coverage() -> None
     assert "MISSING_SOURCE_DATA" in models["P-MORN"]["blocking_categories"]
 
 
+def test_booking_only_frozen_source_parity_excludes_other_company_keys() -> None:
+    report = build_native_model_parity_report(
+        source_workbook(),
+        assessed_at=datetime(2026, 11, 20, tzinfo=UTC),
+        model_key="P-BKNG",
+    )
+    assert report["mode"] == "PARITY_ONLY"
+    assert report["selected_model_keys"] == ["P-BKNG"]
+    assert [row["model_key"] for row in report["models"]] == ["P-BKNG"]
+    assert report["parity_pass_model_keys"] == ["P-BKNG"]
+    result = report["models"][0]
+    assert result["status"] == "PARITY_PASS"
+    assert result["projection_reconciliation"]["passed"] == 30
+    assert result["output_reconciliation"]["passed"] == 22
+    assert result["apply_status"] == "NOT_APPLIED"
+
+
 def test_return_parity_and_shareholder_irr_comparability_are_separate() -> None:
     report = build_native_model_parity_report(
         source_workbook(), assessed_at=datetime(2026, 10, 6, tzinfo=UTC)

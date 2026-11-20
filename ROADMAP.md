@@ -16,6 +16,17 @@ audit. **No model acceptance, production write, import or source-sheet
 change has been performed.** See
 [Booking native parity](docs/native-model-input-migration.md#booking-pre-q3-baseline-parity-remediation--2026-11-20).
 
+## Booking-only import guard — November 20, 2026
+
+Following the `P-BKNG` 30/30 projection and 22/22 output parity fix in
+draft PR #46, the standalone importer now requires an **exact model
+selection** for `--apply`. Its Booking-only dry run uses a database-level
+read-only guard with no row-update locks and produces a scoped report.
+Synthetic CLI/selection tests and source-workbook parity tests verify
+scope. No production write or native model acceptance was performed;
+current Booking price observations are still unavailable. See the
+[model migration runbook](docs/native-model-input-migration.md).
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |
