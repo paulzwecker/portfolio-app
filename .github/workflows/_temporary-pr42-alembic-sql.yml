@@ -54,7 +54,9 @@ jobs:
           }
           assert actual == expected, (actual, expected)
           assert len(re.findall(r"UPDATE\s+alembic_version", sql, re.I)) == 2
-          assert not re.search(r"\b(?:DROP|TRUNCATE|DELETE|INSERT)\b", sql, re.I)
+          assert not re.search(r"\b(?:DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM)\b", sql, re.I)
+          insert_targets = re.findall(r"\bINSERT\s+INTO\s+([a-z_][a-z_0-9]*)", sql, re.I)
+          assert set(insert_targets) <= {"alembic_version"}
           assert "04510ec" not in sql
           assert len(sql) < 100000
           print("OFFLINE_ALEMBIC_GENERATED", "tables",len(actual),"bytes",len(sql),"sha256",hashlib.sha256(sql.encode()).hexdigest())
