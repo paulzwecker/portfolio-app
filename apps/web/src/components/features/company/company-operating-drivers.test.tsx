@@ -261,6 +261,22 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
     expect(html).toContain("No selected provider consensus available.");
   });
 
+  it("warns on per-model driver truncation and missing driver metric definitions", () => {
+    const payload = context();
+    payload.native_models[0].drivers_truncated = true;
+    expect(
+      renderToStaticMarkup(<OperatingDriversPanel context={payload} />),
+    ).toContain("Partial coverage or missing metric definitions");
+
+    payload.native_models[0].drivers_truncated = false;
+    payload.native_models[0].driver_projections = [
+      { ...driver, metric_id: "missing.metric" },
+    ];
+    expect(
+      renderToStaticMarkup(<OperatingDriversPanel context={payload} />),
+    ).toContain("Partial coverage or missing metric definitions");
+  });
+
   it("makes incomplete coverage and empty KPIs explicit", () => {
     const payload = context();
     payload.metric_definitions = [];
