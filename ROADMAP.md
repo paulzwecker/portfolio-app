@@ -6,15 +6,15 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field             | Current value                                                                                                                    |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | PR #42 adds agent context, reviewed operating evidence and prior BASE model review. [Handoff](docs/ACTIVE_WORKSTREAM.md).        |
-| Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.                       |
-| Product outcome   | Issuer evidence → canonical company data → human review → accepted model drivers → informed re-underwriting.                     |
-| Integration       | Prior #42 head `a005893f` passed three CI gates; latest Nov 20 commits require exact-head verification.                          |
-| Production        | Last verified Nov 15 guarded readback is historical; no activation, migration or real accepted observation write.                |
-| Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy.                  |
-| Deferred          | Broader free-provider coverage, autonomous agent acceptance and platform extraction until scoped read pilot.                     |
+| Field             | Current value                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint | PR #42 adds agent context, reviewed operating evidence and prior BASE model review. [Handoff](docs/ACTIVE_WORKSTREAM.md). |
+| Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.                |
+| Product outcome   | Issuer evidence → canonical company data → human review → accepted model drivers → informed re-underwriting.              |
+| Integration       | Prior #42 head `a005893f` passed three CI gates; latest Nov 20 commits require exact-head verification.                   |
+| Production        | Last verified Nov 15 guarded readback is historical; no activation, migration or real accepted observation write.         |
+| Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy.           |
+| Deferred          | Broader free-provider coverage, autonomous agent acceptance and platform extraction until scoped read pilot.              |
 
 The investor-journey acceptance below records the earlier PR #39 milestone.
 PR #42 is a separately gated, evidence-first extension to the Company Explorer.
