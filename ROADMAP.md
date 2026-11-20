@@ -1,6 +1,6 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
@@ -8,13 +8,16 @@ Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field             | Current value                                                                                                                    |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | Agents 1–8 integrated into PR #39; scope frozen for final CI/owner review. [Handoff](docs/ACTIVE_WORKSTREAM.md).                 |
-| Branch / PR       | PR #39 `codex/financial-refresh-slice` now retains the integrated SEC, market/FX, expectations and return-hurdle histories.      |
-| Product outcome   | Portfolio value/source → exact company prices, statements and expectations → accepted-model return analysis → portfolio context. |
-| Integration       | Main `866723e` already contains recovery #37 and investor UI #38; preserve separate branches and owner work.                     |
-| Production        | November 15 01:14 UTC guarded readback: prices, FX, facts, filings and estimates all zero; accepted portfolio unchanged.         |
-| Release           | New return-hurdle API and native-price fields require API-first sequencing; hosted controls and recovery remain external gates.  |
-| Deferred          | Broad provider coverage, EPS basis, inferred fiscal model alignment, Sheets recovery/publication and new infrastructure.         |
+| Active checkpoint | PR #42 adds agent context, reviewed operating evidence and prior BASE model review. [Handoff](docs/ACTIVE_WORKSTREAM.md).        |
+| Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.                       |
+| Product outcome   | Issuer evidence → canonical company data → human review → accepted model drivers → informed re-underwriting.                     |
+| Integration       | Prior #42 head `a005893f` passed three CI gates; latest Nov 20 commits require exact-head verification.                          |
+| Production        | Last verified Nov 15 guarded readback is historical; no activation, migration or real accepted observation write.                |
+| Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy.                  |
+| Deferred          | Broader free-provider coverage, autonomous agent acceptance and platform extraction until scoped read pilot.                     |
+
+The investor-journey acceptance below records the earlier PR #39 milestone.
+PR #42 is a separately gated, evidence-first extension to the Company Explorer.
 
 Acceptance is the existing complete investor journey, not new analytics or providers.
 Demonstrate authorized private real-source recordings in isolated PostgreSQL, retain
