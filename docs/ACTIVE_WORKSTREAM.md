@@ -81,7 +81,12 @@ Completed code slices on this branch (development state, not production claims):
   pack, staged three typed drafts, agent submission, separate reviewer preview/
   fingerprint/acceptance, accepted context readback and idempotent no-draft
   comparison. This tests a real issuer's numbers but **not production data**.
-  Verify exact-head CI for this new test before claiming it passed.
+  Focused disposable-PostgreSQL CI passed **1/1** on Nov 20
+  ([run 44698784806](https://github.com/paulzwecker/portfolio-app/actions/runs/44698784806))
+  after adding explicit fixture flushes for Company → Security → Listing FK order.
+  The preceding broad CI passed 588/589 integration tests; its sole failure
+  was this synthetic insert-order setup, not a canonical workflow assertion.
+  Full exact-head CI on the cleaned branch remains the final merge gate.
 
 Current next gate: exact-head CI, then independent operator authorization for
 a live canonical company UUID allowlist/read token and real-database shadow
