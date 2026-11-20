@@ -7,6 +7,7 @@ management guidance**. There is no new generic workflow engine or data provider.
 ## Contracts and workflow
 
 `POST /v1/company-observation-proposals` accepts exactly one of:
+
 - `MetricDefinitionBatchV1`
 - `KPIObservationBatchV1`
 - `GuidanceObservationBatchV1`
@@ -66,7 +67,6 @@ observations. Google Sheets is not parsed by this API; it will become a producer
 through a later explicit inbox adapter.
 
 The generated OpenAPI/TS contract is authoritative for payload structures.
-
 
 ## Google Sheets is another producer, not another acceptance system
 

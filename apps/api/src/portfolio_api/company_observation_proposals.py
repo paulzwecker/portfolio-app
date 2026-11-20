@@ -367,9 +367,7 @@ def _preflight(
             or (not isinstance(item, MetricDefinitionItem) and item.source_type == "SEC_10Q")
         )
 
-    sec_items = [
-        (row_index, item) for row_index, item in enumerate(items) if is_sec_sourced(item)
-    ]
+    sec_items = [(row_index, item) for row_index, item in enumerate(items) if is_sec_sourced(item)]
     if sec_items:
         cutoff = now()
         crosswalk = list(

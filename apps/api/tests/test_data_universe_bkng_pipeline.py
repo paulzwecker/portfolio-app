@@ -192,7 +192,6 @@ def test_booking_sec_cik_to_reviewed_kpis_full_loop(postgres_engine: Engine) -> 
         assert finished["candidate_submission"]["status"] == "NOT_ATTEMPTED"
 
 
-
 def test_booking_sec_proposal_preview_blocks_missing_or_wrong_cik(
     postgres_engine: Engine,
 ) -> None:
@@ -202,9 +201,7 @@ def test_booking_sec_proposal_preview_blocks_missing_or_wrong_cik(
     )
     company_id = uuid4()
     with Session(postgres_engine) as session, session.begin():
-        session.add(
-            Company(id=company_id, name="Booking Holdings Inc.", reporting_currency="USD")
-        )
+        session.add(Company(id=company_id, name="Booking Holdings Inc.", reporting_currency="USD"))
 
     settings = Settings(
         _env_file=None,
@@ -242,9 +239,7 @@ def test_booking_sec_proposal_preview_blocks_missing_or_wrong_cik(
         assert initial.status_code == 200, initial.text
         assert initial.json()["status"] == "INVALID"
         assert initial.json()["preview_fingerprint"] is None
-        assert any(
-            "SEC evidence requires" in issue["detail"] for issue in initial.json()["issues"]
-        )
+        assert any("SEC evidence requires" in issue["detail"] for issue in initial.json()["issues"])
 
         # A different valid SEC issuer crosswalk still cannot authorize BKNG.
         with Session(postgres_engine) as session, session.begin():
@@ -265,6 +260,5 @@ def test_booking_sec_proposal_preview_blocks_missing_or_wrong_cik(
         assert mismatched.json()["status"] == "INVALID"
         assert mismatched.json()["preview_fingerprint"] is None
         assert any(
-            "SEC evidence requires" in issue["detail"]
-            for issue in mismatched.json()["issues"]
+            "SEC evidence requires" in issue["detail"] for issue in mismatched.json()["issues"]
         )
