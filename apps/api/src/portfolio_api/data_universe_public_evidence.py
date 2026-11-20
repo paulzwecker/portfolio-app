@@ -123,6 +123,8 @@ def extract_uber_q3_2026(html: bytes) -> tuple[int, int, Decimal, Decimal]:
         header = " ".join(" ".join(row) for row in table[:6])
         if not (re.search(r"\b2025\b", header) and re.search(r"\b2026\b", header)):
             continue
+        if header.index("2025") >= header.index("2026"):
+            raise ValueError("Issuer operating table fiscal-year columns reversed")
         trips = [row for row in table if row and row[0] == "Trips"]
         bookings = [row for row in table if row and row[0] == "Gross Bookings"]
         if trips and bookings:
@@ -194,7 +196,17 @@ def verify_uber_q3_2026_pack(pack: EvidencePackV1, html: bytes) -> dict[str, Any
             or item.currency != currency
             or item.value_qualifier != "EQ"
             or item.basis != "REPORTED"
+            or item.quality_status != "VERIFIED"
+            or item.source_type != "EARNINGS_RELEASE"
+            or item.scope_json
             or item.reported_at is not None
+            or definition.category != "OPERATING"
+            or definition.value_kind != ("CURRENCY" if currency else "COUNT")
+            or definition.aggregation_semantics != "PERIOD_FLOW"
+            or definition.default_basis != "REPORTED"
+            or definition.scope_dimensions
+            or not definition.actuals_allowed
+            or definition.guidance_allowed != bool(currency)
             or definition.canonical_unit != unit
             or definition.canonical_scale != Decimal("1000000")
             or definition.default_period_type != "QUARTER"
@@ -216,6 +228,8 @@ def verify_uber_q3_2026_pack(pack: EvidencePackV1, html: bytes) -> dict[str, Any
         or guidance.scale != Decimal("1000000")
         or guidance.currency != "USD"
         or guidance.basis != "COMPANY_GUIDANCE"
+        or guidance.source_type != "EARNINGS_RELEASE"
+        or guidance.scope_json
         or guidance.value_qualifier != "RANGE"
         or guidance.issued_at is not None
         or guidance.status != "ACTIVE"
