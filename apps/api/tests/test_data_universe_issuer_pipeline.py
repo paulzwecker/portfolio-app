@@ -52,6 +52,7 @@ def test_public_issuer_shadow_proposals_complete_a_reviewed_company_loop(
                 is_demo=True,
             )
         )
+        session.flush()  # Preserve Company → Security FK order without ORM relationships.
         session.add(
             Security(
                 id=security_id,
@@ -61,6 +62,7 @@ def test_public_issuer_shadow_proposals_complete_a_reviewed_company_loop(
                 is_demo=True,
             )
         )
+        session.flush()  # Listing refers to an existing security.
         session.add(
             Listing(
                 id=listing_id,
