@@ -302,7 +302,8 @@ def test_review_handoff_withholds_every_batch_if_canonical_context_is_incomplete
     plan = prepare_handoff(context, pack, _verified_pack(pack))
     assert plan["shadow_status"] == "INCOMPLETE_CONTEXT"
     assert plan["ready_batches"] == []
-    assert plan["deferred_batch_types"]
+    assert plan["deferred_batch_types"] == []
+    assert any(row["outcome"] == "INCOMPLETE_CONTEXT" for row in plan["findings"])
 
 
 def test_candidate_post_is_opt_in_and_confirms_exact_reviewed_inputs() -> None:
