@@ -198,9 +198,7 @@ def test_definition_permissions_and_actual_quality_must_match() -> None:
     report = compare_source_pack(context, pack)
     assert report["status"] == "NEEDS_HUMAN_RESOLUTION"
     assert report["draft_proposals"] == []
-    assert {
-        (row["domain"], row["metric_key"], row["outcome"]) for row in report["findings"]
-    } >= {
+    assert {(row["domain"], row["metric_key"], row["outcome"]) for row in report["findings"]} >= {
         ("DEFINITION", "uber.trips", "CONFLICT"),
         ("KPI", "uber.trips", "BLOCKED"),
     }
