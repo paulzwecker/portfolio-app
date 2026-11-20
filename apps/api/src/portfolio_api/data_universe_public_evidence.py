@@ -1,7 +1,7 @@
 """Bounded primary-source verification for the first real-data steward pilot.
 
-This is deliberately one explicit issuer release profile, not a generic
-crawler. A failed/changed document is never treated as confirmed evidence.
+Only explicitly reviewed issuer/source profiles are supported; this is not a
+generic crawler. Changed or ambiguous documents never establish evidence.
 """
 
 from __future__ import annotations
