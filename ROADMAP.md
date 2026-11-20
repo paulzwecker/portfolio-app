@@ -6,15 +6,15 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 ## Execution cursor
 
-| Field             | Current value                                                                                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | PR #42: reviewed BKNG CIK bound in scoped read and reviewer acceptance. [Handoff](docs/ACTIVE_WORKSTREAM.md).     |
-| Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.        |
-| Product outcome   | Tracked issuer → verified operating KPIs → scoped context → human review → research.                              |
-| Integration       | Scoped CIK 39 tests, reviewer-boundary 25 tests, type/contracts pass; exact-head CI is merge gate.                |
-| Production        | Nov 20: one reviewed BKNG SEC CIK crosswalk inserted + readback; no other canonical writes or deploys.            |
-| Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy.   |
-| Deferred          | Live issuer HTML proof, hosted read token and API-first release remain separate operator gates.                   |
+| Field             | Current value                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint | PR #42: reviewed BKNG CIK bound in scoped read and reviewer acceptance. [Handoff](docs/ACTIVE_WORKSTREAM.md).   |
+| Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.      |
+| Product outcome   | Tracked issuer → verified operating KPIs → scoped context → human review → research.                            |
+| Integration       | Scoped CIK 39 tests, reviewer-boundary 25 tests, type/contracts pass; exact-head CI is merge gate.              |
+| Production        | Nov 20: one reviewed BKNG SEC CIK crosswalk inserted + readback; no other canonical writes or deploys.          |
+| Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy. |
+| Deferred          | Live issuer HTML proof, hosted read token and API-first release remain separate operator gates.                 |
 
 The investor-journey acceptance below records the earlier PR #39 milestone.
 PR #42 is a separately gated, evidence-first extension to the Company Explorer.
