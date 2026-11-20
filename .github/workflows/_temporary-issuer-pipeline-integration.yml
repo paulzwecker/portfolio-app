@@ -1,0 +1,51 @@
+name: Temporary issuer review-loop integration check
+
+on:
+  push:
+    branches: [feat/api-first-company-observations]
+
+permissions:
+  contents: read
+
+jobs:
+  issuer-pipeline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: portfolio_app
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: portfolio_app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portfolio_app -d portfolio_app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      APP_ENV: development
+      TEST_DATABASE_URL: postgresql+psycopg://portfolio_app:ci-password@127.0.0.1:5432/portfolio_app_test
+      DATABASE_TARGET_ENVIRONMENT: development
+      DATABASE_TARGET_DATABASE: portfolio_app_test
+      DATABASE_LOCAL_TEST_WRITES_AUTHORIZED: "true"
+      GOOGLE_SHEETS_SPREADSHEET_ID: ""
+      GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install pinned dependencies
+        run: |
+          npm ci
+          npm run setup
+      - name: Test source-checked evidence through reviewer acceptance
+        run: |
+          node scripts/uv.mjs run --locked --project apps/api pytest -x -q apps/api/tests/test_data_universe_issuer_pipeline.py -m integration
