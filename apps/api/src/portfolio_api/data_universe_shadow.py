@@ -393,7 +393,7 @@ def main() -> None:
     parser.add_argument(
         "--verify-public-source",
         action="store_true",
-        help="Check the exact approved Uber issuer release by one bounded public GET",
+        help="Check one approved issuer disclosure by a bounded public GET",
     )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
