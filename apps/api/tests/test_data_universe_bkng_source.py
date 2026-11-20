@@ -48,7 +48,7 @@ def test_booking_exact_q3_operating_values_keep_rounded_reporting_units() -> Non
         FILING.replace(b"54,461", b"54,462"),
         FILING.replace(b"54,461", b"154,461"),
         FILING.replace(b"September 30, 2026", b"December 31, 2026"),
-        FILING.replace(b"FORM 10-Q", b"FORM 10-K"),
+        FILING.replace(b"10-Q", b"10-K"),
         FILING.replace(b"Booking Holdings Inc.", b"Other Company Inc."),
         FILING.replace(b"<th>2026</th><th>2025</th>", b"<th>2025</th><th>2026</th>"),
         FILING.replace(b"Three Months Ended", b"Nine Months Ended"),
