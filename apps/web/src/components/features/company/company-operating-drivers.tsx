@@ -16,6 +16,24 @@ type Driver =
   CompanyAgentContext["native_models"][number]["driver_projections"][number];
 type Metric = CompanyAgentContext["metric_definitions"][number];
 
+type ModelReviewSignal = {
+  metricId: string;
+  metricName: string;
+  periodEnd: string;
+  modelName: string;
+  revisionNumber: number;
+  direction: "ABOVE" | "BELOW";
+  actualValue: string;
+  baseValue: string;
+  sourceReference: string;
+};
+
+function scopeIdentity(scope: Record<string, unknown>): string {
+  return JSON.stringify(
+    Object.entries(scope).sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
 type PeriodGroup = {
   key: string;
   periodStart: string;
@@ -41,7 +59,7 @@ export function comparableOperatingValues(
     actual.unit === reference.unit &&
     actual.scale === reference.scale &&
     actual.currency === reference.currency &&
-    JSON.stringify(actual.scope_json) === JSON.stringify(reference.scope_json)
+    scopeIdentity(actual.scope_json) === scopeIdentity(reference.scope_json)
   );
 }
 
@@ -57,16 +75,27 @@ function compareExactDecimals(left: string, right: string): -1 | 0 | 1 | null {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-/** Compare only expectations recorded before the issuer result was known. */
+/** An accepted value alone is not evidence of when the issuer disclosed it. */
 function priorExpectation(actual: Actual, publishedAt: string | null): boolean {
-  const known = actual.reported_at ?? actual.recorded_at;
   const publication = publishedAt ? Date.parse(publishedAt) : Number.NaN;
-  const observed = known ? Date.parse(known) : Number.NaN;
+  const reported = actual.reported_at
+    ? Date.parse(actual.reported_at)
+    : Number.NaN;
   return (
     Number.isFinite(publication) &&
-    Number.isFinite(observed) &&
-    publication <= observed
+    Number.isFinite(reported) &&
+    publication < reported
   );
+}
+
+function uniqueComparableActual(
+  actuals: Actual[],
+  reference: Guidance | Driver,
+): Actual | null {
+  const matches = actuals.filter((actual) =>
+    comparableOperatingValues(actual, reference),
+  );
+  return matches.length === 1 ? matches[0] : null;
 }
 
 /** Never convert unlike units, currencies, fiscal windows or qualified actuals. */
@@ -78,7 +107,8 @@ export function actualVsGuidance(
     !comparableOperatingValues(actual, guidance) ||
     guidance.value_qualifier !== "RANGE" ||
     guidance.status !== "ACTIVE" ||
-    !priorExpectation(actual, guidance.recorded_at) ||
+    !guidance.is_current ||
+    !priorExpectation(actual, guidance.issued_at ?? guidance.recorded_at) ||
     guidance.lower_value === null ||
     guidance.upper_value === null
   )
@@ -157,7 +187,7 @@ function periodKey(
     periodType,
     start,
     end,
-    JSON.stringify(Object.entries(scope).sort()),
+    scopeIdentity(scope),
   ].join("|");
 }
 
@@ -234,6 +264,52 @@ export function operatingMetricPeriods(
   );
 }
 
+/** Presentation-only review prompts from accepted prior BASE assumptions. */
+export function operatingBaseReviewSignals(
+  context: CompanyAgentContext,
+): ModelReviewSignal[] {
+  const result: ModelReviewSignal[] = [];
+  for (const metric of context.metric_definitions) {
+    for (const period of operatingMetricPeriods(context, metric.metric_id)) {
+      for (const { value, modelName, revisionNumber } of period.drivers) {
+        if (value.scenario !== "BASE") continue;
+        const actual = uniqueComparableActual(period.actuals, value);
+        if (!actual) continue;
+        const direction = actualVsDriver(actual, value);
+        if (direction !== "ABOVE" && direction !== "BELOW") continue;
+        result.push({
+          metricId: metric.metric_id,
+          metricName: metric.display_name,
+          periodEnd: period.periodEnd,
+          modelName,
+          revisionNumber,
+          direction,
+          actualValue: measure(
+            actual.value,
+            actual.scale,
+            actual.unit,
+            actual.currency,
+            actual.value_qualifier,
+          ),
+          baseValue: measure(
+            value.value,
+            value.scale,
+            value.unit,
+            value.currency,
+            value.value_qualifier,
+          ),
+          sourceReference: actual.source_reference,
+        });
+      }
+    }
+  }
+  return result.sort(
+    (a, b) =>
+      b.periodEnd.localeCompare(a.periodEnd) ||
+      a.metricName.localeCompare(b.metricName),
+  );
+}
+
 function ActualCell({ values }: { values: Actual[] }) {
   if (!values.length)
     return <span className="text-muted-foreground">No accepted actual</span>;
@@ -274,9 +350,8 @@ function GuidanceCell({
   return (
     <div className="space-y-2">
       {values.map((value) => {
-        const alignment = actuals
-          .map((actual) => actualVsGuidance(actual, value))
-          .find(Boolean);
+        const actual = uniqueComparableActual(actuals, value);
+        const alignment = actual ? actualVsGuidance(actual, value) : null;
         return (
           <div key={value.id} className="space-y-1">
             <div className="font-medium">
@@ -323,9 +398,8 @@ function DriverCell({
   return (
     <div className="space-y-2">
       {drivers.map(({ value, modelName, revisionNumber }) => {
-        const alignment = actuals
-          .map((actual) => actualVsDriver(actual, value))
-          .find(Boolean);
+        const actual = uniqueComparableActual(actuals, value);
+        const alignment = actual ? actualVsDriver(actual, value) : null;
         return (
           <div key={value.id} className="space-y-1">
             <div className="font-medium">
@@ -379,6 +453,7 @@ export function OperatingDriversPanel({
   context: CompanyAgentContext;
 }) {
   const [selectedMetric, setSelectedMetric] = useState("ALL");
+  const reviewSignals = useMemo(() => operatingBaseReviewSignals(context), [context]);
   const metrics = useMemo(() => {
     const found = new Map<string, Metric>();
     for (const definition of context.metric_definitions)
@@ -456,6 +531,51 @@ export function OperatingDriversPanel({
           evidence of a missing company disclosure. Consult the detailed history
           before making a decision.
         </p>
+      )}
+      {reviewSignals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Prior BASE assumptions to review
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Accepted operating actuals differ from a matching BASE forecast
+              recorded before the result was published. These are review prompts,
+              not valuation changes or trading signals.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y text-sm">
+              {reviewSignals.slice(0, 6).map((signal) => (
+                <li
+                  key={`${signal.metricId}-${signal.periodEnd}-${signal.modelName}-${signal.revisionNumber}`}
+                  className="space-y-1 py-3 first:pt-0"
+                >
+                  <button
+                    type="button"
+                    className="font-medium text-primary underline-offset-2 hover:underline"
+                    onClick={() => setSelectedMetric(signal.metricId)}
+                  >
+                    Review {signal.metricName} · {signal.periodEnd}
+                  </button>
+                  <p>
+                    Actual {signal.actualValue} is{" "}
+                    {signal.direction.toLowerCase()} prior BASE{" "}
+                    {signal.baseValue} · {signal.modelName} revision{" "}
+                    {signal.revisionNumber}
+                  </p>
+                  <Source url={signal.sourceReference} label="Verify actual disclosure" />
+                </li>
+              ))}
+            </ul>
+            {reviewSignals.length > 6 && (
+              <p className="text-xs text-muted-foreground">
+                Showing 6 of {reviewSignals.length} differences. Inspect
+                individual metrics for the remaining periods.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
       {displayed.length === 0 && (
         <Card>
@@ -576,9 +696,10 @@ export function OperatingDriversPanel({
       </Card>
       <p className="text-xs text-muted-foreground">
         Exact comparability requires the same period, scope, currency, scale and
-        unit. Values with qualifiers or conflicting quality do not produce an
-        automated performance verdict. Recorded values are accepted database
-        observations, not trade recommendations.
+        unit, one unambiguous verified actual and a known issuer-result publication
+        time. Same-time or later expectations, qualified values and conflicting
+        quality never produce a performance verdict. A difference prompts
+        re-underwriting, not an automatic model or portfolio change.
       </p>
     </div>
   );
