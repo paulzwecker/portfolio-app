@@ -58,8 +58,13 @@ public numbers but never automatically publishes observations.
 This is an opt-in source read, not a scheduled scraper, crawler or production
 agent deployment. The isolated tests use a small synthetic HTML excerpt of
 the externally cross-checked disclosed figures; they never issue a network
-request. Live source retrieval is a separate operator-triggered verification
-and may fail on publisher-side blocks.
+request. The one-time read-only GitHub Actions pilot on **November 20, 2026**
+successfully fetched the live issuer page and matched all three facts:
+[run #44696041668](https://github.com/paulzwecker/portfolio-app/actions/runs/44696041668).
+The recorded page SHA-256 begins `af725f990041e608`. No canonical API,
+database, source Sheet or private credential was used in that live source check.
+The temporary workflow was removed; subsequent live checks remain explicit
+operator invocations and may fail on publisher-side blocks.
 
 ## Local operator command
 
