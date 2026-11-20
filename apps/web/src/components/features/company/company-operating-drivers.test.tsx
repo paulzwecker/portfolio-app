@@ -146,7 +146,9 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
         recorded_at: "2026-11-05T00:00:00Z",
       }),
     ).toBeNull();
-    expect(actualVsGuidance({ ...actual, reported_at: null }, guidance)).toBeNull();
+    expect(
+      actualVsGuidance({ ...actual, reported_at: null }, guidance),
+    ).toBeNull();
     expect(actualVsDriver({ ...actual, reported_at: null }, driver)).toBeNull();
     expect(
       actualVsGuidance(actual, {
@@ -215,7 +217,9 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
         sourceReference: "https://example.com/source",
       },
     ]);
-    const html = renderToStaticMarkup(<OperatingDriversPanel context={payload} />);
+    const html = renderToStaticMarkup(
+      <OperatingDriversPanel context={payload} />,
+    );
     expect(html).toContain("Prior BASE assumptions to review");
     expect(html).toContain("Review Trips");
     expect(html).toContain("Verify actual disclosure");
