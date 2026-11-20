@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ops/pr42-alembic-schema-release
+          fetch-depth: 0
       - name: Confirm exact merged application source
         run: |
           test "$(git merge-base HEAD 04510ec59df4cc4a15dcfd3e3a63582a499c8be9)" = "04510ec59df4cc4a15dcfd3e3a63582a499c8be9"
