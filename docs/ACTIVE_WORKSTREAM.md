@@ -1,3 +1,33 @@
+## Live read-only operational preflight — November 20, 2026
+
+Authorized Neon and Render connector reads confirmed the actual target, not
+just isolated fixtures. Neon project `app-portfolio`, primary branch
+`production`, database `neondb` is at Alembic `b59f16c8a203`. The
+canonical Booking Holdings company and NASDAQ BKNG common-stock listing exist,
+but the canonical `company_provider_identifiers` table contains **zero**
+reviewed SEC CIK rows (including none for Booking). The new
+`company_observation_proposals` review table is **not present in production**.
+No internal company UUID, token or connection string is recorded in Git.
+
+Render `portfolio-api` is live on `main` commit `41baea8a`
+(November 15), not on the unmerged draft PR #42. Auto-deploy on passing
+main-branch checks remains enabled. Its active environment-group
+`SEC_USER_AGENT` configuration could not be confirmed from service metadata.
+Vercel preview currently reports a build-rate limit; no paid-tier upgrade
+is authorized or required for this pilot.
+
+**Next separate owner decisions (not covered by read-only permission):**
+whether to add exactly one evidence-reviewed BKNG → SEC CIK `0001075531`
+crosswalk in production, and whether to arrange a schema-gated API-first
+release with a checked recovery path and production deployment controls.
+The first guarded live agent-context GET also requires the new code to be
+deployed and an owner-approved distinct read token + Booking-only allowlist.
+Do not attempt candidate POST or any reviewer acceptance as part of the
+read-only pilot. No production data, settings, deployment or migration was
+changed during this preflight.
+
+---
+
 ## Current slice — fail-closed Booking SEC identity binding (2026-11-20)
 
 **Verification checkpoint:** Scoped identity + Booking integration focused
