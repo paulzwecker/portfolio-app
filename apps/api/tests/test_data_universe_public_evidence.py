@@ -1,0 +1,154 @@
+"""Isolated verification of real public issuer facts; tests do not make live requests."""
+
+import copy
+import json
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from portfolio_api.data_universe_public_evidence import (
+    UBER_Q3_2026_URL,
+    extract_uber_q3_2026,
+    verify_official_uber_release,
+    verify_uber_q3_2026_pack,
+)
+from portfolio_api.data_universe_shadow import EvidencePackV1
+
+FIXTURE = Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026.json"
+
+# Small synthetic HTML representation of the issuer's published table and outlook;
+# no third-party source page is copied into Git.
+ISSUER_HTML = b"""
+<html><head><title>Uber Announces Results for Third Quarter 2026</title></head>
+<body>
+<h1>Uber Announces Results for Third Quarter 2026</h1>
+<p>November 04, 2026</p>
+<h2>Outlook for Q4 2026</h2>
+<p>For Q4 2026, we anticipate: Gross Bookings of $63.25 billion to
+$65.25 billion, representing growth.</p>
+<h2>Financial and Operational Highlights for Third Quarter 2026</h2>
+<p>(In millions, except percentages and per share amounts)</p>
+<table>
+<tr><th></th><th>Three Months Ended September 30</th></tr>
+<tr><th></th><th>2025</th><th>2026</th><th>% Change</th></tr>
+<tr><td>Trips</td><td>3,512</td><td>4,061</td><td>16%</td></tr>
+<tr><td>Gross Bookings</td><td>$</td><td>49,740</td><td>$</td>
+    <td><b>59,819</b></td><td>20%</td></tr>
+</table>
+<h2>Results by Offering and Segment</h2>
+<table><tr><th>2025</th><th>2026</th></tr>
+<tr><td>Gross Bookings</td><td>49,740</td><td>59,819</td></tr></table>
+</body></html>
+"""
+
+
+def _pack() -> EvidencePackV1:
+    return EvidencePackV1.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
+
+
+def test_uber_q3_exact_public_facts_and_source_hash() -> None:
+    assert tuple(str(value) for value in extract_uber_q3_2026(ISSUER_HTML)) == (
+        "4061",
+        "59819",
+        "63250.00",
+        "65250.00",
+    )
+    report = verify_uber_q3_2026_pack(_pack(), ISSUER_HTML)
+    assert report["status"] == "SOURCE_MATCHED"
+    assert report["profile"] == "UBER_Q3_2026_IR"
+    assert report["source_reference"] == UBER_Q3_2026_URL
+    assert len(report["source_sha256"]) == 64
+    assert len(report["facts_checked"]) == 3
+
+
+@pytest.mark.parametrize(
+    "modified",
+    [
+        ISSUER_HTML.replace(b"4,061", b"4,062"),
+        ISSUER_HTML.replace(b"59,819", b"59,820"),
+        ISSUER_HTML.replace(b"$65.25", b"$65.30"),
+        ISSUER_HTML.replace(b"November 04, 2026", b"November 05, 2026"),
+        ISSUER_HTML.replace(b"(In millions", b"(In thousands"),
+        ISSUER_HTML.replace(b"2025</th><th>2026", b"2026</th><th>2025"),
+        ISSUER_HTML + ISSUER_HTML,
+    ],
+)
+def test_changed_or_ambiguous_source_never_verifies(modified: bytes) -> None:
+    with pytest.raises(ValueError):
+        verify_uber_q3_2026_pack(_pack(), modified)
+
+
+def test_changed_pack_scale_basis_identity_and_publication_time_fail() -> None:
+    cases = []
+    pack = _pack()
+    pack.kpi_observations[0].scale = 1000
+    cases.append(pack)
+    pack = _pack()
+    pack.kpi_observations[0].basis = "ADJUSTED"
+    cases.append(pack)
+    pack = _pack()
+    pack.kpi_observations[0].reported_at = "2026-11-04T13:00:00Z"
+    cases.append(pack)
+    pack = _pack()
+    pack.guidance_observations[0].upper_value = 65_500
+    cases.append(pack)
+    pack = _pack()
+    pack.source_reference = "https://example.com/redirected"
+    cases.append(pack)
+    pack = _pack()
+    pack.guidance_observations[0].period_end = "2027-03-31"
+    cases.append(pack)
+    for case in cases:
+        with pytest.raises(ValueError):
+            verify_uber_q3_2026_pack(case, ISSUER_HTML)
+
+
+def test_public_source_fetch_uses_fixed_https_no_credentials_or_redirects() -> None:
+    class Headers:
+        def get_content_type(self) -> str:
+            return "text/html"
+
+    class Response:
+        status = 200
+        headers = Headers()
+
+        def __enter__(self) -> "Response":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self, limit: int) -> bytes:
+            assert limit > len(ISSUER_HTML)
+            return ISSUER_HTML
+
+    class Opener:
+        def open(self, request: object, timeout: int) -> Response:
+            assert getattr(request, "full_url") == UBER_Q3_2026_URL
+            assert getattr(request, "get_method")() == "GET"
+            assert timeout == 15
+            return Response()
+
+    with patch(
+        "portfolio_api.data_universe_public_evidence.build_opener",
+        return_value=Opener(),
+    ) as opener:
+        verified = verify_official_uber_release(_pack())
+    assert verified["status"] == "SOURCE_MATCHED"
+    assert opener.call_count == 1
+
+    not_issuer = copy.deepcopy(_pack())
+    not_issuer.source_reference = "https://example.com"
+    with pytest.raises(ValueError, match="approved Uber"), patch(
+        "portfolio_api.data_universe_public_evidence.build_opener"
+    ) as blocked:
+        verify_official_uber_release(not_issuer)
+    blocked.assert_not_called()
+
+
+def test_source_size_limit_fails_closed() -> None:
+    from portfolio_api.data_universe_public_evidence import MAX_ISSUER_BYTES
+
+    with pytest.raises(ValueError, match="byte budget"):
+        verify_uber_q3_2026_pack(_pack(), b"x" * (MAX_ISSUER_BYTES + 1))
