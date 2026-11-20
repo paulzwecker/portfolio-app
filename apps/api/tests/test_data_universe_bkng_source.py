@@ -1,4 +1,5 @@
 """Booking Holdings Q3 2026 primary SEC 10-Q source verification, offline."""
+
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -73,6 +74,8 @@ def test_booking_rounded_reported_facts_cannot_be_silently_upgraded_to_exact() -
     pack.kpi_observations[1].scale = Decimal("1")
     with pytest.raises(ValueError, match="evidence mismatch"):
         verify_booking_q3_2026_pack(pack, FILING)
+
+
 def test_sec_live_read_needs_operator_contact_and_makes_no_request_without_one() -> None:
     with (
         patch.dict("os.environ", {"SEC_USER_AGENT": ""}),

@@ -4,7 +4,6 @@ SEC values are sourced from the Booking Q3 2026 10-Q. The database, issuer
 crosswalk and role credentials are isolated test fixtures, not owner state.
 """
 
-import json
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -47,9 +46,7 @@ def test_booking_sec_cik_to_reviewed_kpis_full_loop(postgres_engine: Engine) -> 
     )
     company_id, security_id = uuid4(), uuid4()
     with Session(postgres_engine) as session, session.begin():
-        session.add(
-            Company(id=company_id, name="Booking Holdings Inc.", reporting_currency="USD")
-        )
+        session.add(Company(id=company_id, name="Booking Holdings Inc.", reporting_currency="USD"))
         session.flush()
         session.add(
             Security(
@@ -121,13 +118,9 @@ def test_booking_sec_cik_to_reviewed_kpis_full_loop(postgres_engine: Engine) -> 
             assert context.native_models_status.status == "UNSUPPORTED"
             handoff = prepare_handoff(context, pack, verified)
             target_type = (
-                "MetricDefinitionBatchV1"
-                if phase == "definitions"
-                else "KPIObservationBatchV1"
+                "MetricDefinitionBatchV1" if phase == "definitions" else "KPIObservationBatchV1"
             )
-            assert [batch["contract_type"] for batch in handoff["ready_batches"]] == [
-                target_type
-            ]
+            assert [batch["contract_type"] for batch in handoff["ready_batches"]] == [target_type]
             batch = handoff["ready_batches"][0]
             submitted = client.post(
                 "/v1/company-observation-proposals",

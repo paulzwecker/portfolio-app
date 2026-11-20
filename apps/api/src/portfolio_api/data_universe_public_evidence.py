@@ -283,8 +283,7 @@ def verify_official_uber_release(pack: EvidencePackV1) -> dict[str, Any]:
 # CIK is public, while the canonical company UUID must be resolved separately.
 BKNG_Q3_2026_CIK = "0001075531"
 BKNG_Q3_2026_URL = (
-    "https://www.sec.gov/Archives/edgar/data/1075531/"
-    "000107553126000045/bkng-20260930.htm"
+    "https://www.sec.gov/Archives/edgar/data/1075531/000107553126000045/bkng-20260930.htm"
 )
 
 
