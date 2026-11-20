@@ -1,5 +1,14 @@
 # Native deployment and separately reviewed migrations
 
+## PR #42 production release candidate (November 20, 2026)
+
+For the **currently prepared, not authorized** Booking operating-observation
+release, use [the dedicated release card](release-booking-observations.md).
+It records the live Neon/Render checks, two exact migration revisions,
+fresh-recovery requirement, required production freezes, attestation sequencing
+and API-first readback. The November 8 incident and prior-release instructions
+below are historical; do not reuse their old migration confirmation.
+
 **Scope:** one developer, the existing GitHub repository, Render API, Vercel web
 project, and Neon PostgreSQL database. This runbook describes the proposed
 configuration in this branch; it does not confirm or change live provider

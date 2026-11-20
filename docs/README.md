@@ -106,6 +106,7 @@ For database operations use [write targets](database-write-targets.md) and
 - [Verified database write targets](database-write-targets.md)
 - [Scenario Calibration & Investment Decision Evaluation](decision-evaluation.md)
 - [Native deployment and separately reviewed migrations](deployment-and-migrations.md)
+- [Booking observation PR #42 controlled release card](release-booking-observations.md)
 - [Expected-return attribution](expected-return-attribution.md)
 - [Expected-return history](expected-return-history.md)
 - [Canonical PostgreSQL migration preparation](postgresql-migration.md)

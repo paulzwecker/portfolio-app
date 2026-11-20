@@ -372,7 +372,7 @@ def test_migration_confirmation_binds_exact_target_and_revision_range() -> None:
         target=RELEASE_HEAD,
     ) == (
         "MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/"
-        "ep-floral-cake-bae16liy/neondb/9f2a6d4c81b7->b59f16c8a203"
+        "ep-floral-cake-bae16liy/neondb/b59f16c8a203->d7b4a6c8e2f0"
     )
 
 
@@ -646,7 +646,17 @@ def test_current_release_plan_rejects_retired_target_and_previous_confirmation()
         ProductionMigrationPreflightError, match="verified_neon_production_identity_required"
     ):
         validate_read_settings(retired)
-    assert PRODUCTION_BASE_REVISION == "9f2a6d4c81b7"
-    assert RELEASE_HEAD == "b59f16c8a203"
+    assert PRODUCTION_BASE_REVISION == "b59f16c8a203"
+    assert RELEASE_HEAD == "d7b4a6c8e2f0"
+    # This runbook cannot migrate from the older, previously reviewed release.
+    with pytest.raises(
+        ProductionMigrationPreflightError, match="production_schema_head_requires_new_review"
+    ):
+        migration_required({"9f2a6d4c81b7"}, {RELEASE_HEAD})
+    # A stale repository checkout and an old target confirmation are not sufficient.
+    with pytest.raises(
+        ProductionMigrationPreflightError, match="repository_migration_head_unexpected"
+    ):
+        migration_required({PRODUCTION_BASE_REVISION}, {"b59f16c8a203"})
     with pytest.raises(ProductionMigrationPreflightError, match="requires_new_review"):
         migration_required({"6c2eaf0b8147"}, {RELEASE_HEAD})

@@ -13,7 +13,7 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 | Product outcome   | Tracked issuer → verified operating KPIs → scoped context → human review → research.                            |
 | Integration       | Scoped CIK 39 tests, reviewer-boundary 25 tests, type/contracts pass; exact-head CI is merge gate.              |
 | Production        | Nov 20: one reviewed BKNG SEC CIK crosswalk inserted + readback; no other canonical writes or deploys.          |
-| Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy. |
+| Release           | PR #42 release card prepared; freeze + fresh recovery + two migrations require separate approval.               |
 | Deferred          | Live issuer HTML proof, hosted read token and API-first release remain separate operator gates.                 |
 
 The investor-journey acceptance below records the earlier PR #39 milestone.

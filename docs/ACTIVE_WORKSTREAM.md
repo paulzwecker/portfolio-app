@@ -1,3 +1,36 @@
+## PR #42 release preparation — November 20, 2026
+
+**Status: PREPARED, NO PRODUCTION RELEASE AUTHORIZATION.** The previous
+production migration tooling was pinned to `9f2a6d4c81b7 ->
+b59f16c8a203`; it has now been updated to the *actual*, separately
+verified production baseline `b59f16c8a203` and PR #42 target
+`d7b4a6c8e2f0`. Fresh recovery remains mandatory. An old checkout,
+schema head or migration confirmation fails closed.
+
+Read-only live inspection: Neon production at `b59f16c8a203` with the
+authorized BKNG CIK crosswalk, **no recovery branch**, and 24-hour
+history retention. Render serves main `41baea8a`, with
+`autoDeploy=yes` / `checksPass`. Vercel production deployment freeze
+and required deployment checks remain unverified. No active database
+observation-definition or proposal-review tables are present.
+
+The existing production schema attestation intentionally remains at
+`b59f16c8a203`; changing it **before** migration/readback would be
+false attestation. After a permitted merge, main CI's schema deploy
+gate must fail closed until a separately approved migration and an
+independently reviewed attestation update.
+
+Release card: `docs/release-booking-observations.md`. First obtain
+explicit owner authorization to freeze Render and Vercel production,
+and to establish a fresh restorable recovery point. Validate an exact
+current-head CI pass and use a clean `main` checkout for the guarded
+read-only preflight. The migration, merge, configuration, deployment
+and post-release agent activation are distinct subsequent approval
+boundaries. No migration, provider setting, recovery branch, deploy,
+merge or acceptance occurred in this release preparation.
+
+---
+
 ## Authorized production Booking SEC CIK mapping — November 20, 2026
 
 Owner explicitly authorized exactly one Booking SEC issuer crosswalk write.
