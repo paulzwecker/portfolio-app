@@ -1,0 +1,32 @@
+name: Temporary operating review formatter
+on:
+  push:
+    branches:
+      - feat/api-first-company-observations
+permissions:
+  contents: write
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/api-first-company-observations
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Format and show exact diff
+        run: |
+          ./node_modules/.bin/prettier --write apps/web/src/components/features/company/company-operating-drivers.tsx
+          git diff -- apps/web/src/components/features/company/company-operating-drivers.tsx
+      - name: Commit formatter output on draft branch
+        run: |
+          if ! git diff --quiet -- apps/web/src/components/features/company/company-operating-drivers.tsx; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add apps/web/src/components/features/company/company-operating-drivers.tsx
+            git commit -m "style(web): apply pinned Prettier to review panel"
+            git push origin HEAD:feat/api-first-company-observations
+          fi
