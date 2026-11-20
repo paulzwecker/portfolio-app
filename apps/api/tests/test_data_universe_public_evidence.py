@@ -17,31 +17,10 @@ from portfolio_api.data_universe_shadow import EvidencePackV1
 
 FIXTURE = Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026.json"
 
-# Small synthetic HTML representation of the issuer's published table and outlook;
-# no third-party source page is copied into Git.
-ISSUER_HTML = b"""
-<html><head><title>Uber Announces Results for Third Quarter 2026</title></head>
-<body>
-<h1>Uber Announces Results for Third Quarter 2026</h1>
-<p>November 04, 2026</p>
-<h2>Outlook for Q4 2026</h2>
-<p>For Q4 2026, we anticipate: Gross Bookings of $63.25 billion to
-$65.25 billion, representing growth.</p>
-<h2>Financial and Operational Highlights for Third Quarter 2026</h2>
-<p>(In millions, except percentages and per share amounts)</p>
-<table>
-<tr><th></th><th>Three Months Ended September 30</th></tr>
-<tr><th></th><th>2025</th><th>2026</th><th>% Change</th></tr>
-<tr><td>Trips</td><td>3,512</td><td>4,061</td><td>16%</td></tr>
-<tr><td>Gross Bookings</td><td>$</td><td>49,740</td><td>$</td>
-    <td><b>59,819</b></td><td>20%</td></tr>
-</table>
-<h2>Results by Offering and Segment</h2>
-<table><tr><th>2025</th><th>2026</th></tr>
-<tr><td>Gross Bookings</td><td>49,740</td><td>59,819</td></tr></table>
-</body></html>
-"""
-
+# Synthetic structure only; the full issuer page is not redistributed in Git.
+ISSUER_HTML = (
+    Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026_excerpt.html"
+).read_bytes()
 
 def _pack() -> EvidencePackV1:
     return EvidencePackV1.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
