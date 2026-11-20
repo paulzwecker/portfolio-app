@@ -120,12 +120,7 @@ def extract_uber_q3_2026(html: bytes) -> tuple[int, int, Decimal, Decimal]:
 
     candidates: list[tuple[int, int]] = []
     for table in parser.tables:
-        year_headers = [
-            cell
-            for row in table[:6]
-            for cell in row
-            if cell in ("2025", "2026")
-        ]
+        year_headers = [cell for row in table[:6] for cell in row if cell in ("2025", "2026")]
         if "2025" not in year_headers or "2026" not in year_headers:
             continue
         trips = [row for row in table if row and row[0] == "Trips"]
