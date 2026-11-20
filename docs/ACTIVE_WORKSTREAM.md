@@ -1,3 +1,37 @@
+## Latest development checkpoint — verified candidate handoff (2026-11-20)
+
+On the same open draft PR #42, added a **manual, default-off**
+`data_universe_proposal_handoff` command. It re-verifies the exact official
+Uber source before reading the scoped company API, produces an owner-only
+review plan and stages only the batch whose dependencies are accepted.
+With missing metric definitions, KPI and guidance candidates are deferred
+until a fresh company-context read confirms reviewer acceptance.
+
+A candidate POST requires an explicit reviewed external batch ID, matching
+full issuer-page SHA-256, separate CLI submission enablement, dedicated agent
+token and the API's existing proposal/write guards. Exactly **one** batch is
+submitted per invocation. Server response identity and payload are validated;
+the candidate still goes through the existing human preview/decision UI.
+There is **no automatic acceptance, model update, scheduled job, extra table,
+paid provider, source Sheet write or production configuration**.
+
+Focused disposable PostgreSQL + unit verification passed **27/27** and Python
+mypy passed in [run 44708861038](https://github.com/paulzwecker/portfolio-app/actions/runs/44708861038).
+The two temporary formatter runs overlapped; one formatting commit was accepted
+without rewriting history, and the workflow was subsequently removed.
+A final small offline-no-submit test was added; exact-head CI on the latest
+branch remains a separate merge gate. Do not interpret focused fixture tests as
+live canonical data acceptance.
+
+**Next highest-value operational dependency:** authorize a strictly scoped,
+read-only canonical UUID/token and run the verified shadow plan for an actual
+eligible company. Production proposal submission/acceptance require separate
+explicit authorization; never infer them from this implementation. Until
+authorized, prioritize verified public source coverage for genuinely held
+businesses rather than new generic infrastructure.
+
+---
+
 ## Active draft integration — PR #42 (2026-11-20)
 
 Single working PR: https://github.com/paulzwecker/portfolio-app/pull/42
