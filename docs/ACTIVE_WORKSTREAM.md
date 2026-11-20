@@ -1,3 +1,13 @@
+## Scoped Booking import report integrity — November 20, 2026
+
+The scoped CLI preflights output outside the repository before any database
+access, rejects an existing report filename, and writes the final receipt with
+0600 permissions and exclusive creation. Focused tests cover these boundaries
+and preserve the existing unscoped diagnostic route. No production acceptance
+or credential changes occurred.
+
+---
+
 ## Booking-only model import boundary — November 20, 2026
 
 The follow-on BUILD in existing draft PR #46 closes the accidental

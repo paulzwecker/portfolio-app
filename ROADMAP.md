@@ -27,6 +27,11 @@ scope. No production write or native model acceptance was performed;
 current Booking price observations are still unavailable. See the
 [model migration runbook](docs/native-model-input-migration.md).
 
+The Booking-only CLI now also rejects in-repository or existing report
+paths before any database access; scoped reports are private and
+non-overwriting. See the import runbook. This closes a receipt-safety
+gap; no model has been imported or accepted.
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |

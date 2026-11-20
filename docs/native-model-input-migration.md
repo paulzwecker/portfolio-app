@@ -110,6 +110,14 @@ access, run the target-bound canonical identity/revision preflight:
 npm run db:import-native-models -- --model-key P-BKNG --output /private/booking-canonical-preview.json
 ```
 
+A selected-model command requires `--output` pointing **outside the
+repository**, with a new filename for each attempt. It verifies the directory
+is writable before loading the workbook or connecting to the database. On
+success the scoped JSON is written with exclusive creation and file mode
+`0600`; an existing receipt is never overwritten. The historic unscoped
+parity/assessment flow retains its existing output behavior. These safeguards
+do not authorize an import, expose a token or replace a backup.
+
 This second command creates a read-only database engine and does not
 obtain `SELECT FOR UPDATE` row locks, even if a native model already exists.
 It never inserts model state or source-price observations. Its output

@@ -1,5 +1,6 @@
 """Scope and non-mutating preflight safeguards for native model imports."""
 
+import stat
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -12,9 +13,12 @@ from sqlalchemy.orm import Session
 from test_booking_dcf_mapping import _synthetic_booking_workbook
 
 from portfolio_api.model_input_migration import (
+    REPOSITORY_ROOT,
     _existing_model,
     _map_portfolio_dcf,
     _model_mappers_for,
+    _private_model_report_path,
+    _write_model_report,
     main,
 )
 
@@ -96,3 +100,34 @@ def test_existing_model_select_does_not_request_row_lock_during_read_only_prefli
             )
             is None
         )
+
+
+def test_scoped_report_path_rejects_repository_and_existing_file_before_database(
+    tmp_path: Path,
+) -> None:
+    repository_target = REPOSITORY_ROOT / "docs" / "reconciliation" / "unreviewed-booking.json"
+    existing_target = tmp_path / "already-reviewed.json"
+    existing_target.write_text("keep the earlier receipt", encoding="utf-8")
+    for target in (repository_target, existing_target):
+        with (
+            patch("portfolio_api.model_input_migration.load_source_workbook") as workbook,
+            patch("portfolio_api.model_input_migration.create_database_engine") as engine,
+            pytest.raises(SystemExit) as rejected,
+        ):
+            main(["--model-key", "P-BKNG", "--apply", "--output", str(target)])
+        assert rejected.value.code == 2
+        workbook.assert_not_called()
+        engine.assert_not_called()
+    assert existing_target.read_text(encoding="utf-8") == "keep the earlier receipt"
+
+
+def test_scoped_report_creates_mode_0600_and_cannot_replace_receipt(tmp_path: Path) -> None:
+    output = tmp_path / "booking.json"
+    safe_target = _private_model_report_path(output, model_key="P-BKNG")
+    report = {"mode": "DRY_RUN", "selected_model_keys": ["P-BKNG"]}
+    _write_model_report(safe_target, report, scoped=True)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    original = output.read_bytes()
+    with pytest.raises(FileExistsError):
+        _write_model_report(safe_target, {"mode": "APPLIED"}, scoped=True)
+    assert output.read_bytes() == original

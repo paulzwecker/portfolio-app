@@ -11,8 +11,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -1635,6 +1637,37 @@ def load_source_workbook(path: Path = DEFAULT_WORKBOOK) -> Workbook:
     return Workbook.read(path, lambda name: name in EXPECTED_MODEL_KEYS)
 
 
+def _private_model_report_path(path: Path, *, model_key: str | None) -> Path:
+    """Fail before DB operations if a selected model's report is unsafe."""
+    if model_key is None:
+        return path  # Preserve legacy broad-scope assessment behavior.
+    target = path.expanduser().resolve()
+    if target.is_relative_to(REPOSITORY_ROOT.resolve()):
+        raise ValueError("Scoped model reports must be stored outside the repository")
+    if target.exists():
+        raise ValueError("Refusing to overwrite an existing scoped model report")
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryFile(dir=target.parent):
+            pass  # Verify output directory is writable before a possible DB acceptance.
+    except OSError as error:
+        raise ValueError("Scoped model report directory is not writable") from error
+    return target
+
+
+def _write_model_report(path: Path, report: dict[str, Any], *, scoped: bool) -> None:
+    payload = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if scoped:
+        # Exclusive file creation and restrictive permissions: never replace
+        # an earlier source/canonical decision receipt.
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+    else:
+        path.write_text(payload, encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workbook", type=Path, default=DEFAULT_WORKBOOK)
@@ -1657,6 +1690,10 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--parity-only cannot be combined with --apply")
     if args.apply and args.model_key is None:
         parser.error("--apply requires exactly one explicit --model-key; broad imports are blocked")
+    try:
+        report_path = _private_model_report_path(args.output, model_key=args.model_key)
+    except ValueError as error:
+        parser.error(str(error))
 
     assessed_at = datetime.now(UTC)
     try:
@@ -1665,10 +1702,7 @@ def main(argv: list[str] | None = None) -> int:
             report = build_native_model_parity_report(
                 workbook, assessed_at=assessed_at, model_key=args.model_key
             )
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(
-                json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-            )
+            _write_model_report(report_path, report, scoped=args.model_key is not None)
             print(
                 f"Wrote parity-only native model report to {args.output}; "
                 f"parity_pass={len(report['parity_pass_model_keys'])}, "
@@ -1701,10 +1735,7 @@ def main(argv: list[str] | None = None) -> int:
                 apply=args.apply,
                 model_key=args.model_key,
             )
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(
-            json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        _write_model_report(report_path, report, scoped=args.model_key is not None)
     except Exception as error:
         print(f"Native model input import failed: {error}", file=sys.stderr)
         return 2
