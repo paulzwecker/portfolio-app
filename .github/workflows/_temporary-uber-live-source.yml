@@ -1,0 +1,52 @@
+name: Temporary Uber issuer evidence check
+
+on:
+  push:
+    branches:
+      - feat/api-first-company-observations
+
+permissions:
+  contents: read
+
+jobs:
+  issuer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      APP_ENV: development
+      GOOGLE_SHEETS_SPREADSHEET_ID: ""
+      GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install pinned tools (no private credentials)
+        run: |
+          npm ci
+          npm run setup
+      - name: Check exact live Uber primary-source facts without database access
+        run: |
+          node scripts/uv.mjs run --locked --project apps/api python - <<'PY'
+          import json
+          from pathlib import Path
+          from portfolio_api.data_universe_public_evidence import verify_official_uber_release
+          from portfolio_api.data_universe_shadow import EvidencePackV1
+
+          path = Path("apps/api/tests/fixtures/data_universe_uber_q3_2026.json")
+          pack = EvidencePackV1.model_validate(json.loads(path.read_text(encoding="utf-8")))
+          result = verify_official_uber_release(pack)
+          assert result["status"] == "SOURCE_MATCHED"
+          print(
+              "LIVE ISSUER MATCH:",
+              result["profile"],
+              result["status"],
+              len(result["facts_checked"]),
+              "checked facts; SHA256",
+              result["source_sha256"][:16],
+          )
+          PY
