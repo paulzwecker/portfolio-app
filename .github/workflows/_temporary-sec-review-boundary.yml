@@ -1,0 +1,72 @@
+name: Temporary SEC reviewer trust-boundary verification
+on:
+  push:
+    branches:
+      - feat/api-first-company-observations
+
+permissions:
+  contents: write
+
+jobs:
+  sec-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: portfolio_app
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: portfolio_app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portfolio_app -d portfolio_app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      APP_ENV: development
+      TEST_DATABASE_URL: postgresql+psycopg://portfolio_app:ci-password@127.0.0.1:5432/portfolio_app_test
+      DATABASE_TARGET_ENVIRONMENT: development
+      DATABASE_TARGET_DATABASE: portfolio_app_test
+      DATABASE_LOCAL_TEST_WRITES_AUTHORIZED: "true"
+      GOOGLE_SHEETS_SPREADSHEET_ID: ""
+      GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/api-first-company-observations
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install pinned toolchain
+        run: |
+          npm ci
+          npm run setup
+      - name: Format new source and documentation
+        run: |
+          node scripts/uv.mjs run --locked --project apps/api ruff check --fix apps/api/src/portfolio_api/company_observation_proposals.py apps/api/tests/test_data_universe_bkng_pipeline.py
+          node scripts/uv.mjs run --locked --project apps/api ruff format apps/api/src/portfolio_api/company_observation_proposals.py apps/api/tests/test_data_universe_bkng_pipeline.py
+          npx prettier --write docs/company-observation-proposals.md docs/data-universe-shadow-pilot.md docs/ACTIVE_WORKSTREAM.md
+      - name: Focused reviewed SEC issuer integration and negative tests
+        run: |
+          node scripts/uv.mjs run --locked --project apps/api pytest -q apps/api/tests/test_company_observation_proposals.py apps/api/tests/test_data_universe_bkng_pipeline.py apps/api/tests/test_data_universe_bkng_source.py apps/api/tests/test_company_agent_context.py
+      - name: Typecheck and lint
+        run: |
+          node scripts/uv.mjs run --locked --project apps/api ruff check apps/api/src/portfolio_api/company_observation_proposals.py apps/api/tests/test_data_universe_bkng_pipeline.py
+          node scripts/uv.mjs run --locked --project apps/api mypy --config-file apps/api/pyproject.toml apps/api/src apps/api/tests
+          npm run contracts:check
+      - name: Commit formatting if required
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -u
+            git commit -m "style(review): format SEC issuer acceptance guard"
+            git push origin HEAD:feat/api-first-company-observations
+          fi
