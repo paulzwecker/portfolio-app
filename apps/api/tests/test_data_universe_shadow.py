@@ -3,6 +3,7 @@
 import copy
 import json
 import sys
+from datetime import UTC, date, datetime
 from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
@@ -187,6 +188,39 @@ def test_conflict_requires_human_resolution_not_automatic_supersession() -> None
         for item in report["findings"]
     )
     assert report["draft_proposals"] == []
+
+
+def test_definition_permissions_and_actual_quality_must_match() -> None:
+    context, pack = _context(), _pack()
+    _accepted_data(context, pack)
+    pack.metric_definitions[0].model_driver_allowed = True
+    context.metric_observations[0].quality_status = "PROVISIONAL"
+    report = compare_source_pack(context, pack)
+    assert report["status"] == "NEEDS_HUMAN_RESOLUTION"
+    assert report["draft_proposals"] == []
+    assert {
+        (row["domain"], row["metric_key"], row["outcome"]) for row in report["findings"]
+    } >= {
+        ("DEFINITION", "uber.trips", "CONFLICT"),
+        ("KPI", "uber.trips", "BLOCKED"),
+    }
+
+    pack.metric_definitions[0].model_driver_allowed = False
+    report = compare_source_pack(context, pack)
+    assert ("KPI", "uber.trips", "CONFLICT") in {
+        (row["domain"], row["metric_key"], row["outcome"]) for row in report["findings"]
+    }
+
+
+def test_source_must_exist_before_authorship_and_canonical_cutoff() -> None:
+    context, pack = _context(), _pack()
+    pack.source_published_on = date(2026, 11, 20)
+    with pytest.raises(ValueError, match="after its pack was authored"):
+        compare_source_pack(context, pack)
+    pack = _pack()
+    context.known_at = datetime(2026, 11, 3, tzinfo=UTC)
+    with pytest.raises(ValueError, match="postdates the canonical knowledge cutoff"):
+        compare_source_pack(context, pack)
 
 
 def test_incomplete_history_cannot_be_assumed_missing() -> None:
