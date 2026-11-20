@@ -2,6 +2,8 @@
 
 import copy
 import json
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -61,22 +63,22 @@ def test_changed_or_ambiguous_source_never_verifies(modified: bytes) -> None:
 def test_changed_pack_scale_basis_identity_and_publication_time_fail() -> None:
     cases = []
     pack = _pack()
-    pack.kpi_observations[0].scale = 1000
+    pack.kpi_observations[0].scale = Decimal("1000")
     cases.append(pack)
     pack = _pack()
     pack.kpi_observations[0].basis = "ADJUSTED"
     cases.append(pack)
     pack = _pack()
-    pack.kpi_observations[0].reported_at = "2026-11-04T13:00:00Z"
+    pack.kpi_observations[0].reported_at = datetime(2026, 11, 4, 13, tzinfo=UTC)
     cases.append(pack)
     pack = _pack()
-    pack.guidance_observations[0].upper_value = 65_500
+    pack.guidance_observations[0].upper_value = Decimal("65500")
     cases.append(pack)
     pack = _pack()
     pack.source_reference = "https://example.com/redirected"
     cases.append(pack)
     pack = _pack()
-    pack.guidance_observations[0].period_end = "2027-03-31"
+    pack.guidance_observations[0].period_end = date(2027, 3, 31)
     cases.append(pack)
     for case in cases:
         with pytest.raises(ValueError):
