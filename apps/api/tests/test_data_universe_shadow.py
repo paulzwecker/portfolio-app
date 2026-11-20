@@ -2,6 +2,8 @@
 
 import copy
 import json
+import os
+import stat
 import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -12,6 +14,12 @@ import pytest
 
 from portfolio_api.company_agent_context import CompanyAgentContextV1
 from portfolio_api.company_observation_proposals import BATCH_ADAPTER
+from portfolio_api.data_universe_proposal_handoff import (
+    main as handoff_main,
+    prepare_handoff,
+    submit_one,
+)
+from portfolio_api.data_universe_public_evidence import verify_uber_q3_2026_pack
 from portfolio_api.data_universe_shadow import (
     EvidencePackV1,
     _fetch_scoped_context,
@@ -247,6 +255,127 @@ def test_reject_private_or_mismatched_context_and_unreviewed_sources() -> None:
     pack.kpi_observations.append(copy.deepcopy(pack.kpi_observations[0]))
     with pytest.raises(ValueError, match="Duplicate KPI period"):
         compare_source_pack(context, pack)
+
+
+def _verified_pack(pack: EvidencePackV1) -> dict[str, object]:
+    html = Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026_excerpt.html"
+    return verify_uber_q3_2026_pack(pack, html.read_bytes())
+
+
+def test_review_handoff_waits_for_definition_acceptance_and_never_self_approves() -> None:
+    context, pack = _context(), _pack()
+    source = _verified_pack(pack)
+    initial = prepare_handoff(context, pack, source)
+    assert initial["shadow_status"] == "DRAFTS_PREPARED"
+    assert [batch["contract_type"] for batch in initial["ready_batches"]] == [
+        "MetricDefinitionBatchV1",
+    ]
+    assert initial["deferred_batch_types"] == [
+        "KPIObservationBatchV1",
+        "GuidanceObservationBatchV1",
+    ]
+    assert initial["candidate_submission"] == {"status": "NOT_ATTEMPTED"}
+    assert initial["canonical_writes_performed"] is False
+
+    _accepted_data(context, pack)
+    context.metric_observations = []
+    context.guidance_observations = []
+    next_stage = prepare_handoff(context, pack, source)
+    assert [batch["contract_type"] for batch in next_stage["ready_batches"]] == [
+        "KPIObservationBatchV1",
+        "GuidanceObservationBatchV1",
+    ]
+    _accepted_data(context, pack)
+    assert prepare_handoff(context, pack, source)["ready_batches"] == []
+
+    wrong = dict(source)
+    wrong["source_sha256"] = "bad"
+    with pytest.raises(ValueError, match="primary-source verification"):
+        prepare_handoff(context, pack, wrong)
+
+
+def test_review_handoff_withholds_every_batch_if_canonical_context_is_incomplete() -> None:
+    context, pack = _context(), _pack()
+    context.metrics_status.truncated = True
+    plan = prepare_handoff(context, pack, _verified_pack(pack))
+    assert plan["shadow_status"] == "INCOMPLETE_CONTEXT"
+    assert plan["ready_batches"] == []
+    assert plan["deferred_batch_types"]
+
+
+def test_candidate_post_is_opt_in_and_confirms_exact_reviewed_inputs() -> None:
+    context, pack = _context(), _pack()
+    source = _verified_pack(pack)
+    batch = prepare_handoff(context, pack, source)["ready_batches"][0]
+    external_id = batch["external_batch_id"]
+    with patch.dict(os.environ, {}, clear=True), pytest.raises(
+        ValueError, match="disabled by default"
+    ):
+        submit_one(
+            "https://example.com", batch, expected_batch_id=external_id,
+            expected_source_sha256=source["source_sha256"], verification=source,
+        )
+    with patch.dict(
+        os.environ,
+        {
+            "DATA_UNIVERSE_PROPOSAL_SUBMIT_ENABLED": "true",
+            "OBSERVATION_PROPOSAL_AGENT_TOKEN": "synthetic-issuer-agent-00000000000000000000",
+        },
+    ):
+        with pytest.raises(ValueError, match="path/credentials"):
+            submit_one(
+                "https://example.com/other", batch, expected_batch_id=external_id,
+                expected_source_sha256=source["source_sha256"], verification=source,
+            )
+        with pytest.raises(ValueError, match="Reviewed batch ID"):
+            submit_one(
+                "https://example.com", batch, expected_batch_id="wrong",
+                expected_source_sha256=source["source_sha256"], verification=source,
+            )
+        with pytest.raises(ValueError, match="Reviewed batch ID"):
+            submit_one(
+                "https://example.com", batch, expected_batch_id=external_id,
+                expected_source_sha256="0" * 64, verification=source,
+            )
+
+
+def test_handoff_cli_offline_preview_is_private_and_never_posts(tmp_path: Path) -> None:
+    context = _context()
+    context_file = tmp_path / "context.json"
+    context_file.write_text(context.model_dump_json(), encoding="utf-8")
+    output = tmp_path / "handoff.json"
+    source_html = Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026_excerpt.html"
+    args = [
+        "data_universe_proposal_handoff",
+        "--context-file", str(context_file),
+        "--source-html", str(source_html),
+        "--company-id", str(context.company.id),
+        "--source-pack", str(FIXTURE),
+        "--output", str(output),
+    ]
+    with (
+        patch.object(sys, "argv", args),
+        patch("portfolio_api.data_universe_proposal_handoff.submit_one") as submitter,
+    ):
+        handoff_main()
+    submitter.assert_not_called()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["source_verification"]["status"] == "SOURCE_MATCHED"
+    assert [r["contract_type"] for r in report["ready_batches"]] == [
+        "MetricDefinitionBatchV1",
+    ]
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    with patch.object(sys, "argv", args), pytest.raises(SystemExit):
+        handoff_main()
+
+    submit_args = args + ["--submit", "--batch-id", "synthetic", "--source-sha256", "0" * 64]
+    with (
+        patch.object(sys, "argv", submit_args),
+        patch("portfolio_api.data_universe_proposal_handoff.submit_one") as submitter,
+        pytest.raises(SystemExit),
+    ):
+        handoff_main()
+    submitter.assert_not_called()
 
 
 def test_scoped_fetch_rejects_unencrypted_non_loopback_host() -> None:
