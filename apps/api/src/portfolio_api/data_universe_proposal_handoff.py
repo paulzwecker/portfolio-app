@@ -12,7 +12,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener
@@ -210,8 +210,8 @@ def main() -> None:
         result = submit_one(
             args.api_base_url,
             selected[0],
-            expected_batch_id=args.batch_id,
-            expected_source_sha256=args.source_sha256,
+            expected_batch_id=cast(str, args.batch_id),
+            expected_source_sha256=cast(str, args.source_sha256),
             verification=verification,
         )
         handoff["candidate_submission"] = {
