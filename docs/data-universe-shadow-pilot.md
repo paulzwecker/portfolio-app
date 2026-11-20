@@ -99,6 +99,65 @@ drafts** path. Its reviewer decisions and canonical writes occur **only**
 against disposable test data. It does not show that production was migrated,
 that a live owner-company read succeeded or that acceptance was approved.
 
+## Verified proposal handoff (separate, default-off command)
+
+The read-only shadow report remains unchanged. For a real operator to hand
+verified facts into the **existing** human-review inbox, use
+`portfolio_api.data_universe_proposal_handoff`. This command rechecks the
+official issuer HTML and the latest scoped canonical context. It never
+accepts canonical observations or calls reviewer endpoints.
+
+Its normal mode is **dry-run**: it writes a private, owner-only
+`DataUniverseReviewHandoffV1` report, never an API POST. The report
+contains source SHA-256, comparison findings, typed eligible batches and
+deferred batch types. Conflicting or incomplete canonical context yields
+**no** eligible batches. If metric definitions are still missing, only
+`MetricDefinitionBatchV1` is eligible; KPI/guidance batches remain deferred
+until the reviewer accepts definitions and a fresh run reconfirms the data.
+
+```sh
+node scripts/uv.mjs run --locked --project apps/api \\
+  python -m portfolio_api.data_universe_proposal_handoff \\
+  --api-base-url https://your-approved-api-host.example \\
+  --company-id YOUR-CANONICAL-UBER-UUID \\
+  --source-pack apps/api/tests/fixtures/data_universe_uber_q3_2026.json \\
+  --output /tmp/uber-review-plan.json
+```
+
+Only after inspecting that **exact plan** and obtaining separate operator
+authorization for candidate writes, explicitly enable the dedicated agent
+submission capability in the operator secret store (never in Git or a Sheet):
+
+```sh
+export DATA_UNIVERSE_PROPOSAL_SUBMIT_ENABLED=true
+export OBSERVATION_PROPOSAL_AGENT_TOKEN="(private dedicated agent role token)"
+node scripts/uv.mjs run --locked --project apps/api \\
+  python -m portfolio_api.data_universe_proposal_handoff \\
+  --api-base-url https://your-approved-api-host.example \\
+  --company-id YOUR-CANONICAL-UBER-UUID \\
+  --source-pack apps/api/tests/fixtures/data_universe_uber_q3_2026.json \\
+  --submit \\
+  --batch-id EXACT_READY_EXTERNAL_BATCH_ID_FROM_PLAN \\
+  --source-sha256 EXACT_64_CHARACTER_ISSUER_SHA256_FROM_PLAN \\
+  --output /tmp/uber-candidate-receipt.json
+```
+
+An explicit submission posts **at most one** freshly recomputed batch to
+`POST /v1/company-observation-proposals`, using the separate agent token.
+It validates a matching source hash and external batch ID, forbids redirects
+and checks the server-returned company and proposal content. If the upstream
+submission outcome is unknown, rerun the **same batch ID** rather than
+minting a new one. The endpoint's replay/conflict and production-write gates
+remain authoritative. Only the reviewer can preview/accept/reject, and no
+acceptance credentials are used by this command. A source document changed
+since dry-run requires a new reviewed plan, not a silent promotion.
+
+Offline synthetic rehearsal uses `--context-file` and `--source-html`
+instead of `--api-base-url`, and **cannot submit**. No live company read,
+proposal submission or production write has been activated under this PR.
+Both the CLI opt-in and the server's separate proposal feature/write gates
+must be authorized before live candidate submission.
+
 ## Fail-closed comparison semantics
 
 - Company ID must match the selected canonical identity; ticker must match a
