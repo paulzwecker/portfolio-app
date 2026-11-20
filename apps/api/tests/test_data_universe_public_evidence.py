@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
+from urllib.request import Request
 
 import pytest
 
@@ -105,9 +106,9 @@ def test_public_source_fetch_uses_fixed_https_no_credentials_or_redirects() -> N
             return ISSUER_HTML
 
     class Opener:
-        def open(self, request: object, timeout: int) -> Response:
-            assert getattr(request, "full_url") == UBER_Q3_2026_URL
-            assert getattr(request, "get_method")() == "GET"
+        def open(self, request: Request, timeout: int) -> Response:
+            assert request.full_url == UBER_Q3_2026_URL
+            assert request.get_method() == "GET"
             assert timeout == 15
             return Response()
 
