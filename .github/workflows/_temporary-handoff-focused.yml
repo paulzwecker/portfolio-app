@@ -46,6 +46,7 @@ jobs:
           npm run setup
       - name: Apply pinned Ruff formatting and lint
         run: |
+          node scripts/uv.mjs run --locked --project apps/api ruff check --fix apps/api/src/portfolio_api/data_universe_proposal_handoff.py apps/api/tests/test_data_universe_shadow.py apps/api/tests/test_data_universe_issuer_pipeline.py
           node scripts/uv.mjs run --locked --project apps/api ruff format apps/api/src/portfolio_api/data_universe_proposal_handoff.py apps/api/tests/test_data_universe_shadow.py apps/api/tests/test_data_universe_issuer_pipeline.py
           node scripts/uv.mjs run --locked --project apps/api ruff check apps/api/src/portfolio_api/data_universe_proposal_handoff.py apps/api/tests/test_data_universe_shadow.py apps/api/tests/test_data_universe_issuer_pipeline.py
       - name: Focused native unit and isolated PostgreSQL tests
