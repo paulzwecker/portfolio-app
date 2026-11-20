@@ -11,12 +11,22 @@ accepted `CompanyAgentContextV1` response into a working evidence review:
   inferred forecasts or blended provider values.
 - "Above/within/below" guidance and "above/on/below" model-driver badges only
   when exact metric, fiscal period, scope, unit, scale and currency align.
-  Actuals must be exact EQ and VERIFIED/RESTATED. Unknown or qualified
-  comparisons are withheld rather than guessed. The comparison uses exact
-  fixed-decimal arithmetic, not rounded JavaScript Numbers. A model driver or
-  guidance observation accepted **after the actual became known** is displayed
-  but does not receive a predictive performance verdict. Withdrawn guidance
-  is not benchmarked.
+  Actuals must be exact EQ and VERIFIED/RESTATED; there must be exactly one
+  comparable current actual. Equivalent scope dimensions match regardless of
+  JSON key order. Ambiguous actuals are displayed without a verdict.
+  The comparison uses exact fixed-decimal arithmetic, not rounded JavaScript
+  Numbers. Actual issuer publication time (`reported_at`) must be known.
+  Model drivers must have been accepted strictly before publication; management
+  guidance must have been both issued (when known) **and accepted** strictly
+  before publication. Same-time/post-result expectations are displayed without
+  predictive verdicts. Withdrawn guidance is not benchmarked.
+- A compact "Prior BASE assumptions to review" panel highlights comparable
+  differences between a published actual and an accepted pre-result BASE driver.
+  It shows the exact actual, prior assumption, model revision and primary-source
+  link, with a control to filter the detailed metric. There is no materiality
+  threshold, investment execution advice or automatic revaluation. Unknown
+  timestamps, duplicate comparable actuals and ON-target results create no
+  review prompt.
 - Provider consensus revenue/EPS is shown separately; it is **not** treated as
   company-specific operating guidance or model drivers.
 - Partial history, unsupported coverage and missing definitions are explicit.
