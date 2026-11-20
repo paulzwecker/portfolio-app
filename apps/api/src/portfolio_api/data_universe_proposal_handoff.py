@@ -72,9 +72,7 @@ def prepare_handoff(
         "shadow_status": shadow["status"],
         "findings": shadow["findings"],
         "ready_batches": eligible,
-        "deferred_batch_types": [
-            b["contract_type"] for b in batches if b not in eligible
-        ],
+        "deferred_batch_types": [b["contract_type"] for b in batches if b not in eligible],
         "candidate_submission": {"status": "NOT_ATTEMPTED"},
         "canonical_writes_performed": False,
     }
@@ -92,9 +90,10 @@ def submit_one(
     url = urlsplit(base_url)
     if (
         not url.hostname
-        or (url.scheme != "https" and not (
-            url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1", "::1")
-        ))
+        or (
+            url.scheme != "https"
+            and not (url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1", "::1"))
+        )
         or url.username
         or url.password
         or url.query
@@ -202,9 +201,7 @@ def main() -> None:
     handoff = prepare_handoff(context, pack, verification)
 
     if args.submit:
-        selected = [
-            b for b in handoff["ready_batches"] if b["external_batch_id"] == args.batch_id
-        ]
+        selected = [b for b in handoff["ready_batches"] if b["external_batch_id"] == args.batch_id]
         if len(selected) != 1:
             raise ValueError("Batch is unavailable, deferred or blocked in fresh canonical context")
         result = submit_one(

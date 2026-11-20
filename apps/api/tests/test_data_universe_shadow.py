@@ -18,6 +18,8 @@ from portfolio_api.company_agent_context import CompanyAgentContextV1
 from portfolio_api.company_observation_proposals import BATCH_ADAPTER
 from portfolio_api.data_universe_proposal_handoff import (
     main as handoff_main,
+)
+from portfolio_api.data_universe_proposal_handoff import (
     prepare_handoff,
     submit_one,
 )
@@ -311,12 +313,16 @@ def test_candidate_post_is_opt_in_and_confirms_exact_reviewed_inputs() -> None:
     source = _verified_pack(pack)
     batch = prepare_handoff(context, pack, source)["ready_batches"][0]
     external_id = batch["external_batch_id"]
-    with patch.dict(os.environ, {}, clear=True), pytest.raises(
-        ValueError, match="disabled by default"
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        pytest.raises(ValueError, match="disabled by default"),
     ):
         submit_one(
-            "https://example.com", batch, expected_batch_id=external_id,
-            expected_source_sha256=source["source_sha256"], verification=source,
+            "https://example.com",
+            batch,
+            expected_batch_id=external_id,
+            expected_source_sha256=source["source_sha256"],
+            verification=source,
         )
     with patch.dict(
         os.environ,
@@ -327,18 +333,27 @@ def test_candidate_post_is_opt_in_and_confirms_exact_reviewed_inputs() -> None:
     ):
         with pytest.raises(ValueError, match="path/credentials"):
             submit_one(
-                "https://example.com/other", batch, expected_batch_id=external_id,
-                expected_source_sha256=source["source_sha256"], verification=source,
+                "https://example.com/other",
+                batch,
+                expected_batch_id=external_id,
+                expected_source_sha256=source["source_sha256"],
+                verification=source,
             )
         with pytest.raises(ValueError, match="Reviewed batch ID"):
             submit_one(
-                "https://example.com", batch, expected_batch_id="wrong",
-                expected_source_sha256=source["source_sha256"], verification=source,
+                "https://example.com",
+                batch,
+                expected_batch_id="wrong",
+                expected_source_sha256=source["source_sha256"],
+                verification=source,
             )
         with pytest.raises(ValueError, match="Reviewed batch ID"):
             submit_one(
-                "https://example.com", batch, expected_batch_id=external_id,
-                expected_source_sha256="0" * 64, verification=source,
+                "https://example.com",
+                batch,
+                expected_batch_id=external_id,
+                expected_source_sha256="0" * 64,
+                verification=source,
             )
 
 
@@ -363,6 +378,7 @@ def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
         },
         "replayed": False,
     }
+
     class Response:
         status = 201
 
@@ -392,9 +408,7 @@ def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
             assert request.full_url == "https://localhost.example/v1/company-observation-proposals"
             assert request.get_header("X-observation-proposal-token") is not None
             assert isinstance(request.data, bytes)
-            assert json.loads(request.data)["external_batch_id"] == batch[
-                "external_batch_id"
-            ]
+            assert json.loads(request.data)["external_batch_id"] == batch["external_batch_id"]
             return Response()
 
     opener = Opener()
@@ -412,7 +426,8 @@ def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
         ),
     ):
         result = submit_one(
-            "https://localhost.example", batch,
+            "https://localhost.example",
+            batch,
             expected_batch_id=batch["external_batch_id"],
             expected_source_sha256=verified["source_sha256"],
             verification=verified,
@@ -437,7 +452,8 @@ def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
         pytest.raises(ValueError, match="does not match"),
     ):
         submit_one(
-            "https://localhost.example", batch,
+            "https://localhost.example",
+            batch,
             expected_batch_id=batch["external_batch_id"],
             expected_source_sha256=verified["source_sha256"],
             verification=verified,
@@ -452,11 +468,16 @@ def test_handoff_cli_offline_preview_is_private_and_never_posts(tmp_path: Path) 
     source_html = Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026_excerpt.html"
     args = [
         "data_universe_proposal_handoff",
-        "--context-file", str(context_file),
-        "--source-html", str(source_html),
-        "--company-id", str(context.company.id),
-        "--source-pack", str(FIXTURE),
-        "--output", str(output),
+        "--context-file",
+        str(context_file),
+        "--source-html",
+        str(source_html),
+        "--company-id",
+        str(context.company.id),
+        "--source-pack",
+        str(FIXTURE),
+        "--output",
+        str(output),
     ]
     with (
         patch.object(sys, "argv", args),

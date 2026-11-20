@@ -18,8 +18,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.company_agent_context import CompanyAgentContextV1
-from portfolio_api.data_universe_public_evidence import verify_uber_q3_2026_pack
 from portfolio_api.data_universe_proposal_handoff import prepare_handoff
+from portfolio_api.data_universe_public_evidence import verify_uber_q3_2026_pack
 from portfolio_api.data_universe_shadow import EvidencePackV1, compare_source_pack
 from portfolio_api.domain.models import Company, Listing, Security
 from portfolio_api.main import create_app
@@ -159,7 +159,7 @@ def test_public_issuer_shadow_proposals_complete_a_reviewed_company_loop(
                 )
                 assert accepted.status_code == 200, accepted.text
                 assert accepted.json()["status"] == "ACCEPTED"
-    
+
         current = client.get(context_url, headers=read_headers)
         assert current.status_code == 200, current.text
         final_context = CompanyAgentContextV1.model_validate(current.json())
