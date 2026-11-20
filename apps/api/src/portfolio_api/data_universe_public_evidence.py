@@ -7,6 +7,7 @@ crawler. A failed/changed document is never treated as confirmed evidence.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -276,3 +277,174 @@ def verify_official_uber_release(pack: EvidencePackV1) -> dict[str, Any]:
     except (HTTPError, URLError, TimeoutError) as error:
         raise ValueError("Primary issuer GET unavailable; no evidence was verified") from error
     return verify_uber_q3_2026_pack(pack, raw)
+
+
+# Booking Holdings is an actual portfolio-company research pilot; the issuer
+# CIK is public, while the canonical company UUID must be resolved separately.
+BKNG_Q3_2026_CIK = "0001075531"
+BKNG_Q3_2026_URL = (
+    "https://www.sec.gov/Archives/edgar/data/1075531/"
+    "000107553126000045/bkng-20260930.htm"
+)
+
+
+def _booking_filing_values(table: list[list[str]], label: str) -> tuple[int, int] | None:
+    """Extract only the first two 3-month year columns, never 9-month totals."""
+    header = " ".join(" ".join(row) for row in table[:8]).lower()
+    if (
+        "three months ended" not in header
+        or "september 30" not in header
+        or "in millions" not in header
+    ):
+        return None
+    years = [cell for row in table[:8] for cell in row if cell in ("2026", "2025")]
+    if len(years) < 2:
+        return None
+    rows = [row for row in table if row and row[0].casefold() == label.casefold()]
+    if not rows:
+        return None
+    if years[:2] != ["2026", "2025"] or len(rows) != 1:
+        raise ValueError("Booking filing has conflicting or reversed quarterly columns")
+    values = []
+    for cell in rows[0][1:]:
+        clean = cell.strip()
+        if re.fullmatch(r"\$?\s*\d[\d,]*", clean):
+            values.append(int(clean.replace("$", "").replace(",", "").replace(" ", "")))
+        if len(values) == 2:
+            break
+    if len(values) != 2 or min(values) <= 0:
+        raise ValueError("Booking filing quarter values are missing or ambiguous")
+    return values[0], values[1]
+
+
+def extract_booking_q3_2026(html: bytes) -> dict[str, int]:
+    """Read a named issuer's 10-Q operating tables, never derive values from revenue."""
+    if not html or len(html) > MAX_ISSUER_BYTES:
+        raise ValueError("Booking SEC filing exceeds the bounded source byte budget")
+    parser = _ReleaseHTML()
+    parser.feed(html.decode("utf-8", errors="strict"))
+    visible = _normalize(" ".join(parser.visible))
+    if (
+        not re.search(r"Booking\s+Holdings\s+Inc\.?", visible, re.I)
+        or not re.search(r"FORM\s+10-Q", visible, re.I)
+        or not re.search(r"September\s+30,\s+2026", visible, re.I)
+    ):
+        raise ValueError("Booking issuer, filing type or economic period is unverified")
+    labels = {
+        "bkng.room_nights": "Room nights",
+        "bkng.flight_tickets": "Flight tickets",
+        "bkng.gross_bookings": "Total gross bookings",
+    }
+    matched: dict[str, int] = {}
+    for metric, label in labels.items():
+        candidates = [
+            value
+            for table in parser.tables
+            if (value := _booking_filing_values(table, label)) is not None
+        ]
+        if len(candidates) != 1:
+            raise ValueError(f"Booking {label} quarterly row missing or ambiguous")
+        matched[metric] = candidates[0][0]
+    return matched
+
+
+def verify_booking_q3_2026_pack(pack: EvidencePackV1, html: bytes) -> dict[str, Any]:
+    """Issuer-bound BKNG operating data; reported millions are rounded."""
+    if (
+        pack.issuer_ticker != "BKNG"
+        or pack.source_reference != BKNG_Q3_2026_URL
+        or pack.source_published_on != date(2026, 11, 3)
+        or pack.guidance_observations
+    ):
+        raise ValueError("Unsupported Booking issuer source, date or guidance")
+    expected = extract_booking_q3_2026(html)
+    definitions = {row.metric_key: row for row in pack.metric_definitions}
+    actuals = {row.metric_key: row for row in pack.kpi_observations}
+    if (
+        len(definitions) != 3
+        or len(actuals) != 3
+        or set(definitions) != set(expected)
+        or set(actuals) != set(expected)
+    ):
+        raise ValueError("Booking source pack requires exactly three reviewed operating metrics")
+    for key, source_value in expected.items():
+        definition = definitions[key]
+        item = actuals[key]
+        unit = "currency" if key == "bkng.gross_bookings" else key.split(".", 1)[1]
+        currency = "USD" if key == "bkng.gross_bookings" else None
+        if (
+            item.value != Decimal(source_value)
+            or item.period_type != "QUARTER"
+            or item.period_start != date(2026, 7, 1)
+            or item.period_end != date(2026, 9, 30)
+            or item.fiscal_year != 2026
+            or item.fiscal_quarter != 3
+            or item.unit != unit
+            or item.scale != Decimal("1000000")
+            or item.currency != currency
+            or item.value_qualifier != "APPROX"
+            or item.basis != "REPORTED"
+            or item.quality_status != "VERIFIED"
+            or item.source_type != "SEC_10Q"
+            or item.source_reference != BKNG_Q3_2026_URL
+            or item.reported_at is not None
+            or item.scope_json
+            or definition.source_reference != BKNG_Q3_2026_URL
+            or definition.category != "OPERATING"
+            or definition.value_kind != ("CURRENCY" if currency else "COUNT")
+            or definition.canonical_unit != unit
+            or definition.canonical_scale != Decimal("1000000")
+            or definition.currency_policy != ("REQUIRED" if currency else "NONE")
+            or definition.default_period_type != "QUARTER"
+            or definition.default_basis != "REPORTED"
+            or definition.aggregation_semantics != "PERIOD_FLOW"
+            or definition.scope_dimensions
+            or not definition.actuals_allowed
+            or definition.guidance_allowed
+            or definition.model_driver_allowed
+        ):
+            raise ValueError(f"Booking KPI evidence mismatch for {key}")
+    return {
+        "status": "SOURCE_MATCHED",
+        "profile": "BKNG_Q3_2026_SEC_10Q",
+        "source_reference": BKNG_Q3_2026_URL,
+        "source_sha256": hashlib.sha256(html).hexdigest(),
+        "checked_at": datetime.now(UTC).isoformat(),
+        "issuer_cik": BKNG_Q3_2026_CIK,
+        "facts_checked": [f"{key}:2026Q3" for key in sorted(expected)],
+    }
+
+
+def verify_source_html(pack: EvidencePackV1, html: bytes) -> dict[str, Any]:
+    """Single fixed issuer registry; never accept an arbitrary document URL."""
+    if pack.issuer_ticker == "UBER":
+        return verify_uber_q3_2026_pack(pack, html)
+    if pack.issuer_ticker == "BKNG":
+        return verify_booking_q3_2026_pack(pack, html)
+    raise ValueError("No approved primary-source profile for issuer")
+
+
+def verify_official_source(pack: EvidencePackV1) -> dict[str, Any]:
+    """Fetch only the public issuer URL in the approved profile."""
+    if pack.issuer_ticker == "UBER":
+        return verify_official_uber_release(pack)
+    if pack.issuer_ticker != "BKNG" or pack.source_reference != BKNG_Q3_2026_URL:
+        raise ValueError("No approved live issuer source for this evidence pack")
+    # SEC fair-access policy requires an operator-configured contact UA. Do not
+    # fabricate an email or use a broad application credential for this request.
+    agent = os.environ.get("SEC_USER_AGENT", "").strip()
+    if len(agent) < 12 or "@" not in agent:
+        raise ValueError("SEC_USER_AGENT contact must be configured for SEC public reads")
+    request = Request(
+        BKNG_Q3_2026_URL,
+        method="GET",
+        headers={"Accept": "text/html", "User-Agent": agent},
+    )
+    try:
+        with build_opener(_NoRedirect).open(request, timeout=15) as response:
+            if response.status != 200 or response.headers.get_content_type() != "text/html":
+                raise ValueError("SEC filing is unavailable as HTML")
+            data = response.read(MAX_ISSUER_BYTES + 1)
+    except (HTTPError, URLError, TimeoutError) as error:
+        raise ValueError("SEC source could not be verified; no proposal authorized") from error
+    return verify_booking_q3_2026_pack(pack, data)
