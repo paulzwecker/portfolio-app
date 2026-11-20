@@ -74,6 +74,7 @@ def _same_definition(existing: dict[str, Any], proposed: MetricDefinitionItem) -
         "default_basis",
         "actuals_allowed",
         "guidance_allowed",
+        "model_driver_allowed",
     )
     candidate = proposed.model_dump(mode="json")
     return (
@@ -93,6 +94,7 @@ def _same_actual(existing: dict[str, Any], proposed: KPIObservationItem) -> bool
         and Decimal(str(existing["scale"])) == proposed.scale
         and existing["currency"] == proposed.currency
         and existing["basis"] == proposed.basis
+        and existing["quality_status"] == proposed.quality_status
     )
 
 
@@ -156,6 +158,10 @@ def compare_source_pack(context: CompanyAgentContextV1, pack: EvidencePackV1) ->
     """
     if context.contract_type != "CompanyAgentContextV1" or context.contract_version != "1.0.0":
         raise ValueError("Unsupported company context contract")
+    if pack.source_published_on > pack.authored_at.date():
+        raise ValueError("Evidence source cannot be published after its pack was authored")
+    if pack.source_published_on > context.known_at.date():
+        raise ValueError("Evidence source postdates the canonical knowledge cutoff")
     if (
         context.portfolio_status.status != "UNSUPPORTED"
         or context.portfolio is not None
