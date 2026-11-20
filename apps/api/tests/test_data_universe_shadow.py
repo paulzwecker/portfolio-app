@@ -277,9 +277,7 @@ def test_verified_public_source_is_checked_before_any_private_context_read(
             "portfolio_api.data_universe_public_evidence.verify_official_uber_release",
             side_effect=ValueError("Source changed"),
         ) as verifier,
-        patch(
-            "portfolio_api.data_universe_shadow._fetch_scoped_context"
-        ) as private_read,
+        patch("portfolio_api.data_universe_shadow._fetch_scoped_context") as private_read,
         pytest.raises(ValueError, match="Source changed"),
     ):
         main()
