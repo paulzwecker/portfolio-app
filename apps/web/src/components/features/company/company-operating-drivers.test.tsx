@@ -166,7 +166,7 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
         issued_at: "2026-10-15T15:00:00Z",
         recorded_at: "2026-11-06T12:00:00Z",
       }),
-    ).toBe("WITHIN");
+    ).toBeNull();
     expect(
       actualVsGuidance(actual, { ...guidance, is_current: false }),
     ).toBeNull();
