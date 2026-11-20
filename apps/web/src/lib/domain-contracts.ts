@@ -1,5 +1,78 @@
 import type { components } from "@portfolio/contracts";
 
+export type CompanyAgentContext =
+  components["schemas"]["CompanyAgentContextV1"];
+
+export function isCompanyAgentContext(
+  value: unknown,
+): value is CompanyAgentContext {
+  return (
+    isRecord(value) &&
+    value.contract_type === "CompanyAgentContextV1" &&
+    value.contract_version === "1.0.0" &&
+    isCompany(value.company) &&
+    array(
+      value.metric_definitions,
+      (row) =>
+        isRecord(row) &&
+        string(row.metric_id) &&
+        string(row.display_name) &&
+        signedDecimal(row.canonical_scale),
+    ) &&
+    array(
+      value.metric_observations,
+      (row) =>
+        isRecord(row) &&
+        string(row.metric_id) &&
+        signedDecimal(row.value) &&
+        string(row.scale) &&
+        string(row.period_end) &&
+        string(row.period_start) &&
+        typeof row.is_current === "boolean",
+    ) &&
+    array(
+      value.guidance_observations,
+      (row) =>
+        isRecord(row) &&
+        string(row.metric_id) &&
+        string(row.period_start) &&
+        string(row.period_end) &&
+        typeof row.is_current === "boolean",
+    ) &&
+    array(
+      value.native_models,
+      (model) =>
+        isRecord(model) &&
+        string(model.model_name) &&
+        isRecord(model.accepted_revision) &&
+        Array.isArray(model.driver_projections) &&
+        model.driver_projections.every(
+          (row: unknown) =>
+            isRecord(row) &&
+            string(row.metric_id) &&
+            signedDecimal(row.value) &&
+            string(row.period_end) &&
+            string(row.period_start),
+        ),
+    ) &&
+    array(
+      value.consensus_periods,
+      (row) => isRecord(row) && string(row.metric),
+    ) &&
+    isRecord(value.metrics_status) &&
+    string(value.metrics_status.status) &&
+    isRecord(value.guidance_status) &&
+    string(value.guidance_status.status) &&
+    isRecord(value.native_models_status) &&
+    string(value.native_models_status.status) &&
+    isRecord(value.consensus_status) &&
+    string(value.consensus_status.status) &&
+    string(value.consensus_continuity_status) &&
+    (value.consensus_provider_id === null ||
+      string(value.consensus_provider_id))
+  );
+}
+
 export type CompanyFinancialStatements =
   components["schemas"]["CompanyFinancialStatementsRead"];
 export type DcfSensitivity = components["schemas"]["DcfSensitivityRead"];
@@ -272,6 +345,13 @@ export type FinancialModelEvidenceRead =
   components["schemas"]["FinancialModelEvidenceRead"];
 export type FinancialModelRevisionProposal =
   components["schemas"]["FinancialModelRevisionProposalV1-Output"];
+export type ObservationProposalRead =
+  components["schemas"]["ObservationProposalRead"];
+export type ObservationProposalPreviewRead =
+  components["schemas"]["ObservationProposalPreviewRead"];
+export type ObservationProposalDecisionRead =
+  components["schemas"]["ObservationProposalDecisionRead"];
+
 export type ModelRevisionProposalRead =
   components["schemas"]["ModelRevisionProposalRead"];
 export type ModelRevisionProposalPreviewRead =
@@ -3787,6 +3867,101 @@ export function isModelRevisionProposalRead(
   );
 }
 
+export function isObservationProposalRead(
+  value: unknown,
+): value is ObservationProposalRead {
+  if (!isRecord(value) || !isRecord(value.proposal)) return false;
+  const proposal = value.proposal;
+  return (
+    uuid(value.id) &&
+    string(value.producer_id) &&
+    /^[0-9a-f]{64}$/.test(String(value.content_fingerprint)) &&
+    [
+      "PENDING",
+      "READY",
+      "CONFLICT",
+      "INVALID",
+      "ACCEPTED",
+      "REJECTED",
+    ].includes(value.status as string) &&
+    nullableString(value.issue) &&
+    nullableString(value.preview_fingerprint) &&
+    timestamp(value.submitted_at) &&
+    nullableString(value.reviewer_id) &&
+    nullableString(value.decision_note) &&
+    (value.reviewed_at === null || timestamp(value.reviewed_at)) &&
+    array(value.accepted_record_ids, uuid) &&
+    [
+      "MetricDefinitionBatchV1",
+      "KPIObservationBatchV1",
+      "GuidanceObservationBatchV1",
+    ].includes(proposal.contract_type as string) &&
+    proposal.contract_version === "1.0.0" &&
+    uuid(proposal.company_id) &&
+    string(proposal.external_batch_id) &&
+    timestamp(proposal.authored_at) &&
+    string(proposal.rationale) &&
+    array(
+      proposal.items,
+      (item) =>
+        isRecord(item) &&
+        string(item.metric_key) &&
+        typeof item.source_reference === "string" &&
+        item.source_reference.startsWith("https://"),
+    )
+  );
+}
+
+export function isObservationProposalList(
+  value: unknown,
+): value is ObservationProposalRead[] {
+  return array(value, isObservationProposalRead);
+}
+
+export function isObservationProposalPreviewRead(
+  value: unknown,
+): value is ObservationProposalPreviewRead {
+  return (
+    isRecord(value) &&
+    uuid(value.proposal_id) &&
+    ["READY", "CONFLICT", "INVALID"].includes(value.status as string) &&
+    (value.preview_fingerprint === null ||
+      /^[0-9a-f]{64}$/.test(String(value.preview_fingerprint))) &&
+    array(
+      value.changes,
+      (row) =>
+        isRecord(row) &&
+        Number.isInteger(row.row_index) &&
+        string(row.metric_key) &&
+        ["CREATE", "SUPERSEDE"].includes(row.operation as string) &&
+        nullableUuid(row.previous_id),
+    ) &&
+    array(
+      value.issues,
+      (row) =>
+        isRecord(row) &&
+        Number.isInteger(row.row_index) &&
+        ["CONFLICT", "INVALID"].includes(row.code as string) &&
+        string(row.detail),
+    )
+  );
+}
+
+export function isObservationProposalDecisionRead(
+  value: unknown,
+): value is ObservationProposalDecisionRead {
+  return (
+    isRecord(value) &&
+    ["ACCEPTED", "REJECTED", "PREVIEW_CHANGED"].includes(
+      value.status as string,
+    ) &&
+    isObservationProposalRead(value.proposal) &&
+    (value.preview === undefined ||
+      value.preview === null ||
+      isObservationProposalPreviewRead(value.preview))
+  );
+}
+
 export function isModelRevisionProposalList(
   value: unknown,
 ): value is ModelRevisionProposalRead[] {
@@ -3901,7 +4076,30 @@ export function isFinancialModelContract(
   const listing = model.valuation_listing;
   if (!isListingIdentity(listing)) return false;
   if (
-    !["1.0.0", "1.1.0", "1.2.0"].includes(v.contract_version as string) ||
+    !["1.0.0", "1.1.0", "1.2.0", "1.3.0"].includes(
+      v.contract_version as string,
+    ) ||
+    (v.driver_projections !== undefined &&
+      !array(
+        v.driver_projections,
+        (row) =>
+          isRecord(row) &&
+          string(row.metric_key) &&
+          string(row.external_driver_id) &&
+          ["BEAR", "BASE", "BULL"].includes(row.scenario as string) &&
+          Number.isInteger(row.forecast_year) &&
+          Number(row.forecast_year) >= 1 &&
+          Number(row.forecast_year) <= 10 &&
+          signedDecimal(row.value) &&
+          signedDecimal(row.scale) &&
+          string(row.unit) &&
+          string(row.rationale) &&
+          string(row.period_start) &&
+          string(row.period_end),
+      )) ||
+    (v.contract_version !== "1.3.0" &&
+      Array.isArray(v.driver_projections) &&
+      v.driver_projections.length > 0) ||
     !timestamp(v.exported_at) ||
     !uuid(model.model_id) ||
     !uuid(model.company_id) ||

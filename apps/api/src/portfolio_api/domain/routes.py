@@ -15,7 +15,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from portfolio_api import candidate_pipeline as candidate_research
-from portfolio_api import model_proposal_auth
+from portfolio_api import company_agent_context as agent_context_ops
+from portfolio_api import company_observation_proposals as observation_proposal_ops
+from portfolio_api import company_observations as company_observation_ops
+from portfolio_api import model_proposal_auth, observation_proposal_auth, observation_sheet_sync
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api import portfolio_ledger as ledger
 from portfolio_api import portfolio_ledger_contracts as ledger_contracts
@@ -248,6 +251,46 @@ def model_proposal_reader_identity(
     token: str = Header(default="", alias="X-Model-Proposal-Token"),
 ) -> tuple[model_proposal_auth.ProposalRole, str]:
     return model_proposal_auth.require_proposal_reader(request, token)
+
+
+def observation_proposal_agent_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Observation-Proposal-Token"),
+) -> str:
+    return observation_proposal_auth.require_agent(request, token)
+
+
+def observation_proposal_reviewer_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Observation-Proposal-Token"),
+) -> str:
+    return observation_proposal_auth.require_reviewer(request, token)
+
+
+def observation_proposal_reader_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Observation-Proposal-Token"),
+) -> tuple[observation_proposal_auth.Role, str]:
+    return observation_proposal_auth.require_reader(request, token)
+
+
+def observation_proposal_acceptance_identity(
+    request: Request,
+    token: str = Header(default="", alias="X-Observation-Proposal-Token"),
+) -> str:
+    return observation_proposal_auth.require_acceptance(request, token)
+
+
+@router.post(
+    "/google-sheets-observation-sync/check",
+    response_model=observation_sheet_sync.ObservationSheetCheck,
+)
+def post_google_sheets_observation_sync_check(
+    request: Request,
+    db: Db,
+) -> observation_sheet_sync.ObservationSheetCheck:
+    settings = cast(Settings, request.app.state.settings)
+    return observation_sheet_sync.check_observation_inbox(db, settings)
 
 
 @router.get(
@@ -1210,6 +1253,32 @@ def get_company(company_id: UUID, db: Db) -> s.CompanyDetail:
     return q.detail(db, company_id)
 
 
+@router.get(
+    "/companies/{company_id}/agent-context",
+    response_model=agent_context_ops.CompanyAgentContextV1,
+)
+def get_company_agent_context(
+    company_id: UUID,
+    request: Request,
+    db: LedgerDb,
+    portfolio_id: UUID | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+) -> agent_context_ops.CompanyAgentContextV1:
+    _validate_market_cutoffs(as_of, known_at)
+    data_universe_only = bool(getattr(request.state, "data_universe_scoped", False))
+    if data_universe_only and portfolio_id is not None:
+        raise HTTPException(403, "Portfolio access is outside the Data Universe read scope")
+    return agent_context_ops.company_agent_context(
+        db,
+        company_id,
+        portfolio_id,
+        as_of,
+        known_at,
+        data_universe_only=data_universe_only,
+    )
+
+
 @router.get("/companies/{company_id}/research", response_model=s.CompanyResearchRead)
 def get_company_research(
     company_id: UUID,
@@ -1304,6 +1373,61 @@ def get_company_market_data(
 ) -> list[s.ListingMarketData]:
     _validate_market_cutoffs(as_of, known_at)
     return q.company_market_data(db, company_id, history_limit, as_of, known_at)
+
+
+@router.get(
+    "/company-metric-definitions",
+    response_model=list[company_observation_ops.CompanyMetricDefinitionRead],
+)
+def get_company_metric_definitions(
+    db: Db,
+    company_id: UUID | None = None,
+    include_deprecated: bool = False,
+) -> list[company_observation_ops.CompanyMetricDefinitionRead]:
+    return company_observation_ops.metric_definitions(db, company_id, include_deprecated)
+
+
+@router.get(
+    "/companies/{company_id}/metric-observations",
+    response_model=list[company_observation_ops.CompanyMetricObservationRead],
+)
+def get_company_metric_observations(
+    company_id: UUID,
+    db: Db,
+    metric_id: str | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
+) -> list[company_observation_ops.CompanyMetricObservationRead]:
+    _validate_market_cutoffs(as_of, known_at)
+    return company_observation_ops.company_metric_history(
+        db, company_id, metric_id, as_of, known_at, limit
+    )
+
+
+@router.get(
+    "/companies/{company_id}/guidance-observations",
+    response_model=list[company_observation_ops.CompanyGuidanceObservationRead],
+)
+def get_company_guidance_observations(
+    company_id: UUID,
+    db: Db,
+    metric_id: str | None = None,
+    as_of: date | None = None,
+    known_at: datetime | None = None,
+    current_only: bool = False,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
+) -> list[company_observation_ops.CompanyGuidanceObservationRead]:
+    _validate_market_cutoffs(as_of, known_at)
+    return company_observation_ops.company_guidance_history(
+        db,
+        company_id,
+        metric_id,
+        as_of,
+        known_at,
+        current_only,
+        limit,
+    )
 
 
 @router.get(
@@ -1703,6 +1827,99 @@ def post_additional_model_contract_import(
 
 
 @router.post(
+    "/company-observation-proposals",
+    response_model=observation_proposal_ops.ObservationProposalSubmissionRead,
+    status_code=201,
+)
+def post_company_observation_proposal(
+    value: observation_proposal_ops.ObservationBatchV1,
+    producer_id: Annotated[str, Depends(observation_proposal_agent_identity)],
+    db: Db,
+    response: Response,
+) -> observation_proposal_ops.ObservationProposalSubmissionRead:
+    result = observation_proposal_ops.submit(db, value, producer_id=producer_id)
+    if result.replayed:
+        response.status_code = 200
+    return result
+
+
+@router.get(
+    "/company-observation-proposals",
+    response_model=list[observation_proposal_ops.ObservationProposalRead],
+)
+def get_company_observation_proposals(
+    reviewer_id: Annotated[str, Depends(observation_proposal_reviewer_identity)],
+    db: Db,
+    company_id: UUID | None = None,
+    status: observation_proposal_ops.BatchStatus | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> list[observation_proposal_ops.ObservationProposalRead]:
+    del reviewer_id
+    return observation_proposal_ops.list_proposals(
+        db, company_id=company_id, status=status, limit=limit
+    )
+
+
+@router.get(
+    "/company-observation-proposals/{proposal_id}",
+    response_model=observation_proposal_ops.ObservationProposalRead,
+)
+def get_company_observation_proposal(
+    proposal_id: UUID,
+    reader: Annotated[
+        tuple[observation_proposal_auth.Role, str], Depends(observation_proposal_reader_identity)
+    ],
+    db: Db,
+) -> observation_proposal_ops.ObservationProposalRead:
+    candidate = observation_proposal_ops.get(db, proposal_id)
+    role, actor = reader
+    if role == "AGENT" and candidate.producer_id != actor:
+        raise HTTPException(404, "Company observation proposal not found.")
+    return candidate
+
+
+@router.post(
+    "/company-observation-proposals/{proposal_id}/preview",
+    response_model=observation_proposal_ops.ObservationProposalPreviewRead,
+)
+def post_company_observation_proposal_preview(
+    proposal_id: UUID,
+    reviewer_id: Annotated[str, Depends(observation_proposal_reviewer_identity)],
+    db: Db,
+) -> observation_proposal_ops.ObservationProposalPreviewRead:
+    del reviewer_id
+    return observation_proposal_ops.preview(db, proposal_id)
+
+
+@router.post(
+    "/company-observation-proposals/{proposal_id}/accept",
+    response_model=observation_proposal_ops.ObservationProposalDecisionRead,
+)
+def post_company_observation_proposal_accept(
+    proposal_id: UUID,
+    value: observation_proposal_ops.ObservationProposalDecisionRequest,
+    reviewer_id: Annotated[str, Depends(observation_proposal_acceptance_identity)],
+    db: Db,
+) -> observation_proposal_ops.ObservationProposalDecisionRead:
+    return observation_proposal_ops.accept(db, proposal_id, value, reviewer_id=reviewer_id)
+
+
+@router.post(
+    "/company-observation-proposals/{proposal_id}/reject",
+    response_model=observation_proposal_ops.ObservationProposalDecisionRead,
+)
+def post_company_observation_proposal_reject(
+    proposal_id: UUID,
+    value: observation_proposal_ops.ObservationProposalRejectRequest,
+    reviewer_id: Annotated[str, Depends(observation_proposal_reviewer_identity)],
+    db: Db,
+) -> observation_proposal_ops.ObservationProposalDecisionRead:
+    return observation_proposal_ops.reject(
+        db, proposal_id, value.decision_note, reviewer_id=reviewer_id
+    )
+
+
+@router.post(
     "/model-revision-proposals",
     response_model=s.ModelRevisionProposalSubmissionRead,
     status_code=201,
@@ -1909,6 +2126,18 @@ def post_financial_model_contract_import(
 )
 def get_financial_model_history(model_id: UUID, db: Db) -> list[s.FinancialModelRevisionSummary]:
     return q.financial_model_revision_history(db, model_id)
+
+
+@router.get(
+    "/financial-models/{model_id}/revisions/{revision_id}/driver-projections",
+    response_model=list[company_observation_ops.FinancialModelDriverProjectionRead],
+)
+def get_financial_model_driver_projections(
+    model_id: UUID,
+    revision_id: UUID,
+    db: Db,
+) -> list[company_observation_ops.FinancialModelDriverProjectionRead]:
+    return company_observation_ops.model_driver_projections(db, model_id, revision_id)
 
 
 @router.get(

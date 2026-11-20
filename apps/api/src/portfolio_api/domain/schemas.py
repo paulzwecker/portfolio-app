@@ -4404,13 +4404,51 @@ class FinancialModelContractCalculation(Contract):
         return self
 
 
+ModelDriverDecimal = Annotated[
+    FixedDecimal, BeforeValidator(exact), Field(max_digits=38, decimal_places=12)
+]
+
+
+class FinancialModelDriverProjectionInput(Contract):
+    """Explicit company operating path authored with a portable model revision."""
+
+    external_driver_id: Annotated[
+        str, Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9._:-]+$")
+    ]
+    metric_key: Annotated[
+        str, Field(min_length=1, max_length=160, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    ]
+    scenario: Literal["BEAR", "BASE", "BULL"]
+    forecast_year: int = Field(ge=1, le=10)
+    period_type: Literal["DATE", "MONTH", "QUARTER", "FY", "TTM", "EVENT"]
+    period_start: date
+    period_end: date
+    value: ModelDriverDecimal
+    value_qualifier: Literal["EQ", "APPROX", "GT", "GTE", "LT", "LTE"] = "EQ"
+    unit: Annotated[str, Field(min_length=1, max_length=64)]
+    scale: Annotated[ModelDriverDecimal, Field(gt=0)]
+    currency: Currency | None = None
+    basis: Literal["MODEL_DRIVER"] = "MODEL_DRIVER"
+    scope_json: dict[str, str] = Field(default_factory=dict, max_length=10)
+    rationale: Annotated[str, Field(min_length=10, max_length=2000)]
+
+    @model_validator(mode="after")
+    def validate_period(self) -> Self:
+        if self.period_start > self.period_end:
+            raise ValueError("Driver projection period start cannot exceed period end")
+        return self
+
+
 class FinancialModelContractV1(Contract):
-    contract_version: Literal["1.0.0", "1.1.0", "1.2.0"]
+    contract_version: Literal["1.0.0", "1.1.0", "1.2.0", "1.3.0"]
     exported_at: datetime
     model: FinancialModelContractIdentity
     base_revision: FinancialModelContractBaseRevision
     candidate_revision: FinancialModelContractCandidateRevision
     base_calculation: FinancialModelContractCalculation
+    driver_projections: list[FinancialModelDriverProjectionInput] = Field(
+        default_factory=list, max_length=60
+    )
     proposal: FinancialModelProposalProvenance | None = None
     supporting_evidence: list[FinancialModelEvidenceReference] = Field(
         default_factory=list, max_length=30
@@ -4425,10 +4463,29 @@ class FinancialModelContractV1(Contract):
 
     @model_validator(mode="after")
     def contract_revision_links_match(self) -> Self:
-        if self.contract_version != "1.2.0" and (
+        if self.contract_version not in {"1.2.0", "1.3.0"} and (
             self.proposal is not None or self.supporting_evidence
         ):
-            raise ValueError("Model evidence requires portable contract version 1.2.0")
+            raise ValueError("Model evidence requires portable contract version 1.2.0 or 1.3.0")
+        if self.driver_projections and self.contract_version != "1.3.0":
+            raise ValueError("Explicit model-driver projections require contract version 1.3.0")
+        driver_ids = [item.external_driver_id for item in self.driver_projections]
+        if len(set(driver_ids)) != len(driver_ids):
+            raise ValueError("Model driver external IDs must be unique within the revision")
+        identities = [
+            (
+                item.metric_key,
+                item.scenario,
+                item.forecast_year,
+                item.period_type,
+                item.period_start,
+                item.period_end,
+                tuple(sorted(item.scope_json.items())),
+            )
+            for item in self.driver_projections
+        ]
+        if len(set(identities)) != len(identities):
+            raise ValueError("Duplicate operating-driver scenario/period/scope")
         _validate_unique_model_evidence(self.supporting_evidence)
         if self.base_calculation.revision_id != self.base_revision.revision_id:
             raise ValueError("Base calculation must match the exported base revision")

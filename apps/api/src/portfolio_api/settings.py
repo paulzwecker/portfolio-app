@@ -3,6 +3,7 @@
 import re
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -39,6 +40,15 @@ class Settings(BaseSettings):
     model_proposal_agent_id: str | None = None
     model_proposal_reviewer_token: SecretStr | None = None
     model_proposal_reviewer_id: str | None = None
+    observation_proposals_enabled: bool = False
+    observation_acceptance_enabled: bool = False
+    observation_proposal_agent_token: SecretStr | None = None
+    observation_proposal_agent_id: str | None = None
+    observation_proposal_reviewer_token: SecretStr | None = None
+    observation_proposal_reviewer_id: str | None = None
+    data_universe_read_enabled: bool = False
+    data_universe_read_token: SecretStr | None = None
+    data_universe_read_company_ids: str | None = None
     cloud_ingestion_enabled: bool = False
     sec_user_agent: str | None = None
     fmp_api_key: SecretStr | None = None
@@ -47,6 +57,8 @@ class Settings(BaseSettings):
     google_drive_market_data_workbook_file_id: str | None = None
     google_sheets_service_account_file: Path | None = None
     google_sheets_sync_tab: str = "Application Model Sync Inbox"
+    observation_sheets_inbox_enabled: bool = False
+    google_sheets_observation_tab: str = "Application Observation Inbox"
     google_sheets_poll_seconds: int = 0
     google_sheets_request_timeout_seconds: int = 20
     recurring_operations_enabled: bool = False
@@ -73,7 +85,7 @@ class Settings(BaseSettings):
             raise ValueError("Google Drive workbook settings must contain a file ID, not a URL")
         return value
 
-    @field_validator("google_sheets_sync_tab")
+    @field_validator("google_sheets_sync_tab", "google_sheets_observation_tab")
     @classmethod
     def validate_google_sheets_sync_tab(cls, value: str) -> str:
         if not value.strip() or "!" in value or len(value) > 100:
@@ -87,7 +99,12 @@ class Settings(BaseSettings):
             raise ValueError("GOOGLE_SHEETS_POLL_SECONDS must be 0 or at least 60")
         return value
 
-    @field_validator("model_proposal_agent_id", "model_proposal_reviewer_id")
+    @field_validator(
+        "model_proposal_agent_id",
+        "model_proposal_reviewer_id",
+        "observation_proposal_agent_id",
+        "observation_proposal_reviewer_id",
+    )
     @classmethod
     def validate_model_proposal_identity(cls, value: str | None) -> str | None:
         if value is None:
@@ -148,6 +165,68 @@ class Settings(BaseSettings):
             and self.model_proposal_agent_id == self.model_proposal_reviewer_id
         ):
             raise ValueError("Agent and reviewer proposal identities must be distinct")
+        if self.observation_acceptance_enabled and not self.observation_proposals_enabled:
+            raise ValueError("Observation acceptance cannot be enabled without proposals")
+        if self.observation_sheets_inbox_enabled and not self.observation_proposals_enabled:
+            raise ValueError("Observation Sheets inbox requires observation proposals enabled")
+        observation_roles = (
+            (self.observation_proposal_agent_token, self.observation_proposal_agent_id, "AGENT"),
+            (
+                self.observation_proposal_reviewer_token,
+                self.observation_proposal_reviewer_id,
+                "REVIEWER",
+            ),
+        )
+        for token, identity, role in observation_roles:
+            if (token is None) != (identity is None):
+                raise ValueError(f"OBSERVATION_PROPOSAL_{role}_TOKEN and _ID must be paired")
+            if token is not None and len(token.get_secret_value()) < 32:
+                raise ValueError(f"OBSERVATION_PROPOSAL_{role}_TOKEN must have 32 characters")
+        if (
+            self.observation_proposal_agent_token is not None
+            and self.observation_proposal_reviewer_token is not None
+            and self.observation_proposal_agent_token.get_secret_value()
+            == self.observation_proposal_reviewer_token.get_secret_value()
+        ):
+            raise ValueError("Observation agent/reviewer credentials must be distinct")
+        if (
+            self.observation_proposal_agent_id is not None
+            and self.observation_proposal_agent_id == self.observation_proposal_reviewer_id
+        ):
+            raise ValueError("Observation agent/reviewer identities must be distinct")
+        # Narrow, opt-in read token for DATA_UNIVERSE_STEWARD. Reject absent,
+        # malformed or ambiguous company scope at configuration time.
+        token = self.data_universe_read_token
+        ids = self.data_universe_read_company_ids
+        if self.data_universe_read_enabled and (token is None or not ids):
+            raise ValueError("DATA_UNIVERSE_READ requires a token and a company allowlist")
+        if token is not None:
+            secret = token.get_secret_value()
+            if len(secret) < 32:
+                raise ValueError("DATA_UNIVERSE_READ_TOKEN must have at least 32 characters")
+            for other in (
+                self.api_access_token,
+                self.model_proposal_agent_token,
+                self.model_proposal_reviewer_token,
+                self.observation_proposal_agent_token,
+                self.observation_proposal_reviewer_token,
+            ):
+                if other is not None and secret == other.get_secret_value():
+                    raise ValueError("Data Universe read token must be a dedicated credential")
+        if ids is not None:
+            company_ids = [part.strip() for part in ids.split(",")]
+            if not 1 <= len(company_ids) <= 25 or any(not part for part in company_ids):
+                raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS must contain 1–25 UUIDs")
+            try:
+                parsed = [UUID(part) for part in company_ids]
+            except ValueError as error:
+                raise ValueError(
+                    "DATA_UNIVERSE_READ_COMPANY_IDS contains an invalid UUID"
+                ) from error
+            if len(set(parsed)) != len(parsed) or any(
+                str(value) != supplied for value, supplied in zip(parsed, company_ids, strict=True)
+            ):
+                raise ValueError("DATA_UNIVERSE_READ_COMPANY_IDS must be unique canonical UUIDs")
         if self.app_env in {"preview", "production"}:
             if self.database_url is None:
                 raise ValueError("DATABASE_URL is required for remote deployments")

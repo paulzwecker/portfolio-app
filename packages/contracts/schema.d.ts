@@ -254,6 +254,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/agent-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Agent Context */
+        get: operations["get_company_agent_context_v1_companies__company_id__agent_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/candidate-pipeline": {
         parameters: {
             query?: never;
@@ -544,6 +561,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/companies/{company_id}/guidance-observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Guidance Observations */
+        get: operations["get_company_guidance_observations_v1_companies__company_id__guidance_observations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/companies/{company_id}/job-requests": {
         parameters: {
             query?: never;
@@ -587,6 +621,23 @@ export interface paths {
         };
         /** Get Company Market Data */
         get: operations["get_company_market_data_v1_companies__company_id__market_data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/companies/{company_id}/metric-observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Metric Observations */
+        get: operations["get_company_metric_observations_v1_companies__company_id__metric_observations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -868,6 +919,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/company-metric-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Metric Definitions */
+        get: operations["get_company_metric_definitions_v1_company_metric_definitions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company-observation-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Observation Proposals */
+        get: operations["get_company_observation_proposals_v1_company_observation_proposals_get"];
+        put?: never;
+        /** Post Company Observation Proposal */
+        post: operations["post_company_observation_proposal_v1_company_observation_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company-observation-proposals/{proposal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Company Observation Proposal */
+        get: operations["get_company_observation_proposal_v1_company_observation_proposals__proposal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company-observation-proposals/{proposal_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Company Observation Proposal Accept */
+        post: operations["post_company_observation_proposal_accept_v1_company_observation_proposals__proposal_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company-observation-proposals/{proposal_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Company Observation Proposal Preview */
+        post: operations["post_company_observation_proposal_preview_v1_company_observation_proposals__proposal_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company-observation-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Company Observation Proposal Reject */
+        post: operations["post_company_observation_proposal_reject_v1_company_observation_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/execution-pace-runs": {
         parameters: {
             query?: never;
@@ -1040,6 +1194,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/financial-models/{model_id}/revisions/{revision_id}/driver-projections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Financial Model Driver Projections */
+        get: operations["get_financial_model_driver_projections_v1_financial_models__model_id__revisions__revision_id__driver_projections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/financial-models/{model_id}/sensitivity": {
         parameters: {
             query?: never;
@@ -1103,6 +1274,23 @@ export interface paths {
         put?: never;
         /** Post Google Sheets Agent Work Publish */
         post: operations["post_google_sheets_agent_work_publish_v1_google_sheets_agent_operations__agent_role__work_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/google-sheets-observation-sync/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Google Sheets Observation Sync Check */
+        post: operations["post_google_sheets_observation_sync_check_v1_google_sheets_observation_sync_check_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2742,6 +2930,66 @@ export interface components {
              */
             valuation_listing_id: string;
         };
+        /** AgentContextCoverage */
+        AgentContextCoverage: {
+            /** Latest Recorded At */
+            latest_recorded_at?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "AVAILABLE" | "PARTIAL" | "NO_DATA" | "AMBIGUOUS" | "UNSUPPORTED";
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** AgentContextNativeModel */
+        AgentContextNativeModel: {
+            accepted_revision: components["schemas"]["FinancialModelRevisionSummary"];
+            /** Driver Projections */
+            driver_projections: components["schemas"]["FinancialModelDriverProjectionRead"][];
+            /** Drivers Truncated */
+            drivers_truncated: boolean;
+            /** Model Currency */
+            model_currency: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /** Model Name */
+            model_name: string;
+            /** Model Type */
+            model_type: string;
+            /** Revision History Href */
+            revision_history_href: string;
+            /**
+             * Valuation Listing Id
+             * Format: uuid
+             */
+            valuation_listing_id: string;
+        };
+        /**
+         * AgentContextSecIdentity
+         * @description Point-in-time reviewed SEC mapping; public issuer identity only.
+         */
+        AgentContextSecIdentity: {
+            /** Cik */
+            cik?: string | null;
+            /** Evidence Source */
+            evidence_source?: string | null;
+            /** Recorded At */
+            recorded_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "MAPPED" | "UNMAPPED" | "AMBIGUOUS" | "INVALID";
+        };
         /** AgentOwnerCashFlowProposalMethod */
         "AgentOwnerCashFlowProposalMethod-Input": {
             inputs: components["schemas"]["OwnerCashFlowInput-Input"];
@@ -3164,6 +3412,82 @@ export interface components {
              */
             valuation_status: "VALUED" | "FX_UNAVAILABLE" | "BALANCE_UNAVAILABLE";
         };
+        /** CompanyAgentContextV1 */
+        CompanyAgentContextV1: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            company: components["schemas"]["CompanyRead"];
+            /** Consensus Continuity Status */
+            consensus_continuity_status: string;
+            /** Consensus Periods */
+            consensus_periods: components["schemas"]["ConsensusEstimatePeriodRead"][];
+            /** Consensus Provider Id */
+            consensus_provider_id: string | null;
+            consensus_status: components["schemas"]["AgentContextCoverage"];
+            /**
+             * Contract Type
+             * @default CompanyAgentContextV1
+             * @constant
+             */
+            contract_type: "CompanyAgentContextV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** Current Research */
+            current_research: components["schemas"]["ResearchRevisionRead"][];
+            /** Current Theses */
+            current_theses: components["schemas"]["InvestmentThesisRevisionRead"][];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Guidance Observations */
+            guidance_observations: components["schemas"]["CompanyGuidanceObservationRead"][];
+            guidance_status: components["schemas"]["AgentContextCoverage"];
+            identity: components["schemas"]["AgentContextCoverage"];
+            imported_model_outputs: components["schemas"]["CompanyModelOutputsCurrentRead"] | null;
+            imported_outputs_status: components["schemas"]["AgentContextCoverage"];
+            /**
+             * Known At
+             * Format: date-time
+             */
+            known_at: string;
+            /** Listings */
+            listings: components["schemas"]["ListingRead"][];
+            /** Metric Definitions */
+            metric_definitions: components["schemas"]["CompanyMetricDefinitionRead"][];
+            /** Metric Observations */
+            metric_observations: components["schemas"]["CompanyMetricObservationRead"][];
+            metrics_status: components["schemas"]["AgentContextCoverage"];
+            /** Native Models */
+            native_models: components["schemas"]["AgentContextNativeModel"][];
+            native_models_status: components["schemas"]["AgentContextCoverage"];
+            portfolio: components["schemas"]["CompanyPortfolioContext"] | null;
+            portfolio_holdings_authority: components["schemas"]["HoldingsAuthorityRead"] | null;
+            /** Portfolio Id */
+            portfolio_id: string | null;
+            /** Portfolio Snapshot Id */
+            portfolio_snapshot_id: string | null;
+            portfolio_status: components["schemas"]["AgentContextCoverage"];
+            /** Portfolio Target Revision Id */
+            portfolio_target_revision_id: string | null;
+            research_status: components["schemas"]["AgentContextCoverage"];
+            /** Resource Links */
+            resource_links: {
+                [key: string]: string;
+            };
+            sec_identity?: components["schemas"]["AgentContextSecIdentity"] | null;
+            /** Securities */
+            securities: components["schemas"]["SecurityRead"][];
+            thesis_status: components["schemas"]["AgentContextCoverage"];
+        };
         /** CompanyCandidatePipelineRead */
         CompanyCandidatePipelineRead: {
             company: components["schemas"]["CompanyRead"];
@@ -3498,6 +3822,81 @@ export interface components {
             /** Truncated */
             truncated: boolean;
         };
+        /** CompanyGuidanceObservationRead */
+        CompanyGuidanceObservationRead: {
+            /** Basis */
+            basis: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Currency */
+            currency: string | null;
+            /** External Guidance Id */
+            external_guidance_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter: number | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Current */
+            is_current: boolean;
+            /** Issued At */
+            issued_at: string | null;
+            /** Lower Value */
+            lower_value: string | null;
+            /**
+             * Metric Definition Id
+             * Format: uuid
+             */
+            metric_definition_id: string;
+            /** Metric Id */
+            metric_id: string;
+            /** Midpoint Value */
+            midpoint_value: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Period Type */
+            period_type: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Scale */
+            scale: string;
+            /** Scope Json */
+            scope_json: {
+                [key: string]: unknown;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /** Status */
+            status: string;
+            /** Supersedes Guidance Id */
+            supersedes_guidance_id: string | null;
+            /** Unit */
+            unit: string;
+            /** Upper Value */
+            upper_value: string | null;
+            /** Value Qualifier */
+            value_qualifier: string;
+        };
         /** CompanyInvestmentThesisRead */
         CompanyInvestmentThesisRead: {
             /** As Of */
@@ -3511,6 +3910,132 @@ export interface components {
             known_at: string | null;
             /** Streams */
             streams: components["schemas"]["InvestmentThesisStreamRead"][];
+        };
+        /** CompanyMetricDefinitionRead */
+        CompanyMetricDefinitionRead: {
+            /** Active */
+            active: boolean;
+            /** Actuals Allowed */
+            actuals_allowed: boolean;
+            /** Aggregation Semantics */
+            aggregation_semantics: string;
+            /** Canonical Scale */
+            canonical_scale: string;
+            /** Canonical Unit */
+            canonical_unit: string;
+            /** Category */
+            category: string;
+            /** Company Id */
+            company_id: string | null;
+            /** Consensus Allowed */
+            consensus_allowed: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency Policy */
+            currency_policy: string;
+            /** Default Basis */
+            default_basis: string | null;
+            /** Default Period Type */
+            default_period_type: string;
+            /** Deprecated At */
+            deprecated_at: string | null;
+            /** Description */
+            description: string;
+            /** Display Name */
+            display_name: string;
+            /** Guidance Allowed */
+            guidance_allowed: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Metric Id */
+            metric_id: string;
+            /** Model Driver Allowed */
+            model_driver_allowed: boolean;
+            /** Scope Dimensions */
+            scope_dimensions: string[];
+            /** Source Reference */
+            source_reference: string | null;
+            /** Value Kind */
+            value_kind: string;
+        };
+        /** CompanyMetricObservationRead */
+        CompanyMetricObservationRead: {
+            /** Basis */
+            basis: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Currency */
+            currency: string | null;
+            /** External Observation Id */
+            external_observation_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter: number | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Current */
+            is_current: boolean;
+            /**
+             * Metric Definition Id
+             * Format: uuid
+             */
+            metric_definition_id: string;
+            /** Metric Id */
+            metric_id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Period Type */
+            period_type: string;
+            /** Quality Reason */
+            quality_reason: string | null;
+            /** Quality Status */
+            quality_status: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Reported At */
+            reported_at: string | null;
+            /** Scale */
+            scale: string;
+            /** Scope Json */
+            scope_json: {
+                [key: string]: unknown;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /** Supersedes Observation Id */
+            supersedes_observation_id: string | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /** Value Qualifier */
+            value_qualifier: string;
         };
         /** CompanyModelOutputsCurrentRead */
         CompanyModelOutputsCurrentRead: {
@@ -5611,7 +6136,9 @@ export interface components {
              * Contract Version
              * @enum {string}
              */
-            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0";
+            /** Driver Projections */
+            driver_projections?: components["schemas"]["FinancialModelDriverProjectionInput-Input"][];
             /**
              * Exported At
              * Format: date-time
@@ -5631,7 +6158,9 @@ export interface components {
              * Contract Version
              * @enum {string}
              */
-            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0";
+            /** Driver Projections */
+            driver_projections?: components["schemas"]["FinancialModelDriverProjectionInput-Output"][];
             /**
              * Exported At
              * Format: date-time
@@ -5662,6 +6191,191 @@ export interface components {
              * Format: uuid
              */
             valuation_listing_id: string;
+        };
+        /**
+         * FinancialModelDriverProjectionInput
+         * @description Explicit company operating path authored with a portable model revision.
+         */
+        "FinancialModelDriverProjectionInput-Input": {
+            /**
+             * Basis
+             * @default MODEL_DRIVER
+             * @constant
+             */
+            basis: "MODEL_DRIVER";
+            /** Currency */
+            currency?: string | null;
+            /** External Driver Id */
+            external_driver_id: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Rationale */
+            rationale: string;
+            /** Scale */
+            scale: number | string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "BEAR" | "BASE" | "BULL";
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: number | string;
+            /**
+             * Value Qualifier
+             * @default EQ
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE";
+        };
+        /**
+         * FinancialModelDriverProjectionInput
+         * @description Explicit company operating path authored with a portable model revision.
+         */
+        "FinancialModelDriverProjectionInput-Output": {
+            /**
+             * Basis
+             * @default MODEL_DRIVER
+             * @constant
+             */
+            basis: "MODEL_DRIVER";
+            /** Currency */
+            currency?: string | null;
+            /** External Driver Id */
+            external_driver_id: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Rationale */
+            rationale: string;
+            /** Scale */
+            scale: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "BEAR" | "BASE" | "BULL";
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /**
+             * Value Qualifier
+             * @default EQ
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE";
+        };
+        /** FinancialModelDriverProjectionRead */
+        FinancialModelDriverProjectionRead: {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency: string | null;
+            /** External Driver Id */
+            external_driver_id: string;
+            /** Forecast Year */
+            forecast_year: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Metric Definition Id
+             * Format: uuid
+             */
+            metric_definition_id: string;
+            /** Metric Id */
+            metric_id: string;
+            /**
+             * Model Id
+             * Format: uuid
+             */
+            model_id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Period Type */
+            period_type: string;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /** Scale */
+            scale: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "BEAR" | "BASE" | "BULL";
+            /** Scope Json */
+            scope_json: {
+                [key: string]: unknown;
+            };
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /** Value Qualifier */
+            value_qualifier: string;
         };
         /** FinancialModelEvidenceRead */
         FinancialModelEvidenceRead: {
@@ -7135,6 +7849,194 @@ export interface components {
              */
             offset: number;
         };
+        /** GuidanceObservationBatchV1 */
+        "GuidanceObservationBatchV1-Input": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            contract_type: "GuidanceObservationBatchV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** External Batch Id */
+            external_batch_id: string;
+            /** Items */
+            items: components["schemas"]["GuidanceObservationItem-Input"][];
+            /** Rationale */
+            rationale: string;
+        };
+        /** GuidanceObservationBatchV1 */
+        "GuidanceObservationBatchV1-Output": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            contract_type: "GuidanceObservationBatchV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** External Batch Id */
+            external_batch_id: string;
+            /** Items */
+            items: components["schemas"]["GuidanceObservationItem-Output"][];
+            /** Rationale */
+            rationale: string;
+        };
+        /** GuidanceObservationItem */
+        "GuidanceObservationItem-Input": {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency?: string | null;
+            /** External Guidance Id */
+            external_guidance_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter?: number | null;
+            /** Fiscal Year */
+            fiscal_year?: number | null;
+            /** Issued At */
+            issued_at?: string | null;
+            /** Lower Value */
+            lower_value?: (number | string) | null;
+            /** Metric Key */
+            metric_key: string;
+            /** Midpoint Value */
+            midpoint_value?: (number | string) | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Scale */
+            scale: number | string;
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /**
+             * Status
+             * @default ACTIVE
+             * @enum {string}
+             */
+            status: "ACTIVE" | "WITHDRAWN" | "ACHIEVED";
+            /** Supersedes Guidance Id */
+            supersedes_guidance_id?: string | null;
+            /** Unit */
+            unit: string;
+            /** Upper Value */
+            upper_value?: (number | string) | null;
+            /**
+             * Value Qualifier
+             * @default RANGE
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE" | "RANGE";
+        };
+        /** GuidanceObservationItem */
+        "GuidanceObservationItem-Output": {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency?: string | null;
+            /** External Guidance Id */
+            external_guidance_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter?: number | null;
+            /** Fiscal Year */
+            fiscal_year?: number | null;
+            /** Issued At */
+            issued_at?: string | null;
+            /** Lower Value */
+            lower_value?: string | null;
+            /** Metric Key */
+            metric_key: string;
+            /** Midpoint Value */
+            midpoint_value?: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Scale */
+            scale: string;
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /**
+             * Status
+             * @default ACTIVE
+             * @enum {string}
+             */
+            status: "ACTIVE" | "WITHDRAWN" | "ACHIEVED";
+            /** Supersedes Guidance Id */
+            supersedes_guidance_id?: string | null;
+            /** Unit */
+            unit: string;
+            /** Upper Value */
+            upper_value?: string | null;
+            /**
+             * Value Qualifier
+             * @default RANGE
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE" | "RANGE";
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -7589,6 +8491,190 @@ export interface components {
             history: components["schemas"]["InvestmentThesisRevisionRead"][];
             /** Stream Key */
             stream_key: string;
+        };
+        /** KPIObservationBatchV1 */
+        "KPIObservationBatchV1-Input": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            contract_type: "KPIObservationBatchV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** External Batch Id */
+            external_batch_id: string;
+            /** Items */
+            items: components["schemas"]["KPIObservationItem-Input"][];
+            /** Rationale */
+            rationale: string;
+        };
+        /** KPIObservationBatchV1 */
+        "KPIObservationBatchV1-Output": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            contract_type: "KPIObservationBatchV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** External Batch Id */
+            external_batch_id: string;
+            /** Items */
+            items: components["schemas"]["KPIObservationItem-Output"][];
+            /** Rationale */
+            rationale: string;
+        };
+        /** KPIObservationItem */
+        "KPIObservationItem-Input": {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency?: string | null;
+            /** External Observation Id */
+            external_observation_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter?: number | null;
+            /** Fiscal Year */
+            fiscal_year?: number | null;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Quality Reason */
+            quality_reason?: string | null;
+            /**
+             * Quality Status
+             * @default VERIFIED
+             * @enum {string}
+             */
+            quality_status: "VERIFIED" | "PROVISIONAL" | "CONFLICTED" | "RESTATED";
+            /** Reported At */
+            reported_at?: string | null;
+            /** Scale */
+            scale: number | string;
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /** Supersedes Observation Id */
+            supersedes_observation_id?: string | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: number | string;
+            /**
+             * Value Qualifier
+             * @default EQ
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE";
+        };
+        /** KPIObservationItem */
+        "KPIObservationItem-Output": {
+            /** Basis */
+            basis: string;
+            /** Currency */
+            currency?: string | null;
+            /** External Observation Id */
+            external_observation_id: string;
+            /** Fiscal Quarter */
+            fiscal_quarter?: number | null;
+            /** Fiscal Year */
+            fiscal_year?: number | null;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Quality Reason */
+            quality_reason?: string | null;
+            /**
+             * Quality Status
+             * @default VERIFIED
+             * @enum {string}
+             */
+            quality_status: "VERIFIED" | "PROVISIONAL" | "CONFLICTED" | "RESTATED";
+            /** Reported At */
+            reported_at?: string | null;
+            /** Scale */
+            scale: string;
+            /** Scope Json */
+            scope_json?: {
+                [key: string]: string;
+            };
+            /** Source Reference */
+            source_reference: string;
+            /** Source Type */
+            source_type: string;
+            /** Supersedes Observation Id */
+            supersedes_observation_id?: string | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+            /**
+             * Value Qualifier
+             * @default EQ
+             * @enum {string}
+             */
+            value_qualifier: "EQ" | "APPROX" | "GT" | "GTE" | "LT" | "LTE";
         };
         /** LedgerAcceptCreate */
         LedgerAcceptCreate: {
@@ -9140,6 +10226,178 @@ export interface components {
              */
             state: "AVAILABLE" | "STALE" | "REFRESHING" | "PARTIAL" | "UNAVAILABLE";
         };
+        /** MetricDefinitionBatchV1 */
+        "MetricDefinitionBatchV1-Input": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            contract_type: "MetricDefinitionBatchV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** External Batch Id */
+            external_batch_id: string;
+            /** Items */
+            items: components["schemas"]["MetricDefinitionItem-Input"][];
+            /** Rationale */
+            rationale: string;
+        };
+        /** MetricDefinitionBatchV1 */
+        "MetricDefinitionBatchV1-Output": {
+            /**
+             * Authored At
+             * Format: date-time
+             */
+            authored_at: string;
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            contract_type: "MetricDefinitionBatchV1";
+            /**
+             * Contract Version
+             * @default 1.0.0
+             * @constant
+             */
+            contract_version: "1.0.0";
+            /** External Batch Id */
+            external_batch_id: string;
+            /** Items */
+            items: components["schemas"]["MetricDefinitionItem-Output"][];
+            /** Rationale */
+            rationale: string;
+        };
+        /** MetricDefinitionItem */
+        "MetricDefinitionItem-Input": {
+            /**
+             * Actuals Allowed
+             * @default true
+             */
+            actuals_allowed: boolean;
+            /** Aggregation Semantics */
+            aggregation_semantics: string;
+            /** Canonical Scale */
+            canonical_scale: number | string;
+            /** Canonical Unit */
+            canonical_unit: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "OPERATING" | "CUSTOMER" | "CAPACITY" | "PRODUCT" | "MARKET_SHARE" | "MARKET_EXPOSURE" | "SEGMENT" | "BACKLOG" | "QUALITY" | "OTHER";
+            /**
+             * Currency Policy
+             * @enum {string}
+             */
+            currency_policy: "REQUIRED" | "OPTIONAL" | "NONE";
+            /** Default Basis */
+            default_basis?: string | null;
+            /**
+             * Default Period Type
+             * @enum {string}
+             */
+            default_period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Description */
+            description: string;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Guidance Allowed
+             * @default false
+             */
+            guidance_allowed: boolean;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Model Driver Allowed
+             * @default false
+             */
+            model_driver_allowed: boolean;
+            /** Scope Dimensions */
+            scope_dimensions?: string[];
+            /** Source Reference */
+            source_reference: string;
+            /**
+             * Value Kind
+             * @enum {string}
+             */
+            value_kind: "CURRENCY" | "PERCENT" | "COUNT" | "RATIO";
+        };
+        /** MetricDefinitionItem */
+        "MetricDefinitionItem-Output": {
+            /**
+             * Actuals Allowed
+             * @default true
+             */
+            actuals_allowed: boolean;
+            /** Aggregation Semantics */
+            aggregation_semantics: string;
+            /** Canonical Scale */
+            canonical_scale: string;
+            /** Canonical Unit */
+            canonical_unit: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "OPERATING" | "CUSTOMER" | "CAPACITY" | "PRODUCT" | "MARKET_SHARE" | "MARKET_EXPOSURE" | "SEGMENT" | "BACKLOG" | "QUALITY" | "OTHER";
+            /**
+             * Currency Policy
+             * @enum {string}
+             */
+            currency_policy: "REQUIRED" | "OPTIONAL" | "NONE";
+            /** Default Basis */
+            default_basis?: string | null;
+            /**
+             * Default Period Type
+             * @enum {string}
+             */
+            default_period_type: "DATE" | "MONTH" | "QUARTER" | "FY" | "TTM" | "EVENT";
+            /** Description */
+            description: string;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Guidance Allowed
+             * @default false
+             */
+            guidance_allowed: boolean;
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Model Driver Allowed
+             * @default false
+             */
+            model_driver_allowed: boolean;
+            /** Scope Dimensions */
+            scope_dimensions?: string[];
+            /** Source Reference */
+            source_reference: string;
+            /**
+             * Value Kind
+             * @enum {string}
+             */
+            value_kind: "CURRENCY" | "PERCENT" | "COUNT" | "RATIO";
+        };
         /**
          * ModelEvidenceRelationship
          * @enum {string}
@@ -9432,6 +10690,153 @@ export interface components {
             proposal: components["schemas"]["ModelRevisionProposalRead"];
             /** Replayed */
             replayed: boolean;
+        };
+        /** ObservationProposalChange */
+        ObservationProposalChange: {
+            /** Metric Key */
+            metric_key: string;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "CREATE" | "SUPERSEDE";
+            /** Previous Id */
+            previous_id: string | null;
+            /** Row Index */
+            row_index: number;
+        };
+        /** ObservationProposalDecisionRead */
+        ObservationProposalDecisionRead: {
+            preview?: components["schemas"]["ObservationProposalPreviewRead"] | null;
+            proposal: components["schemas"]["ObservationProposalRead"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACCEPTED" | "REJECTED" | "PREVIEW_CHANGED";
+        };
+        /** ObservationProposalDecisionRequest */
+        ObservationProposalDecisionRequest: {
+            /** Decision Note */
+            decision_note: string;
+            /** Preview Fingerprint */
+            preview_fingerprint: string;
+        };
+        /** ObservationProposalIssue */
+        ObservationProposalIssue: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "CONFLICT" | "INVALID";
+            /** Detail */
+            detail: string;
+            /** Row Index */
+            row_index: number;
+        };
+        /** ObservationProposalPreviewRead */
+        ObservationProposalPreviewRead: {
+            /** Changes */
+            changes: components["schemas"]["ObservationProposalChange"][];
+            /** Issues */
+            issues: components["schemas"]["ObservationProposalIssue"][];
+            /** Preview Fingerprint */
+            preview_fingerprint: string | null;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "READY" | "CONFLICT" | "INVALID";
+        };
+        /** ObservationProposalRead */
+        ObservationProposalRead: {
+            /** Accepted Record Ids */
+            accepted_record_ids: string[];
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Decision Note */
+            decision_note: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue */
+            issue: string | null;
+            /** Preview Fingerprint */
+            preview_fingerprint: string | null;
+            /** Producer Id */
+            producer_id: string;
+            /** Proposal */
+            proposal: components["schemas"]["MetricDefinitionBatchV1-Output"] | components["schemas"]["KPIObservationBatchV1-Output"] | components["schemas"]["GuidanceObservationBatchV1-Output"];
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewer Id */
+            reviewer_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "READY" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED";
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
+        /** ObservationProposalRejectRequest */
+        ObservationProposalRejectRequest: {
+            /** Decision Note */
+            decision_note: string;
+        };
+        /** ObservationProposalSubmissionRead */
+        ObservationProposalSubmissionRead: {
+            proposal: components["schemas"]["ObservationProposalRead"];
+            /** Replayed */
+            replayed: boolean;
+        };
+        /** ObservationSheetCheck */
+        ObservationSheetCheck: {
+            /** Checked Count */
+            checked_count: number;
+            /** Created Count */
+            created_count: number;
+            /** Created Proposal Ids */
+            created_proposal_ids: string[];
+            /** Issues */
+            issues: components["schemas"]["ObservationSheetIssue"][];
+            /** Replayed Count */
+            replayed_count: number;
+            /** Source Error Code */
+            source_error_code?: string | null;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SUCCEEDED" | "PARTIAL" | "SOURCE_UNAVAILABLE" | "SYNC_IN_PROGRESS";
+            /** Tab */
+            tab: string;
+        };
+        /** ObservationSheetIssue */
+        ObservationSheetIssue: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "INVALID" | "CONFLICT" | "NOT_FOUND";
+            /** Publish Id */
+            publish_id: string;
+            /** Reason */
+            reason: string;
+            /** Row Number */
+            row_number: number;
         };
         /** OperationalJobAttemptRead */
         OperationalJobAttemptRead: {
@@ -13917,6 +15322,41 @@ export interface operations {
             };
         };
     };
+    get_company_agent_context_v1_companies__company_id__agent_context_get: {
+        parameters: {
+            query?: {
+                portfolio_id?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyAgentContextV1"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_company_candidate_pipeline_v1_companies__company_id__candidate_pipeline_get: {
         parameters: {
             query?: never;
@@ -14533,6 +15973,43 @@ export interface operations {
             };
         };
     };
+    get_company_guidance_observations_v1_companies__company_id__guidance_observations_get: {
+        parameters: {
+            query?: {
+                metric_id?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+                current_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyGuidanceObservationRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_company_job_requests_v1_companies__company_id__job_requests_get: {
         parameters: {
             query?: {
@@ -14623,6 +16100,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListingMarketData"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_metric_observations_v1_companies__company_id__metric_observations_get: {
+        parameters: {
+            query?: {
+                metric_id?: string | null;
+                as_of?: string | null;
+                known_at?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyMetricObservationRead"][];
                 };
             };
             /** @description Validation Error */
@@ -15202,6 +16715,248 @@ export interface operations {
             };
         };
     };
+    get_company_metric_definitions_v1_company_metric_definitions_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                include_deprecated?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyMetricDefinitionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_observation_proposals_v1_company_observation_proposals_get: {
+        parameters: {
+            query?: {
+                company_id?: string | null;
+                status?: ("PENDING" | "READY" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED") | null;
+                limit?: number;
+            };
+            header?: {
+                "X-Observation-Proposal-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationProposalRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_company_observation_proposal_v1_company_observation_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Observation-Proposal-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetricDefinitionBatchV1-Input"] | components["schemas"]["KPIObservationBatchV1-Input"] | components["schemas"]["GuidanceObservationBatchV1-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationProposalSubmissionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_company_observation_proposal_v1_company_observation_proposals__proposal_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Observation-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationProposalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_company_observation_proposal_accept_v1_company_observation_proposals__proposal_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Observation-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObservationProposalDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationProposalDecisionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_company_observation_proposal_preview_v1_company_observation_proposals__proposal_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Observation-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationProposalPreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_company_observation_proposal_reject_v1_company_observation_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Observation-Proposal-Token"?: string;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObservationProposalRejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationProposalDecisionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_execution_pace_runs_v1_execution_pace_runs_get: {
         parameters: {
             query?: never;
@@ -15586,6 +17341,38 @@ export interface operations {
             };
         };
     };
+    get_financial_model_driver_projections_v1_financial_models__model_id__revisions__revision_id__driver_projections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                model_id: string;
+                revision_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialModelDriverProjectionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_dcf_sensitivity_v1_financial_models__model_id__sensitivity_get: {
         parameters: {
             query: {
@@ -15737,6 +17524,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_google_sheets_observation_sync_check_v1_google_sheets_observation_sync_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationSheetCheck"];
                 };
             };
         };

@@ -1,20 +1,23 @@
 # Capability roadmap and execution ledger
 
-Updated 2026-11-15. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
+Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star.
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 ## Execution cursor
 
-| Field             | Current value                                                                                                                    |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | Agents 1–8 integrated into PR #39; scope frozen for final CI/owner review. [Handoff](docs/ACTIVE_WORKSTREAM.md).                 |
-| Branch / PR       | PR #39 `codex/financial-refresh-slice` now retains the integrated SEC, market/FX, expectations and return-hurdle histories.      |
-| Product outcome   | Portfolio value/source → exact company prices, statements and expectations → accepted-model return analysis → portfolio context. |
-| Integration       | Main `866723e` already contains recovery #37 and investor UI #38; preserve separate branches and owner work.                     |
-| Production        | November 15 01:14 UTC guarded readback: prices, FX, facts, filings and estimates all zero; accepted portfolio unchanged.         |
-| Release           | New return-hurdle API and native-price fields require API-first sequencing; hosted controls and recovery remain external gates.  |
-| Deferred          | Broad provider coverage, EPS basis, inferred fiscal model alignment, Sheets recovery/publication and new infrastructure.         |
+| Field             | Current value                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| Active checkpoint | PR #42: reviewed BKNG CIK bound in scoped read and reviewer acceptance. [Handoff](docs/ACTIVE_WORKSTREAM.md). |
+| Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.    |
+| Product outcome   | Tracked issuer → verified operating KPIs → scoped context → human review → research.                          |
+| Integration       | Scoped CIK 39 tests, reviewer-boundary 25 tests, type/contracts pass; exact-head CI is merge gate.            |
+| Production        | Nov 20: one reviewed BKNG SEC CIK crosswalk inserted + readback; no other canonical writes or deploys.        |
+| Release           | PR #42 release card prepared; freeze + fresh recovery + two migrations require separate approval.             |
+| Deferred          | Live issuer HTML proof, hosted read token and API-first release remain separate operator gates.               |
+
+The investor-journey acceptance below records the earlier PR #39 milestone.
+PR #42 is a separately gated, evidence-first extension to the Company Explorer.
 
 Acceptance is the existing complete investor journey, not new analytics or providers.
 Demonstrate authorized private real-source recordings in isolated PostgreSQL, retain
@@ -633,3 +636,32 @@ with evidence, limitation and next ready action. Keep commands in runbooks, outc
 in the vision, boundaries in architecture and long results in dated history.
 Reassess C1â€“C7 at integration. Keep completed PRs stable for owner review. A green
 PR never grants production, source-edit, acceptance, migration or activation authority.
+
+## API-first hybrid company-observation foundation
+
+- Issue #40 / #41 foundation: add canonical company metric definitions, append-only
+  KPI observations, separate management-guidance observations and revision-scoped
+  financial-model driver projections.
+- Preserve existing reported-fundamental and provider-consensus ownership; the new
+  domain is for company-specific operating evidence that does not belong in
+  statement facts.
+- Expose typed read APIs first. Google Sheets remains a structured workbench/proposal
+  producer; PostgreSQL remains canonical accepted state.
+- Next slice: explicit Sheets/agent proposal capture, preview and human acceptance,
+  then Company Explorer KPI/guidance/model-driver visualization.
+
+- 2026-11-19 — PR #42 CompanyAgentContextV1 read slice: bounded canonical company context, explicit portfolio identity, point-in-time data/guidance, accepted research/thesis/native models, and linked detailed resources. Pending integration/contract-generation verification; no production operations.
+
+- 2026-11-19 — PR #42 observation proposal workflow: company-scoped metric-definition/KPI/guidance typed batches, isolated audit candidate table, independent role tokens, deterministic preview/fingerprint, explicit human accept/reject, and default-off activation. Integration verification pending; no production write/activation.
+
+- 2026-11-19 — PR #42: Data & Universe Steward least-privilege read gate, restricted CompanyAgentContextV1 company allowlist and role-filtered response, negative auth tests; no token provisioning, endpoint activation or production writes. A new accepted-schema head requires updating its exact deployment test; full CI remains a merge gate.
+
+- 2026-11-19 — PR #42: bounded API-first Data Universe shadow runner and public Uber primary-source pack; deterministic read/compare/draft classification, explicit unknown coverage, no API POST, no production activation. Test evidence pending; host-credential pilot remains gated.
+
+- 2026-11-19 — PR #42: optional Sheets observation inbox bridge to the existing KPI/guidance proposal service. Single manual check, existing read-only Sheets double-capture/chunked schema, source-specific idempotency, bounded issues, no new table/worker/scheduler/acceptance path. Integration check pending; no live Sheet or production activation.
+
+- 2026-11-19 — PR #42: Company Explorer operating-KPI/driver read view with evidence, coverage, selected-provider consensus (financial metrics isolated) and exact period/scope/unit comparison. UI and contract tests pending; no production deployment. Next: publish explicit driver paths through accepted model revision contract v1.3.
+
+- 2026-11-19 — PR #42: portable UFCF DCF 1.3.0 explicit driver projections (Bear/Base/Bull), existing model sync/manual review and fair-value parity; same accepted revision model-driver table, no migration. Company Explorer operating KPI comparisons render only exact matched units/periods. Focused integration and client validation pending; no production writes.
+
+- 2026-11-19 — PR #42: close Next.js proxy agent-context access gap, add scoped observation proposal review to Operating KPIs with source/preview/confirmation and server-only reviewer token. No agent self-acceptance. Tests and generated contracts being verified.

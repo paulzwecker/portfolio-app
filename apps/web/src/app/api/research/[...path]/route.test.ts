@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.stubEnv("API_ACCESS_TOKEN", "");
   vi.stubEnv("WEB_ACCESS_USERNAME", "");
   vi.stubEnv("WEB_ACCESS_PASSWORD", "");
+  vi.stubEnv("OBSERVATION_PROPOSAL_REVIEWER_TOKEN", "");
 });
 
 it("forwards only known read operations and query parameters without caching", async () => {
@@ -1590,3 +1591,160 @@ it.each([
     );
   },
 );
+
+it("validates the canonical company agent context through the authenticated proxy", async () => {
+  const response = {
+    contract_type: "CompanyAgentContextV1",
+    contract_version: "1.0.0",
+    company,
+    metric_definitions: [],
+    metric_observations: [],
+    guidance_observations: [],
+    native_models: [],
+    consensus_periods: [],
+    metrics_status: { status: "NO_DATA", truncated: false },
+    guidance_status: { status: "NO_DATA", truncated: false },
+    native_models_status: { status: "NO_DATA", truncated: false },
+    consensus_status: { status: "NO_DATA", truncated: false },
+    consensus_continuity_status: "NO_MAPPING",
+    consensus_provider_id: null,
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json(response));
+  vi.stubGlobal("fetch", mock);
+  const target = ["companies", id, "agent-context"];
+  const value = await GET(
+    new Request(`http://localhost/api/research/companies/${id}/agent-context`),
+    context(target),
+  );
+  expect(value.status).toBe(200);
+  expect((mock.mock.calls[0][0] as URL).pathname).toBe(
+    `/v1/companies/${id}/agent-context`,
+  );
+  expect(value.headers.get("cache-control")).toBe("no-store");
+
+  mock.mockResolvedValueOnce(
+    Response.json({ ...response, contract_version: "unknown" }),
+  );
+  const invalid = await GET(
+    new Request(`http://localhost/api/research/companies/${id}/agent-context`),
+    context(target),
+  );
+  expect(invalid.status).toBe(503);
+});
+
+it("keeps observation-review credentials server-side and validates reviewer responses", async () => {
+  const token = "reviewer-secret-never-sent-to-browser";
+  vi.stubEnv("OBSERVATION_PROPOSAL_REVIEWER_TOKEN", token);
+  const batch = {
+    contract_type: "KPIObservationBatchV1",
+    contract_version: "1.0.0",
+    company_id: id,
+    external_batch_id: "source-2026-q3",
+    authored_at: "2026-11-19T12:00:00Z",
+    rationale: "Company earnings release explains accepted operating KPI.",
+    items: [
+      {
+        metric_key: "synthetic.trips",
+        source_reference: "https://example.com/earnings",
+      },
+    ],
+  };
+  const candidate = {
+    id,
+    producer_id: "sheets-observation:synthetic",
+    content_fingerprint: "a".repeat(64),
+    status: "PENDING",
+    proposal: batch,
+    preview_fingerprint: null,
+    accepted_record_ids: [],
+    issue: null,
+    decision_note: null,
+    reviewer_id: null,
+    submitted_at: "2026-11-19T12:00:00Z",
+    reviewed_at: null,
+  };
+  const mock = vi.fn().mockResolvedValue(Response.json([candidate]));
+  vi.stubGlobal("fetch", mock);
+  const listing = await GET(
+    new Request(
+      `http://localhost/api/research/company-observation-proposals?company_id=${id}&token=hidden`,
+    ),
+    context(["company-observation-proposals"]),
+  );
+  expect(listing.status).toBe(200);
+  expect((mock.mock.calls[0][0] as URL).searchParams.get("company_id")).toBe(
+    id,
+  );
+  expect((mock.mock.calls[0][0] as URL).searchParams.has("token")).toBe(false);
+  expect(mock.mock.calls[0][1].headers["X-Observation-Proposal-Token"]).toBe(
+    token,
+  );
+  expect(JSON.stringify(await listing.json())).not.toContain(token);
+
+  mock.mockResolvedValueOnce(
+    Response.json({
+      proposal_id: id,
+      status: "READY",
+      preview_fingerprint: "b".repeat(64),
+      changes: [
+        {
+          row_index: 0,
+          metric_key: "synthetic.trips",
+          operation: "CREATE",
+          previous_id: null,
+        },
+      ],
+      issues: [],
+    }),
+  );
+  const preview = await POST(
+    new Request(
+      `http://localhost/api/research/company-observation-proposals/${id}/preview`,
+      { method: "POST" },
+    ),
+    context(["company-observation-proposals", id, "preview"]),
+  );
+  expect(preview.status).toBe(200);
+  expect(mock.mock.calls[1][1].body).toBeUndefined();
+  expect(mock.mock.calls[1][1].headers["X-Observation-Proposal-Token"]).toBe(
+    token,
+  );
+
+  mock.mockResolvedValueOnce(
+    Response.json({
+      status: "ACCEPTED",
+      proposal: { ...candidate, status: "ACCEPTED", reviewer_id: "human" },
+    }),
+  );
+  const accepted = await POST(
+    new Request(
+      `http://localhost/api/research/company-observation-proposals/${id}/accept`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          preview_fingerprint: "b".repeat(64),
+          decision_note: "Reviewed accepted source and exact metric semantics.",
+        }),
+      },
+    ),
+    context(["company-observation-proposals", id, "accept"]),
+  );
+  expect(accepted.status).toBe(200);
+  expect((await accepted.json()).status).toBe("ACCEPTED");
+});
+
+it("cannot submit observation proposals via the reviewer-only web proxy", async () => {
+  vi.stubEnv("OBSERVATION_PROPOSAL_REVIEWER_TOKEN", "configured-reviewer");
+  const mock = vi.fn();
+  vi.stubGlobal("fetch", mock);
+  const submit = await POST(
+    new Request("http://localhost/api/research/company-observation-proposals", {
+      method: "POST",
+      body: "{}",
+    }),
+    context(["company-observation-proposals"]),
+  );
+  expect(submit.status).toBe(404);
+  expect(mock).not.toHaveBeenCalled();
+});

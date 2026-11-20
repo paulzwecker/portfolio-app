@@ -40,8 +40,9 @@ PROJECT_ID = "blue-pond-96398788"
 PRIMARY_BRANCH_ID = "br-square-butterfly-bacw0rn5"
 PRIMARY_ENDPOINT_ID = "ep-floral-cake-bae16liy"
 DATABASE_NAME = "neondb"
-PRODUCTION_BASE_REVISION = "9f2a6d4c81b7"
-RELEASE_HEAD = "b59f16c8a203"
+# Reviewed schema step for PR #42; never permit a retired base or arbitrary head.
+PRODUCTION_BASE_REVISION = "b59f16c8a203"
+RELEASE_HEAD = "d7b4a6c8e2f0"
 CORE_READ_TABLES = ("companies",)
 MIGRATION_CONFIRMATION_PREFIX = "MIGRATE"
 INITIAL_BOOTSTRAP_CONFIRMATION_PREFIX = "INITIALIZE"

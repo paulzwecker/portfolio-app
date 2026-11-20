@@ -19,6 +19,11 @@ WITH counts AS (
     UNION ALL SELECT 'price_observations', count(*) FROM public.price_observations
     UNION ALL SELECT 'fx_observations', count(*) FROM public.fx_observations
     UNION ALL SELECT 'reported_fundamental_observations', count(*) FROM public.reported_fundamental_observations
+    UNION ALL SELECT 'company_metric_definitions', count(*) FROM public.company_metric_definitions
+    UNION ALL SELECT 'company_metric_observations', count(*) FROM public.company_metric_observations
+    UNION ALL SELECT 'company_guidance_observations', count(*) FROM public.company_guidance_observations
+    UNION ALL SELECT 'company_observation_proposals', count(*) FROM public.company_observation_proposals
+    UNION ALL SELECT 'financial_model_driver_projections', count(*) FROM public.financial_model_driver_projections
     UNION ALL SELECT 'model_output_snapshots', count(*) FROM public.model_output_snapshots
     UNION ALL SELECT 'financial_models', count(*) FROM public.financial_models
     UNION ALL SELECT 'financial_model_revisions', count(*) FROM public.financial_model_revisions

@@ -164,6 +164,25 @@ as distinct outputs. The imported legacy estimate baseline is not sufficient to 
 a value. Unavailable workbook persistence/breadth components remain uncalculated. See
 [`estimate-momentum.md`](estimate-momentum.md).
 
+## Company operating metrics and guidance
+
+`CompanyMetricDefinition` gives non-statement operating KPIs a stable semantic key,
+unit/scale policy, period semantics and optional company scope. It does not replace
+the existing reported-fundamental or consensus metric enums where those domains
+already have exact meaning.
+
+`CompanyMetricObservation` stores append-only factual KPI observations with absolute
+economic periods, exact decimals, qualifiers, basis/scope, source provenance,
+quality and correction lineage. `CompanyGuidanceObservation` stores management
+guidance separately, including ranges and withdrawal/supersession history.
+`FinancialModelDriverProjection` attaches explicitly underwritten company-specific
+driver paths to one accepted financial-model revision and scenario.
+
+The application exposes these records through typed read APIs. Google Sheets remains
+an external workbench/staging producer; it is not canonical storage, and ordinary
+P-/W-* cells or review prose are never parsed into this domain. See
+[`company-operating-metrics.md`](company-operating-metrics.md).
+
 ## Agent-authored research forecasts and assessments
 
 `ResearchRevision` is the immutable publication boundary for an external Sheets

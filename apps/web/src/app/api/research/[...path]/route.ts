@@ -29,6 +29,7 @@ import {
   isGoogleSheetsResearchSyncRun,
   isGoogleSheetsResearchSyncStatus,
   isCompanyRiskAssessments,
+  isCompanyAgentContext,
   isPortfolioRiskAssessments,
   isDetail,
   isEvent,
@@ -92,6 +93,10 @@ import {
   isModelRevisionProposalList,
   isModelRevisionProposalPreviewRead,
   isModelRevisionProposalRead,
+  isObservationProposalList,
+  isObservationProposalRead,
+  isObservationProposalPreviewRead,
+  isObservationProposalDecisionRead,
   isOwnerCashFlowCalculationPreview,
   isResidualIncomeCalculationPreview,
   isCompanyReportedFundamentals,
@@ -131,6 +136,12 @@ const historicalReconciliationPath = new RegExp(
 );
 const sensitivityPath = new RegExp(`^financial-models/${id}/sensitivity$`);
 const returnHurdlePath = new RegExp(`^financial-models/${id}/return-hurdle$`);
+const observationProposalItemPath = new RegExp(
+  `^company-observation-proposals/${id}$`,
+);
+const observationProposalDecisionPath = new RegExp(
+  `^company-observation-proposals/${id}/(preview|accept|reject)$`,
+);
 const digest = "[0-9a-f]{64}";
 const ledgerPreviewPath = new RegExp(`^portfolios/${id}/ledger/preview$`);
 const ledgerListingPath = new RegExp(`^portfolios/${id}/ledger/listings$`);
@@ -152,10 +163,10 @@ const ledgerBodyPath = new RegExp(
   `^portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?)$`,
 );
 const readable = new RegExp(
-  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|market-data/bootstrap-scope|market-data/historical-bootstrap|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|model-revision-proposals|model-revision-proposals/${id}|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(candidate-pipeline|research|thesis|risk-assessments|market-data|sec-coverage|refresh-options|job-requests|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/sensitivity|/return-hurdle|/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(overview|risk-assessments|ledger/anchor|ledger/listings|ledger/ownership|ledger/candidates(?:/${id}(?:/publication-preview)?)?))$`,
+  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|market-data/bootstrap-scope|market-data/historical-bootstrap|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|model-revision-proposals|model-revision-proposals/${id}|company-observation-proposals|company-observation-proposals/${id}|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(agent-context|candidate-pipeline|research|thesis|risk-assessments|market-data|sec-coverage|refresh-options|job-requests|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/sensitivity|/return-hurdle|/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(overview|risk-assessments|ledger/anchor|ledger/listings|ledger/ownership|ledger/candidates(?:/${id}(?:/publication-preview)?)?))$`,
 );
 const writable = new RegExp(
-  `^(operations/job-requests|operations/job-requests/${id}/retry|research-queue/${digest}/complete|research-triggers/refresh|research-revisions|investment-thesis-revisions|model-revision-proposals/${id}/(preview|accept|reject)|companies/${id}/(candidate-pipeline-revisions|lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|google-sheets-agent-operations/(DATA_UNIVERSE_STEWARD|PORTFOLIO_THESIS_SENTINEL|MODEL_ALLOCATION_STEWARD)/work/publish|google-sheets-sync/(connection-test|check|thesis-watch/publish|portfolio-state/publish|candidates/${id}/(preview|accept|reject))|google-sheets-risk-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|google-sheets-research-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|ranking-runs|execution-pace-runs|fx-observations|portfolios/${id}/holding-snapshots|portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?))$`,
+  `^(operations/job-requests|operations/job-requests/${id}/retry|research-queue/${digest}/complete|research-triggers/refresh|research-revisions|investment-thesis-revisions|model-revision-proposals/${id}/(preview|accept|reject)|company-observation-proposals/${id}/(preview|accept|reject)|companies/${id}/(candidate-pipeline-revisions|lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|google-sheets-agent-operations/(DATA_UNIVERSE_STEWARD|PORTFOLIO_THESIS_SENTINEL|MODEL_ALLOCATION_STEWARD)/work/publish|google-sheets-sync/(connection-test|check|thesis-watch/publish|portfolio-state/publish|candidates/${id}/(preview|accept|reject))|google-sheets-risk-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|google-sheets-research-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|ranking-runs|execution-pace-runs|fx-observations|portfolios/${id}/holding-snapshots|portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?))$`,
 );
 
 function validWrite(path: string, data: unknown): boolean {
@@ -177,6 +188,11 @@ function validWrite(path: string, data: unknown): boolean {
     return path.endsWith("/preview")
       ? isModelRevisionProposalPreviewRead(data)
       : isModelRevisionProposalDecisionRead(data);
+  }
+  if (observationProposalDecisionPath.test(path)) {
+    return path.endsWith("/preview")
+      ? isObservationProposalPreviewRead(data)
+      : isObservationProposalDecisionRead(data);
   }
   if (path === "operations/job-requests" || path.endsWith("/retry"))
     return isOperationalJobRequest(data);
@@ -300,6 +316,10 @@ function validRead(path: string, data: unknown): boolean {
     );
   if (path === "model-revision-proposals")
     return isModelRevisionProposalList(data);
+  if (path === "company-observation-proposals")
+    return isObservationProposalList(data);
+  if (observationProposalItemPath.test(path))
+    return isObservationProposalRead(data);
   if (path.startsWith("model-revision-proposals/"))
     return isModelRevisionProposalRead(data);
   if (/^companies\/[0-9a-fA-F-]{36}\/job-requests$/.test(path))
@@ -379,6 +399,8 @@ function validRead(path: string, data: unknown): boolean {
     return isCompanySecCoverage(data);
   if (path.startsWith("companies/") && path.endsWith("/financial-statements"))
     return isCompanyFinancialStatements(data);
+  if (path.startsWith("companies/") && path.endsWith("/agent-context"))
+    return isCompanyAgentContext(data);
   if (path.startsWith("companies/") && path.endsWith("/research"))
     return isCompanyResearch(data);
   if (path.startsWith("companies/") && path.endsWith("/thesis"))
@@ -628,7 +650,8 @@ async function proxy(request: Request, path: string[]) {
         url.searchParams.set(key, value);
       if (
         value !== null &&
-        joined === "model-revision-proposals" &&
+        (joined === "model-revision-proposals" ||
+          joined === "company-observation-proposals") &&
         ["company_id", "status", "limit"].includes(key)
       )
         url.searchParams.set(key, value);
@@ -795,7 +818,10 @@ async function proxy(request: Request, path: string[]) {
       body = await request.text();
       if (
         body.length === 0 &&
-        /^model-revision-proposals\/[0-9a-fA-F-]{36}\/preview$/.test(joined)
+        (/^model-revision-proposals\/[0-9a-fA-F-]{36}\/preview$/.test(joined) ||
+          /^company-observation-proposals\/[0-9a-fA-F-]{36}\/preview$/.test(
+            joined,
+          ))
       )
         body = undefined;
       if (
@@ -844,12 +870,24 @@ async function proxy(request: Request, path: string[]) {
       );
     const modelProposalReviewerToken =
       process.env.MODEL_PROPOSAL_REVIEWER_TOKEN;
+    const observationProposalReview =
+      joined === "company-observation-proposals" ||
+      observationProposalItemPath.test(joined) ||
+      observationProposalDecisionPath.test(joined);
+    const observationReviewerToken =
+      process.env.OBSERVATION_PROPOSAL_REVIEWER_TOKEN;
     if (process.env.NODE_ENV === "production" && !apiAccessToken) {
       throw new Error("API_ACCESS_TOKEN is missing.");
     }
     if (modelProposalReview && !modelProposalReviewerToken) {
       return Response.json(
         { detail: "Model proposal reviewer access is not configured." },
+        { status: 503, headers },
+      );
+    }
+    if (observationProposalReview && !observationReviewerToken) {
+      return Response.json(
+        { detail: "Observation proposal reviewer access is not configured." },
         { status: 503, headers },
       );
     }
@@ -861,6 +899,9 @@ async function proxy(request: Request, path: string[]) {
         ...(apiAccessToken ? { "X-API-Access-Token": apiAccessToken } : {}),
         ...(modelProposalReview && modelProposalReviewerToken
           ? { "X-Model-Proposal-Token": modelProposalReviewerToken }
+          : {}),
+        ...(observationProposalReview && observationReviewerToken
+          ? { "X-Observation-Proposal-Token": observationReviewerToken }
           : {}),
       },
       cache: "no-store",

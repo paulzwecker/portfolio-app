@@ -36,6 +36,10 @@ from psycopg import sql
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError
 
+from portfolio_api import (
+    company_observation_proposals as _company_observation_proposals,  # noqa: F401
+)
+from portfolio_api import company_observations as _company_observations  # noqa: F401
 from portfolio_api.database import Base
 from portfolio_api.domain import models  # noqa: F401 -- register mapped tables
 from portfolio_api.migrations import expected_heads
@@ -99,6 +103,10 @@ TABLE_GROUPS: dict[str, tuple[str, ...]] = {
         "fx_observations",
         "reported_fundamental_batches",
         "reported_fundamental_observations",
+        "company_metric_definitions",
+        "company_metric_observations",
+        "company_guidance_observations",
+        "company_observation_proposals",
         "consensus_estimate_provider_mappings",
         "consensus_estimate_batches",
         "consensus_estimate_observations",
@@ -112,6 +120,7 @@ TABLE_GROUPS: dict[str, tuple[str, ...]] = {
         "financial_model_revision_evidence",
         "financial_model_outputs",
         "financial_model_migration_assessments",
+        "financial_model_driver_projections",
         "agent_model_revision_proposals",
         "dcf_model_assumptions",
         "dcf_scenario_assumptions",

@@ -172,7 +172,7 @@ test("the repository graph and owner marker bind the reviewed pending ledger ran
       result.status,
     ),
   );
-  assert.equal(result.repository_head, "b59f16c8a203");
+  assert.equal(result.repository_head, "d7b4a6c8e2f0");
   if (marker.revision === "9f2a6d4c81b7")
     assert.deepEqual(result.pending_revisions, [
       "a832e94d6f10",

@@ -544,6 +544,168 @@
         "title": "AdditionalModelPortableContractV2",
         "type": "object"
       },
+      "AgentContextCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "latest_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Recorded At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "PARTIAL",
+              "NO_DATA",
+              "AMBIGUOUS",
+              "UNSUPPORTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AgentContextCoverage",
+        "type": "object"
+      },
+      "AgentContextNativeModel": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_revision": {
+            "$ref": "#/components/schemas/FinancialModelRevisionSummary"
+          },
+          "driver_projections": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelDriverProjectionRead"
+            },
+            "title": "Driver Projections",
+            "type": "array"
+          },
+          "drivers_truncated": {
+            "title": "Drivers Truncated",
+            "type": "boolean"
+          },
+          "model_currency": {
+            "title": "Model Currency",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_type": {
+            "title": "Model Type",
+            "type": "string"
+          },
+          "revision_history_href": {
+            "title": "Revision History Href",
+            "type": "string"
+          },
+          "valuation_listing_id": {
+            "format": "uuid",
+            "title": "Valuation Listing Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "model_name",
+          "model_type",
+          "valuation_listing_id",
+          "model_currency",
+          "accepted_revision",
+          "driver_projections",
+          "drivers_truncated",
+          "revision_history_href"
+        ],
+        "title": "AgentContextNativeModel",
+        "type": "object"
+      },
+      "AgentContextSecIdentity": {
+        "additionalProperties": false,
+        "description": "Point-in-time reviewed SEC mapping; public issuer identity only.",
+        "properties": {
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cik"
+          },
+          "evidence_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Source"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "status": {
+            "enum": [
+              "MAPPED",
+              "UNMAPPED",
+              "AMBIGUOUS",
+              "INVALID"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AgentContextSecIdentity",
+        "type": "object"
+      },
       "AgentOwnerCashFlowProposalMethod-Input": {
         "additionalProperties": false,
         "properties": {
@@ -1897,6 +2059,264 @@
         "title": "CashValuation",
         "type": "object"
       },
+      "CompanyAgentContextV1": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyRead"
+          },
+          "consensus_continuity_status": {
+            "title": "Consensus Continuity Status",
+            "type": "string"
+          },
+          "consensus_periods": {
+            "items": {
+              "$ref": "#/components/schemas/ConsensusEstimatePeriodRead"
+            },
+            "title": "Consensus Periods",
+            "type": "array"
+          },
+          "consensus_provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Provider Id"
+          },
+          "consensus_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "contract_type": {
+            "const": "CompanyAgentContextV1",
+            "default": "CompanyAgentContextV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "current_research": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchRevisionRead"
+            },
+            "title": "Current Research",
+            "type": "array"
+          },
+          "current_theses": {
+            "items": {
+              "$ref": "#/components/schemas/InvestmentThesisRevisionRead"
+            },
+            "title": "Current Theses",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "guidance_observations": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyGuidanceObservationRead"
+            },
+            "title": "Guidance Observations",
+            "type": "array"
+          },
+          "guidance_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "imported_model_outputs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyModelOutputsCurrentRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "imported_outputs_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "known_at": {
+            "format": "date-time",
+            "title": "Known At",
+            "type": "string"
+          },
+          "listings": {
+            "items": {
+              "$ref": "#/components/schemas/ListingRead"
+            },
+            "title": "Listings",
+            "type": "array"
+          },
+          "metric_definitions": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMetricDefinitionRead"
+            },
+            "title": "Metric Definitions",
+            "type": "array"
+          },
+          "metric_observations": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyMetricObservationRead"
+            },
+            "title": "Metric Observations",
+            "type": "array"
+          },
+          "metrics_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "native_models": {
+            "items": {
+              "$ref": "#/components/schemas/AgentContextNativeModel"
+            },
+            "title": "Native Models",
+            "type": "array"
+          },
+          "native_models_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "portfolio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyPortfolioContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_holdings_authority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldingsAuthorityRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Id"
+          },
+          "portfolio_snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Snapshot Id"
+          },
+          "portfolio_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "portfolio_target_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Target Revision Id"
+          },
+          "research_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          },
+          "resource_links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Resource Links",
+            "type": "object"
+          },
+          "sec_identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentContextSecIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "securities": {
+            "items": {
+              "$ref": "#/components/schemas/SecurityRead"
+            },
+            "title": "Securities",
+            "type": "array"
+          },
+          "thesis_status": {
+            "$ref": "#/components/schemas/AgentContextCoverage"
+          }
+        },
+        "required": [
+          "generated_at",
+          "as_of",
+          "known_at",
+          "identity",
+          "company",
+          "securities",
+          "listings",
+          "portfolio_status",
+          "portfolio_id",
+          "portfolio_snapshot_id",
+          "portfolio_target_revision_id",
+          "portfolio_holdings_authority",
+          "portfolio",
+          "metrics_status",
+          "metric_definitions",
+          "metric_observations",
+          "guidance_status",
+          "guidance_observations",
+          "consensus_status",
+          "consensus_continuity_status",
+          "consensus_provider_id",
+          "consensus_periods",
+          "research_status",
+          "current_research",
+          "thesis_status",
+          "current_theses",
+          "native_models_status",
+          "native_models",
+          "imported_outputs_status",
+          "imported_model_outputs",
+          "resource_links"
+        ],
+        "title": "CompanyAgentContextV1",
+        "type": "object"
+      },
       "CompanyCandidatePipelineRead": {
         "additionalProperties": false,
         "properties": {
@@ -3050,6 +3470,219 @@
         "title": "CompanyForecastAccuracyRead",
         "type": "object"
       },
+      "CompanyGuidanceObservationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_guidance_id": {
+            "title": "External Guidance Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "lower_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Value"
+          },
+          "metric_definition_id": {
+            "format": "uuid",
+            "title": "Metric Definition Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "midpoint_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midpoint Value"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "title": "Period Type",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": true,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_guidance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Guidance Id"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Value"
+          },
+          "value_qualifier": {
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_guidance_id",
+          "company_id",
+          "metric_definition_id",
+          "metric_id",
+          "period_type",
+          "period_start",
+          "period_end",
+          "fiscal_year",
+          "fiscal_quarter",
+          "lower_value",
+          "midpoint_value",
+          "upper_value",
+          "value_qualifier",
+          "unit",
+          "scale",
+          "currency",
+          "basis",
+          "scope_json",
+          "issued_at",
+          "source_type",
+          "source_reference",
+          "status",
+          "supersedes_guidance_id",
+          "is_current",
+          "recorded_at"
+        ],
+        "title": "CompanyGuidanceObservationRead",
+        "type": "object"
+      },
       "CompanyInvestmentThesisRead": {
         "additionalProperties": false,
         "properties": {
@@ -3097,6 +3730,352 @@
           "streams"
         ],
         "title": "CompanyInvestmentThesisRead",
+        "type": "object"
+      },
+      "CompanyMetricDefinitionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "actuals_allowed": {
+            "title": "Actuals Allowed",
+            "type": "boolean"
+          },
+          "aggregation_semantics": {
+            "title": "Aggregation Semantics",
+            "type": "string"
+          },
+          "canonical_scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Canonical Scale",
+            "type": "string"
+          },
+          "canonical_unit": {
+            "title": "Canonical Unit",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "consensus_allowed": {
+            "title": "Consensus Allowed",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency_policy": {
+            "title": "Currency Policy",
+            "type": "string"
+          },
+          "default_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Basis"
+          },
+          "default_period_type": {
+            "title": "Default Period Type",
+            "type": "string"
+          },
+          "deprecated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deprecated At"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guidance_allowed": {
+            "title": "Guidance Allowed",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "model_driver_allowed": {
+            "title": "Model Driver Allowed",
+            "type": "boolean"
+          },
+          "scope_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scope Dimensions",
+            "type": "array"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          },
+          "value_kind": {
+            "title": "Value Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "metric_id",
+          "company_id",
+          "display_name",
+          "category",
+          "value_kind",
+          "canonical_unit",
+          "canonical_scale",
+          "currency_policy",
+          "aggregation_semantics",
+          "default_period_type",
+          "default_basis",
+          "scope_dimensions",
+          "actuals_allowed",
+          "guidance_allowed",
+          "consensus_allowed",
+          "model_driver_allowed",
+          "active",
+          "description",
+          "source_reference",
+          "created_at",
+          "deprecated_at"
+        ],
+        "title": "CompanyMetricDefinitionRead",
+        "type": "object"
+      },
+      "CompanyMetricObservationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_observation_id": {
+            "title": "External Observation Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "metric_definition_id": {
+            "format": "uuid",
+            "title": "Metric Definition Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "title": "Period Type",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "quality_status": {
+            "title": "Quality Status",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": true,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "supersedes_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Observation Id"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_observation_id",
+          "company_id",
+          "metric_definition_id",
+          "metric_id",
+          "period_type",
+          "period_start",
+          "period_end",
+          "fiscal_year",
+          "fiscal_quarter",
+          "value",
+          "value_qualifier",
+          "unit",
+          "scale",
+          "currency",
+          "basis",
+          "scope_json",
+          "reported_at",
+          "source_type",
+          "source_reference",
+          "quality_status",
+          "quality_reason",
+          "supersedes_observation_id",
+          "is_current",
+          "recorded_at"
+        ],
+        "title": "CompanyMetricObservationRead",
         "type": "object"
       },
       "CompanyModelOutputsCurrentRead": {
@@ -11069,10 +12048,19 @@
             "enum": [
               "1.0.0",
               "1.1.0",
-              "1.2.0"
+              "1.2.0",
+              "1.3.0"
             ],
             "title": "Contract Version",
             "type": "string"
+          },
+          "driver_projections": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelDriverProjectionInput-Input"
+            },
+            "maxItems": 60,
+            "title": "Driver Projections",
+            "type": "array"
           },
           "exported_at": {
             "format": "date-time",
@@ -11128,10 +12116,19 @@
             "enum": [
               "1.0.0",
               "1.1.0",
-              "1.2.0"
+              "1.2.0",
+              "1.3.0"
             ],
             "title": "Contract Version",
             "type": "string"
+          },
+          "driver_projections": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialModelDriverProjectionInput-Output"
+            },
+            "maxItems": 60,
+            "title": "Driver Projections",
+            "type": "array"
           },
           "exported_at": {
             "format": "date-time",
@@ -11220,6 +12217,428 @@
           "initial_revision"
         ],
         "title": "FinancialModelCreate",
+        "type": "object"
+      },
+      "FinancialModelDriverProjectionInput-Input": {
+        "additionalProperties": false,
+        "description": "Explicit company operating path authored with a portable model revision.",
+        "properties": {
+          "basis": {
+            "const": "MODEL_DRIVER",
+            "default": "MODEL_DRIVER",
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_driver_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:-]+$",
+            "title": "External Driver Id",
+            "type": "string"
+          },
+          "forecast_year": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale"
+          },
+          "scenario": {
+            "enum": [
+              "BEAR",
+              "BASE",
+              "BULL"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "external_driver_id",
+          "metric_key",
+          "scenario",
+          "forecast_year",
+          "period_type",
+          "period_start",
+          "period_end",
+          "value",
+          "unit",
+          "scale",
+          "rationale"
+        ],
+        "title": "FinancialModelDriverProjectionInput",
+        "type": "object"
+      },
+      "FinancialModelDriverProjectionInput-Output": {
+        "additionalProperties": false,
+        "description": "Explicit company operating path authored with a portable model revision.",
+        "properties": {
+          "basis": {
+            "const": "MODEL_DRIVER",
+            "default": "MODEL_DRIVER",
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_driver_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:-]+$",
+            "title": "External Driver Id",
+            "type": "string"
+          },
+          "forecast_year": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "BEAR",
+              "BASE",
+              "BULL"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "external_driver_id",
+          "metric_key",
+          "scenario",
+          "forecast_year",
+          "period_type",
+          "period_start",
+          "period_end",
+          "value",
+          "unit",
+          "scale",
+          "rationale"
+        ],
+        "title": "FinancialModelDriverProjectionInput",
+        "type": "object"
+      },
+      "FinancialModelDriverProjectionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_driver_id": {
+            "title": "External Driver Id",
+            "type": "string"
+          },
+          "forecast_year": {
+            "title": "Forecast Year",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metric_definition_id": {
+            "format": "uuid",
+            "title": "Metric Definition Id",
+            "type": "string"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "BEAR",
+              "BASE",
+              "BULL"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": true,
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_driver_id",
+          "model_id",
+          "revision_id",
+          "scenario",
+          "metric_definition_id",
+          "metric_id",
+          "forecast_year",
+          "period_type",
+          "period_start",
+          "period_end",
+          "value",
+          "value_qualifier",
+          "unit",
+          "scale",
+          "currency",
+          "basis",
+          "scope_json",
+          "rationale",
+          "recorded_at"
+        ],
+        "title": "FinancialModelDriverProjectionRead",
         "type": "object"
       },
       "FinancialModelEvidenceRead": {
@@ -16313,6 +17732,598 @@
         "title": "GoogleSheetsThesisWatchPublishRequest",
         "type": "object"
       },
+      "GuidanceObservationBatchV1-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "GuidanceObservationBatchV1",
+            "default": "GuidanceObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GuidanceObservationItem-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "GuidanceObservationBatchV1",
+        "type": "object"
+      },
+      "GuidanceObservationBatchV1-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "GuidanceObservationBatchV1",
+            "default": "GuidanceObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GuidanceObservationItem-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "GuidanceObservationBatchV1",
+        "type": "object"
+      },
+      "GuidanceObservationItem-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_guidance_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Guidance Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "lower_value": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "decimal_places": 12,
+                "max_digits": 38
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Value"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "midpoint_value": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "decimal_places": 12,
+                "max_digits": 38
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midpoint Value"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "default": "ACTIVE",
+            "enum": [
+              "ACTIVE",
+              "WITHDRAWN",
+              "ACHIEVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_guidance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Guidance Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper_value": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                    "type": "string"
+                  }
+                ],
+                "decimal_places": 12,
+                "max_digits": 38
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Value"
+          },
+          "value_qualifier": {
+            "default": "RANGE",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE",
+              "RANGE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_guidance_id"
+        ],
+        "title": "GuidanceObservationItem",
+        "type": "object"
+      },
+      "GuidanceObservationItem-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_guidance_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Guidance Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "lower_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Value"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "midpoint_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midpoint Value"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "default": "ACTIVE",
+            "enum": [
+              "ACTIVE",
+              "WITHDRAWN",
+              "ACHIEVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_guidance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Guidance Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "upper_value": {
+            "anyOf": [
+              {
+                "decimal_places": 12,
+                "max_digits": 38,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Value"
+          },
+          "value_qualifier": {
+            "default": "RANGE",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE",
+              "RANGE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_guidance_id"
+        ],
+        "title": "GuidanceObservationItem",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -17823,6 +19834,542 @@
           "history"
         ],
         "title": "InvestmentThesisStreamRead",
+        "type": "object"
+      },
+      "KPIObservationBatchV1-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "KPIObservationBatchV1",
+            "default": "KPIObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KPIObservationItem-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "KPIObservationBatchV1",
+        "type": "object"
+      },
+      "KPIObservationBatchV1-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "KPIObservationBatchV1",
+            "default": "KPIObservationBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KPIObservationItem-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "KPIObservationBatchV1",
+        "type": "object"
+      },
+      "KPIObservationItem-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_observation_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Observation Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "quality_status": {
+            "default": "VERIFIED",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "CONFLICTED",
+              "RESTATED"
+            ],
+            "title": "Quality Status",
+            "type": "string"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "supersedes_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Observation Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_observation_id",
+          "value"
+        ],
+        "title": "KPIObservationItem",
+        "type": "object"
+      },
+      "KPIObservationItem-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "external_observation_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Observation Id",
+            "type": "string"
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "maximum": 4.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "maximum": 2200.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "quality_reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Reason"
+          },
+          "quality_status": {
+            "default": "VERIFIED",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "CONFLICTED",
+              "RESTATED"
+            ],
+            "title": "Quality Status",
+            "type": "string"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          },
+          "scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Scale",
+            "type": "string"
+          },
+          "scope_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10,
+            "propertyNames": {
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "title": "Scope Json",
+            "type": "object"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "source_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          },
+          "supersedes_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Observation Id"
+          },
+          "unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "decimal_places": 12,
+            "max_digits": 38,
+            "title": "Value",
+            "type": "string"
+          },
+          "value_qualifier": {
+            "default": "EQ",
+            "enum": [
+              "EQ",
+              "APPROX",
+              "GT",
+              "GTE",
+              "LT",
+              "LTE"
+            ],
+            "title": "Value Qualifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "period_type",
+          "period_start",
+          "period_end",
+          "unit",
+          "scale",
+          "basis",
+          "source_type",
+          "source_reference",
+          "external_observation_id",
+          "value"
+        ],
+        "title": "KPIObservationItem",
         "type": "object"
       },
       "LedgerAcceptCreate": {
@@ -21783,6 +24330,428 @@
         "title": "MarketRefreshStatusRead",
         "type": "object"
       },
+      "MetricDefinitionBatchV1-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "MetricDefinitionBatchV1",
+            "default": "MetricDefinitionBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionItem-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "MetricDefinitionBatchV1",
+        "type": "object"
+      },
+      "MetricDefinitionBatchV1-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "authored_at": {
+            "format": "date-time",
+            "title": "Authored At",
+            "type": "string"
+          },
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "contract_type": {
+            "const": "MetricDefinitionBatchV1",
+            "default": "MetricDefinitionBatchV1",
+            "title": "Contract Type",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "external_batch_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Batch Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDefinitionItem-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "external_batch_id",
+          "authored_at",
+          "rationale",
+          "items"
+        ],
+        "title": "MetricDefinitionBatchV1",
+        "type": "object"
+      },
+      "MetricDefinitionItem-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "actuals_allowed": {
+            "default": true,
+            "title": "Actuals Allowed",
+            "type": "boolean"
+          },
+          "aggregation_semantics": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Aggregation Semantics",
+            "type": "string"
+          },
+          "canonical_scale": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Canonical Scale"
+          },
+          "canonical_unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Canonical Unit",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "OPERATING",
+              "CUSTOMER",
+              "CAPACITY",
+              "PRODUCT",
+              "MARKET_SHARE",
+              "MARKET_EXPOSURE",
+              "SEGMENT",
+              "BACKLOG",
+              "QUALITY",
+              "OTHER"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "currency_policy": {
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL",
+              "NONE"
+            ],
+            "title": "Currency Policy",
+            "type": "string"
+          },
+          "default_basis": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Basis"
+          },
+          "default_period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Default Period Type",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4000,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guidance_allowed": {
+            "default": false,
+            "title": "Guidance Allowed",
+            "type": "boolean"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "model_driver_allowed": {
+            "default": false,
+            "title": "Model Driver Allowed",
+            "type": "boolean"
+          },
+          "scope_dimensions": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Scope Dimensions",
+            "type": "array"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "value_kind": {
+            "enum": [
+              "CURRENCY",
+              "PERCENT",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Value Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "display_name",
+          "category",
+          "value_kind",
+          "canonical_unit",
+          "canonical_scale",
+          "currency_policy",
+          "aggregation_semantics",
+          "default_period_type",
+          "description",
+          "source_reference"
+        ],
+        "title": "MetricDefinitionItem",
+        "type": "object"
+      },
+      "MetricDefinitionItem-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "actuals_allowed": {
+            "default": true,
+            "title": "Actuals Allowed",
+            "type": "boolean"
+          },
+          "aggregation_semantics": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Aggregation Semantics",
+            "type": "string"
+          },
+          "canonical_scale": {
+            "decimal_places": 12,
+            "gt": 0,
+            "max_digits": 38,
+            "title": "Canonical Scale",
+            "type": "string"
+          },
+          "canonical_unit": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Canonical Unit",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "OPERATING",
+              "CUSTOMER",
+              "CAPACITY",
+              "PRODUCT",
+              "MARKET_SHARE",
+              "MARKET_EXPOSURE",
+              "SEGMENT",
+              "BACKLOG",
+              "QUALITY",
+              "OTHER"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "currency_policy": {
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL",
+              "NONE"
+            ],
+            "title": "Currency Policy",
+            "type": "string"
+          },
+          "default_basis": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Basis"
+          },
+          "default_period_type": {
+            "enum": [
+              "DATE",
+              "MONTH",
+              "QUARTER",
+              "FY",
+              "TTM",
+              "EVENT"
+            ],
+            "title": "Default Period Type",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4000,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "guidance_allowed": {
+            "default": false,
+            "title": "Guidance Allowed",
+            "type": "boolean"
+          },
+          "metric_key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "model_driver_allowed": {
+            "default": false,
+            "title": "Model Driver Allowed",
+            "type": "boolean"
+          },
+          "scope_dimensions": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Scope Dimensions",
+            "type": "array"
+          },
+          "source_reference": {
+            "maxLength": 2000,
+            "minLength": 9,
+            "pattern": "^https://",
+            "title": "Source Reference",
+            "type": "string"
+          },
+          "value_kind": {
+            "enum": [
+              "CURRENCY",
+              "PERCENT",
+              "COUNT",
+              "RATIO"
+            ],
+            "title": "Value Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_key",
+          "display_name",
+          "category",
+          "value_kind",
+          "canonical_unit",
+          "canonical_scale",
+          "currency_policy",
+          "aggregation_semantics",
+          "default_period_type",
+          "description",
+          "source_reference"
+        ],
+        "title": "MetricDefinitionItem",
+        "type": "object"
+      },
       "ModelEvidenceRelationship": {
         "enum": [
           "SUPPORTS",
@@ -22771,6 +25740,463 @@
           "replayed"
         ],
         "title": "ModelRevisionProposalSubmissionRead",
+        "type": "object"
+      },
+      "ObservationProposalChange": {
+        "additionalProperties": false,
+        "properties": {
+          "metric_key": {
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "CREATE",
+              "SUPERSEDE"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "previous_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Id"
+          },
+          "row_index": {
+            "title": "Row Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_index",
+          "metric_key",
+          "operation",
+          "previous_id"
+        ],
+        "title": "ObservationProposalChange",
+        "type": "object"
+      },
+      "ObservationProposalDecisionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservationProposalPreviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/ObservationProposalRead"
+          },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "REJECTED",
+              "PREVIEW_CHANGED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "proposal"
+        ],
+        "title": "ObservationProposalDecisionRead",
+        "type": "object"
+      },
+      "ObservationProposalDecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Decision Note",
+            "type": "string"
+          },
+          "preview_fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Preview Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview_fingerprint",
+          "decision_note"
+        ],
+        "title": "ObservationProposalDecisionRequest",
+        "type": "object"
+      },
+      "ObservationProposalIssue": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "CONFLICT",
+              "INVALID"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "row_index": {
+            "title": "Row Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_index",
+          "code",
+          "detail"
+        ],
+        "title": "ObservationProposalIssue",
+        "type": "object"
+      },
+      "ObservationProposalPreviewRead": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationProposalChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationProposalIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
+          },
+          "proposal_id": {
+            "format": "uuid",
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "READY",
+              "CONFLICT",
+              "INVALID"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "status",
+          "issues",
+          "changes",
+          "preview_fingerprint"
+        ],
+        "title": "ObservationProposalPreviewRead",
+        "type": "object"
+      },
+      "ObservationProposalRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_record_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Accepted Record Ids",
+            "type": "array"
+          },
+          "content_fingerprint": {
+            "title": "Content Fingerprint",
+            "type": "string"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "preview_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Fingerprint"
+          },
+          "producer_id": {
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "proposal": {
+            "discriminator": {
+              "mapping": {
+                "GuidanceObservationBatchV1": "#/components/schemas/GuidanceObservationBatchV1-Output",
+                "KPIObservationBatchV1": "#/components/schemas/KPIObservationBatchV1-Output",
+                "MetricDefinitionBatchV1": "#/components/schemas/MetricDefinitionBatchV1-Output"
+              },
+              "propertyName": "contract_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetricDefinitionBatchV1-Output"
+              },
+              {
+                "$ref": "#/components/schemas/KPIObservationBatchV1-Output"
+              },
+              {
+                "$ref": "#/components/schemas/GuidanceObservationBatchV1-Output"
+              }
+            ],
+            "title": "Proposal"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "READY",
+              "CONFLICT",
+              "INVALID",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "producer_id",
+          "proposal",
+          "content_fingerprint",
+          "status",
+          "issue",
+          "preview_fingerprint",
+          "accepted_record_ids",
+          "reviewer_id",
+          "decision_note",
+          "submitted_at",
+          "reviewed_at"
+        ],
+        "title": "ObservationProposalRead",
+        "type": "object"
+      },
+      "ObservationProposalRejectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Decision Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_note"
+        ],
+        "title": "ObservationProposalRejectRequest",
+        "type": "object"
+      },
+      "ObservationProposalSubmissionRead": {
+        "additionalProperties": false,
+        "properties": {
+          "proposal": {
+            "$ref": "#/components/schemas/ObservationProposalRead"
+          },
+          "replayed": {
+            "title": "Replayed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "proposal",
+          "replayed"
+        ],
+        "title": "ObservationProposalSubmissionRead",
+        "type": "object"
+      },
+      "ObservationSheetCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_count": {
+            "title": "Checked Count",
+            "type": "integer"
+          },
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "created_proposal_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Created Proposal Ids",
+            "type": "array"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationSheetIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "replayed_count": {
+            "title": "Replayed Count",
+            "type": "integer"
+          },
+          "source_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Error Code"
+          },
+          "spreadsheet_id": {
+            "title": "Spreadsheet Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SUCCEEDED",
+              "PARTIAL",
+              "SOURCE_UNAVAILABLE",
+              "SYNC_IN_PROGRESS"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tab": {
+            "title": "Tab",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "spreadsheet_id",
+          "tab",
+          "checked_count",
+          "created_count",
+          "replayed_count",
+          "issues",
+          "created_proposal_ids"
+        ],
+        "title": "ObservationSheetCheck",
+        "type": "object"
+      },
+      "ObservationSheetIssue": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "INVALID",
+              "CONFLICT",
+              "NOT_FOUND"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "publish_id": {
+            "title": "Publish Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "publish_id",
+          "code",
+          "reason"
+        ],
+        "title": "ObservationSheetIssue",
         "type": "object"
       },
       "OperationalJobAttemptRead": {
@@ -36825,6 +40251,100 @@
         ]
       }
     },
+    "/v1/companies/{company_id}/agent-context": {
+      "get": {
+        "operationId": "get_company_agent_context_v1_companies__company_id__agent_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "portfolio_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyAgentContextV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Agent Context",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/companies/{company_id}/candidate-pipeline": {
       "get": {
         "operationId": "get_company_candidate_pipeline_v1_companies__company_id__candidate_pipeline_get",
@@ -38042,6 +41562,125 @@
         ]
       }
     },
+    "/v1/companies/{company_id}/guidance-observations": {
+      "get": {
+        "operationId": "get_company_guidance_observations_v1_companies__company_id__guidance_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "current_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Current Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyGuidanceObservationRead"
+                  },
+                  "title": "Response Get Company Guidance Observations V1 Companies  Company Id  Guidance Observations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Guidance Observations",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/companies/{company_id}/job-requests": {
       "get": {
         "operationId": "get_company_job_requests_v1_companies__company_id__job_requests_get",
@@ -38242,6 +41881,115 @@
           }
         },
         "summary": "Get Company Market Data",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/companies/{company_id}/metric-observations": {
+      "get": {
+        "operationId": "get_company_metric_observations_v1_companies__company_id__metric_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "known_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Known At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyMetricObservationRead"
+                  },
+                  "title": "Response Get Company Metric Observations V1 Companies  Company Id  Metric Observations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Metric Observations",
         "tags": [
           "Portfolio research"
         ]
@@ -39310,6 +43058,472 @@
         ]
       }
     },
+    "/v1/company-metric-definitions": {
+      "get": {
+        "operationId": "get_company_metric_definitions_v1_company_metric_definitions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_deprecated",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Deprecated",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyMetricDefinitionRead"
+                  },
+                  "title": "Response Get Company Metric Definitions V1 Company Metric Definitions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Metric Definitions",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals": {
+      "get": {
+        "operationId": "get_company_observation_proposals_v1_company_observation_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "READY",
+                    "CONFLICT",
+                    "INVALID",
+                    "ACCEPTED",
+                    "REJECTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObservationProposalRead"
+                  },
+                  "title": "Response Get Company Observation Proposals V1 Company Observation Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Observation Proposals",
+        "tags": [
+          "Portfolio research"
+        ]
+      },
+      "post": {
+        "operationId": "post_company_observation_proposal_v1_company_observation_proposals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "GuidanceObservationBatchV1": "#/components/schemas/GuidanceObservationBatchV1-Input",
+                    "KPIObservationBatchV1": "#/components/schemas/KPIObservationBatchV1-Input",
+                    "MetricDefinitionBatchV1": "#/components/schemas/MetricDefinitionBatchV1-Input"
+                  },
+                  "propertyName": "contract_type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MetricDefinitionBatchV1-Input"
+                  },
+                  {
+                    "$ref": "#/components/schemas/KPIObservationBatchV1-Input"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GuidanceObservationBatchV1-Input"
+                  }
+                ],
+                "title": "Value"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalSubmissionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_company_observation_proposal_v1_company_observation_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Company Observation Proposal",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}/accept": {
+      "post": {
+        "operationId": "post_company_observation_proposal_accept_v1_company_observation_proposals__proposal_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationProposalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalDecisionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal Accept",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}/preview": {
+      "post": {
+        "operationId": "post_company_observation_proposal_preview_v1_company_observation_proposals__proposal_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal Preview",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/company-observation-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "post_company_observation_proposal_reject_v1_company_observation_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Observation-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Observation-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationProposalRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationProposalDecisionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Company Observation Proposal Reject",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/execution-pace-runs": {
       "get": {
         "operationId": "get_execution_pace_runs_v1_execution_pace_runs_get",
@@ -39914,6 +44128,63 @@
         ]
       }
     },
+    "/v1/financial-models/{model_id}/revisions/{revision_id}/driver-projections": {
+      "get": {
+        "operationId": "get_financial_model_driver_projections_v1_financial_models__model_id__revisions__revision_id__driver_projections_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FinancialModelDriverProjectionRead"
+                  },
+                  "title": "Response Get Financial Model Driver Projections V1 Financial Models  Model Id  Revisions  Revision Id  Driver Projections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Financial Model Driver Projections",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
     "/v1/financial-models/{model_id}/sensitivity": {
       "get": {
         "operationId": "get_dcf_sensitivity_v1_financial_models__model_id__sensitivity_get",
@@ -40184,6 +44455,27 @@
           }
         },
         "summary": "Post Google Sheets Agent Work Publish",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/google-sheets-observation-sync/check": {
+      "post": {
+        "operationId": "post_google_sheets_observation_sync_check_v1_google_sheets_observation_sync_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationSheetCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Post Google Sheets Observation Sync Check",
         "tags": [
           "Portfolio research"
         ]

@@ -202,3 +202,38 @@ A corrected inbox revision label can recapture the same immutable contract after
 a source metadata error. The original invalid record stays available. Older invalid
 capture keys retain compatibility through a separate verified-source namespace.
 [Independent-model decision](architecture/decisions/002-independent-company-models.md)
+
+## Portable DCF contract v1.3 — explicit operating drivers
+
+`FinancialModelContractV1` version `1.3.0` extends the evidence-capable
+`1.2.0` DCF publication with optional `driver_projections[]` (up to 60 rows).
+Each row is an explicitly authored assumption — never derived automatically
+from model revenue/EBIT or projected by the API:
+
+- Stable external driver ID and approved company metric key;
+- `BEAR` / `BASE` / `BULL` scenario and forecast year (1–10);
+- Economic period start/end/type, exact decimal **value** and **scale**;
+- Qualifier, unit, currency, `MODEL_DRIVER` basis, scope and rationale.
+
+Only registered, active company metric definitions with
+`model_driver_allowed=true` may be referenced. Units, scale, currency and scope
+must match the immutable metric definition. Duplicate IDs and duplicate
+scenario/metric/period/scope rows fail validation. Evidence/author/source
+requirements are identical to v1.2.
+
+The normal model calculation and fair-value parity remain untouched. The
+existing model-contract preview shows driver-path changes as a separate diff.
+A **reviewer** must accept the full model revision through the existing guarded
+publication inbox; driver rows are appended transactionally to the exact
+accepted revision, with prior historical revision paths retained. Native model
+and `CompanyAgentContextV1` read endpoints expose those rows. The Company
+Explorer Operating KPIs view then compares explicit driver assumptions against
+matching actuals and guidance, never against differently scaled or dated facts.
+
+Version 1.0–1.2 imports, digests and existing model valuations remain compatible;
+no driver paths are inferred for older contracts. The version `1.3.0` is
+supported for **portable UFCF DCF contracts** here. Owner cash flow/residual
+income portable v2.1 are not implicitly changed.
+
+No database migration or new engine is introduced. No production model is
+updated, and the workbook has not been edited in this PR.
