@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from portfolio_api.company_agent_context import CompanyAgentContextV1
 from portfolio_api.data_universe_public_evidence import verify_uber_q3_2026_pack
+from portfolio_api.data_universe_proposal_handoff import prepare_handoff
 from portfolio_api.data_universe_shadow import EvidencePackV1, compare_source_pack
 from portfolio_api.domain.models import Company, Listing, Security
 from portfolio_api.main import create_app
@@ -104,47 +105,61 @@ def test_public_issuer_shadow_proposals_complete_a_reviewed_company_loop(
 
         report = compare_source_pack(context, pack)
         assert report["status"] == "DRAFTS_PREPARED"
-        batches = report["draft_proposals"]
-        assert [b["contract_type"] for b in batches] == [
+        handoff = prepare_handoff(context, pack, verified)
+        assert [b["contract_type"] for b in handoff["ready_batches"]] == [
             "MetricDefinitionBatchV1",
+        ]
+        assert handoff["deferred_batch_types"] == [
             "KPIObservationBatchV1",
             "GuidanceObservationBatchV1",
         ]
 
         # A proposal is never self-approved: only the reviewer role can preview
-        # and explicitly accept each dependency in order.
-        for batch in batches:
-            denied = client.post(
-                "/v1/company-observation-proposals",
-                json=batch,
-                headers=reviewer_headers,
-            )
-            assert denied.status_code == 401
-            submitted = client.post(
-                "/v1/company-observation-proposals",
-                json=batch,
-                headers=agent_headers,
-            )
-            assert submitted.status_code == 201, submitted.text
-            proposal_id = submitted.json()["proposal"]["id"]
-            preview = client.post(
-                f"/v1/company-observation-proposals/{proposal_id}/preview",
-                headers=reviewer_headers,
-            )
-            assert preview.status_code == 200, preview.text
-            assert preview.json()["status"] == "READY", preview.text
-            assert preview.json()["preview_fingerprint"]
-            accepted = client.post(
-                f"/v1/company-observation-proposals/{proposal_id}/accept",
-                headers=reviewer_headers,
-                json={
-                    "preview_fingerprint": preview.json()["preview_fingerprint"],
-                    "decision_note": "Reviewed source extract, periods and units in isolation.",
-                },
-            )
-            assert accepted.status_code == 200, accepted.text
-            assert accepted.json()["status"] == "ACCEPTED"
-
+        # and explicitly accept each dependency in order. Definitions must be
+        # accepted before a fresh context makes KPI/guidance candidates eligible.
+        for phase in ("definitions", "observations"):
+            if phase == "observations":
+                updated = client.get(context_url, headers=read_headers)
+                assert updated.status_code == 200, updated.text
+                handoff = prepare_handoff(
+                    CompanyAgentContextV1.model_validate(updated.json()), pack, verified
+                )
+                assert [b["contract_type"] for b in handoff["ready_batches"]] == [
+                    "KPIObservationBatchV1",
+                    "GuidanceObservationBatchV1",
+                ]
+            for batch in handoff["ready_batches"]:
+                denied = client.post(
+                    "/v1/company-observation-proposals",
+                    json=batch,
+                    headers=reviewer_headers,
+                )
+                assert denied.status_code == 401
+                submitted = client.post(
+                    "/v1/company-observation-proposals",
+                    json=batch,
+                    headers=agent_headers,
+                )
+                assert submitted.status_code == 201, submitted.text
+                proposal_id = submitted.json()["proposal"]["id"]
+                preview = client.post(
+                    f"/v1/company-observation-proposals/{proposal_id}/preview",
+                    headers=reviewer_headers,
+                )
+                assert preview.status_code == 200, preview.text
+                assert preview.json()["status"] == "READY", preview.text
+                assert preview.json()["preview_fingerprint"]
+                accepted = client.post(
+                    f"/v1/company-observation-proposals/{proposal_id}/accept",
+                    headers=reviewer_headers,
+                    json={
+                        "preview_fingerprint": preview.json()["preview_fingerprint"],
+                        "decision_note": "Reviewed source extract, periods and units in isolation.",
+                    },
+                )
+                assert accepted.status_code == 200, accepted.text
+                assert accepted.json()["status"] == "ACCEPTED"
+    
         current = client.get(context_url, headers=read_headers)
         assert current.status_code == 200, current.text
         final_context = CompanyAgentContextV1.model_validate(current.json())
@@ -163,3 +178,7 @@ def test_public_issuer_shadow_proposals_complete_a_reviewed_company_loop(
         assert matched["status"] == "MATCHED"
         assert matched["draft_proposals"] == []
         assert all(row["outcome"] == "MATCHED" for row in matched["findings"])
+        finished = prepare_handoff(final_context, pack, verified)
+        assert finished["shadow_status"] == "MATCHED"
+        assert finished["ready_batches"] == []
+        assert finished["candidate_submission"]["status"] == "NOT_ATTEMPTED"
