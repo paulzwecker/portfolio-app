@@ -34,7 +34,7 @@ The fixture's `authored_at` is the synthetic pack preparation timestamp, not
 the issuer's publication timestamp. The source pack is reviewed input, not
 proof that an autonomous browser fetched or validated the release.
 
-### Bounded primary-source verification (first issuer profile)
+### Bounded primary-source verification (Uber pilot)
 
 The optional `--verify-public-source` switch performs **one direct HTTP GET**
 against that exact Uber investor-relations URL, with no redirects, cookies,
@@ -65,6 +65,77 @@ The recorded page SHA-256 begins `af725f990041e608`. No canonical API,
 database, source Sheet or private credential was used in that live source check.
 The temporary workflow was removed; subsequent live checks remain explicit
 operator invocations and may fail on publisher-side blocks.
+
+## First held-company pilot: Booking Holdings Q3 2026
+
+The new **BKNG** profile uses the original SEC Form 10-Q, accession
+`0001075531-26-000045` (filed November 3, 2026), for the quarter ended
+September 30, 2026:
+
+https://www.sec.gov/Archives/edgar/data/1075531/000107553126000045/bkng-20260930.htm
+
+The reviewed test pack
+`apps/api/tests/fixtures/data_universe_bkng_q3_2026.json` carries exactly
+three company-specific operating actuals: **345 million room nights**,
+**21 million flight tickets**, and **USD 54,461 million total gross
+bookings**. These are operating measures, not GAAP revenue. SEC tables
+report them in *millions*, not exact underlying counts or dollars. Every
+observation therefore preserves `value_qualifier=APPROX` and its scale,
+and `reported_at=null` because the filing date is not an exact public
+release instant. No model driver, guidance or return prediction is inferred.
+
+### Canonical identity: SEC CIK before ticker
+
+The issuer's public CIK is **0001075531**. The existing canonical
+`company_provider_identifiers` table, not a ticker-only inference,
+must already contain one operator-reviewed mapping to Booking Holdings.
+A read-only operator can inspect it with the following **SELECT only**,
+alongside the exact security/listing identity:
+
+```sql
+SELECT c.id AS company_id, c.name, p.identifier_value AS sec_cik,
+       l.ticker, l.venue, l.currency
+FROM company_provider_identifiers AS p
+JOIN companies AS c ON c.id = p.company_id
+JOIN securities AS s ON s.company_id = c.id
+JOIN listings AS l ON l.security_id = s.id
+WHERE p.provider_id = 'sec_edgar'
+  AND p.identifier_type = 'SEC_CIK'
+  AND p.identifier_value = '0001075531'
+  AND l.ticker = 'BKNG';
+```
+
+Continue only if the result identifies exactly one reviewed issuer/listing
+with a matching Booking Holdings name and the supported USD common-stock
+listing. **Do not** create a new company, invent a UUID, change a mapping
+or infer identity from `BKNG` alone. A missing or conflicting crosswalk
+blocks the live pilot until separately reviewed.
+
+The scoped Data & Universe read token must have that UUID explicitly
+allowlisted. Its context still hides private holdings, thesis and models.
+After **separate read-only operator authorization**, the offline-first
+command can be run with the exact UUID and private read token:
+
+```sh
+export SEC_USER_AGENT="(operator-configured SEC fair-access contact)"
+node scripts/uv.mjs run --locked --project apps/api \\
+  python -m portfolio_api.data_universe_proposal_handoff \\
+  --api-base-url https://your-approved-api-host.example \\
+  --company-id THE_REVIEWED_BOOKING_COMPANY_UUID \\
+  --source-pack apps/api/tests/fixtures/data_universe_bkng_q3_2026.json \\
+  --output /tmp/bkng-q3-2026-private-review-plan.json
+```
+
+The SEC public GET requires an operator-configured contact user-agent
+(`SEC_USER_AGENT`). It uses the *single exact 10-Q URL*, HTTPS, bounded
+bytes/time, no redirects and no paid provider. Any inaccessible, changed,
+malformed, conflicting or ambiguous source fails closed. The default
+command produces only an owner-only private review plan, not a proposal
+POST. Agent submission, reviewer acceptance and production configuration
+remain separate gates. Synthetic PostgreSQL tests prove the SEC CIK →
+company/listing → reviewed definition/actual → accepted scoped-read
+journey; **no production Booking UUID or live database read has been
+established by this development slice**.
 
 ## Local operator command
 
@@ -195,8 +266,8 @@ A subsequent agent may research and author the same evidence pack, but must
 still submit any proposed accepted change through the existing human reviewer
 workflow, not by direct SQL or workbook edits.
 
-By default, the CLI does not retrieve issuer pages. The optional, one-URL
-Uber verifier is the only public-source GET and is deliberately separate from
+By default, the CLI does not retrieve issuer pages. The approved, fixed-URL Uber and Booking verifiers are the only
+public-source GETs and remain deliberately separate from
 the canonical-read and proposal-comparison logic. It never POSTs agent
 proposals, accepts canonical changes or bypasses the human reviewer. Broader
 company adapters must independently establish source rights, identity and
