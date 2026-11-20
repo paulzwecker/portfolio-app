@@ -1,3 +1,50 @@
+## Authorized production Booking SEC CIK mapping — November 20, 2026
+
+Owner explicitly authorized exactly one Booking SEC issuer crosswalk write.
+A fresh read-only preflight verified Neon `app-portfolio` / production branch /
+`neondb.public` at Alembic `b59f16c8a203`, the existing non-demo
+Booking Holdings canonical company, and its one USD/NASDAQ BKNG common-stock
+listing. No SEC provider mappings existed. The SEC's official Q3 2026 10-Q
+filing index independently confirms registrant **Booking Holdings Inc.**,
+CIK **0001075531** and accession **0001075531-26-000045**.
+
+The **single authorized additive insert** completed at 2026-11-20
+11:51:25 UTC with `sec_edgar` / `SEC_CIK` / `0001075531`, the
+official registrant name and exact official SEC filing-index URL as
+evidence, source timestamps recorded at the transaction instant and
+`actor=IMPORT` (existing importer convention). The write was
+transactional and guarded by PostgreSQL READ COMMITTED, the existing SEC
+advisory-lock namespace, fixed database/schema/migration identity,
+canonical company/listing checks and no-collision checks.
+
+**Independent committed readback:** exactly one canonical BKNG/SEC CIK
+mapping exists, and it joins to the previously verified NASDAQ common
+listing. The mapping table's total count rose from 0 to 1; schema remains
+`b59f16c8a203`. No Booking SEC fact observations or SEC fact batches
+exist, and the new `company_observation_proposals` table remains
+undeployed. No holdings, accepted model/observation, provider refresh,
+production configuration, Render deployment or Vercel setting was changed.
+
+**Rollback/recovery:** The exact inserted mapping primary key is held in
+the private operator session, not tracked in Git. A separately authorized,
+single-row conditional DELETE matching ID, company, CIK and evidence
+would reverse this additive change if no downstream references were
+created. Do not run a blanket mapping DELETE. No production database
+restore or recovery-branch creation was performed for this one-row action;
+future database migrations/deployments retain their independent
+recovery/release gates.
+
+**Next operational gate:** The active Render API is still the November 15
+`41baea8a` release and does not include the PR #42 read-only
+`CompanyAgentContextV1.sec_identity` contract or its proposal inbox.
+Do not infer that live hosted Booking agent proposals now work.
+A coordinated schema-safe, reviewed API-first deployment and privately
+provisioned scoped read token/Booking-only allowlist still require
+separate authorization. A live SEC HTML adapter check also requires an
+operator-configured SEC fair-access User-Agent.
+
+---
+
 ## Live read-only operational preflight — November 20, 2026
 
 Authorized Neon and Render connector reads confirmed the actual target, not
