@@ -120,7 +120,9 @@ def test_booking_sec_cik_to_reviewed_kpis_full_loop(postgres_engine: Engine) -> 
             assert context.sec_identity.evidence_source is not None
             if phase == "definitions":
                 with pytest.raises(ValueError, match="reviewed matching SEC CIK"):
-                    prepare_handoff(context.model_copy(update={"sec_identity": None}), pack, verified)
+                    prepare_handoff(
+                        context.model_copy(update={"sec_identity": None}), pack, verified
+                    )
                 wrong = context.sec_identity.model_copy(update={"cik": "0001234567"})
                 with pytest.raises(ValueError, match="reviewed matching SEC CIK"):
                     prepare_handoff(
