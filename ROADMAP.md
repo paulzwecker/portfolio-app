@@ -8,7 +8,7 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field             | Current value                                                                                                             |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | PR #42 adds agent context, reviewed operating evidence and prior BASE model review. [Handoff](docs/ACTIVE_WORKSTREAM.md). |
+| Active checkpoint | PR #42 verified live Uber source; isolated reviewer pipeline in current-head CI.    [Handoff](docs/ACTIVE_WORKSTREAM.md). |
 | Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.                |
 | Product outcome   | Issuer evidence → canonical company data → human review → accepted model drivers → informed re-underwriting.              |
 | Integration       | Prior #42 head `a005893f` passed three CI gates; latest Nov 20 commits require exact-head verification.                   |
