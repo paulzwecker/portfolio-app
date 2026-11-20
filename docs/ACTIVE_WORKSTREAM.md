@@ -1,5 +1,13 @@
 ## Current slice — fail-closed Booking SEC identity binding (2026-11-20)
 
+**Second-pass acceptance safeguard:** The observation reviewer API now
+enforces SEC evidence identity for direct agent submissions, not only the
+steward CLI. SEC-hosted or `SEC_10Q` rows require a unique current
+operator-reviewed company CIK matching the source URL. The CIK mapping
+participates in preview fingerprints and is rechecked at acceptance.
+Missing/mismatched mappings produce an `INVALID` preview; isolated
+PostgreSQL tests exercise this without accessing production data.
+
 The real Booking SEC pilot now ties every staged candidate to a
 **point-in-time, operator-reviewed SEC CIK** returned in the restricted
 `CompanyAgentContextV1.sec_identity`. The field exposes only public issuer

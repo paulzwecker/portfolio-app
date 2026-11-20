@@ -190,3 +190,81 @@ def test_booking_sec_cik_to_reviewed_kpis_full_loop(postgres_engine: Engine) -> 
         assert finished["shadow_status"] == "MATCHED"
         assert finished["ready_batches"] == []
         assert finished["candidate_submission"]["status"] == "NOT_ATTEMPTED"
+
+
+
+def test_booking_sec_proposal_preview_blocks_missing_or_wrong_cik(
+    postgres_engine: Engine,
+) -> None:
+    """The direct agent API must never bypass the issuer identity check."""
+    pack = EvidencePackV1.model_validate_json(
+        (HERE / "data_universe_bkng_q3_2026.json").read_text(encoding="utf-8")
+    )
+    company_id = uuid4()
+    with Session(postgres_engine) as session, session.begin():
+        session.add(
+            Company(id=company_id, name="Booking Holdings Inc.", reporting_currency="USD")
+        )
+
+    settings = Settings(
+        _env_file=None,
+        app_env="development",
+        observation_proposals_enabled=True,
+        observation_acceptance_enabled=True,
+        observation_proposal_agent_token=SecretStr(AGENT),
+        observation_proposal_agent_id="synthetic-booking-agent",
+        observation_proposal_reviewer_token=SecretStr(REVIEWER),
+        observation_proposal_reviewer_id="synthetic-booking-human-reviewer",
+    )
+    batch = {
+        "contract_type": "MetricDefinitionBatchV1",
+        "contract_version": "1.0.0",
+        "company_id": str(company_id),
+        "external_batch_id": "bkng-unmapped-cik-negative-test",
+        "authored_at": datetime.now(UTC).isoformat(),
+        "rationale": "SEC issuer evidence requires an exact reviewed CIK.",
+        "items": [pack.metric_definitions[0].model_dump(mode="json")],
+    }
+    with (
+        patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
+        TestClient(create_app(settings)) as client,
+    ):
+        submission = client.post(
+            "/v1/company-observation-proposals",
+            json=batch,
+            headers={"X-Observation-Proposal-Token": AGENT},
+        )
+        assert submission.status_code == 201, submission.text
+        proposal_id = submission.json()["proposal"]["id"]
+        url = f"/v1/company-observation-proposals/{proposal_id}/preview"
+        headers = {"X-Observation-Proposal-Token": REVIEWER}
+        initial = client.post(url, headers=headers)
+        assert initial.status_code == 200, initial.text
+        assert initial.json()["status"] == "INVALID"
+        assert initial.json()["preview_fingerprint"] is None
+        assert any(
+            "SEC evidence requires" in issue["detail"] for issue in initial.json()["issues"]
+        )
+
+        # A different valid SEC issuer crosswalk still cannot authorize BKNG.
+        with Session(postgres_engine) as session, session.begin():
+            session.add(
+                CompanyProviderIdentifier(
+                    company_id=company_id,
+                    provider_id=SEC_PROVIDER_ID,
+                    identifier_type="SEC_CIK",
+                    identifier_value="0009999999",
+                    provider_company_name="Other public issuer",
+                    evidence_source="https://www.sec.gov/Archives/edgar/data/9999999/",
+                    effective_at=datetime(2026, 11, 3, tzinfo=UTC),
+                    actor="LOCAL_USER",
+                )
+            )
+        mismatched = client.post(url, headers=headers)
+        assert mismatched.status_code == 200, mismatched.text
+        assert mismatched.json()["status"] == "INVALID"
+        assert mismatched.json()["preview_fingerprint"] is None
+        assert any(
+            "SEC evidence requires" in issue["detail"]
+            for issue in mismatched.json()["issues"]
+        )

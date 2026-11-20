@@ -8,6 +8,7 @@ import hashlib
 import json
 from datetime import UTC, date, datetime
 from typing import Annotated, Any, Literal, Self, cast
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from pydantic import Field, TypeAdapter, field_validator, model_validator
@@ -32,8 +33,9 @@ from portfolio_api.company_observations import (
 )
 from portfolio_api.database import Base
 from portfolio_api.domain import schemas as s
-from portfolio_api.domain.models import Company, now
+from portfolio_api.domain.models import Company, CompanyProviderIdentifier, now
 from portfolio_api.domain.services import DomainError
+from portfolio_api.sec_identity import SEC_PROVIDER_ID, reviewed_cik, sec_evidence_matches_cik
 
 Period = Literal["DATE", "MONTH", "QUARTER", "FY", "TTM", "EVENT"]
 Qualifier = Literal["EQ", "APPROX", "GT", "GTE", "LT", "LTE"]
@@ -353,7 +355,60 @@ def _preflight(
     dependencies: list[object] = []
     seen: set[str] = set()
     seen_external_ids: set[str] = set()
-    for index, item in enumerate(cast(list[ProposalItem], batch.items)):
+    items = cast(list[ProposalItem], batch.items)
+
+    # The API's reviewer authority must independently recheck issuer identity;
+    # the steward CLI is not the only way to create a candidate.
+    def is_sec_sourced(item: ProposalItem) -> bool:
+        host = (urlsplit(item.source_reference).hostname or "").casefold()
+        return (
+            host == "sec.gov"
+            or host.endswith(".sec.gov")
+            or (not isinstance(item, MetricDefinitionItem) and item.source_type == "SEC_10Q")
+        )
+
+    sec_items = [
+        (row_index, item) for row_index, item in enumerate(items) if is_sec_sourced(item)
+    ]
+    if sec_items:
+        cutoff = now()
+        crosswalk = list(
+            session.scalars(
+                select(CompanyProviderIdentifier)
+                .where(
+                    CompanyProviderIdentifier.company_id == batch.company_id,
+                    CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
+                    CompanyProviderIdentifier.identifier_type == "SEC_CIK",
+                    CompanyProviderIdentifier.effective_at <= cutoff,
+                    CompanyProviderIdentifier.recorded_at <= cutoff,
+                )
+                .order_by(CompanyProviderIdentifier.id)
+                .limit(2)
+            )
+        )
+        mapped_cik = reviewed_cik(crosswalk[0]) if len(crosswalk) == 1 else None
+        dependencies.append(
+            (
+                "SEC_CIK",
+                [
+                    (str(mapping.id), mapping.identifier_value, mapping.recorded_at.isoformat())
+                    for mapping in crosswalk
+                ],
+            )
+        )
+        for row_index, item in sec_items:
+            if mapped_cik is None or not sec_evidence_matches_cik(
+                mapped_cik, item.source_reference
+            ):
+                issues.append(
+                    ObservationProposalIssue(
+                        row_index=row_index,
+                        code="INVALID",
+                        detail="SEC evidence requires an exact reviewed issuer CIK crosswalk",
+                    )
+                )
+
+    for index, item in enumerate(items):
         key = item.metric_key
         if isinstance(item, MetricDefinitionItem):
             identity = key

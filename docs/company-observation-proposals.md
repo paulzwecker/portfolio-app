@@ -30,7 +30,12 @@ tables; accepted metric definitions retain immutable semantics.
    `POST /v1/company-observation-proposals/{id}/preview`.
    Deterministic checks verify metric permissions, company ownership, exact
    unit/scale/currency, fiscal period, external identity and correction lineage.
-   Missing/invalid data is never guessed.
+   Missing/invalid data is never guessed. SEC-hosted sources or items marked
+   `SEC_10Q` also require a unique operator-reviewed company SEC CIK mapping
+   matching the source URL. Missing, ambiguous and mismatched crosswalks
+   produce an `INVALID` preview, and the mapping identity participates in
+   the fingerprint rechecked at acceptance. A direct API proposal cannot
+   bypass this guard by avoiding the steward CLI.
 3. Reviewer accepts only a `READY` batch using the exact
    `preview_fingerprint` and a decision note. Acceptance rechecks canonical
    dependencies under a company row lock and creates all rows in one transaction.

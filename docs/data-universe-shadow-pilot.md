@@ -93,7 +93,10 @@ The scoped `CompanyAgentContextV1.sec_identity` now returns a time-filtered
 `MAPPED` SEC CIK only when the stored evidence URL and CIK pass existing
 issuer-mapping validation. The shadow comparator **enforces** that the CIK
 equals `0001075531`; missing, invalid or ambiguous mappings fail closed
-_before_ any reviewed batch becomes eligible.
+_before_ any reviewed batch becomes eligible. The observation reviewer API
+independently checks SEC source identity during preview and acceptance, even
+when an agent submits directly instead of using the CLI. Neither check
+substitutes for verifying the issuer's published filing text.
 A read-only operator can inspect it with the following **SELECT only**,
 alongside the exact security/listing identity:
 
