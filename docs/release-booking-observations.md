@@ -43,12 +43,13 @@ to create observations. Their application is **not** part of this card.
    controls. Confirm no pending `main` deployment is about to start.
    Do not rely on `render.yaml` alone to freeze production.
 2. **Fresh recovery — separately approve and verify.** Establish
-   a fresh restore-capable Neon branch or retained encrypted full
-   database backup. Validate identity, parent LSN, creation/expiry,
-   Alembic head and canonical inventory against primary. A Neon
-   branch alone is temporary, not a durable off-device backup. Prefer
-   the existing encrypted recovery procedure and an isolated
-   restoration rehearsal before this data-bearing production change.
+   a fresh restore-capable Neon recovery branch, required by the
+   existing migration preflight. Validate its identity, parent LSN,
+   creation/expiry, Alembic head and canonical inventory against
+   primary. A Neon branch alone is temporary, not a durable off-device
+   backup; also establish a separately retained encrypted full-database
+   backup and rehearse restoration under the existing recovery
+   procedure before a data-bearing production migration.
 3. **Exact-head CI and review.** Resolve any GitHub Actions
    `action_required` state and run all three named jobs on the
    exact intended commit: `Quality, contracts and build`,
