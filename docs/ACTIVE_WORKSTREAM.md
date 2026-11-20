@@ -56,13 +56,31 @@ Completed code slices on this branch (development state, not production claims):
   reviewer operations, using a separate server-only reviewer token.
   Company Explorer exposes the existing review queue and two-step decisions
   without creating another acceptance path. No live credential configured.
+- **Evidence-safe operating BASE review:** Company Explorer now highlights
+  differences between a sole verified comparable actual and a pre-result
+  accepted BASE assumption, with exact source/model revision and a metric
+  filter action. No verdict without issuer report timing, with a late
+  expectation, or with multiple comparable current actuals. JSON scope
+  ordering is normalized. Per-model driver truncation and missing metric
+  definitions are flagged instead of hidden. No valuation/trading mutation.
+- **Data & Universe shadow correctness:** source pack publication must not
+  postdate its authoring or canonical knowledge cutoff; KPI quality mismatch
+  and model-driver metric permission mismatch are human conflicts, not false
+  MATCHED results. Focused regression tests and domain docs added.
 
-Known follow-ons: verify read scope and integration edge cases, regenerate checked-in
-OpenAPI/TypeScript artifacts from the repository's canonical generator, and prove
-a read-only real-company Data & Universe Steward pilot before exposing proposal
-writes beyond isolation. Owner instructed that full CI green is a **merge gate**,
-not a pause between small development increments. Current CI and contract
-generation are not claimed complete.
+Verification: PR #42 previously passed all three required CI jobs on
+`a005893f` (Quality/contracts/build, PostgreSQL integration and Windows
+migration compatibility). New Nov 20 commits require fresh **exact-head**
+checks; consult the PR, not an older commit, for the final verdict. The
+temporary formatter workflow used in development was removed.
+
+Next high-value gates: resolve any current-head CI failure, then obtain
+separate authorized read-only company scope/credential setup and prove one
+real disclosure → canonical comparison → owner-reviewed draft journey.
+Only then expand vetted free/public issuer coverage. No live credentials,
+production migration, model acceptance, Sheets edits, scheduler enablement,
+protected merge or deployment are authorized. Full CI remains a **merge
+gate**, not a pause between compatible increments.
 
 ---
 
