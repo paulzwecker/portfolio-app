@@ -235,14 +235,12 @@ def verify_uber_q3_2026_pack(pack: EvidencePackV1, html: bytes) -> dict[str, Any
         or guidance.status != "ACTIVE"
     ):
         raise ValueError("Issuer Q4 guidance period, range or unit mismatch")
-    if any(
-        item.source_reference != UBER_Q3_2026_URL
-        for item in (
-            *pack.metric_definitions,
-            *pack.kpi_observations,
-            *pack.guidance_observations,
-        )
-    ):
+    source_references = (
+        [item.source_reference for item in pack.metric_definitions]
+        + [item.source_reference for item in pack.kpi_observations]
+        + [item.source_reference for item in pack.guidance_observations]
+    )
+    if any(reference != UBER_Q3_2026_URL for reference in source_references):
         raise ValueError("Issuer pack includes facts from an unverified source")
     return {
         "status": "SOURCE_MATCHED",
