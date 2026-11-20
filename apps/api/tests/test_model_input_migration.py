@@ -134,6 +134,19 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
         assert result["projection_reconciliation"]["passed"] == 30
         assert result["output_reconciliation"]["passed"] == 22
 
+    bkng = by_key["P-BKNG"]
+    assert bkng.model_currency == "USD"
+    assert bkng.model_type.value == "UFCF_DCF_10Y_FADE"
+    assert bkng.return_methodology_code == "UFCF_ENTERPRISE_HMODEL_IRR"
+    assert bkng.mapping_version == "portfolio-bkng-gordon-return-2026-11-20-v1"
+    assert "Year 10" in bkng.legacy_return_semantics
+    assert bkng.input_cell_map["scenarios.BASE.years"] == "J16:N22"
+    assert "formula=" in bkng.source_references["legacy_return_terminal.BASE"]
+    bkng_parity = _reconcile_model(workbook, bkng)
+    assert bkng_parity["status"] == "PARITY_PASS"
+    assert bkng_parity["projection_reconciliation"]["passed"] == 30
+    assert bkng_parity["output_reconciliation"]["passed"] == 22
+
     for model_key in ("P-AMZN", "P-HIMS", "P-MSFT"):
         model = by_key[model_key]
         assert isinstance(model.values, FinancialModelRevisionCreate)
@@ -275,6 +288,7 @@ def test_import_creates_parity_proven_native_revisions_once_and_records_assessme
             ).all()
         )
         assert return_methods["P-AMZN"] == "UFCF_ENTERPRISE_HMODEL_IRR"
+        assert return_methods["P-BKNG"] == "UFCF_ENTERPRISE_HMODEL_IRR"
         assert return_methods["P-HIMS"] == "UFCF_ENTERPRISE_HMODEL_IRR"
         assert return_methods["P-MSFT"] == "UFCF_ENTERPRISE_IRR"
         for model_key in ("W-AXON", "W-FIX", "W-RBRK", "W-VEEV"):

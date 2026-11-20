@@ -4,6 +4,18 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+## Current priority — Booking native model baseline (November 20, 2026)
+
+After the user verified the aligned production release, the first
+evidence-to-decision development began in independent draft PR #45.
+The next model-readiness slice identified the separate P-BKNG enterprise
+IRR terminal convention and corrected its native mapping. The frozen
+baseline has 30/30 projection and 22/22 output parity, with 149/149
+assumption cells agreeing with the current Sheet at the read-only
+audit. **No model acceptance, production write, import or source-sheet
+change has been performed.** See
+[Booking native parity](docs/native-model-input-migration.md#booking-pre-q3-baseline-parity-remediation--2026-11-20).
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |

@@ -64,7 +64,10 @@ MAPPING_VERSION = "legacy-native-input-v1"
 PORTFOLIO_DCF_MAPPING_VERSION = "portfolio-ufcf-dcf-2026-10-06-v1"
 PORTFOLIO_DCF_EXPLICIT_TAIL_MAPPING_VERSION = "portfolio-ufcf-tail-2026-10-09-v1"
 WATCHLIST_OWNER_CASH_MAPPING_VERSION = "watchlist-owner-cf-2026-10-09-v1"
+BOOKING_GORDON_RETURN_MAPPING_VERSION = "portfolio-bkng-gordon-return-2026-11-20-v1"
 EXPLICIT_UFCF_TAIL_MODEL_KEYS = frozenset({"P-AMZN", "P-HIMS", "P-MSFT"})
+# Terminal *return* convention is separate from how the Y6-Y10 UFCF path is generated.
+HMODEL_GORDON_RETURN_MODEL_KEYS = frozenset({"P-AMZN", "P-HIMS", "P-BKNG"})
 TOLERANCE = Decimal("0.0000001")
 SOURCE_DISPLAY_TOLERANCE = Decimal("0.0000005")
 SCENARIO_ORDER = ("BEAR", "BASE", "BULL")
@@ -120,6 +123,7 @@ EXPECTED_MODEL_KEYS = (
 PARITY_PROVEN_MODEL_KEYS = (
     "P-GOOGL",
     "P-AMZN",
+    "P-BKNG",
     "P-HIMS",
     "P-ISRG",
     "P-MA",
@@ -497,19 +501,31 @@ def _map_portfolio_dcf(workbook: Workbook, model_key: str, accepted_at: datetime
         source_references[f"year10_growth_target.{scenario}"] = _source_cell_evidence(
             workbook, model_key, address
         )
+    if model_key == "P-BKNG":
+        # SEC/Q3 inputs do not belong here: these are the baseline workbook's
+        # independently evidenced Gordon terminal cells for its return stream.
+        for scenario, address in {"BEAR": "AA200", "BASE": "AA201", "BULL": "AA202"}.items():
+            source_references[f"legacy_return_terminal.{scenario}"] = _source_cell_evidence(
+                workbook, model_key, address
+            )
     if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
         for scenario, column in {"BEAR": "B", "BASE": "C", "BULL": "D"}.items():
             source_references[f"explicit_ufcf_tail.{scenario}"] = "; ".join(
                 _source_cell_evidence(workbook, model_key, f"{column}{row}")
                 for row in range(206, 211)
             )
-    if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
+    if model_key in HMODEL_GORDON_RETURN_MODEL_KEYS:
+        tail_source = (
+            "explicit annual UFCF growth through Year 10"
+            if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS
+            else "a linear UFCF growth fade from Year 5 to the Year 10 target"
+        )
         return_semantics = (
-            "The source uses explicit annual UFCF growth through Year 10 and an H-model "
-            "terminal return stream: Year 10 UFCF plus a Gordon terminal value fading from "
-            "the Year 10 growth rate to perpetual growth. Fair value separately retains the "
-            "source's terminal growth premium. This enterprise return is not a shareholder-"
-            "distribution IRR and remains distinct from the standard legacy UFCF return stream."
+            f"The source uses {tail_source}. The Expected IRR stream uses Year 10 "
+            "UFCF plus its Gordon terminal value, without the 2.5 terminal-growth "
+            "premium used in scenario Fair Value. This enterprise return is not "
+            "a shareholder-distribution IRR and is distinct from the standard "
+            "legacy UFCF return stream."
         )
     elif owner_title_evidence:
         return_semantics = (
@@ -550,11 +566,13 @@ def _map_portfolio_dcf(workbook: Workbook, model_key: str, accepted_at: datetime
         legacy_return_semantics=return_semantics,
         legacy_return_basis=(
             "ENTERPRISE_UFCF_HMODEL_GORDON_TERMINAL_VS_IMPLIED_ENTERPRISE_COST"
-            if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS
+            if model_key in HMODEL_GORDON_RETURN_MODEL_KEYS
             else "ENTERPRISE_UFCF_TERMINAL_VALUE_VS_IMPLIED_ENTERPRISE_COST"
         ),
         return_methodology_code=(
-            UFCF_ENTERPRISE_HMODEL_IRR if model_key in {"P-AMZN", "P-HIMS"} else UFCF_ENTERPRISE_IRR
+            UFCF_ENTERPRISE_HMODEL_IRR
+            if model_key in HMODEL_GORDON_RETURN_MODEL_KEYS
+            else UFCF_ENTERPRISE_IRR
         ),
         expected_irr_comparability="NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR",
         mapping_version=mapping_version,
@@ -750,6 +768,9 @@ def _supported_model_mappers() -> list[tuple[str, Callable[[Workbook, datetime],
 
 
 def _mapping_version_for(model_key: str) -> str:
+    if model_key == "P-BKNG":
+        # New semantic mapping must never replay an old source revision ID.
+        return BOOKING_GORDON_RETURN_MAPPING_VERSION
     if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
         return PORTFOLIO_DCF_EXPLICIT_TAIL_MAPPING_VERSION
     if model_key in WATCHLIST_OWNER_CASH_MODEL_KEYS:

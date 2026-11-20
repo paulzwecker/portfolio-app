@@ -1,3 +1,20 @@
+## Booking native UFCF model parity — November 20, 2026
+
+Independent of open PR #45, this BUILD corrects the previously blocked
+`P-BKNG` model mapping. The source 10-year UFCF projections already
+matched 30/30, while three expected-return checks failed because the
+source's Year 10 IRR stream used UFCF + Gordon terminal (no 2.5 premium).
+The existing `UFCF_ENTERPRISE_HMODEL_IRR` method resolves that
+discrepancy without changing source assumptions or fair values.
+The frozen source now passes 30/30 projections and 22/22 outputs.
+149 current model-input cells were independently compared with the
+frozen reference; only the live-linked market price has changed.
+No canonical model was accepted, no production write or Sheet edit
+occurred, and no shareholder-return claim is made. See
+`docs/native-model-input-migration.md` for provenance and acceptance gates.
+
+---
+
 ## PR #42 release preparation — November 20, 2026
 
 **Focused verification:** The temporary release verifier passed

@@ -25,6 +25,68 @@ currency links; the importer requires one exact non-demo application listing mat
 Mapping versions are per batch so extending the importer does not change the
 idempotency keys of the first two accepted revisions.
 
+## Booking pre-Q3 baseline parity remediation — 2026-11-20
+
+The earlier October 5 assessment marked `P-BKNG` `DATA_CHECK`; the entry
+in the historical table below remains its **as-of-October-5** classification.
+A new focused **parity-only**, no-database assessment against the exact frozen
+reference workbook (SHA-256
+`27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9`)
+isolated its actual failure:
+
+| Reconciliation                                     | Previous default return method | Source-evidenced Gordon return method |
+| -------------------------------------------------- | -----------------------------: | ------------------------------------: |
+| Five-year and tail projections                     |                     30/30 pass |                            30/30 pass |
+| Normalized fair-value / IRR / return-stream checks |                     19/22 pass |                        **22/22 pass** |
+| Expected enterprise UFCF IRR (frozen source quote) |                   15.89107776% |                      **15.38803248%** |
+| Source expected IRR                                |                   15.38803248% |                          15.38803248% |
+
+The three original discrepancies were source `AA212` (IRR),
+`AC212` (excess return), and `Z212` (Year 10 terminal cash-flow
+stream). The source cash-flow cells `AA200:AA202` explicitly add each
+scenario's Year 10 UFCF and Gordon perpetuity value, **without** the
+extra 2.5 terminal-growth premium in the separate fair-value formula.
+The original native mapping incorrectly assigned the premium-inclusive
+`UFCF_ENTERPRISE_IRR` return method. Existing native
+`UFCF_ENTERPRISE_HMODEL_IRR` already represents the observed return
+stream, so the correction selects that **existing** method without
+altering the underlying revenue, margin, DCF discounting, probabilities,
+share counts or terminal Fair Value.
+
+Booking's Years 6-10 UFCF growth still uses the existing **linear
+fade**; the return-method correction does not turn it into the explicit
+annual-tail pattern used by Amazon/Hims. The separate "Verified Layout"
+block reports a Bear FV of about 132.46 at B125, different from the
+**published** contract's 125.61 at L202/BA4. The importer reconciles
+the explicit published contract, **not** that secondary layout;
+the reviewer must confirm which section governs before acceptance.
+The new versioned import mapping
+is `portfolio-bkng-gordon-return-2026-11-20-v1`. Its idempotency identity
+cannot collide with an old `P-BKNG` mapping receipt.
+
+An independently authorized read-only comparison of 149 current
+`P-BKNG` model-input cells against the frozen reference matched all
+149 within 1e-8 at this assessment. The live-linked quote differed from
+the old snapshot, so this parity assessment **does not** import the
+workbook quote into market data or declare a current, investable IRR.
+The workbook lacks a trustworthy economic effective date; the initial
+accepted revision would use explicit owner acceptance time and retain
+source identity and immutable assumption evidence.
+
+**Engineering acceptance:** source-data-only regression tests assert
+30/30 projections, 22/22 financial checks, correct terminal formulas
+and method classification; independent synthetic tests establish
+that Fair Value remains unchanged when only the return method changes.
+These checks establish importer **eligibility**, not a production
+model/revision or a shareholder cash-flow expected IRR.
+
+**Pending separate owner action:** review the exact frozen source inputs,
+the latest live Sheet state, the non-demo NASDAQ BKNG USD listing,
+reviewed source-date limitation, and fresh market-price coverage.
+Only then run the existing guarded application import dry-run and,
+with separate production-write authorization, accept an initial
+native revision. Do not merge or apply any change automatically.
+
 ## Repeatable workflow
 
 The default command performs a read-only dry run and writes the latest batch report:
