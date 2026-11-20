@@ -43,7 +43,7 @@ jobs:
           import hashlib
           import re
           sql = Path("ops/release/pr42-alembic-generated.sql").read_text()
-          actual = set(re.findall(r"CREATE TABLE\\s+([a-z_][a-z_0-9]*)", sql, re.I))
+          actual = set(re.findall(r"CREATE TABLE\s+([a-z_][a-z_0-9]*)", sql, re.I))
           expected = {
               "company_metric_definitions",
               "company_metric_observations",
@@ -52,8 +52,8 @@ jobs:
               "company_observation_proposals",
           }
           assert actual == expected, (actual, expected)
-          assert len(re.findall(r"UPDATE\\s+alembic_version", sql, re.I)) == 2
-          assert not re.search(r"\\b(?:DROP|TRUNCATE|DELETE|INSERT)\\b", sql, re.I)
+          assert len(re.findall(r"UPDATE\s+alembic_version", sql, re.I)) == 2
+          assert not re.search(r"\b(?:DROP|TRUNCATE|DELETE|INSERT)\b", sql, re.I)
           assert "04510ec" not in sql
           assert len(sql) < 100000
           print("OFFLINE_ALEMBIC_GENERATED", "tables",len(actual),"bytes",len(sql),"sha256",hashlib.sha256(sql.encode()).hexdigest())
