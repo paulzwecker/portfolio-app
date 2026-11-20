@@ -1,0 +1,29 @@
+name: Temporary roadmap formatting
+on:
+  push:
+    branches:
+      - feat/api-first-company-observations
+permissions:
+  contents: write
+jobs:
+  format-roadmap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/api-first-company-observations
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Format active roadmap and remove temporary helper
+        run: |
+          npm ci
+          npx prettier --write ROADMAP.md
+          git rm .github/workflows/_temporary-format-roadmap.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ROADMAP.md
+          git commit -m "style(docs): format reviewed production SEC mapping handoff"
+          git push origin HEAD:feat/api-first-company-observations
