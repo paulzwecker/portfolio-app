@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+from urllib.request import Request
 from uuid import uuid4
 
 import pytest
@@ -338,6 +339,107 @@ def test_candidate_post_is_opt_in_and_confirms_exact_reviewed_inputs() -> None:
                 "https://example.com", batch, expected_batch_id=external_id,
                 expected_source_sha256="0" * 64, verification=source,
             )
+
+
+def test_candidate_post_only_uses_agent_role_and_verifies_server_echo() -> None:
+    context, pack = _context(), _pack()
+    verified = _verified_pack(pack)
+    batch = prepare_handoff(context, pack, verified)["ready_batches"][0]
+    body = {
+        "proposal": {
+            "id": str(uuid4()),
+            "producer_id": "synthetic-agent",
+            "proposal": batch,
+            "content_fingerprint": "a" * 64,
+            "status": "PENDING",
+            "issue": None,
+            "preview_fingerprint": None,
+            "accepted_record_ids": [],
+            "reviewer_id": None,
+            "decision_note": None,
+            "submitted_at": datetime.now(UTC).isoformat(),
+            "reviewed_at": None,
+        },
+        "replayed": False,
+    }
+    class Response:
+        status = 201
+
+        def __enter__(self) -> "Response":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self, limit: int) -> bytes:
+            data = json.dumps(body).encode("utf-8")
+            assert len(data) < limit
+            return data
+
+        class headers:
+            @staticmethod
+            def get_content_type() -> str:
+                return "application/json"
+
+    class Opener:
+        calls = 0
+
+        def open(self, request: Request, timeout: int) -> Response:
+            self.calls += 1
+            assert timeout == 15
+            assert request.get_method() == "POST"
+            assert request.full_url == "https://localhost.example/v1/company-observation-proposals"
+            assert request.get_header("X-observation-proposal-token") is not None
+            assert json.loads(request.data or b"{}")["external_batch_id"] == batch[
+                "external_batch_id"
+            ]
+            return Response()
+
+    opener = Opener()
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "DATA_UNIVERSE_PROPOSAL_SUBMIT_ENABLED": "true",
+                "OBSERVATION_PROPOSAL_AGENT_TOKEN": "synthetic-issuer-agent-00000000000000000000",
+            },
+        ),
+        patch(
+            "portfolio_api.data_universe_proposal_handoff.build_opener",
+            return_value=opener,
+        ),
+    ):
+        result = submit_one(
+            "https://localhost.example", batch,
+            expected_batch_id=batch["external_batch_id"],
+            expected_source_sha256=verified["source_sha256"],
+            verification=verified,
+        )
+    assert opener.calls == 1
+    assert result.replayed is False
+    assert result.proposal.proposal.external_batch_id == batch["external_batch_id"]
+    assert result.proposal.status == "PENDING"
+    body["proposal"]["proposal"] = {**batch, "external_batch_id": "forged"}
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "DATA_UNIVERSE_PROPOSAL_SUBMIT_ENABLED": "true",
+                "OBSERVATION_PROPOSAL_AGENT_TOKEN": "synthetic-issuer-agent-00000000000000000000",
+            },
+        ),
+        patch(
+            "portfolio_api.data_universe_proposal_handoff.build_opener",
+            return_value=opener,
+        ),
+        pytest.raises(ValueError, match="does not match"),
+    ):
+        submit_one(
+            "https://localhost.example", batch,
+            expected_batch_id=batch["external_batch_id"],
+            expected_source_sha256=verified["source_sha256"],
+            verification=verified,
+        )
 
 
 def test_handoff_cli_offline_preview_is_private_and_never_posts(tmp_path: Path) -> None:
