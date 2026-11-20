@@ -7,6 +7,7 @@ import stat
 import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -257,7 +258,7 @@ def test_reject_private_or_mismatched_context_and_unreviewed_sources() -> None:
         compare_source_pack(context, pack)
 
 
-def _verified_pack(pack: EvidencePackV1) -> dict[str, object]:
+def _verified_pack(pack: EvidencePackV1) -> dict[str, Any]:
     html = Path(__file__).parent / "fixtures" / "data_universe_uber_q3_2026_excerpt.html"
     return verify_uber_q3_2026_pack(pack, html.read_bytes())
 
