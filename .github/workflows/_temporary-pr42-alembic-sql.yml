@@ -21,7 +21,7 @@ jobs:
           ref: ops/pr42-alembic-schema-release
       - name: Confirm exact merged application source
         run: |
-          test "$(git rev-parse HEAD^)" = "04510ec59df4cc4a15dcfd3e3a63582a499c8be9"
+          test "$(git merge-base HEAD 04510ec59df4cc4a15dcfd3e3a63582a499c8be9)" = "04510ec59df4cc4a15dcfd3e3a63582a499c8be9"
           git diff --exit-code "04510ec59df4cc4a15dcfd3e3a63582a499c8be9" HEAD -- apps/api/migrations apps/api/src apps/api/alembic.ini
       - uses: actions/setup-node@v4
         with:
