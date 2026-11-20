@@ -405,9 +405,9 @@ def main() -> None:
     pack = EvidencePackV1.model_validate(source_data)
     source_verification: dict[str, Any] = {"status": "NOT_CHECKED"}
     if args.verify_public_source:
-        from portfolio_api.data_universe_public_evidence import verify_official_uber_release
+        from portfolio_api.data_universe_public_evidence import verify_official_source
 
-        source_verification = verify_official_uber_release(pack)
+        source_verification = verify_official_source(pack)
 
     if args.api_base_url is not None:
         context_data = _fetch_scoped_context(args.api_base_url, args.company_id)
