@@ -1,4 +1,4 @@
-## Active draft integration — PR #42 (2026-11-19)
+## Active draft integration — PR #42 (2026-11-20)
 
 Single working PR: https://github.com/paulzwecker/portfolio-app/pull/42
 Branch: `feat/api-first-company-observations`. **Do not merge or deploy** without
@@ -67,6 +67,26 @@ Completed code slices on this branch (development state, not production claims):
   postdate its authoring or canonical knowledge cutoff; KPI quality mismatch
   and model-driver metric permission mismatch are human conflicts, not false
   MATCHED results. Focused regression tests and domain docs added.
+- **Real primary-source verification:** explicit `--verify-public-source` checks
+  only Uber's November 4, 2026 Q3 issuer release with a bounded public HTTPS
+  GET, no redirect or private secret. It validates table/year/scale, two actuals
+  and the separate next-quarter guidance; a mismatch fails before canonical
+  API read. The report records a source SHA-256 or NOT_CHECKED.
+  The temporary live issuer check **passed** on November 20, 2026
+  ([GitHub run 44696041668](https://github.com/paulzwecker/portfolio-app/actions/runs/44696041668):
+  SOURCE_MATCHED, 3 facts, SHA-256 prefix `af725f990041e608`).
+  Temporary workflow removed; no recurring source job remains.
+- **Agent-to-reviewer integration:** new isolated PostgreSQL test exercises a
+  synthetic UBER canonical identity, scoped context, source-checked evidence
+  pack, staged three typed drafts, agent submission, separate reviewer preview/
+  fingerprint/acceptance, accepted context readback and idempotent no-draft
+  comparison. This tests a real issuer's numbers but **not production data**.
+  Verify exact-head CI for this new test before claiming it passed.
+
+Current next gate: exact-head CI, then independent operator authorization for
+a live canonical company UUID allowlist/read token and real-database shadow
+comparison. No production database or workbook write, source activation,
+proposal acceptance, migration, deployment or protected merge is authorized.
 
 Verification: PR #42 previously passed all three required CI jobs on
 `a005893f` (Quality/contracts/build, PostgreSQL integration and Windows
