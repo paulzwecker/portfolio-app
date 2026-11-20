@@ -1,3 +1,47 @@
+## Latest development checkpoint — Booking Holdings SEC pilot (2026-11-20)
+
+PR #42 now supports a **real tracked issuer (BKNG)** alongside the earlier
+Uber public-source rehearsal. Booking's official Form 10-Q for Q3 2026
+(SEC accession `0001075531-26-000045`, filed November 3) is represented
+by a reviewed source pack: 345 million booked room nights, 21 million flight
+tickets and USD 54,461 million gross bookings. The published data are
+rounded to millions; all three observations retain `APPROX` qualifiers,
+`reported_at=null`, economic period, original USD/units and SEC provenance.
+No GAAP revenue, consensus, guidance or financial forecasts are inferred.
+
+- New fixed issuer verifier `BKNG_Q3_2026_SEC_10Q` uses one official SEC
+  HTML URL, bounded bytes/time, no redirects and operator-supplied
+  `SEC_USER_AGENT` for fair access. It rejects issuer, quarter, year
+  column, reporting scale or amount conflicts; it never self-accepts.
+  Production public-page bytes **have not been fetched through the new
+  adapter**; offline tests use a small synthetic HTML table fixture,
+  while published figures were cross-checked with official filings.
+- Reuses `CompanyAgentContextV1`, the exact BKNG listing and the existing
+  reviewed SEC CIK crosswalk (`0001075531`), rather than hard-coding
+  or inventing a company UUID. The operator runbook contains a SELECT-only
+  crosswalk check. An absent/mismatched crosswalk blocks live onboarding.
+- The existing default-off handoff/agent proposal/human reviewer pipeline
+  supports Booking with no new API/database table or paid provider.
+  A disposable PostgreSQL test seeds synthetic BKNG identities and reviewed
+  CIK mapping, then verifies definition acceptance → KPI proposals →
+  independent human approval → accepted readback and replay. No production
+  acceptance, workbook mutation, schema migration or deployment.
+- Focused [Booking workflow CI run](https://github.com/paulzwecker/portfolio-app/actions/runs/44712143955)
+  passed **41 source/unit/integration tests** and Python typing/formatting.
+  The canonical formatter was committed; its one-time workflow was removed.
+  Exact latest-head broad CI remains the protected merge gate and is not
+  a prerequisite to selecting the next development slice.
+
+**Operator-only next step:** obtain an independently authorized live
+read-only BKNG company UUID/CIK confirmation and scoped API token, then
+perform a live official filing fetch and private shadow preview. If the
+live HTML differs from the synthetic table layout, fail closed and refine
+the adapter without accepting any data. Proposal POST, canonical acceptance,
+live credentials, production deployment and merge require separate owner
+authorization.
+
+---
+
 ## Latest development checkpoint — verified candidate handoff (2026-11-20)
 
 On the same open draft PR #42, added a **manual, default-off**
