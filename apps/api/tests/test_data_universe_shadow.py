@@ -494,7 +494,9 @@ def test_handoff_cli_offline_preview_is_private_and_never_posts(tmp_path: Path) 
     with patch.object(sys, "argv", args), pytest.raises(SystemExit):
         handoff_main()
 
-    submit_args = args + ["--submit", "--batch-id", "synthetic", "--source-sha256", "0" * 64]
+    submit_args = args.copy()
+    submit_args[submit_args.index("--output") + 1] = str(tmp_path / "forbidden.json")
+    submit_args += ["--submit", "--batch-id", "synthetic", "--source-sha256", "0" * 64]
     with (
         patch.object(sys, "argv", submit_args),
         patch("portfolio_api.data_universe_proposal_handoff.submit_one") as submitter,
@@ -502,6 +504,7 @@ def test_handoff_cli_offline_preview_is_private_and_never_posts(tmp_path: Path) 
     ):
         handoff_main()
     submitter.assert_not_called()
+    assert not (tmp_path / "forbidden.json").exists()
 
 
 def test_scoped_fetch_rejects_unencrypted_non_loopback_host() -> None:
