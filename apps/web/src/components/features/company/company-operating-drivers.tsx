@@ -186,12 +186,7 @@ function periodKey(
   end: string,
   scope: Record<string, unknown>,
 ) {
-  return [
-    periodType,
-    start,
-    end,
-    scopeIdentity(scope),
-  ].join("|");
+  return [periodType, start, end, scopeIdentity(scope)].join("|");
 }
 
 export function operatingMetricPeriods(
@@ -547,17 +542,14 @@ export function OperatingDriversPanel({
             </CardTitle>
             <p className="text-xs text-muted-foreground">
               Accepted operating actuals differ from a matching BASE forecast
-              recorded before the result was published. These are review prompts,
-              not valuation changes or trading signals.
+              recorded before the result was published. These are review
+              prompts, not valuation changes or trading signals.
             </p>
           </CardHeader>
           <CardContent>
             <ul className="divide-y text-sm">
               {reviewSignals.slice(0, 6).map((signal) => (
-                <li
-                  key={signal.driverId}
-                  className="space-y-1 py-3 first:pt-0"
-                >
+                <li key={signal.driverId} className="space-y-1 py-3 first:pt-0">
                   <button
                     type="button"
                     className="font-medium text-primary underline-offset-2 hover:underline"
@@ -706,10 +698,10 @@ export function OperatingDriversPanel({
       </Card>
       <p className="text-xs text-muted-foreground">
         Exact comparability requires the same period, scope, currency, scale and
-        unit, one unambiguous verified actual and a known issuer-result publication
-        time. Same-time or later expectations, qualified values and conflicting
-        quality never produce a performance verdict. A difference prompts
-        re-underwriting, not an automatic model or portfolio change.
+        unit, one unambiguous verified actual and a known issuer-result
+        publication time. Same-time or later expectations, qualified values and
+        conflicting quality never produce a performance verdict. A difference
+        prompts re-underwriting, not an automatic model or portfolio change.
       </p>
     </div>
   );
