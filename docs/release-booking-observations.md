@@ -93,7 +93,7 @@ The command never migrates a database.
 
 1. With freezes maintained, recovery verified, an owner-approved
    migration window and the existing production-write guard enabled
-   *only within its isolated operator process*, run the established
+   _only within its isolated operator process_, run the established
    `npm run db:migrate` procedure once from clean, pinned `main`.
    Do not run Alembic from CI or Render startup. Plan for the old
    Render API to become unready as soon as Alembic advances.

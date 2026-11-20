@@ -2,7 +2,7 @@
 
 **Status: PREPARED, NO PRODUCTION RELEASE AUTHORIZATION.** The previous
 production migration tooling was pinned to `9f2a6d4c81b7 ->
-b59f16c8a203`; it has now been updated to the *actual*, separately
+b59f16c8a203`; it has now been updated to the _actual_, separately
 verified production baseline `b59f16c8a203` and PR #42 target
 `d7b4a6c8e2f0`. Fresh recovery remains mandatory. An old checkout,
 schema head or migration confirmation fails closed.
