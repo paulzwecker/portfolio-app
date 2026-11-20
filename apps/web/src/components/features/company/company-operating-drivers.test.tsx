@@ -5,6 +5,7 @@ import {
   actualVsDriver,
   actualVsGuidance,
   operatingMetricPeriods,
+  operatingBaseReviewSignals,
 } from "@/components/features/company/company-operating-drivers";
 import type { CompanyAgentContext } from "@/lib/domain-contracts";
 import { companyViewFromLocation } from "@/components/features/company/company-view-tabs";
@@ -107,6 +108,12 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
       "BELOW",
     );
     expect(actualVsDriver({ ...actual, value: "4000" }, driver)).toBe("ON");
+    expect(
+      actualVsDriver(
+        { ...actual, scope_json: { region: "US", product: "Core" } },
+        { ...driver, scope_json: { product: "Core", region: "US" } },
+      ),
+    ).toBe("ABOVE");
     expect(actualVsGuidance({ ...actual, scale: "1000" }, guidance)).toBeNull();
     expect(actualVsDriver({ ...actual, currency: "USD" }, driver)).toBeNull();
     expect(
@@ -139,6 +146,30 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
         recorded_at: "2026-11-05T00:00:00Z",
       }),
     ).toBeNull();
+    expect(actualVsGuidance({ ...actual, reported_at: null }, guidance)).toBeNull();
+    expect(actualVsDriver({ ...actual, reported_at: null }, driver)).toBeNull();
+    expect(
+      actualVsGuidance(actual, {
+        ...guidance,
+        issued_at: "2026-11-04T15:00:00Z",
+      }),
+    ).toBeNull();
+    expect(
+      actualVsGuidance(actual, {
+        ...guidance,
+        issued_at: "2026-11-04T15:01:00Z",
+      }),
+    ).toBeNull();
+    expect(
+      actualVsGuidance(actual, {
+        ...guidance,
+        issued_at: "2026-10-15T15:00:00Z",
+        recorded_at: "2026-11-06T12:00:00Z",
+      }),
+    ).toBe("WITHIN");
+    expect(
+      actualVsGuidance(actual, { ...guidance, is_current: false }),
+    ).toBeNull();
 
     expect(
       actualVsGuidance(
@@ -169,6 +200,46 @@ describe("Operating KPI performance and accepted driver assumptions", () => {
     expect(groups[0].actuals).toHaveLength(0);
     expect(groups[0].guidance).toHaveLength(1);
     expect(groups[1].drivers).toHaveLength(1);
+  });
+
+  it("prompts a review only for an unambiguous, prior, comparable BASE miss", () => {
+    const payload = context();
+    expect(operatingBaseReviewSignals(payload)).toMatchObject([
+      {
+        metricId: "uber.trips",
+        metricName: "Trips",
+        periodEnd: "2026-09-30",
+        direction: "ABOVE",
+        modelName: "10Y UFCF",
+        revisionNumber: 3,
+        sourceReference: "https://example.com/source",
+      },
+    ]);
+    const html = renderToStaticMarkup(<OperatingDriversPanel context={payload} />);
+    expect(html).toContain("Prior BASE assumptions to review");
+    expect(html).toContain("Review Trips");
+    expect(html).toContain("Verify actual disclosure");
+    expect(html).toContain("not valuation changes or trading signals");
+
+    payload.metric_observations = [
+      actual,
+      { ...actual, id: "actual-2", value: "3900" },
+    ];
+    expect(operatingBaseReviewSignals(payload)).toHaveLength(0);
+    const ambiguous = renderToStaticMarkup(
+      <OperatingDriversPanel context={payload} />,
+    );
+    expect(ambiguous).not.toContain("Actual within guidance range");
+    expect(ambiguous).not.toContain("Actual above base case");
+    expect(ambiguous).not.toContain("Prior BASE assumptions to review");
+
+    payload.metric_observations = [{ ...actual, reported_at: null }];
+    expect(operatingBaseReviewSignals(payload)).toHaveLength(0);
+    payload.metric_observations = [actual];
+    payload.native_models[0].driver_projections = [
+      { ...driver, recorded_at: "2026-11-05T00:00:00Z" },
+    ];
+    expect(operatingBaseReviewSignals(payload)).toHaveLength(0);
   });
 
   it("shows source-backed actuals, guidance and accepted scenario without synthesizing values", () => {
