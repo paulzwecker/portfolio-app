@@ -62,9 +62,13 @@ synthetic company UUID and UBER listing. No token or external network is needed.
 
 - Company ID must match the selected canonical identity; ticker must match a
   canonical listing. A full portfolio-context response is rejected.
-- Defining metric semantics with an existing incompatible metric ID is a
-  **conflict**, not a silent dictionary rewrite.
-- Matching accepted observations produce no proposal.
+- Defining metric semantics or enabling model-driver use with an existing
+  incompatible metric ID is a **conflict**, not a silent dictionary rewrite.
+- Matching accepted observations produce no proposal; an accepted PROVISIONAL
+  actual does not count as the same quality as VERIFIED primary-source evidence.
+  Such discrepancies require human review rather than silent upgrades.
+- Evidence dated after pack authorship or the canonical knowledge cutoff is
+  rejected before any missing-data drafts are prepared.
 - Existing observations with conflicting values produce a **human correction
   requirement**. The CLI deliberately does not invent supersession IDs.
 - Truncated or unsupported KPI/definition/guidance history cannot prove a
