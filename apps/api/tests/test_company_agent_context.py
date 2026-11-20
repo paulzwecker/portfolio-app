@@ -15,7 +15,7 @@ from portfolio_api.company_observations import (
     CompanyMetricDefinition,
     CompanyMetricObservation,
 )
-from portfolio_api.domain.models import Company, Portfolio
+from portfolio_api.domain.models import Company, CompanyProviderIdentifier, Portfolio
 
 pytestmark = pytest.mark.integration
 
@@ -190,3 +190,75 @@ def test_future_target_guidance_is_visible_when_already_known(
         assert earlier.status_code == 200, earlier.text
         assert earlier.json()["guidance_observations"] == []
         assert earlier.json()["metric_observations"] == []
+
+
+
+def test_agent_context_sec_mapping_is_public_and_point_in_time(
+    postgres_engine: Engine,
+) -> None:
+    """No ticker-based CIK inference, even for an otherwise valid company."""
+    company_id = uuid4()
+    with Session(postgres_engine) as session, session.begin():
+        session.add(
+            Company(
+                id=company_id,
+                name="Booking Holdings Inc.",
+                reporting_currency="USD",
+                created_at=datetime(2026, 1, 1, tzinfo=UTC),
+            )
+        )
+        session.flush()
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value="0001075531",
+                provider_company_name="Booking Holdings Inc.",
+                evidence_source=(
+                    "https://www.sec.gov/Archives/edgar/data/1075531/"
+                    "000107553126000045/0001075531-26-000045-index.htm"
+                ),
+                effective_at=datetime(2026, 11, 3, tzinfo=UTC),
+                recorded_at=datetime(2026, 11, 3, tzinfo=UTC),
+                actor="LOCAL_USER",
+            )
+        )
+
+    path = f"/v1/companies/{company_id}/agent-context"
+    with TestClient(fixture_application(postgres_engine, fixture_settings())) as client:
+        before = client.get(
+            path, params={"known_at": "2026-10-20T12:00:00Z"}
+        )
+        assert before.status_code == 200, before.text
+        assert before.json()["sec_identity"]["status"] == "UNMAPPED"
+        assert before.json()["sec_identity"]["cik"] is None
+
+        after = client.get(path)
+        assert after.status_code == 200, after.text
+        identity = after.json()["sec_identity"]
+        assert identity["status"] == "MAPPED"
+        assert identity["cik"] == "0001075531"
+        assert identity["evidence_source"].startswith("https://www.sec.gov/")
+        assert identity["recorded_at"] is not None
+
+    # Multiple known CIK records cannot silently select one for the steward.
+    with Session(postgres_engine) as session, session.begin():
+        session.add(
+            CompanyProviderIdentifier(
+                company_id=company_id,
+                provider_id="sec_edgar",
+                identifier_type="SEC_CIK",
+                identifier_value="0009999999",
+                provider_company_name="Booking Holdings Inc.",
+                evidence_source="https://www.sec.gov/Archives/edgar/data/9999999/",
+                effective_at=datetime(2026, 11, 4, tzinfo=UTC),
+                recorded_at=datetime(2026, 11, 4, tzinfo=UTC),
+                actor="LOCAL_USER",
+            )
+        )
+    with TestClient(fixture_application(postgres_engine, fixture_settings())) as client:
+        ambiguous = client.get(path)
+        assert ambiguous.status_code == 200, ambiguous.text
+        assert ambiguous.json()["sec_identity"]["status"] == "AMBIGUOUS"
+        assert ambiguous.json()["sec_identity"]["cik"] is None

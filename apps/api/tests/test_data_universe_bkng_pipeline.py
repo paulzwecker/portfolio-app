@@ -114,6 +114,18 @@ def test_booking_sec_cik_to_reviewed_kpis_full_loop(postgres_engine: Engine) -> 
             context = CompanyAgentContextV1.model_validate(response.json())
             assert context.company.name == "Booking Holdings Inc."
             assert [item.ticker for item in context.listings] == ["BKNG"]
+            assert context.sec_identity is not None
+            assert context.sec_identity.status == "MAPPED"
+            assert context.sec_identity.cik == BKNG_Q3_2026_CIK
+            assert context.sec_identity.evidence_source is not None
+            if phase == "definitions":
+                with pytest.raises(ValueError, match="reviewed matching SEC CIK"):
+                    prepare_handoff(context.model_copy(update={"sec_identity": None}), pack, verified)
+                wrong = context.sec_identity.model_copy(update={"cik": "0001234567"})
+                with pytest.raises(ValueError, match="reviewed matching SEC CIK"):
+                    prepare_handoff(
+                        context.model_copy(update={"sec_identity": wrong}), pack, verified
+                    )
             assert context.portfolio_status.status == "UNSUPPORTED"
             assert context.native_models_status.status == "UNSUPPORTED"
             handoff = prepare_handoff(context, pack, verified)

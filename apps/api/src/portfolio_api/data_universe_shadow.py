@@ -176,8 +176,17 @@ def compare_source_pack(context: CompanyAgentContextV1, pack: EvidencePackV1) ->
         raise ValueError("Company identity context is incomplete")
     if pack.issuer_ticker not in {listing.ticker for listing in context.listings}:
         raise ValueError("Evidence issuer ticker does not match canonical company listings")
-    if pack.issuer_ticker == "BKNG" and "booking holdings" not in context.company.name.casefold():
-        raise ValueError("Booking evidence requires the matching canonical issuer company")
+    if pack.issuer_ticker == "BKNG":
+        from portfolio_api.data_universe_public_evidence import BKNG_Q3_2026_CIK
+
+        if "booking holdings" not in context.company.name.casefold():
+            raise ValueError("Booking evidence requires the matching canonical issuer company")
+        if (
+            context.sec_identity is None
+            or context.sec_identity.status != "MAPPED"
+            or context.sec_identity.cik != BKNG_Q3_2026_CIK
+        ):
+            raise ValueError("Booking evidence requires the reviewed matching SEC CIK crosswalk")
     if (
         any(item.source_reference != pack.source_reference for item in pack.metric_definitions)
         or any(item.source_reference != pack.source_reference for item in pack.kpi_observations)

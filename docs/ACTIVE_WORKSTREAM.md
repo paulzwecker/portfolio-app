@@ -1,3 +1,19 @@
+## Current slice — fail-closed Booking SEC identity binding (2026-11-20)
+
+The real Booking SEC pilot now ties every staged candidate to a
+**point-in-time, operator-reviewed SEC CIK** returned in the restricted
+`CompanyAgentContextV1.sec_identity`. The field exposes only public issuer
+identity/evidence, not holdings or research. For BKNG, the CLI blocks a
+missing/invalid/ambiguous/mismatched CIK even when the company name and
+listing ticker appear correct. No company ID is guessed or provisioned.
+
+An isolated test covers known-at exclusion, a valid reviewed mapping and
+ambiguous CIK rows; the full Booking evidence → review integration test also
+asserts that the scoped context supplies the exact SEC identity. This is
+code-only; the hosted canonical BKNG UUID/read token remains an operator gate.
+
+---
+
 ## Latest development checkpoint — Booking Holdings SEC pilot (2026-11-20)
 
 PR #42 now supports a **real tracked issuer (BKNG)** alongside the earlier

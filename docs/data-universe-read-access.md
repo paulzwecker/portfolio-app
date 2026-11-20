@@ -18,7 +18,10 @@ model acceptance or production changes.
   UUIDs, checked before any database access. An unlisted company returns 404.
 - Allowed response: canonical company/security/listing identity; bounded KPI
   definitions and observations; issued management guidance; selected-provider
-  consensus with original source/period/quality metadata.
+  consensus with original source/period/quality metadata. An additive
+  `sec_identity` section exposes only the existing operator-reviewed public
+  SEC CIK/evidence reference (or UNMAPPED/INVALID/AMBIGUOUS), filtered by
+  effective and recorded time. It never infers identity from a ticker.
 - Excluded response: portfolio and target identifiers, holdings/market values,
   research/thesis details, accepted native models and imported model outputs.
   These sections return `UNSUPPORTED` and empty/null values; no expensive

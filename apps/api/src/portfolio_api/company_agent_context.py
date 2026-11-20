@@ -12,6 +12,7 @@ from portfolio_api.domain import queries as q
 from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services
 from portfolio_api.domain.models import (
+    CompanyProviderIdentifier,
     FinancialModel,
     FinancialModelRevision,
     InvestmentThesisRevision,
@@ -25,6 +26,7 @@ from portfolio_api.domain.models import (
 )
 from portfolio_api.investment_thesis import thesis_revision_read
 from portfolio_api.research_forecasts import research_revision_read
+from portfolio_api.sec_identity import SEC_PROVIDER_ID, reviewed_cik
 
 # The response is a working context, not an exhaustive historical export.
 MAX_OBSERVATIONS = 80
@@ -41,6 +43,15 @@ class AgentContextCoverage(s.Contract):
     reason: str | None = None
     latest_recorded_at: datetime | None = None
     truncated: bool = False
+
+
+class AgentContextSecIdentity(s.Contract):
+    """Point-in-time reviewed SEC mapping; public issuer identity only."""
+
+    status: Literal["MAPPED", "UNMAPPED", "AMBIGUOUS", "INVALID"]
+    cik: str | None = None
+    evidence_source: str | None = None
+    recorded_at: datetime | None = None
 
 
 class AgentContextNativeModel(s.Contract):
@@ -89,6 +100,8 @@ class CompanyAgentContextV1(s.Contract):
     imported_outputs_status: AgentContextCoverage
     imported_model_outputs: s.CompanyModelOutputsCurrentRead | None
     resource_links: dict[str, str]
+    # Optional for older offline snapshots; live API always supplies this.
+    sec_identity: AgentContextSecIdentity | None = None
 
 
 def _coverage(
@@ -160,6 +173,39 @@ def company_agent_context(
                 "lifecycle": Lifecycle(lifecycle.new_state) if lifecycle else None,
                 "lifecycle_event_id": lifecycle.id if lifecycle else None,
             }
+        )
+
+    # An issuer ticker/name is not proof of the canonical SEC identity.
+    # Expose only an operator-reviewed, source-validated, point-in-time CIK.
+    sec_records = list(
+        session.scalars(
+            select(CompanyProviderIdentifier)
+            .where(
+                CompanyProviderIdentifier.company_id == company_id,
+                CompanyProviderIdentifier.provider_id == SEC_PROVIDER_ID,
+                CompanyProviderIdentifier.identifier_type == "SEC_CIK",
+                CompanyProviderIdentifier.effective_at <= cutoff,
+                CompanyProviderIdentifier.recorded_at <= cutoff,
+            )
+            .order_by(CompanyProviderIdentifier.id)
+            .limit(2)
+        )
+    )
+    sec_identity = AgentContextSecIdentity(status="UNMAPPED")
+    if len(sec_records) > 1:
+        sec_identity = AgentContextSecIdentity(status="AMBIGUOUS")
+    elif sec_records:
+        mapping = sec_records[0]
+        cik = reviewed_cik(mapping)
+        sec_identity = (
+            AgentContextSecIdentity(
+                status="MAPPED",
+                cik=cik,
+                evidence_source=mapping.evidence_source,
+                recorded_at=mapping.recorded_at,
+            )
+            if cik is not None
+            else AgentContextSecIdentity(status="INVALID")
         )
 
     portfolios: list[UUID] = []
@@ -408,6 +454,7 @@ def company_agent_context(
         known_at=cutoff,
         identity=_coverage(len(security_rows) + len(listing_rows) + 1),
         company=company_read,
+        sec_identity=sec_identity,
         securities=[s.SecurityRead.model_validate(item) for item in security_rows],
         listings=[s.ListingRead.model_validate(item) for item in listing_rows],
         portfolio_status=portfolio_status,

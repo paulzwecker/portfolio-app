@@ -89,6 +89,11 @@ release instant. No model driver, guidance or return prediction is inferred.
 The issuer's public CIK is **0001075531**. The existing canonical
 `company_provider_identifiers` table, not a ticker-only inference,
 must already contain one operator-reviewed mapping to Booking Holdings.
+The scoped `CompanyAgentContextV1.sec_identity` now returns a time-filtered
+`MAPPED` SEC CIK only when the stored evidence URL and CIK pass existing
+issuer-mapping validation. The shadow comparator **enforces** that the CIK
+equals `0001075531`; missing, invalid or ambiguous mappings fail closed
+*before* any reviewed batch becomes eligible.
 A read-only operator can inspect it with the following **SELECT only**,
 alongside the exact security/listing identity:
 
