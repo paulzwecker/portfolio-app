@@ -8,13 +8,13 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 | Field             | Current value                                                                                                     |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Active checkpoint | PR #42: verified issuer → safe candidate handoff. [Handoff](docs/ACTIVE_WORKSTREAM.md).                           |
+| Active checkpoint | PR #42: BKNG public-source and CIK-locked reviewer pilot. [Handoff](docs/ACTIVE_WORKSTREAM.md).                   |
 | Branch / PR       | PR #42 `feat/api-first-company-observations` remains draft; preserve prior #39 and independent owner work.        |
-| Product outcome   | Public source → canonical comparison → human-reviewed candidates → accepted company/model research.               |
-| Integration       | Prior head fully green; focused handoff 27/27 + typing passed; exact-head CI is a merge gate.                     |
+| Product outcome   | Tracked issuer → verified operating KPIs → scoped context → human review → research.                              |
+| Integration       | BKNG focused 41 tests + type checks pass; full CI remains a protected merge gate.                                 |
 | Production        | Last verified Nov 15 guarded readback is historical; no activation, migration or real accepted observation write. |
 | Release           | API-first coordinated release and independent recovery/owner authorization remain required; no merge or deploy.   |
-| Deferred          | Broader free-provider coverage, autonomous agent acceptance and platform extraction until scoped read pilot.      |
+| Deferred          | Live BKNG canonical read, broader issuer profiles and generic agent infrastructure until approved.                |
 
 The investor-journey acceptance below records the earlier PR #39 milestone.
 PR #42 is a separately gated, evidence-first extension to the Company Explorer.
