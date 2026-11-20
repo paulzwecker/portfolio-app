@@ -108,7 +108,9 @@ export function actualVsGuidance(
     guidance.value_qualifier !== "RANGE" ||
     guidance.status !== "ACTIVE" ||
     !guidance.is_current ||
-    !priorExpectation(actual, guidance.issued_at ?? guidance.recorded_at) ||
+    !priorExpectation(actual, guidance.recorded_at) ||
+    (guidance.issued_at != null &&
+      !priorExpectation(actual, guidance.issued_at)) ||
     guidance.lower_value === null ||
     guidance.upper_value === null
   )
