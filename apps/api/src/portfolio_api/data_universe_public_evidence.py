@@ -439,7 +439,7 @@ def fetch_official_booking_filing(pack: EvidencePackV1) -> bytes:
         with build_opener(_NoRedirect).open(request, timeout=15) as response:
             if response.status != 200 or response.headers.get_content_type() != "text/html":
                 raise ValueError("SEC filing is unavailable as HTML")
-            data = response.read(MAX_ISSUER_BYTES + 1)
+            data: bytes = response.read(MAX_ISSUER_BYTES + 1)
     except (HTTPError, URLError, TimeoutError) as error:
         raise ValueError("SEC source could not be verified; no proposal authorized") from error
     return data
