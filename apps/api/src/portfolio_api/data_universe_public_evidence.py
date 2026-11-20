@@ -120,13 +120,18 @@ def extract_uber_q3_2026(html: bytes) -> tuple[int, int, Decimal, Decimal]:
 
     candidates: list[tuple[int, int]] = []
     for table in parser.tables:
-        header = " ".join(" ".join(row) for row in table[:6])
-        if not (re.search(r"\b2025\b", header) and re.search(r"\b2026\b", header)):
+        year_headers = [
+            cell
+            for row in table[:6]
+            for cell in row
+            if cell in ("2025", "2026")
+        ]
+        if "2025" not in year_headers or "2026" not in year_headers:
             continue
         trips = [row for row in table if row and row[0] == "Trips"]
         bookings = [row for row in table if row and row[0] == "Gross Bookings"]
         if trips and bookings:
-            if header.index("2025") >= header.index("2026"):
+            if year_headers.index("2025") >= year_headers.index("2026"):
                 raise ValueError("Issuer operating table fiscal-year columns reversed")
             if len(trips) != 1 or len(bookings) != 1:
                 raise ValueError("Duplicate company operating rows in issuer table")
