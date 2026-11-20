@@ -478,11 +478,18 @@ export function OperatingDriversPanel({
     (sum, item) => sum + item.driver_projections.length,
     0,
   );
-  const missingDefinitions = [
-    ...context.metric_observations,
-    ...context.guidance_observations,
-  ].some(
-    (item) => !metrics.some((metric) => metric.metric_id === item.metric_id),
+  const loadedMetricIds = new Set(metrics.map((metric) => metric.metric_id));
+  const missingDefinitions =
+    [...context.metric_observations, ...context.guidance_observations].some(
+      (item) => !loadedMetricIds.has(item.metric_id),
+    ) ||
+    context.native_models.some((model) =>
+      model.driver_projections.some(
+        (driver) => !loadedMetricIds.has(driver.metric_id),
+      ),
+    );
+  const incompleteDrivers = context.native_models.some(
+    (model) => model.drivers_truncated,
   );
   return (
     <div className="space-y-5">
@@ -527,6 +534,7 @@ export function OperatingDriversPanel({
       {(context.metrics_status.truncated ||
         context.guidance_status.truncated ||
         context.native_models_status.truncated ||
+        incompleteDrivers ||
         missingDefinitions) && (
         <p role="status" className="rounded-md border p-3 text-sm">
           Partial coverage or missing metric definitions. A missing row is not
