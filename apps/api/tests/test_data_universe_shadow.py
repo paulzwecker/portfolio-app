@@ -254,6 +254,40 @@ def test_scoped_fetch_rejects_unencrypted_non_loopback_host() -> None:
         _fetch_scoped_context("http://example.com", uuid4())
 
 
+def test_verified_public_source_is_checked_before_any_private_context_read(
+    tmp_path: Path,
+) -> None:
+    company_id = uuid4()
+    output = tmp_path / "verified-shadow.json"
+    args = [
+        "data_universe_shadow",
+        "--api-base-url",
+        "https://private-api.example",
+        "--company-id",
+        str(company_id),
+        "--source-pack",
+        str(FIXTURE),
+        "--verify-public-source",
+        "--output",
+        str(output),
+    ]
+    with (
+        patch.object(sys, "argv", args),
+        patch(
+            "portfolio_api.data_universe_public_evidence.verify_official_uber_release",
+            side_effect=ValueError("Source changed"),
+        ) as verifier,
+        patch(
+            "portfolio_api.data_universe_shadow._fetch_scoped_context"
+        ) as private_read,
+        pytest.raises(ValueError, match="Source changed"),
+    ):
+        main()
+    verifier.assert_called_once()
+    private_read.assert_not_called()
+    assert not output.exists()
+
+
 def test_offline_cli_writes_only_explicit_external_report(tmp_path: Path) -> None:
     context = _context()
     context_file = tmp_path / "context.json"
@@ -275,5 +309,6 @@ def test_offline_cli_writes_only_explicit_external_report(tmp_path: Path) -> Non
     report = json.loads(output.read_text(encoding="utf-8"))
     assert report["status"] == "DRAFTS_PREPARED"
     assert report["writes_performed"] is False
+    assert report["source_verification"]["status"] == "NOT_CHECKED"
     with patch.object(sys, "argv", args), pytest.raises(SystemExit):
         main()
