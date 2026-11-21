@@ -1,3 +1,62 @@
+## Booking PR #46 secondary valuation resolved — 2026-11-21
+
+Formula review of the live and frozen P-BKNG Sheet established that the
+"Verified Layout" B125/B160/B195 is an auxiliary **5-year UFCF + Gordon
+terminal** calculation. Published 10-year model outputs L202:N202 use
+five additional forecast years and the terminal 2.5 growth-fade premium.
+They are **different methods**, not a source calculation mismatch. The
+published output contract and 10-year tab title govern this migration;
+the alternate section is retained as auditable reference-only evidence.
+Source-data regression tests verify both paths without writing the
+Sheet. Production model acceptance remains separately owner-gated.
+
+---
+
+## Scoped Booking import report integrity — November 20, 2026
+
+The scoped CLI preflights output outside the repository before any database
+access, rejects an existing report filename, and writes the final receipt with
+0600 permissions and exclusive creation. Focused tests cover these boundaries
+and preserve the existing unscoped diagnostic route. No production acceptance
+or credential changes occurred.
+
+---
+
+## Booking-only model import boundary — November 20, 2026
+
+The follow-on BUILD in existing draft PR #46 closes the accidental
+batch-import risk: `--apply` requires `--model-key P-BKNG` for Booking,
+and the standalone model preflight uses a read-only connection with no
+`SELECT FOR UPDATE`. A one-tab parity-only receipt is available without
+a database. Focused tests cover exact tab selection, malformed/unknown
+input, command-level fail-closed behavior, and transaction read-only
+compatibility in isolated PostgreSQL. The previous model analytics
+bootstrap remains an independently gated batch importer.
+
+The read-only production check found one exact NASDAQ BKNG USD listing,
+no accepted Booking native model and no BKNG price observations.
+No production write, source Sheet edit, deployment, or acceptance occurred.
+See docs/native-model-input-migration.md.
+
+---
+
+## Booking native UFCF model parity — November 20, 2026
+
+Independent of open PR #45, this BUILD corrects the previously blocked
+`P-BKNG` model mapping. The source 10-year UFCF projections already
+matched 30/30, while three expected-return checks failed because the
+source's Year 10 IRR stream used UFCF + Gordon terminal (no 2.5 premium).
+The existing `UFCF_ENTERPRISE_HMODEL_IRR` method resolves that
+discrepancy without changing source assumptions or fair values.
+The frozen source now passes 30/30 projections and 22/22 outputs.
+149 current model-input cells were independently compared with the
+frozen reference; only the live-linked market price has changed.
+No canonical model was accepted, no production write or Sheet edit
+occurred, and no shareholder-return claim is made. See
+`docs/native-model-input-migration.md` for provenance and acceptance gates.
+
+---
+
 ## PR #42 release preparation — November 20, 2026
 
 **Focused verification:** The temporary release verifier passed

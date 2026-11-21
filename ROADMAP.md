@@ -4,6 +4,41 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+## Current priority — Booking native model baseline (November 20, 2026)
+
+After the user verified the aligned production release, the first
+evidence-to-decision development began in independent draft PR #45.
+The next model-readiness slice identified the separate P-BKNG enterprise
+IRR terminal convention and corrected its native mapping. The frozen
+baseline has 30/30 projection and 22/22 output parity, with 149/149
+assumption cells agreeing with the current Sheet at the read-only
+audit. **No model acceptance, production write, import or source-sheet
+change has been performed.** See
+[Booking native parity](docs/native-model-input-migration.md#booking-pre-q3-baseline-parity-remediation--2026-11-20).
+
+## Booking-only import guard — November 20, 2026
+
+Following the `P-BKNG` 30/30 projection and 22/22 output parity fix in
+draft PR #46, the standalone importer now requires an **exact model
+selection** for `--apply`. Its Booking-only dry run uses a database-level
+read-only guard with no row-update locks and produces a scoped report.
+Synthetic CLI/selection tests and source-workbook parity tests verify
+scope. No production write or native model acceptance was performed;
+current Booking price observations are still unavailable. See the
+[model migration runbook](docs/native-model-input-migration.md).
+
+The Booking-only CLI now also rejects in-repository or existing report
+paths before any database access; scoped reports are private and
+non-overwriting. See the import runbook. This closes a receipt-safety
+gap; no model has been imported or accepted.
+
+The PR #46 review resolved the Booking secondary valuation discrepancy:
+the alternate "Verified Layout" is a five-year Gordon DCF, while the
+published contract is the ten-year secular-fade UFCF DCF. The latter
+remains the migration's sole authoritative baseline; both source
+paths are documented and regressions added. Production model
+acceptance, Q3 updates and prices remain separate owner gates.
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |

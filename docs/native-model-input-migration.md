@@ -25,6 +25,151 @@ currency links; the importer requires one exact non-demo application listing mat
 Mapping versions are per batch so extending the importer does not change the
 idempotency keys of the first two accepted revisions.
 
+## Booking pre-Q3 baseline parity remediation — 2026-11-20
+
+The earlier October 5 assessment marked `P-BKNG` `DATA_CHECK`; the entry
+in the historical table below remains its **as-of-October-5** classification.
+A new focused **parity-only**, no-database assessment against the exact frozen
+reference workbook (SHA-256
+`27f1889a7185e8759486409490db4d52c694f0084d0a914b234a1e251ab78ce9`)
+isolated its actual failure:
+
+| Reconciliation                                     | Previous default return method | Source-evidenced Gordon return method |
+| -------------------------------------------------- | -----------------------------: | ------------------------------------: |
+| Five-year and tail projections                     |                     30/30 pass |                            30/30 pass |
+| Normalized fair-value / IRR / return-stream checks |                     19/22 pass |                        **22/22 pass** |
+| Expected enterprise UFCF IRR (frozen source quote) |                   15.89107776% |                      **15.38803248%** |
+| Source expected IRR                                |                   15.38803248% |                          15.38803248% |
+
+The three original discrepancies were source `AA212` (IRR),
+`AC212` (excess return), and `Z212` (Year 10 terminal cash-flow
+stream). The source cash-flow cells `AA200:AA202` explicitly add each
+scenario's Year 10 UFCF and Gordon perpetuity value, **without** the
+extra 2.5 terminal-growth premium in the separate fair-value formula.
+The original native mapping incorrectly assigned the premium-inclusive
+`UFCF_ENTERPRISE_IRR` return method. Existing native
+`UFCF_ENTERPRISE_HMODEL_IRR` already represents the observed return
+stream, so the correction selects that **existing** method without
+altering the underlying revenue, margin, DCF discounting, probabilities,
+share counts or terminal Fair Value.
+
+Booking's Years 6-10 UFCF growth still uses the existing **linear
+fade**; the return-method correction does not turn it into the explicit
+annual-tail pattern used by Amazon/Hims.
+
+### Published 10-year model vs auxiliary 5-year layout — resolved 2026-11-21
+
+The worksheet's separately titled **"Verified Layout"** is **another
+economic methodology**, not a second execution of the published 10-year
+model. Its Bear/Base/Bull sections discount only Years 1–5 UFCF and
+capitalize Year 5 UFCF with an immediate Gordon terminal
+(`B120`, `B155`, `B190`), then divide by diluted shares. The published
+model (`L202:N202`, also surfaced by the fixed model output contract)
+includes Years 6–10 of secular-fade UFCF and a Year 10 terminal with
+the 2.5 terminal-growth premium. Its independent first-five-year
+inputs are shared with the alternative, but the terminal horizons
+are intentionally different.
+
+| USD per BKNG share | Published 10-year UFCF DCF | Auxiliary 5-year Gordon DCF |
+| ------------------ | -------------------------: | --------------------------: |
+| Bear               |                     125.61 |                      132.46 |
+| Base               |                     243.54 |                      215.23 |
+| Bull               |                     417.23 |                      314.60 |
+
+The authority for _this migration_ is unambiguous: the `P-BKNG` sheet
+title identifies the **10-Year Secular Growth Fade Valuation** and the
+published contract uses `L202:N202` via `E4:G4` and `BA4:BA6`.
+The auxiliary five-year calculations are internally consistent
+(demonstrated by source-data tests), but they are **reference-only**,
+not competing canonical outputs or evidence of a broken 10-year
+calculation. Both formula paths remain unchanged in Google Sheets.
+The importer records the separate `alternative_5y_gordon` source-cell
+references to make that distinction auditable; it never imports the
+five-year values as native model fair values. If the owner ever wants
+the five-year methodology as an active valuation, it requires a
+separately named, reviewed model/method rather than an undisclosed
+substitution. This closes the source authority discrepancy without
+altering assumptions or the accepted model's expected-return semantics.
+
+The new versioned import mapping is
+`portfolio-bkng-gordon-return-2026-11-20-v1`. Its idempotency identity
+cannot collide with an old `P-BKNG` mapping receipt.
+
+An independently authorized read-only comparison of 149 current
+`P-BKNG` model-input cells against the frozen reference matched all
+149 within 1e-8 at this assessment. The live-linked quote differed from
+the old snapshot, so this parity assessment **does not** import the
+workbook quote into market data or declare a current, investable IRR.
+The workbook lacks a trustworthy economic effective date; the initial
+accepted revision would use explicit owner acceptance time and retain
+source identity and immutable assumption evidence.
+
+**Engineering acceptance:** source-data-only regression tests assert
+30/30 projections, 22/22 financial checks, correct terminal formulas
+and method classification; independent synthetic tests establish
+that Fair Value remains unchanged when only the return method changes.
+These checks establish importer **eligibility**, not a production
+model/revision or a shareholder cash-flow expected IRR.
+
+**Pending separate owner action:** review the exact frozen source inputs,
+the latest live Sheet state, the non-demo NASDAQ BKNG USD listing,
+reviewed source-date limitation, and fresh market-price coverage.
+Only then run the existing guarded application import dry-run and,
+with separate production-write authorization, accept an initial
+native revision. Do not merge or apply any change automatically.
+
+## Narrow Booking-only dry-run and acceptance guard — November 20, 2026
+
+The legacy standalone CLI previously applied _every_ eligible model when
+invoked with `--apply`. It now **refuses to apply** without an exact source
+tab `--model-key` (for Booking, `P-BKNG`). It refuses unknown keys rather
+than guessing by ticker or company name. A scoped report returns
+`selected_model_keys = ["P-BKNG"]`, with no other company evaluated or
+written. The default, no-selection **preview** retains its historical
+all-company coverage for ordinary diagnostic reports.
+
+Run a source-only check without a database connection:
+
+```sh
+npm run db:import-native-models -- --parity-only --model-key P-BKNG --output /private/booking-source-parity.json
+```
+
+After separately approved, privately configured **read-only** production
+access, run the target-bound canonical identity/revision preflight:
+
+```sh
+npm run db:import-native-models -- --model-key P-BKNG --output /private/booking-canonical-preview.json
+```
+
+A selected-model command requires `--output` pointing **outside the
+repository**, with a new filename for each attempt. It verifies the directory
+is writable before loading the workbook or connecting to the database. On
+success the scoped JSON is written with exclusive creation and file mode
+`0600`; an existing receipt is never overwritten. The historic unscoped
+parity/assessment flow retains its existing output behavior. These safeguards
+do not authorize an import, expose a token or replace a backup.
+
+This second command creates a read-only database engine and does not
+obtain `SELECT FOR UPDATE` row locks, even if a native model already exists.
+It never inserts model state or source-price observations. Its output
+must be checked for exactly one selected model, matching source digest,
+listing identity and `DRY_RUN_READY` (or a clearly explained existing
+receipt/conflict). Run only after a fresh input/currency/source-date
+review and before any separate owner acceptance decision.
+
+Only with explicit authorization for the current target and reviewed
+single-model report may an operator use:
+
+```sh
+npm run db:import-native-models -- --model-key P-BKNG --apply --output /private/booking-import-receipt.json
+```
+
+That command still uses the existing production write-target guard,
+immutable revision ancestry and receipt checks. It is **not** authorized
+by this development change. The older batch onboarding orchestration
+(`model_analytics_bootstrap`) remains a separate, explicitly approved
+batch workflow; these CLI guards do not assert its scope.
+
 ## Repeatable workflow
 
 The default command performs a read-only dry run and writes the latest batch report:
@@ -34,10 +179,12 @@ npm run db:import-native-models
 ```
 
 Review `docs/reconciliation/native-model-input-import-batch-2-2026-10-05.json`.
-Accept only the reviewed, parity-passing mappings with:
+To accept a specific reviewed mapping, use the required
+`--model-key` argument and all production-write authorization gates.
+For example, **only after separate owner approval**:
 
 ```powershell
-npm run db:import-native-models -- --apply
+npm run db:import-native-models -- --model-key P-BKNG --apply --output "<private-receipt-path>"
 ```
 
 An applied replay is safe. The source workbook hash, tab key, and mapping version

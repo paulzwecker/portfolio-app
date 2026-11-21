@@ -134,6 +134,19 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
         assert result["projection_reconciliation"]["passed"] == 30
         assert result["output_reconciliation"]["passed"] == 22
 
+    bkng = by_key["P-BKNG"]
+    assert bkng.model_currency == "USD"
+    assert bkng.model_type.value == "UFCF_DCF_10Y_FADE"
+    assert bkng.return_methodology_code == "UFCF_ENTERPRISE_HMODEL_IRR"
+    assert bkng.mapping_version == "portfolio-bkng-gordon-return-2026-11-20-v1"
+    assert "Year 10" in bkng.legacy_return_semantics
+    assert bkng.input_cell_map["scenarios.BASE.years"] == "J16:N22"
+    assert "formula=" in bkng.source_references["legacy_return_terminal.BASE"]
+    bkng_parity = _reconcile_model(workbook, bkng)
+    assert bkng_parity["status"] == "PARITY_PASS"
+    assert bkng_parity["projection_reconciliation"]["passed"] == 30
+    assert bkng_parity["output_reconciliation"]["passed"] == 22
+
     for model_key in ("P-AMZN", "P-HIMS", "P-MSFT"):
         model = by_key[model_key]
         assert isinstance(model.values, FinancialModelRevisionCreate)
@@ -151,6 +164,49 @@ def test_authoritative_source_mappings_and_cached_calculations_reconcile() -> No
         assert result["status"] == "PARITY_PASS", model_key
         assert result["projection_reconciliation"]["passed"] == 30
         assert result["output_reconciliation"]["passed"] == 22
+
+
+def test_booking_only_scoped_import_does_not_accept_other_parity_proven_models(
+    postgres_engine: Engine,
+) -> None:
+    workbook = source_workbook()
+    accepted_at = datetime.now(UTC)
+    with Session(postgres_engine) as session, session.begin():
+        for name, ticker in (("Booking Holdings", "BKNG"), ("Alphabet", "GOOGL")):
+            add_company_listing(
+                session,
+                name=name,
+                reporting_currency="USD",
+                security_name=f"{name} common stock",
+                ticker=ticker,
+                venue="NASDAQ",
+                currency="USD",
+            )
+        preview = import_native_model_inputs(
+            session, workbook, accepted_at=accepted_at, apply=False, model_key="P-BKNG"
+        )
+        assert preview["mode"] == "DRY_RUN"
+        assert preview["selected_model_keys"] == ["P-BKNG"]
+        assert len(preview["models"]) == 1
+        assert preview["models"][0]["apply_status"] == "DRY_RUN_READY"
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 0
+        applied = import_native_model_inputs(
+            session, workbook, accepted_at=accepted_at, apply=True, model_key="P-BKNG"
+        )
+        assert applied["input_sets_imported"] == 1
+        assert applied["selected_model_keys"] == ["P-BKNG"]
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 1
+        model = session.scalar(select(FinancialModel))
+        assert model is not None and model.source_model_key == "P-BKNG"
+
+    with Session(postgres_engine) as session, session.begin():
+        replay = import_native_model_inputs(
+            session, workbook, accepted_at=accepted_at, apply=True, model_key="P-BKNG"
+        )
+        assert replay["input_sets_imported"] == 0
+        assert replay["input_sets_already_imported"] == 1
+        assert replay["selected_model_keys"] == ["P-BKNG"]
+        assert session.scalar(select(func.count()).select_from(FinancialModel)) == 1
 
 
 def test_source_quote_is_used_only_for_parity_and_keeps_effective_date_unknown() -> None:
@@ -275,6 +331,7 @@ def test_import_creates_parity_proven_native_revisions_once_and_records_assessme
             ).all()
         )
         assert return_methods["P-AMZN"] == "UFCF_ENTERPRISE_HMODEL_IRR"
+        assert return_methods["P-BKNG"] == "UFCF_ENTERPRISE_HMODEL_IRR"
         assert return_methods["P-HIMS"] == "UFCF_ENTERPRISE_HMODEL_IRR"
         assert return_methods["P-MSFT"] == "UFCF_ENTERPRISE_IRR"
         for model_key in ("W-AXON", "W-FIX", "W-RBRK", "W-VEEV"):
