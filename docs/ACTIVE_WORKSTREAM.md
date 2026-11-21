@@ -1,3 +1,17 @@
+## Booking PR #46 secondary valuation resolved — 2026-11-21
+
+Formula review of the live and frozen P-BKNG Sheet established that the
+"Verified Layout" B125/B160/B195 is an auxiliary **5-year UFCF + Gordon
+terminal** calculation. Published 10-year model outputs L202:N202 use
+five additional forecast years and the terminal 2.5 growth-fade premium.
+They are **different methods**, not a source calculation mismatch. The
+published output contract and 10-year tab title govern this migration;
+the alternate section is retained as auditable reference-only evidence.
+Source-data regression tests verify both paths without writing the
+Sheet. Production model acceptance remains separately owner-gated.
+
+---
+
 ## Scoped Booking import report integrity — November 20, 2026
 
 The scoped CLI preflights output outside the repository before any database

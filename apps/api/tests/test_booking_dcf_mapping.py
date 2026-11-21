@@ -90,6 +90,9 @@ def test_booking_uses_existing_gordon_return_without_changing_dcf_fair_value() -
     assert all(scenario.tail_ufcf_growth is None for scenario in model.values.scenarios)
     assert model.input_cell_map["scenarios.BASE.years"] == "J16:N22"
     assert "formula=" in model.source_references["legacy_return_terminal.BASE"]
+    assert "P-BKNG!B125;" in model.source_references["alternative_5y_gordon.BEAR"]
+    assert "P-BKNG!B160;" in model.source_references["alternative_5y_gordon.BASE"]
+    assert "P-BKNG!B195;" in model.source_references["alternative_5y_gordon.BULL"]
 
     corrected = _calculate(model)
     old_method = _calculate(replace(model, return_methodology_code=UFCF_ENTERPRISE_IRR))

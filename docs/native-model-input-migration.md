@@ -55,13 +55,44 @@ share counts or terminal Fair Value.
 
 Booking's Years 6-10 UFCF growth still uses the existing **linear
 fade**; the return-method correction does not turn it into the explicit
-annual-tail pattern used by Amazon/Hims. The separate "Verified Layout"
-block reports a Bear FV of about 132.46 at B125, different from the
-**published** contract's 125.61 at L202/BA4. The importer reconciles
-the explicit published contract, **not** that secondary layout;
-the reviewer must confirm which section governs before acceptance.
-The new versioned import mapping
-is `portfolio-bkng-gordon-return-2026-11-20-v1`. Its idempotency identity
+annual-tail pattern used by Amazon/Hims.
+
+### Published 10-year model vs auxiliary 5-year layout — resolved 2026-11-21
+
+The worksheet's separately titled **"Verified Layout"** is **another
+economic methodology**, not a second execution of the published 10-year
+model. Its Bear/Base/Bull sections discount only Years 1–5 UFCF and
+capitalize Year 5 UFCF with an immediate Gordon terminal
+(`B120`, `B155`, `B190`), then divide by diluted shares. The published
+model (`L202:N202`, also surfaced by the fixed model output contract)
+includes Years 6–10 of secular-fade UFCF and a Year 10 terminal with
+the 2.5 terminal-growth premium. Its independent first-five-year
+inputs are shared with the alternative, but the terminal horizons
+are intentionally different.
+
+| USD per BKNG share | Published 10-year UFCF DCF | Auxiliary 5-year Gordon DCF |
+| ------------------ | -------------------------: | --------------------------: |
+| Bear               |                     125.61 |                      132.46 |
+| Base               |                     243.54 |                      215.23 |
+| Bull               |                     417.23 |                      314.60 |
+
+The authority for _this migration_ is unambiguous: the `P-BKNG` sheet
+title identifies the **10-Year Secular Growth Fade Valuation** and the
+published contract uses `L202:N202` via `E4:G4` and `BA4:BA6`.
+The auxiliary five-year calculations are internally consistent
+(demonstrated by source-data tests), but they are **reference-only**,
+not competing canonical outputs or evidence of a broken 10-year
+calculation. Both formula paths remain unchanged in Google Sheets.
+The importer records the separate `alternative_5y_gordon` source-cell
+references to make that distinction auditable; it never imports the
+five-year values as native model fair values. If the owner ever wants
+the five-year methodology as an active valuation, it requires a
+separately named, reviewed model/method rather than an undisclosed
+substitution. This closes the source authority discrepancy without
+altering assumptions or the accepted model's expected-return semantics.
+
+The new versioned import mapping is
+`portfolio-bkng-gordon-return-2026-11-20-v1`. Its idempotency identity
 cannot collide with an old `P-BKNG` mapping receipt.
 
 An independently authorized read-only comparison of 149 current

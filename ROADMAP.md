@@ -32,6 +32,13 @@ paths before any database access; scoped reports are private and
 non-overwriting. See the import runbook. This closes a receipt-safety
 gap; no model has been imported or accepted.
 
+The PR #46 review resolved the Booking secondary valuation discrepancy:
+the alternate "Verified Layout" is a five-year Gordon DCF, while the
+published contract is the ten-year secular-fade UFCF DCF. The latter
+remains the migration's sole authoritative baseline; both source
+paths are documented and regressions added. Production model
+acceptance, Q3 updates and prices remain separate owner gates.
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |

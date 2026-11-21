@@ -510,6 +510,18 @@ def _map_portfolio_dcf(workbook: Workbook, model_key: str, accepted_at: datetime
             source_references[f"legacy_return_terminal.{scenario}"] = _source_cell_evidence(
                 workbook, model_key, address
             )
+        # This separately labeled workbook layout is a 5-year Gordon DCF.
+        # Preserve its evidence, but never substitute its FVs for the published
+        # 10-year secular-fade output contract at L202:N202.
+        for scenario, terminal_cell, fv_cell in (
+            ("BEAR", "B120", "B125"),
+            ("BASE", "B155", "B160"),
+            ("BULL", "B190", "B195"),
+        ):
+            source_references[f"alternative_5y_gordon.{scenario}"] = "; ".join(
+                _source_cell_evidence(workbook, model_key, address)
+                for address in (terminal_cell, fv_cell)
+            )
     if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
         for scenario, column in {"BEAR": "B", "BASE": "C", "BULL": "D"}.items():
             source_references[f"explicit_ufcf_tail.{scenario}"] = "; ".join(

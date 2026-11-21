@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 
@@ -11,6 +12,9 @@ from portfolio_api.model_input_migration import (
     DEFAULT_WORKBOOK,
     EXPECTED_MODEL_KEYS,
     PARITY_PROVEN_MODEL_KEYS,
+    _decimal,
+    _map_portfolio_dcf,
+    _reconcile_model,
     build_native_model_parity_report,
 )
 
@@ -125,3 +129,56 @@ def test_return_parity_and_shareholder_irr_comparability_are_separate() -> None:
     }
     assert nvo["source_price_for_parity"]["effective_at"] is None
     assert nvo["application_identity_validation"] == "NOT_CHECKED_PARITY_ONLY"
+
+
+def test_booking_verified_layout_is_an_alternative_five_year_gordon_dcf() -> None:
+    workbook = source_workbook()
+    tab = "P-BKNG"
+    model = _map_portfolio_dcf(workbook, tab, datetime(2026, 11, 21, tzinfo=UTC))
+    assert _reconcile_model(workbook, model)["status"] == "PARITY_PASS"
+
+    five_year_rows = (
+        ("BEAR", 118, 119, 120, 121, 125, "L202", "$I$22-$I$23", "G112"),
+        ("BASE", 153, 154, 155, 156, 160, "M202", "$N$22-$N$23", "G147"),
+        ("BULL", 188, 189, 190, 191, 195, "N202", "$S$22-$S$23", "G182"),
+    )
+    for (
+        scenario,
+        pv,
+        terminal_ufcf,
+        terminal,
+        pv_terminal,
+        fv,
+        published,
+        spread,
+        year5,
+    ) in five_year_rows:
+        # The alternative's Gordon terminal is attached immediately to Y5.
+        assert workbook.cell(tab, f"B{terminal}").formula == f"B{terminal_ufcf}/({spread})"
+        terminal_ufcf_formula = workbook.cell(tab, f"B{terminal_ufcf}").formula
+        assert terminal_ufcf_formula is not None
+        assert terminal_ufcf_formula.startswith(f"{year5}*(1+")
+        # It uses only five discounted UFCF years and a discounted Y5 terminal.
+        formula = workbook.cell(tab, f"B{pv}").formula
+        assert formula is not None and formula.startswith("SUM(C") and ":G" in formula
+        value = (
+            (
+                _decimal(workbook, tab, f"B{pv}")
+                + _decimal(workbook, tab, f"B{pv_terminal}")
+                + _decimal(workbook, tab, "B23")
+            )
+            / _decimal(workbook, tab, "B24")
+            / _decimal(workbook, tab, "B16")
+        )
+        alternative = _decimal(workbook, tab, f"B{fv}")
+        assert abs(value - alternative) < Decimal("0.0000001")
+
+        # The published 10-year model explicitly includes years 6–10 and the
+        # 2.5x secular terminal premium. Neither method replaces the other.
+        ten_year_formula = workbook.cell(tab, published).formula
+        assert ten_year_formula is not None
+        assert "2.5*" in ten_year_formula and ")^10" in ten_year_formula
+        assert abs(alternative - _decimal(workbook, tab, published)) > Decimal(1)
+        evidence = model.source_references[f"alternative_5y_gordon.{scenario}"]
+        assert f"{tab}!B{terminal};" in evidence
+        assert f"{tab}!B{fv};" in evidence
