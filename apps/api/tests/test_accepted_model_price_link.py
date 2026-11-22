@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select, text
@@ -41,20 +42,25 @@ from portfolio_api.market_data_ingestion import (
     build_provider_import,
 )
 from portfolio_api.model_input_migration import import_native_model_inputs, load_source_workbook
-from portfolio_api.yahoo_finance import load_yahoo_crosswalk
+from portfolio_api.yahoo_finance import (
+    ProviderFetchFailure,
+    YahooFinanceProvider,
+    YahooListingMapping,
+    load_yahoo_crosswalk,
+)
 
 
-class FrozenBkngYahoo:
+class FrozenBkngYahoo(YahooFinanceProvider):
     """Provider fixture: exact real-company identity, synthetic prices, no HTTP calls."""
 
-    def __init__(self, listing_id, payload: bytes, retrieved_at: datetime) -> None:
+    def __init__(self, listing_id: UUID, payload: bytes, retrieved_at: datetime) -> None:
         self.listing_id = listing_id
         self.payload = payload
         self.retrieved_at = retrieved_at
-        self.failures: list[object] = []
-        self.bound: dict = {}
+        self.failures: list[ProviderFetchFailure] = []
+        self.bound: dict[UUID, YahooListingMapping] = {}
 
-    def bind_listing_ids(self, listing_ids: dict) -> None:
+    def bind_listing_ids(self, listing_ids: Mapping[UUID, YahooListingMapping]) -> None:
         self.bound = dict(listing_ids)
 
     async def fetch(self, query: ProviderQuery) -> list[RawProviderRecord]:
@@ -97,7 +103,7 @@ def test_minimum_acl_price_import_recalculates_accepted_bkng_without_revision_wr
     with postgres_engine.connect() as connection:
         transaction = connection.begin()
         try:
-            schema = connection.execute(text("SELECT current_schema()")).scalar_one()
+            schema: str = connection.execute(text("SELECT current_schema()")).scalar_one()
             assert schema.startswith("test_")
             with Session(bind=connection) as owner:
                 company = Company(name="Booking Holdings", reporting_currency="USD", is_demo=False)
@@ -225,6 +231,7 @@ def test_minimum_acl_price_import_recalculates_accepted_bkng_without_revision_wr
                 assert read.scalar(select(func.count()).select_from(MarketDataBatch)) == 1
                 assert read.scalar(select(func.count()).select_from(CorporateAction)) == 0
                 assert read.scalar(select(func.count()).select_from(FxObservation)) == 0
-                assert read.scalar(select(func.count()).select_from(PriceObservation)) >= 2
+                count = read.scalar(select(func.count()).select_from(PriceObservation))
+                assert count is not None and count >= 2
         finally:
             transaction.rollback()
