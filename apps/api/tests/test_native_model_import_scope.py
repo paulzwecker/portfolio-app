@@ -12,6 +12,11 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_booking_dcf_mapping import _synthetic_booking_workbook
 
+from portfolio_api.database_write_target import (
+    BOOKING_MODEL_INPUT_WRITE_OPERATION,
+    _read_live_identity,
+    _write_permission_scope,
+)
 from portfolio_api.model_input_migration import (
     REPOSITORY_ROOT,
     _existing_model,
@@ -19,6 +24,8 @@ from portfolio_api.model_input_migration import (
     _model_mappers_for,
     _private_model_report_path,
     _write_model_report,
+    import_native_model_inputs,
+    load_source_workbook,
     main,
 )
 
@@ -77,6 +84,9 @@ def test_cli_scopes_database_activity_and_uses_read_only_engine_for_preview(
     ):
         assert main(arguments) == 0
     assert create.call_args.kwargs["read_only"] is (not apply)
+    assert create.call_args.kwargs["write_operation"] == (
+        "native_model_input_import_bkng" if apply else "native_model_input_import"
+    )
     assert importer.call_args.kwargs["model_key"] == "P-BKNG"
     assert importer.call_args.kwargs["apply"] is apply
 
@@ -131,3 +141,73 @@ def test_scoped_report_creates_mode_0600_and_cannot_replace_receipt(tmp_path: Pa
     with pytest.raises(FileExistsError):
         _write_model_report(safe_target, {"mode": "APPLIED"}, scoped=True)
     assert output.read_bytes() == original
+
+
+@pytest.mark.integration
+@pytest.mark.source_data
+def test_booking_import_works_with_isolated_minimum_table_dml(
+    postgres_engine: Engine,
+) -> None:
+    # Exercise the exact privilege matrix against real PostgreSQL, not merely
+    # mocked ACL rows. The entire transaction (including the role) rolls back.
+    from portfolio_api.domain.models import Company, Listing, Security
+
+    role = f"bkng_import_{uuid4().hex[:10]}"
+    with postgres_engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            schema: str = connection.execute(text("SELECT current_schema()")).scalar_one()
+            assert schema.startswith("test_")
+            connection.execute(text(f'CREATE ROLE "{role}" NOLOGIN'))
+            connection.execute(text(f'GRANT USAGE ON SCHEMA "{schema}" TO "{role}"'))
+            scope = _write_permission_scope(BOOKING_MODEL_INPUT_WRITE_OPERATION, "import")
+            assert scope is not None
+            for table_name, permissions in scope.items():
+                perms = ", ".join(sorted(permissions))
+                connection.execute(
+                    text(f'GRANT {perms} ON TABLE "{schema}"."{table_name}" TO "{role}"')
+                )
+            issuer = Company(name="Booking Holdings", reporting_currency="USD", is_demo=False)
+            with Session(bind=connection) as initial_session:
+                initial_session.add(issuer)
+                initial_session.flush()
+                security = Security(
+                    company_id=issuer.id,
+                    name="Booking Holdings common stock",
+                    security_type="COMMON_STOCK",
+                    is_demo=False,
+                )
+                initial_session.add(security)
+                initial_session.flush()
+                initial_session.add(
+                    Listing(
+                        security_id=security.id,
+                        ticker="BKNG",
+                        venue="NASDAQ",
+                        currency="USD",
+                        is_demo=False,
+                    )
+                )
+                initial_session.flush()
+
+            connection.execute(text(f'SET LOCAL ROLE "{role}"'))
+            identity = _read_live_identity(connection, "import", required_write_privileges=scope)
+            assert identity.missing_tables == ()
+            assert identity.missing_privileges == ()
+            full = _read_live_identity(connection, "import")
+            assert full.missing_privileges, "Unscoped guard must still require broad DML"
+            with Session(bind=connection) as model_session:
+                report = import_native_model_inputs(
+                    model_session,
+                    load_source_workbook(),
+                    accepted_at=datetime(2026, 11, 22, tzinfo=UTC),
+                    apply=True,
+                    model_key="P-BKNG",
+                )
+                assert report["selected_model_keys"] == ["P-BKNG"]
+                assert report["input_sets_imported"] == 1, report["models"]
+                assert report["models"][0]["status"] == "PARITY_PASS"
+                assert report["models"][0]["apply_status"] == "IMPORTED"
+                model_session.flush()
+        finally:
+            transaction.rollback()

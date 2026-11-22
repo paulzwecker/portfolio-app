@@ -118,6 +118,40 @@ Only then run the existing guarded application import dry-run and,
 with separate production-write authorization, accept an initial
 native revision. Do not merge or apply any change automatically.
 
+## Booking-only least-privilege write guard — 2026-11-22
+
+The default application/import guard continues checking all mapped tables
+for SELECT, INSERT, UPDATE, and DELETE. The frozen initial Booking importer
+now selects the exact operation name `native_model_input_import_bkng` **only**
+for `--apply --model-key P-BKNG`. Other import operations and other selected
+model keys retain the previous all-table privilege requirements. This is a
+narrow database permission attestation, not authorization to accept a model.
+
+| Required grants        | Tables                                                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SELECT                 | `securities`, `listings`, `price_observations`, `return_methodology_definitions`                                                                                                                |
+| SELECT, UPDATE         | `companies` (row lock via SELECT FOR UPDATE)                                                                                                                                                    |
+| SELECT, INSERT, UPDATE | `financial_models` (create, revision pointer, row lock)                                                                                                                                         |
+| SELECT, INSERT         | `financial_model_revisions`, `financial_model_migration_assessments`, `financial_model_outputs`, `dcf_model_assumptions`, `dcf_scenario_assumptions`, `dcf_year_assumptions`, `dcf_projections` |
+
+For Booking, no DELETE, schema CREATE or ALTER privilege is required.
+PostgreSQL must enforce this privilege matrix on the temporary non-superuser
+role. The guard does not grant permissions. The default Neon `read_write`
+role provisioning may grant broad DML; use a separately reviewed, narrowly
+granted operator role instead. Keep credentials private.
+
+The normal production write-target guard still verifies the physical
+connection, independent Neon control-plane project/primary branch/direct
+endpoint, TLS hostname, schema and explicit production-write authorization.
+Use an actual `NEON_API_KEY` in an approved secret store, never mocked
+control-plane metadata. The importer retains frozen source SHA, model key,
+input digest, receipt idempotence and conflict checks.
+
+Regression tests cover exact operation selection, narrowed ACL denials,
+production authorization and endpoint mismatch, plus a transactionally
+rolled-back Booking initial import on an isolated PostgreSQL test schema
+using only the listed grants. This code change does not accept any model.
+
 ## Narrow Booking-only dry-run and acceptance guard — November 20, 2026
 
 The legacy standalone CLI previously applied _every_ eligible model when

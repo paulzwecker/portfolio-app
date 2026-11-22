@@ -1,3 +1,16 @@
+## Booking importer restricted database permissions — 2026-11-22
+
+ChatGPT Work correctly stopped the authorized initial Booking production
+import because the generic guard required broad DML on all app tables.
+The new operation-specific policy (`native_model_input_import_bkng`)
+checks only the minimum Booking model import permissions and retains all
+other application/other-import guard behavior. Unit and PostgreSQL
+integration tests and exact-head CI are required before merge.
+No production model acceptance or credential changes in this code slice.
+See `docs/native-model-input-migration.md` for operator grants.
+
+---
+
 ## Booking PR #46 secondary valuation resolved — 2026-11-21
 
 Formula review of the live and frozen P-BKNG Sheet established that the

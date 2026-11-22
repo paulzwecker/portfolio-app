@@ -39,6 +39,13 @@ remains the migration's sole authoritative baseline; both source
 paths are documented and regressions added. Production model
 acceptance, Q3 updates and prices remain separate owner gates.
 
+The Booking initial-model acceptance remains unexecuted: the generic
+write-target guard demanded broad DML on all mapped application tables.
+A Booking-only privilege policy now narrows the target-attested grants
+without changing validation of production identity, TLS, authorization,
+other importers, or the model's immutable source fingerprint.
+The new PR requires CI and review before a fresh production dry-run.
+
 ## Execution cursor
 
 | Field             | Current value                                                                                                 |
