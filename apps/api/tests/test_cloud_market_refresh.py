@@ -31,9 +31,13 @@ from portfolio_api.domain.models import (
     Company,
     CurrentLifecycle,
     ExternalIngestionRun,
+    FinancialModel,
+    FinancialModelRevision,
     LifecycleEvent,
     Listing,
     Portfolio,
+    PriceObservation,
+    Security,
 )
 from portfolio_api.external_data import ExternalDataDomain
 from portfolio_api.external_ingestion import run_scheduled
@@ -505,3 +509,71 @@ def test_legacy_universe_gaps_remain_visible_outside_explicit_cloud_listing_scop
     with Session(postgres_engine) as session:
         scoped = run_cloud_incremental_refresh(session, settings, at)
     assert scoped["status"] == "COMPLETE"
+
+
+@pytest.mark.integration
+def test_model_only_company_refreshes_its_exact_listing_once(
+    postgres_engine: Engine, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    at = datetime.now(UTC)
+    with Session(postgres_engine) as session, session.begin():
+        company = Company(name="Synthetic Example Corporation")
+        session.add(company)
+        session.flush()
+        security = Security(
+            company_id=company.id, name="Synthetic common", security_type="COMMON_STOCK"
+        )
+        session.add(security)
+        session.flush()
+        listing = Listing(security_id=security.id, venue="NASDAQ", ticker="SYNTH", currency="USD")
+        sibling = Listing(security_id=security.id, venue="OTHER", ticker="SYNTH", currency="USD")
+        session.add_all([listing, sibling])
+        session.flush()
+        model = FinancialModel(
+            company_id=company.id,
+            valuation_listing_id=listing.id,
+            model_type="UFCF_DCF_10Y_FADE",
+            model_name="Synthetic",
+            model_currency="USD",
+        )
+        session.add(model)
+        session.flush()
+        revision = FinancialModelRevision(
+            model_id=model.id,
+            model_type=model.model_type,
+            revision_number=1,
+            methodology_version="fixture-v1",
+            actor="IMPORT",
+            rationale="Synthetic",
+            effective_at=at,
+        )
+        session.add(revision)
+        session.flush()
+        model.current_revision_id = revision.id
+        company_id, listing_id = company.id, listing.id
+        crosswalk, _ = _crosswalk(_mapping(company_id, security.id, listing_id))
+
+    path = tmp_path / "crosswalk.json"
+    path.write_text(crosswalk.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr("portfolio_api.market_data_startup.CROSSWALK_PATH", path)
+    transport = Mock(return_value=source_payload("SYNTH", at))
+    monkeypatch.setattr(
+        "portfolio_api.external_ingestion.YahooFinanceProvider",
+        lambda cw: YahooFinanceProvider(cw, transport=transport, retries=0),
+    )
+    settings = Settings(
+        _env_file=None, database_url=None, database_target_environment="development"
+    )
+    for slot in ("09:45", "09:45", "11:15"):
+        with Session(postgres_engine) as session:
+            report = run_cloud_incremental_refresh(
+                session, settings, at, company_id=company_id, refresh_slot=slot
+            )
+            assert report["status"] == "COMPLETE"
+            assert report["subject_count"] == 1
+    assert transport.call_count == 2
+    with Session(postgres_engine) as session:
+        prices = session.scalars(select(PriceObservation)).all()
+        assert {p.listing_id for p in prices} == {listing_id}
+        assert sum(p.price_kind == "CURRENT_QUOTE" for p in prices) == 1
+        assert session.scalar(select(func.count()).select_from(FinancialModelRevision)) == 1

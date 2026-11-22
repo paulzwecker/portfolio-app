@@ -39,7 +39,7 @@ from portfolio_api.recurring_operations import process_manual_job_requests
 
 @pytest.mark.integration
 @pytest.mark.parametrize("lifecycle", [None, "CANDIDATE", "DROP"])
-def test_verified_holdings_allow_only_sec_jobs_independently_of_lifecycle(
+def test_verified_holdings_allow_sec_and_price_jobs_independently_of_lifecycle(
     postgres_engine: Engine, lifecycle: str | None
 ) -> None:
     source = _source(postgres_engine)
@@ -48,7 +48,7 @@ def test_verified_holdings_allow_only_sec_jobs_independently_of_lifecycle(
             _set_lifecycle(session, COMPANY_ID, lifecycle)
         before = queries.overview(session, source.portfolio_id)
         options = company_refresh_options(session, COMPANY_ID)
-        assert options.eligible_job_names == ["SEC_FUNDAMENTALS", "SEC_FILINGS"]
+        assert options.eligible_job_names == ["SEC_FUNDAMENTALS", "SEC_FILINGS", "MARKET_DATA"]
         assert (
             options.lifecycle == lifecycle and options.sec_eligibility_basis == "VERIFIED_HOLDING"
         )
@@ -69,7 +69,7 @@ def test_verified_holdings_allow_only_sec_jobs_independently_of_lifecycle(
             assert job.affected_domains == (
                 ["REPORTED_FUNDAMENTALS"] if name == "SEC_FUNDAMENTALS" else ["SOURCE_DOCUMENTS"]
             )
-        for name in ("COMPANY_REFRESH", "MARKET_DATA", "FX", "MARKET_AND_FX", "RESEARCH_REFRESH"):
+        for name in ("COMPANY_REFRESH", "FX", "MARKET_AND_FX", "RESEARCH_REFRESH"):
             with pytest.raises(ValueError, match="Portfolio and Watchlist"):
                 create_job_request(
                     session,
@@ -119,7 +119,12 @@ def test_missing_zero_companyless_and_ambiguous_scope_cannot_supply_admission(
         )
         # Existing explicit Watchlist rules remain usable with multiple portfolios.
         active = company_refresh_options(session, source.watchlist_company_id)
-        assert active.eligible_job_names == ["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS"]
+        assert active.eligible_job_names == [
+            "COMPANY_REFRESH",
+            "SEC_FUNDAMENTALS",
+            "SEC_FILINGS",
+            "MARKET_DATA",
+        ]
 
 
 @pytest.mark.integration

@@ -1137,7 +1137,7 @@ class OperationalJobRequestCreate(Contract):
         return self
 
 
-CompanyRefreshJobName = Literal["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS"]
+CompanyRefreshJobName = Literal["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS", "MARKET_DATA"]
 
 
 class CompanyRefreshOptionsRead(Contract):

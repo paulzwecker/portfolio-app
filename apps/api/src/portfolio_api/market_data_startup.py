@@ -7,14 +7,17 @@ import json
 import time
 from collections.abc import MutableMapping
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from portfolio_api.database import create_database_engine
+from portfolio_api.database_write_target import CLOUD_MARKET_WRITE_OPERATION
 from portfolio_api.domain.models import (
     ExternalIngestionRun,
+    FinancialModel,
     FxObservation,
     PriceObservation,
 )
@@ -64,6 +67,10 @@ def run_cloud_incremental_refresh(
     session: Session,
     settings: Settings,
     at: datetime,
+    *,
+    company_id: UUID | None = None,
+    refresh_slot: str | None = None,
+    include_fx: bool = True,
 ) -> dict[str, object]:
     """Freeze and bound the existing scheduled importer to the reviewed market scope."""
     if settings.database_target_environment is None:
@@ -88,6 +95,13 @@ def run_cloud_incremental_refresh(
     crosswalk, digest = _load_crosswalk(CROSSWALK_PATH)
     end = at.astimezone(UTC).date()
     start = end - timedelta(days=CLOUD_CORRECTION_DAYS - 1)
+    models = select(FinancialModel.valuation_listing_id).where(
+        FinancialModel.current_revision_id.is_not(None)
+    )
+    if company_id is not None:
+        models = models.where(FinancialModel.company_id == company_id)
+    model_listings = set(session.scalars(models))
+    company_scope = {company_id} if company_id is not None else None
     preview = preview_market_data_bootstrap(
         session,
         crosswalk=crosswalk,
@@ -95,6 +109,8 @@ def run_cloud_incremental_refresh(
         start_date=start,
         end_date=end,
         target_environment=settings.database_target_environment,
+        company_id=company_id,
+        include_listing_ids=model_listings,
     )
     if preview["status"] != "READY":
         return {
@@ -103,7 +119,9 @@ def run_cloud_incremental_refresh(
             "failure_code": "MARKET_SCOPE_REVIEW_REQUIRED",
             "preview": preview,
         }
-    listing_rows, _held = active_market_listings(session)
+    listing_rows, _held = active_market_listings(
+        session, company_scope, include_listing_ids=model_listings
+    )
     listing_keys = {(listing.venue, listing.ticker) for listing, _, _ in listing_rows}
     if len({(venue.casefold(), ticker.casefold()) for venue, ticker in listing_keys}) != len(
         listing_rows
@@ -114,6 +132,8 @@ def run_cloud_incremental_refresh(
             "failure_code": "AMBIGUOUS_CANONICAL_LISTING_KEYS",
         }
     pairs = {tuple(pair.split("/")) for pair in preview["required_fx_pairs"]}
+    if not include_fx:
+        pairs.clear()
     subject_count = len(listing_keys) + len(pairs)
     if subject_count > CLOUD_MAX_SUBJECTS:
         return {
@@ -123,6 +143,8 @@ def run_cloud_incremental_refresh(
             "subject_count": subject_count,
             "maximum_subjects": CLOUD_MAX_SUBJECTS,
         }
+    if subject_count == 0:
+        return {"status": "NOT_APPLICABLE", "phase": "PREFLIGHT_EMPTY"}
     domains = [ExternalDataDomain.MARKET_DATA] if listing_keys else []
     if pairs:
         domains.append(ExternalDataDomain.FX)
@@ -135,6 +157,9 @@ def run_cloud_incremental_refresh(
         lookback_days=CLOUD_CORRECTION_DAYS,
         run_date=end,
         listing_key_filter=listing_keys,
+        company_ids=company_scope,
+        market_refresh_slot=refresh_slot,
+        frozen_listing_ids={listing.id for listing, _, _ in listing_rows},
         fx_pair_filter=pairs,
         frozen_yahoo_crosswalk=(crosswalk, digest),
         retry_failed=True,
@@ -299,10 +324,14 @@ def run_startup_refresh(
     ready_poll_seconds: int = DEFAULT_READY_POLL_SECONDS,
     allow_local_proxy_bypass: bool = True,
     cloud_incremental: bool = False,
+    company_id: UUID | None = None,
+    refresh_slot: str | None = None,
 ) -> dict[str, object]:
     engine = create_database_engine(
         settings,
-        write_operation="market_data_startup_ingestion",
+        write_operation=CLOUD_MARKET_WRITE_OPERATION
+        if cloud_incremental
+        else "market_data_startup_ingestion",
         write_operation_kind="ingestion",
     )
     if engine is None:
@@ -332,7 +361,13 @@ def run_startup_refresh(
                     if cloud_incremental:
                         checked_at = datetime.now(UTC)
                         try:
-                            report = run_cloud_incremental_refresh(session, settings, checked_at)
+                            report = run_cloud_incremental_refresh(
+                                session,
+                                settings,
+                                checked_at,
+                                company_id=company_id,
+                                refresh_slot=refresh_slot,
+                            )
                         except MarketDataBootstrapError:
                             report = {
                                 "status": "BLOCKED",
@@ -341,10 +376,14 @@ def run_startup_refresh(
                             }
                         if report.get("phase") == "PREFLIGHT":
                             session.rollback()
-                            diagnostic = record_cloud_market_preflight(session, report, checked_at)
+                            diagnostic = record_cloud_market_preflight(
+                                session, report, checked_at, company_id=company_id
+                            )
                             report["preflight_run_id"] = diagnostic["run_id"]
                         elif report.get("phase") == "INGESTION":
-                            resolve_cloud_market_preflights(session, checked_at)
+                            resolve_cloud_market_preflights(
+                                session, checked_at, company_id=company_id
+                            )
                         return {
                             "status": report["status"],
                             "failure_code": report.get("failure_code"),

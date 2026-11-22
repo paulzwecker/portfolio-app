@@ -16,6 +16,7 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain.models import (
     Company,
     CurrentLifecycle,
+    FinancialModel,
     Lifecycle,
     LifecycleEvent,
     OperationalJobAttempt,
@@ -121,7 +122,17 @@ def company_refresh_options(
         company_id=company.id,
         company_name=company.name,
         lifecycle=lifecycle,
-        eligible_job_names=[],
+        eligible_job_names=["MARKET_DATA"]
+        if session.scalar(
+            select(FinancialModel.id)
+            .where(
+                FinancialModel.company_id == company_id,
+                FinancialModel.current_revision_id.is_not(None),
+            )
+            .limit(1)
+        )
+        is not None
+        else [],
         sec_eligibility_basis=None,
         sec_unavailable_reason=(
             "No positive verified holding supports SEC refresh for this company."
@@ -133,7 +144,7 @@ def company_refresh_options(
     if lifecycle in {"PORTFOLIO", "WATCHLIST"}:
         return result.model_copy(
             update={
-                "eligible_job_names": ["COMPANY_REFRESH", *SEC_COMPANY_JOBS],
+                "eligible_job_names": ["COMPANY_REFRESH", *SEC_COMPANY_JOBS, "MARKET_DATA"],
                 "sec_eligibility_basis": "ACTIVE_LIFECYCLE",
                 "sec_unavailable_reason": None,
             }
@@ -159,7 +170,7 @@ def company_refresh_options(
     if held:
         return result.model_copy(
             update={
-                "eligible_job_names": list(SEC_COMPANY_JOBS),
+                "eligible_job_names": [*SEC_COMPANY_JOBS, "MARKET_DATA"],
                 "sec_eligibility_basis": "VERIFIED_HOLDING",
                 "sec_unavailable_reason": None,
                 "portfolio_id": portfolios[0],
@@ -202,7 +213,10 @@ def create_job_request(
         if job_name in SEC_COMPANY_JOBS:
             if job_name not in options.eligible_job_names:
                 raise ValueError(options.sec_unavailable_reason)
-        elif lifecycle not in {"PORTFOLIO", "WATCHLIST"}:
+        elif job_name not in options.eligible_job_names and lifecycle not in {
+            "PORTFOLIO",
+            "WATCHLIST",
+        }:
             raise ValueError("Company-scoped refresh is limited to Portfolio and Watchlist.")
         company_name = options.company_name
         scope_detail.update(

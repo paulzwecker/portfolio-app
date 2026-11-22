@@ -4115,7 +4115,7 @@ export interface components {
             /** Company Name */
             company_name: string;
             /** Eligible Job Names */
-            eligible_job_names: ("COMPANY_REFRESH" | "SEC_FUNDAMENTALS" | "SEC_FILINGS")[];
+            eligible_job_names: ("COMPANY_REFRESH" | "SEC_FUNDAMENTALS" | "SEC_FILINGS" | "MARKET_DATA")[];
             /**
              * Execution Mode
              * @enum {string}

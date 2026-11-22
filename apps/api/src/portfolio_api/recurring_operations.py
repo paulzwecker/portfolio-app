@@ -60,6 +60,7 @@ from portfolio_api.market_data_startup import (
 )
 from portfolio_api.market_data_startup import (
     configure_yahoo_no_proxy,
+    run_cloud_incremental_refresh,
 )
 from portfolio_api.migrations import expected_heads
 from portfolio_api.networking import bypass_known_local_port_nine_proxy
@@ -705,27 +706,35 @@ def _run_manual_market_step(
     if include_fx:
         domains.append(ExternalDataDomain.FX)
     company_ids = {request.company_id} if request and request.company_id else None
-    with Session(engine) as session:
-        selected, _held = active_market_listings(session, company_ids)
-        initial_backfill_needed = any(
-            (
-                session.scalar(
-                    select(func.count(func.distinct(PriceObservation.market_date))).where(
-                        PriceObservation.listing_id == listing.id,
-                        PriceObservation.provider == "YAHOO_FINANCE",
-                        PriceObservation.price_kind == "DAILY_CLOSE",
-                        PriceObservation.data_quality.in_(("PASS", "PASS_VERIFIED_FALLBACK")),
-                        PriceObservation.split_adjusted_close.is_not(None),
+    tracked_request = (
+        request is not None
+        and request.job_name in {"MARKET_DATA", "MARKET_AND_FX"}
+        and settings.market_data_provider == "YAHOO_FINANCE"
+        and settings.database_target_environment is not None
+    )
+    lookback_days = 90
+    if not tracked_request:
+        with Session(engine) as session:
+            selected, _held = active_market_listings(session, company_ids)
+            initial_backfill_needed = any(
+                (
+                    session.scalar(
+                        select(func.count(func.distinct(PriceObservation.market_date))).where(
+                            PriceObservation.listing_id == listing.id,
+                            PriceObservation.provider == "YAHOO_FINANCE",
+                            PriceObservation.price_kind == "DAILY_CLOSE",
+                            PriceObservation.data_quality.in_(("PASS", "PASS_VERIFIED_FALLBACK")),
+                            PriceObservation.split_adjusted_close.is_not(None),
+                        )
                     )
+                    or 0
                 )
-                or 0
+                < 252
+                for listing, _security, _company in selected
             )
-            < 252
-            for listing, _security, _company in selected
-        )
-    lookback_days = DEFAULT_LOOKBACK_DAYS if include_market and initial_backfill_needed else 90
-    if include_market and settings.market_data_provider == "EODHD_DEMO":
-        lookback_days = 365
+        lookback_days = DEFAULT_LOOKBACK_DAYS if include_market and initial_backfill_needed else 90
+        if include_market and settings.market_data_provider == "EODHD_DEMO":
+            lookback_days = 365
     with engine.connect() as connection:
         acquired: bool = connection.execute(
             text("SELECT pg_try_advisory_lock(:namespace, :lock_key)"),
@@ -742,6 +751,15 @@ def _run_manual_market_step(
             if include_market and settings.market_data_provider == "YAHOO_FINANCE":
                 configure_yahoo_no_proxy()
             with Session(bind=connection) as session:
+                if tracked_request and request is not None:
+                    return run_cloud_incremental_refresh(
+                        session,
+                        settings,
+                        now_at,
+                        company_id=request.company_id,
+                        refresh_slot=str(request.id),
+                        include_fx=include_fx,
+                    )
                 report = run_scheduled(
                     session,
                     settings,

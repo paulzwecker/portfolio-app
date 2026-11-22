@@ -93,6 +93,7 @@ type ModelDescriptor = {
   recordedAt: string | null;
   calculatedAsOf: string | null;
   calculationKnownAt: string | null;
+  quoteObservedAt: string | null;
   actor: string | null;
   source: string | null;
   rationale: string | null;
@@ -334,6 +335,7 @@ function nativeDescriptor(
     recordedAt: readString(revision?.recorded_at),
     calculatedAsOf: readString(current?.calculated_as_of),
     calculationKnownAt: readString(current?.known_at),
+    quoteObservedAt: readString(readRecord(current?.market_price)?.observed_at),
     actor: readString(revision?.actor),
     source: readString(revision?.source),
     rationale: readString(revision?.rationale),
@@ -371,6 +373,7 @@ function importedDescriptor(snapshot: unknown): ModelDescriptor | null {
     recordedAt: readString(item.recorded_at),
     calculatedAsOf: null,
     calculationKnownAt: null,
+    quoteObservedAt: null,
     actor: readString(item.actor),
     source: readString(item.source),
     rationale: readString(item.rationale),
@@ -503,6 +506,7 @@ function ValuationSummary({ descriptor }: { descriptor: ModelDescriptor }) {
   const output = descriptor.output;
   const currency = output?.modelCurrency ?? descriptor.currency;
   const methodology = output?.methodology;
+  const quoteTime = descriptor.quoteObservedAt ?? output?.priceEffectiveAt;
   return (
     <Card className="min-w-0 border-primary/20 shadow-none">
       <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
@@ -600,10 +604,8 @@ function ValuationSummary({ descriptor }: { descriptor: ModelDescriptor }) {
               <span>Perspective: {methodology?.perspective ?? "Unknown"}</span>
               <span>Price state: {statusLabel(output.priceStatus)}</span>
               <span>
-                Price date:{" "}
-                {output.priceEffectiveAt
-                  ? dateTime(output.priceEffectiveAt)
-                  : "Unavailable"}
+                {descriptor.quoteObservedAt ? "Quote observed" : "Price date"}:{" "}
+                {quoteTime ? dateTime(quoteTime) : "Unavailable"}
               </span>
               <span>
                 Revision effective:{" "}

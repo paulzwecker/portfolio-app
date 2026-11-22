@@ -1314,6 +1314,7 @@ def _yahoo_operation(
     fx_pairs: set[tuple[str, str]] | None,
     frozen_crosswalk: YahooListingCrosswalk | None = None,
     listing_scope: bool = False,
+    frozen_listing_ids: set[UUID] | None = None,
 ) -> dict[ExternalDataDomain, DomainOutcome]:
     crosswalk = frozen_crosswalk or load_yahoo_crosswalk(crosswalk_path)
     provider = YahooFinanceProvider(crosswalk)
@@ -1332,6 +1333,7 @@ def _yahoo_operation(
             start_date=start_date,
             lookback_days=lookback_days,
             scope=scope_kind,
+            exact_listing_ids=frozen_listing_ids,
             corporate_action_overlap_days=corporate_action_overlap_days,
             listing_keys=listing_keys,
             company_ids=company_ids,
@@ -1462,7 +1464,11 @@ def _run_result(session: Session, claim: RunClaim) -> dict[str, Any]:
 
 
 def record_cloud_market_preflight(
-    session: Session, report: dict[str, object], checked_at: datetime
+    session: Session,
+    report: dict[str, object],
+    checked_at: datetime,
+    *,
+    company_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Persist a blocked scope check in the existing ingestion ledger, without fetching facts."""
     code = report.get("failure_code")
@@ -1474,6 +1480,7 @@ def record_cloud_market_preflight(
         ExternalDataDomain.MARKET_DATA,
         {
             "scope": "cloud_market_preflight",
+            "company_id": str(company_id) if company_id else None,
             "checked_at": checked_at.isoformat(),
             "failure_code": code,
         },
@@ -1495,13 +1502,17 @@ def record_cloud_market_preflight(
     return _run_result(session, claim)
 
 
-def resolve_cloud_market_preflights(session: Session, checked_at: datetime) -> None:
+def resolve_cloud_market_preflights(
+    session: Session, checked_at: datetime, *, company_id: UUID | None = None
+) -> None:
     """Retain prior block evidence while recording that a later scope check passed."""
     blocked = session.scalars(
         select(ExternalIngestionRun)
         .where(
             ExternalIngestionRun.provider_id == YAHOO_PROVIDER_ID,
             ExternalIngestionRun.request_scope["scope"].as_string() == "cloud_market_preflight",
+            ExternalIngestionRun.request_scope["company_id"].as_string()
+            == (str(company_id) if company_id else None),
             ExternalIngestionRun.status == "BLOCKED",
             ExternalIngestionRun.created_at <= checked_at,
             ExternalIngestionRun.report["preflight_resolved_at"].as_string().is_(None),
@@ -1529,8 +1540,10 @@ def run_scheduled(
     run_date: date | None = None,
     yahoo_crosswalk_path: Any = CROSSWALK_PATH,
     listing_key_filter: set[tuple[str, str]] | None = None,
+    frozen_listing_ids: set[UUID] | None = None,
     frozen_yahoo_crosswalk: tuple[YahooListingCrosswalk, str] | None = None,
     retry_failed: bool = False,
+    market_refresh_slot: str | None = None,
     sec_research_scope: bool = False,
 ) -> dict[str, Any]:
     if replay_scope is not None and replay_scope.get("scope") == "cloud_market_preflight":
@@ -1717,11 +1730,15 @@ def run_scheduled(
                     scope = prior_scope
         if domain in YAHOO_MARKET_DOMAINS and listing_key_filter is not None:
             scope["scope"] = "listings"
+            if frozen_listing_ids is not None:
+                scope["listing_ids"] = sorted(str(item) for item in frozen_listing_ids)
             scope["listing_keys"] = [
                 {"venue": venue, "ticker": ticker} for venue, ticker in sorted(listing_key_filter)
             ]
         if domain in YAHOO_DOMAINS and frozen_yahoo_crosswalk is not None:
             scope["crosswalk_sha256"] = frozen_yahoo_crosswalk[1]
+        if market_refresh_slot is not None and domain in YAHOO_DOMAINS:
+            scope["market_refresh_slot"] = market_refresh_slot
         scopes[domain] = scope
         claim = _claim_run(
             session,
@@ -1798,6 +1815,9 @@ def run_scheduled(
                 fx_pairs=fx_pairs,
                 frozen_crosswalk=frozen_yahoo_crosswalk[0] if frozen_yahoo_crosswalk else None,
                 listing_scope=market_scope.get("scope") == "listings",
+                frozen_listing_ids={UUID(item) for item in market_scope["listing_ids"]}
+                if "listing_ids" in market_scope
+                else None,
             )
 
         _execute_cycle(session, yahoo_claims, yahoo_cycle, single_attempt=retry_failed)

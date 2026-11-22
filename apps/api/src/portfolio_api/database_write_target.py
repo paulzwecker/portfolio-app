@@ -36,6 +36,7 @@ AuditSink = Callable[[Mapping[str, Any]], None]
 _API_BASE = "https://console.neon.tech/api/v2"
 _AUDIT_INFO_KEY = "portfolio_database_write_target_guard"
 _OPERATION_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]{1,79}$")
+CLOUD_MARKET_WRITE_OPERATION = "cloud_tracked_market_ingestion"
 BOOKING_MODEL_INPUT_WRITE_OPERATION = "native_model_input_import_bkng"
 ACCEPTED_MODEL_PRICE_WRITE_OPERATION = "market_data_provider_accepted_model_price"
 # One accepted native model, one exact listing, price only; no FX or corporate actions.
@@ -85,6 +86,47 @@ def _write_permission_scope(
     operation: str, operation_kind: WriteOperationKind
 ) -> dict[str, frozenset[str]] | None:
     """Exact operation ID gates least-privilege checks; other writers remain unchanged."""
+    if operation == CLOUD_MARKET_WRITE_OPERATION:
+        if operation_kind != "ingestion":
+            raise DatabaseWriteTargetError(
+                "write_permission_scope_mismatch", "Market worker requires ingestion."
+            )
+        return {
+            **{
+                name: frozenset({"SELECT"})
+                for name in (
+                    "companies",
+                    "securities",
+                    "listings",
+                    "financial_models",
+                    "portfolios",
+                    "company_lifecycle_current",
+                    "lifecycle_events",
+                    "holding_snapshots",
+                    "holding_positions",
+                    "holding_cash_positions",
+                    "canonical_bootstrap_runs",
+                    "legacy_import_batches",
+                )
+            },
+            **{
+                name: frozenset({"SELECT", "INSERT"})
+                for name in (
+                    "price_observations",
+                    "external_raw_payloads",
+                    "corporate_actions",
+                    "fx_observations",
+                    "external_ingestion_attempts",
+                )
+            },
+            **{
+                name: frozenset({"SELECT", "INSERT", "UPDATE"})
+                for name in (
+                    "market_data_batches",
+                    "external_ingestion_runs",
+                )
+            },
+        }
     if operation == ACCEPTED_MODEL_PRICE_WRITE_OPERATION:
         if operation_kind != "ingestion":
             raise DatabaseWriteTargetError(
