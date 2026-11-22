@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from portfolio_api.database import create_database_engine
+from portfolio_api.database_write_target import BOOKING_MODEL_INPUT_WRITE_OPERATION
 from portfolio_api.domain import schemas, services
 from portfolio_api.domain.models import (
     Company,
@@ -1728,7 +1729,11 @@ def main(argv: list[str] | None = None) -> int:
     settings = Settings()
     engine = create_database_engine(
         settings,
-        write_operation="native_model_input_import",
+        write_operation=(
+            BOOKING_MODEL_INPUT_WRITE_OPERATION
+            if args.apply and args.model_key == "P-BKNG"
+            else "native_model_input_import"
+        ),
         write_operation_kind="import",
         read_only=not args.apply,
     )
