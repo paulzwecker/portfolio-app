@@ -1540,9 +1540,12 @@ export function isCompanyRefreshOptions(
     !string(value.company_name) ||
     !(value.lifecycle === null || lifecycle(value.lifecycle)) ||
     !array(value.eligible_job_names, (name) =>
-      ["COMPANY_REFRESH", "SEC_FUNDAMENTALS", "SEC_FILINGS"].includes(
-        name as string,
-      ),
+      [
+        "COMPANY_REFRESH",
+        "SEC_FUNDAMENTALS",
+        "SEC_FILINGS",
+        "MARKET_DATA",
+      ].includes(name as string),
     ) ||
     !["WORKER", "OPERATOR", "DISABLED"].includes(
       value.execution_mode as string,
@@ -1552,17 +1555,18 @@ export function isCompanyRefreshOptions(
     return false;
   const jobs = value.eligible_job_names as string[];
   if (new Set(jobs).size !== jobs.length) return false;
+  const secJobs = jobs.filter((job) => job !== "MARKET_DATA");
   if (value.sec_eligibility_basis === "ACTIVE_LIFECYCLE")
     return (
       ["PORTFOLIO", "WATCHLIST"].includes(value.lifecycle as string) &&
-      jobs.length === 3 &&
+      secJobs.length === 3 &&
       value.sec_unavailable_reason === null &&
       value.portfolio_id === null &&
       value.holding_snapshot_id === null
     );
   if (value.sec_eligibility_basis === "VERIFIED_HOLDING")
     return (
-      jobs.length === 2 &&
+      secJobs.length === 2 &&
       !jobs.includes("COMPANY_REFRESH") &&
       uuid(value.portfolio_id) &&
       uuid(value.holding_snapshot_id) &&
@@ -1570,7 +1574,7 @@ export function isCompanyRefreshOptions(
     );
   return (
     value.sec_eligibility_basis === null &&
-    jobs.length === 0 &&
+    secJobs.length === 0 &&
     string(value.sec_unavailable_reason) &&
     value.portfolio_id === null &&
     value.holding_snapshot_id === null

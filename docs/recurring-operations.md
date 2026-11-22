@@ -438,3 +438,39 @@ or after 17:00 Europe/Berlin for ECB-only, with named-timezone DST handling. The
 must be awake; sleeping Render Free is not a scheduler. No timer was registered.
 Recovery, source permission, initial reconciliation and a controlled increment precede
 separately approved unattended activation.
+
+## Intraday market refresh
+
+The Tracked market refresh workflow uses US equity sessions for its clock.
+On regular sessions it targets 09:45, 11:15, 12:45, 14:15 and 15:45 New York time.
+On half-days it targets 09:45, 10:30, 11:15, 12:00 and 12:45. The XNYS calendar
+filters holidays and early closes before the database job. Each slot has a separate
+durable run identity. Rerunning the same slot reuses a successful result.
+Manual workflow dispatch gets its own identity. The company **Refresh price**
+button submits a durable request, independent of the schedule. With
+`MANUAL_OPERATIONS_ENABLED=true`, the API kicks off price-only and market/FX
+requests after committing the receipt. The existing market lock and five-minute
+cooldown apply. Polling the receipt updates the company's valuation on completion.
+Other exchanges use the same US reference clock. A single
+company UUID limits selection to its Portfolio/Watchlist listings, exact holdings
+and accepted valuation listings. An accepted model alone includes only its
+valuation listing. The worker freezes the selected listing IDs and venue/ticker
+pairs, verifies provider mappings, and uses the existing 90-day correction,
+corporate-action and required FX paths. The existing 30-subject limit includes FX.
+The run ledger deduplicates successful same-slot reruns and retains failed attempts.
+
+Configure the GitHub environment `tracked-market` with a dedicated direct,
+verify-full SQLAlchemy URL in `MARKET_DATABASE_URL` and a project metadata key
+in `MARKET_NEON_API_KEY`. Set environment variables `NEON_PROJECT_ID`,
+`NEON_BRANCH_ID`, `NEON_ENDPOINT_ID`, and `DATABASE_TARGET_DATABASE`.
+Set `TRACKED_MARKET_SCOPE` to the reviewed company UUID for a pilot or explicitly
+to `all` for the reviewed universe. Set the repository variable
+`TRACKED_MARKET_REFRESH_ENABLED=true` to enable the job on main. Set it to false
+to stop future jobs. The web service uses its own credentials.
+
+The worker role needs CONNECT, schema USAGE, SELECT on alembic_version for
+readiness and the table privileges in the cloud market policy in
+`database_write_target.py`. Its writes cover market observations, FX, corporate
+actions, raw evidence, batches and run/attempt receipts. Provision only those
+grants. On the first new session compare the latest quote observation ID and
+observed time with the company's valuation page. Re-run the same scheduled slot and check the run and observation counts before widening scope.

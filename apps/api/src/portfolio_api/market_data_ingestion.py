@@ -600,10 +600,17 @@ async def build_provider_import(
     fx_pairs: set[tuple[str, str]] | None = None,
     corporate_action_overlap_days: int = DEFAULT_CORPORATE_ACTION_OVERLAP_DAYS,
     include_listing_ids: set[UUID] | None = None,
+    exact_listing_ids: set[UUID] | None = None,
 ) -> dict[str, Any]:
     selected, held_ids = active_market_listings(
-        session, company_ids, include_listing_ids=include_listing_ids
+        session,
+        company_ids,
+        include_listing_ids=exact_listing_ids
+        if exact_listing_ids is not None
+        else include_listing_ids,
     )
+    if exact_listing_ids is not None:
+        selected = [row for row in selected if row[0].id in exact_listing_ids]
     selection_issues: list[dict[str, str]] = []
     if listing_keys is not None:
         selected_by_key = {
@@ -875,6 +882,7 @@ def apply_provider_import(session: Session, report: dict[str, Any]) -> dict[str,
                     PriceObservation.price_kind,
                     PriceObservation.market_date,
                     PriceObservation.source_ref,
+                    PriceObservation.observed_at,
                 )
                 .where(
                     PriceObservation.listing_id.in_(listing_ids),
@@ -885,7 +893,9 @@ def apply_provider_import(session: Session, report: dict[str, Any]) -> dict[str,
                 )
                 .order_by(PriceObservation.recorded_at.desc())
             )
-            old_prices: dict[tuple[UUID, str, str, str, datetime], tuple[UUID, str]] = {}
+            old_prices: dict[
+                tuple[UUID, str, str, str, datetime], tuple[UUID, str, datetime | None]
+            ] = {}
             for existing_price in existing_prices:
                 price_key = (
                     existing_price.listing_id,
@@ -894,7 +904,10 @@ def apply_provider_import(session: Session, report: dict[str, Any]) -> dict[str,
                     existing_price.price_kind,
                     existing_price.market_date,
                 )
-                old_prices.setdefault(price_key, (existing_price.id, existing_price.source_ref))
+                old_prices.setdefault(
+                    price_key,
+                    (existing_price.id, existing_price.source_ref, existing_price.observed_at),
+                )
             accepted_prices: list[dict[str, Any]] = []
             for row in price_rows:
                 price_key = (
@@ -906,6 +919,14 @@ def apply_provider_import(session: Session, report: dict[str, Any]) -> dict[str,
                 )
                 old_price = old_prices.get(price_key)
                 if old_price is not None and old_price[1] == row["source_ref"]:
+                    continue
+                if (
+                    old_price is not None
+                    and row["price_kind"] == "CURRENT_QUOTE"
+                    and old_price[2] is not None
+                    and row.get("observed_at") is not None
+                    and row["observed_at"] < old_price[2]
+                ):
                     continue
                 if old_price is not None:
                     row["supersedes_observation_id"] = old_price[0]

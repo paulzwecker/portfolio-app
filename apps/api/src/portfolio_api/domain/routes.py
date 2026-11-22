@@ -5,7 +5,17 @@ from datetime import UTC, date, datetime, time
 from typing import Annotated, Literal, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, Response
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.responses import JSONResponse
 from psycopg import Connection as PsycopgConnection
 from psycopg import Error as PsycopgError
@@ -91,7 +101,10 @@ from portfolio_api.portfolio_sheet_sync import (
     publish_portfolio_state,
     require_sheet_publication_available,
 )
-from portfolio_api.recurring_operations import recurring_operations_status
+from portfolio_api.recurring_operations import (
+    process_manual_job_requests,
+    recurring_operations_status,
+)
 from portfolio_api.reported_fundamentals import METRIC_DEFINITIONS
 from portfolio_api.research_agent_operations import (
     ResearchAgentOperationError,
@@ -1072,6 +1085,27 @@ def get_operational_job_request(request_id: UUID, db: Db) -> s.OperationalJobReq
     return job_request_read(db, request)
 
 
+def _dispatch_price_request(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    settings: Settings,
+    job_request: OperationalJobRequest,
+) -> None:
+    # Function-scoped database dependency commits before FastAPI runs this task.
+    if (
+        settings.manual_operations_enabled
+        and job_request.job_name in {"MARKET_DATA", "MARKET_AND_FX"}
+        and job_request.status == "QUEUED"
+    ):
+        background_tasks.add_task(
+            process_manual_job_requests,
+            request.app.state.database_engine,
+            settings,
+            request_id=job_request.id,
+            job_names=frozenset({job_request.job_name}),
+        )
+
+
 @router.post(
     "/operations/job-requests",
     response_model=s.OperationalJobRequestRead,
@@ -1079,6 +1113,7 @@ def get_operational_job_request(request_id: UUID, db: Db) -> s.OperationalJobReq
 )
 def post_operational_job_request(
     request: Request,
+    background_tasks: BackgroundTasks,
     value: s.OperationalJobRequestCreate,
     db: Db,
 ) -> s.OperationalJobRequestRead:
@@ -1094,6 +1129,7 @@ def post_operational_job_request(
         job_request, deduplicated = create_job_request(db, value)
     except ValueError as error:
         raise HTTPException(422, str(error)) from None
+    _dispatch_price_request(request, background_tasks, settings, job_request)
     return job_request_read(db, job_request, deduplicated=deduplicated)
 
 
@@ -1104,6 +1140,7 @@ def post_operational_job_request(
 )
 def post_operational_job_request_retry(
     request: Request,
+    background_tasks: BackgroundTasks,
     request_id: UUID,
     db: Db,
 ) -> s.OperationalJobRequestRead:
@@ -1126,6 +1163,7 @@ def post_operational_job_request_retry(
         raise HTTPException(404, str(error)) from None
     except ValueError as error:
         raise HTTPException(409, str(error)) from None
+    _dispatch_price_request(request, background_tasks, settings, job_request)
     return job_request_read(db, job_request)
 
 

@@ -16,6 +16,7 @@ import { dateTime } from "@/lib/display";
 
 type CompanyJob = CompanyRefreshOptions["eligible_job_names"][number];
 const labels: Record<CompanyJob, string> = {
+  MARKET_DATA: "Refresh price",
   COMPANY_REFRESH: "Refresh this company",
   SEC_FUNDAMENTALS: "Refresh SEC fundamentals",
   SEC_FILINGS: "Refresh SEC filings",
@@ -268,11 +269,15 @@ export function CompanyRefreshAction({
     !secOnly && verified?.eligible_job_names.includes("COMPANY_REFRESH")
       ? ["COMPANY_REFRESH"]
       : ["SEC_FUNDAMENTALS", "SEC_FILINGS"];
+  if (!secOnly && verified?.eligible_job_names.includes("MARKET_DATA"))
+    jobs.unshift("MARKET_DATA");
   const unavailable = !verified
     ? "Refresh eligibility is unavailable."
     : verified.execution_mode === "DISABLED"
       ? "Manual and recurring operations are disabled."
-      : verified.sec_unavailable_reason;
+      : secOnly || !verified.eligible_job_names.includes("MARKET_DATA")
+        ? verified.sec_unavailable_reason
+        : null;
 
   return (
     <div
@@ -326,7 +331,9 @@ export function CompanyRefreshAction({
         {options.error ??
           (unavailable ||
             (verified?.execution_mode === "OPERATOR"
-              ? "Requests wait for an operator-run one-shot process."
+              ? verified.eligible_job_names.includes("MARKET_DATA") && !secOnly
+                ? "Price refreshes can run on demand. Other requests use the configured worker."
+                : "Requests wait for an operator-run one-shot process."
               : "Requests run through the recurring operations worker."))}
         {verified?.sec_eligibility_basis === "VERIFIED_HOLDING" &&
           " SEC eligibility comes from verified holdings."}

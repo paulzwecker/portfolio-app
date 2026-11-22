@@ -236,20 +236,34 @@ def test_scope_recovery_clears_active_block_without_refetching_or_advancing_fres
     settings = Settings(
         _env_file=None, database_url=None, database_target_environment="development"
     )
-    arguments = {"cloud_incremental": True, "allow_local_proxy_bypass": False}
-    assert run_startup_refresh(settings, **arguments)["status"] == "COMPLETE"
+    assert (
+        run_startup_refresh(settings, cloud_incremental=True, allow_local_proxy_bypass=False)[
+            "status"
+        ]
+        == "COMPLETE"
+    )
     assert len(calls) == 2
     with Session(postgres_engine) as session:
         original = queries.market_refresh_status(session)
         assert original.state == "AVAILABLE"
     mapping = market_scope.read_bytes()
     market_scope.write_text("invalid source", encoding="utf-8")
-    assert run_startup_refresh(settings, **arguments)["status"] == "BLOCKED"
+    assert (
+        run_startup_refresh(settings, cloud_incremental=True, allow_local_proxy_bypass=False)[
+            "status"
+        ]
+        == "BLOCKED"
+    )
     with Session(postgres_engine) as session:
         assert queries.market_refresh_status(session).state == "PARTIAL"
         counts = table_counts(postgres_engine)
     market_scope.write_bytes(mapping)
-    assert run_startup_refresh(settings, **arguments)["status"] == "COMPLETE"
+    assert (
+        run_startup_refresh(settings, cloud_incremental=True, allow_local_proxy_bypass=False)[
+            "status"
+        ]
+        == "COMPLETE"
+    )
     assert len(calls) == 2
     assert counts == table_counts(postgres_engine)
     with Session(postgres_engine) as session:

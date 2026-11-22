@@ -4,7 +4,12 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
-The Booking production attempt rolled back during the canonical price lookup.
+The one-time BKNG quote import was verified on November 22. The intraday
+worker now supports a single tracked company pilot and accepted-model listings.
+Next production milestone: verify a new session and a same-day repeat on the
+deployed company valuation page before expanding the recurring market scope.
+
+Historical migration notes follow. The Booking production attempt rolled back during the canonical price lookup.
 The Booking grant matrix now includes read access for refresh and regime metadata.
 A synthetic no-price PostgreSQL regression exercises the restricted writer in CI.
 Production acceptance remains pending.

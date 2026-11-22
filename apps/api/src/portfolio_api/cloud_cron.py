@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from portfolio_api.database import create_database_engine
 from portfolio_api.market_data_startup import run_startup_refresh
@@ -91,7 +91,13 @@ def main(argv: list[str] | None = None) -> int:
         default="market-data",
         help="Market/FX by default. SEC-only also drains at most one queued SEC request.",
     )
+    parser.add_argument(
+        "--company-id", type=UUID, help="Limit a market-data cycle to one tracked company."
+    )
+    parser.add_argument("--refresh-slot", help="Stable identity for an intraday market cycle.")
     args = parser.parse_args(argv)
+    if (args.company_id is not None or args.refresh_slot) and args.scope != "market-data":
+        parser.error("--company-id requires --scope market-data")
     settings = Settings()
     if not settings.cloud_ingestion_enabled:
         print(json.dumps({"status": "DISABLED", "reason": "CLOUD_INGESTION_ENABLED=false"}))
@@ -107,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
                 settings,
                 allow_local_proxy_bypass=False,
                 cloud_incremental=True,
+                company_id=args.company_id,
+                refresh_slot=args.refresh_slot,
             )
         except Exception as error:
             reports["market_data"] = {"status": "FAILED", "error_type": type(error).__name__}
