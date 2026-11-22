@@ -1,3 +1,20 @@
+## Accepted-model market price connection — November 22, 2026
+
+The accepted BKNG baseline was independently confirmed in production with
+revision 1 and a preserved PARTIAL output (no canonical BKNG price yet).
+The read-side current-model calculator already derives results from canonical
+quotes without changing the accepted revision. A new scoped path in
+`market_data_ingestion` accepts exactly one `--accepted-model-id`,
+derives its canonical listing, disables FX, rejects corporate actions and
+stale/invalid prices, and uses read-only preview and a narrower price-only
+write privilege matrix. Offline live Yahoo price evidence was successfully
+normalized for NASDAQ:BKNG, USD, November 10–20 (last USD 144.91).
+The code is not a production ingestion: new PR, isolated PostgreSQL
+coverage and independent operator acceptance/readback are the next gates.
+See `docs/accepted-model-price-onboarding.md`.
+
+---
+
 ## Booking importer restricted database permissions — 2026-11-22
 
 ChatGPT Work correctly stopped the authorized initial Booking production
