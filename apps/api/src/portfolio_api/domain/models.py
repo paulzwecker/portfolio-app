@@ -4100,7 +4100,7 @@ class FinancialModelMigrationAssessment(Base):
     )
     source_model_key: Mapped[str] = mapped_column(String(120))
     source_workbook_sha256: Mapped[str] = mapped_column(String(64))
-    mapping_version: Mapped[str] = mapped_column(String(40))
+    mapping_version: Mapped[str] = mapped_column(String(80))
     status: Mapped[str] = mapped_column(String(24))
     input_digest: Mapped[str] = mapped_column(String(64))
     report: Mapped[dict[str, object]] = mapped_column(JSON)
