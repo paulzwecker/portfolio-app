@@ -4,6 +4,11 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+The Booking production attempt rolled back during the canonical price lookup.
+The Booking grant matrix now includes read access for refresh and regime metadata.
+A synthetic no-price PostgreSQL regression exercises the restricted writer in CI.
+Production acceptance remains pending.
+
 ## Current priority — Booking native model baseline (November 20, 2026)
 
 After the user verified the aligned production release, the first
