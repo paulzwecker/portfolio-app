@@ -1,6 +1,7 @@
 """Scope and non-mutating preflight safeguards for native model imports."""
 
 import stat
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -19,6 +20,8 @@ from portfolio_api.database_write_target import (
 )
 from portfolio_api.model_input_migration import (
     REPOSITORY_ROOT,
+    _create_native_model,
+    _current_application_state,
     _existing_model,
     _map_portfolio_dcf,
     _model_mappers_for,
@@ -143,11 +146,8 @@ def test_scoped_report_creates_mode_0600_and_cannot_replace_receipt(tmp_path: Pa
     assert output.read_bytes() == original
 
 
-@pytest.mark.integration
-@pytest.mark.source_data
-def test_booking_import_works_with_isolated_minimum_table_dml(
-    postgres_engine: Engine,
-) -> None:
+@pytest.fixture
+def booking_writer_session(postgres_engine: Engine) -> Iterator[Session]:
     # Exercise the exact privilege matrix against real PostgreSQL, not merely
     # mocked ACL rows. The entire transaction (including the role) rolls back.
     from portfolio_api.domain.models import Company, Listing, Security
@@ -197,17 +197,43 @@ def test_booking_import_works_with_isolated_minimum_table_dml(
             full = _read_live_identity(connection, "import")
             assert full.missing_privileges, "Unscoped guard must still require broad DML"
             with Session(bind=connection) as model_session:
-                report = import_native_model_inputs(
-                    model_session,
-                    load_source_workbook(),
-                    accepted_at=datetime(2026, 11, 22, tzinfo=UTC),
-                    apply=True,
-                    model_key="P-BKNG",
-                )
-                assert report["selected_model_keys"] == ["P-BKNG"]
-                assert report["input_sets_imported"] == 1, report["models"]
-                assert report["models"][0]["status"] == "PARITY_PASS"
-                assert report["models"][0]["apply_status"] == "IMPORTED"
-                model_session.flush()
+                yield model_session
         finally:
             transaction.rollback()
+
+
+@pytest.mark.integration
+@pytest.mark.source_data
+def test_booking_import_works_with_isolated_minimum_table_dml(
+    booking_writer_session: Session,
+) -> None:
+    report = import_native_model_inputs(
+        booking_writer_session,
+        load_source_workbook(),
+        accepted_at=datetime(2026, 11, 22, tzinfo=UTC),
+        apply=True,
+        model_key="P-BKNG",
+    )
+    assert report["selected_model_keys"] == ["P-BKNG"]
+    assert report["input_sets_imported"] == 1, report["models"]
+    assert report["models"][0]["status"] == "PARITY_PASS"
+    assert report["models"][0]["apply_status"] == "IMPORTED"
+    booking_writer_session.flush()
+
+
+@pytest.mark.integration
+def test_booking_writer_stores_partial_output_without_prices(
+    booking_writer_session: Session,
+) -> None:
+    from portfolio_api.model_input_migration import _identity
+
+    mapped = _map_portfolio_dcf(
+        _synthetic_booking_workbook(), "P-BKNG", datetime(2026, 11, 22, tzinfo=UTC)
+    )
+    issuer, listing = _identity(booking_writer_session, mapped)
+    model, _ = _create_native_model(booking_writer_session, issuer.id, listing.id, mapped)
+    output = _current_application_state(booking_writer_session, model)
+    assert output["status"] == "PARTIAL"
+    assert output["price"] is None
+    assert output["weighted_upside"] is None
+    assert output["expected_cash_flow_irr"] is None

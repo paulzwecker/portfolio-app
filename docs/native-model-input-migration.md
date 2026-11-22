@@ -129,7 +129,7 @@ narrow database permission attestation, not authorization to accept a model.
 
 | Required grants        | Tables                                                                                                                                                                                          |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SELECT                 | `securities`, `listings`, `price_observations`, `return_methodology_definitions`                                                                                                                |
+| SELECT                 | `securities`, `listings`, `price_observations`, `return_methodology_definitions`, `external_ingestion_runs`, `price_regime_snapshots`, `market_data_batches`                                    |
 | SELECT, UPDATE         | `companies` (row lock via SELECT FOR UPDATE)                                                                                                                                                    |
 | SELECT, INSERT, UPDATE | `financial_models` (create, revision pointer, row lock)                                                                                                                                         |
 | SELECT, INSERT         | `financial_model_revisions`, `financial_model_migration_assessments`, `financial_model_outputs`, `dcf_model_assumptions`, `dcf_scenario_assumptions`, `dcf_year_assumptions`, `dcf_projections` |
