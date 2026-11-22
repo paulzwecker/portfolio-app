@@ -13,7 +13,6 @@ from sqlalchemy import func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from test_market_data_bootstrap import _listing_payload
-from test_model_input_migration import add_company_listing, source_workbook
 
 from portfolio_api.current_model_calculation import current_native_model_calculation
 from portfolio_api.database_write_target import (
@@ -22,13 +21,16 @@ from portfolio_api.database_write_target import (
     _write_permission_scope,
 )
 from portfolio_api.domain.models import (
+    Company,
     CorporateAction,
     FinancialModel,
     FinancialModelOutput,
     FinancialModelRevision,
     FxObservation,
+    Listing,
     MarketDataBatch,
     PriceObservation,
+    Security,
 )
 from portfolio_api.external_data import ExternalDataDomain, ProviderQuery, RawProviderRecord
 from portfolio_api.market_data_ingestion import (
@@ -38,7 +40,7 @@ from portfolio_api.market_data_ingestion import (
     apply_provider_import,
     build_provider_import,
 )
-from portfolio_api.model_input_migration import import_native_model_inputs
+from portfolio_api.model_input_migration import import_native_model_inputs, load_source_workbook
 from portfolio_api.yahoo_finance import load_yahoo_crosswalk
 
 
@@ -98,18 +100,30 @@ def test_minimum_acl_price_import_recalculates_accepted_bkng_without_revision_wr
             schema = connection.execute(text("SELECT current_schema()")).scalar_one()
             assert schema.startswith("test_")
             with Session(bind=connection) as owner:
-                company = add_company_listing(
-                    owner,
-                    name="Booking Holdings",
-                    reporting_currency="USD",
-                    security_name="Booking Holdings common",
-                    ticker="BKNG",
-                    venue="NASDAQ",
-                    currency="USD",
+                company = Company(name="Booking Holdings", reporting_currency="USD", is_demo=False)
+                owner.add(company)
+                owner.flush()
+                security = Security(
+                    company_id=company.id,
+                    name="Booking Holdings common",
+                    security_type="COMMON_STOCK",
+                    is_demo=False,
                 )
+                owner.add(security)
+                owner.flush()
+                owner.add(
+                    Listing(
+                        security_id=security.id,
+                        ticker="BKNG",
+                        venue="NASDAQ",
+                        currency="USD",
+                        is_demo=False,
+                    )
+                )
+                owner.flush()
                 applied = import_native_model_inputs(
                     owner,
-                    source_workbook(),
+                    load_source_workbook(),
                     accepted_at=now,
                     apply=True,
                     model_key="P-BKNG",
