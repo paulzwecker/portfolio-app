@@ -72,7 +72,7 @@ jobs:
           DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true"
           CLOUD_INGESTION_ENABLED: "true"
           RECURRING_OPERATIONS_ENABLED: "true"
-          PGSSLROOTCERT: system
+          PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
         run: |
           : "${MARKET_SCOPE:?Configure a company UUID or all}"
           : "${DATABASE_URL:?Missing worker connection}"
