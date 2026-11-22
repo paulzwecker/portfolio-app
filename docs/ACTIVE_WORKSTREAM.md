@@ -1,3 +1,22 @@
+## Booking status on November 22, 2026
+
+Production readback confirmed one accepted Booking model at revision 1.
+PR #51 covers price ingestion for its NASDAQ listing. All three CI jobs
+passed at `689e975`. The last production readback had zero Booking prices.
+PR #45 prepares the quarterly evidence brief for human review. The import
+attempts below record earlier checkpoints.
+
+## Booking evidence-to-decision BUILD — November 20, 2026
+
+After the owner confirmed the aligned cloud release, the next read-only
+investor workflow compares Booking Q3 2026 SEC filing values to the canonical
+issuer context, keeps reported growth and rounded millions distinct, and
+produces an investor decision brief with staged human-review eligibility.
+No FCF/FV/IRR impact is inferred. See docs/booking-evidence-decision.md.
+The private live SEC read requires an operator-provisioned fair-access contact
+and the separately enabled Booking-only scoped token. No production writes,
+provider activations, recurring jobs, or app deployment occur in this BUILD.
+
 ## Booking importer restricted database permissions — 2026-11-22
 
 ChatGPT Work correctly stopped the authorized initial Booking production

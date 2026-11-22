@@ -4,6 +4,24 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+## Booking status on November 22, 2026
+
+Production readback confirmed one accepted Booking model at revision 1.
+PR #51 covers price ingestion for its NASDAQ listing. All three CI jobs
+passed at `689e975`. The last production readback had zero Booking prices.
+PR #45 prepares the quarterly evidence brief for human review. The import
+attempts below record earlier checkpoints.
+
+## Current milestone — November 20, 2026
+
+The owner accepted the aligned API/Vercel production release on main
+2650c822 after the Neon schema migrated to d7b4a6c8e2f0.
+The new Booking evidence-to-decision BUILD adds source-hashed, rounded-unit-safe
+quarterly KPI comparisons and an explicit human-review handoff. See
+[Booking evidence to decision](docs/booking-evidence-decision.md).
+No live SEC/source-context proof, production write, model acceptance, or
+valuation impact is claimed by this code change.
+
 The Booking production attempt rolled back during the canonical price lookup.
 The Booking grant matrix now includes read access for refresh and regime metadata.
 A synthetic no-price PostgreSQL regression exercises the restricted writer in CI.
