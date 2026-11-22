@@ -9,6 +9,11 @@ The Booking grant matrix now includes read access for refresh and regime metadat
 A synthetic no-price PostgreSQL regression exercises the restricted writer in CI.
 Production acceptance remains pending.
 
+The next Booking apply attempt rolled back at receipt insertion: the 42-character
+mapping version exceeded its 40-character column. The proposed Alembic revision
+widens that column and the restricted-role CI regression now reads the stored receipt.
+Production migration and the subsequent Booking import remain pending.
+
 ## Current priority — Booking native model baseline (November 20, 2026)
 
 After the user verified the aligned production release, the first

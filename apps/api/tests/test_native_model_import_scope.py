@@ -1,5 +1,6 @@
 """Scope and non-mutating preflight safeguards for native model imports."""
 
+import json
 import stat
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -20,8 +21,6 @@ from portfolio_api.database_write_target import (
 )
 from portfolio_api.model_input_migration import (
     REPOSITORY_ROOT,
-    _create_native_model,
-    _current_application_state,
     _existing_model,
     _map_portfolio_dcf,
     _model_mappers_for,
@@ -222,17 +221,45 @@ def test_booking_import_works_with_isolated_minimum_table_dml(
 
 
 @pytest.mark.integration
-def test_booking_writer_stores_partial_output_without_prices(
-    booking_writer_session: Session,
+def test_booking_writer_persists_full_receipt_without_prices(
+    booking_writer_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from portfolio_api.model_input_migration import _identity
-
-    mapped = _map_portfolio_dcf(
-        _synthetic_booking_workbook(), "P-BKNG", datetime(2026, 11, 22, tzinfo=UTC)
+    # CI has synthetic assumptions but no private cached workbook output cells.
+    # Supply only the source-side parity result; run all database steps for real.
+    workbook = _synthetic_booking_workbook()
+    inventory = tmp_path / "inventory.json"
+    inventory.write_text(
+        json.dumps({"source": {"sha256": workbook.sha256}, "models": [{"model_tab": "P-BKNG"}]}),
+        encoding="utf-8",
     )
-    issuer, listing = _identity(booking_writer_session, mapped)
-    model, _ = _create_native_model(booking_writer_session, issuer.id, listing.id, mapped)
-    output = _current_application_state(booking_writer_session, model)
+    monkeypatch.setattr("portfolio_api.model_input_migration.INVENTORY_PATH", inventory)
+    with patch(
+        "portfolio_api.model_input_migration._base_report",
+        return_value={
+            "model_key": "P-BKNG",
+            "status": "PARITY_PASS",
+            "input_mapping": {"input_digest": "b" * 64},
+        },
+    ):
+        result = import_native_model_inputs(
+            booking_writer_session,
+            workbook,
+            accepted_at=datetime(2026, 11, 22, tzinfo=UTC),
+            apply=True,
+            model_key="P-BKNG",
+        )
+    assert result["input_sets_imported"] == 1
+    row = booking_writer_session.execute(
+        text(
+            "SELECT mapping_version, model_id, revision_id, report "
+            "FROM financial_model_migration_assessments WHERE source_model_key = 'P-BKNG'"
+        )
+    ).one()
+    assert row.mapping_version == "portfolio-bkng-gordon-return-2026-11-20-v1"
+    accepted = result["models"][0]["accepted_model"]
+    assert str(row.model_id) == accepted["model_id"]
+    assert str(row.revision_id) == accepted["revision_id"]
+    output = row.report["current_application_recalculation"]
     assert output["status"] == "PARTIAL"
     assert output["price"] is None
     assert output["weighted_upside"] is None

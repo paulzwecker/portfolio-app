@@ -118,6 +118,13 @@ Only then run the existing guarded application import dry-run and,
 with separate production-write authorization, accept an initial
 native revision. Do not merge or apply any change automatically.
 
+## Receipt mapping version capacity
+
+Revision `b93e1c7af602` widens the receipt's mapping version from 40 to 80
+characters. The reviewed Booking identifier is 42 characters and must round-trip
+unchanged. Downgrade refuses to shorten any existing identifier. Use the guarded
+migration procedure before retrying the importer; preserve both source digests.
+
 ## Booking-only least-privilege write guard — 2026-11-22
 
 The default application/import guard continues checking all mapped tables
