@@ -78,6 +78,7 @@ def test_return_observation_requires_listing_identity_and_captured_quote_basis()
 def test_legacy_assignment_requires_an_explicitly_documented_tab() -> None:
     assert VERIFIED_LEGACY_METHOD_BY_MODEL_KEY["P-GOOGL"] == UFCF_ENTERPRISE_IRR
     assert VERIFIED_LEGACY_METHOD_BY_MODEL_KEY["P-AMZN"] == UFCF_ENTERPRISE_HMODEL_IRR
+    assert VERIFIED_LEGACY_METHOD_BY_MODEL_KEY["P-BKNG"] == UFCF_ENTERPRISE_HMODEL_IRR
     assert VERIFIED_LEGACY_METHOD_BY_MODEL_KEY["P-HIMS"] == UFCF_ENTERPRISE_HMODEL_IRR
     assert VERIFIED_LEGACY_METHOD_BY_MODEL_KEY["P-MSFT"] == UFCF_ENTERPRISE_IRR
     assert VERIFIED_LEGACY_METHOD_BY_MODEL_KEY["W-TOST"] == OWNER_CASH_FLOW_EQUITY_IRR

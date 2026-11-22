@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import SecretStr, ValidationError
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import Connection, make_url
 
 from portfolio_api.database import create_database_engine
 from portfolio_api.database_write_target import (
+    BOOKING_MODEL_INPUT_WRITE_OPERATION,
     ConfirmationProvider,
     DatabaseWriteTargetError,
     DatabaseWriteTargetGuard,
@@ -19,8 +20,10 @@ from portfolio_api.database_write_target import (
     WriteOperationKind,
     _application_table_names,
     _interactive_confirmation,
+    _read_live_identity,
     _RejectRedirects,
     _statement_may_write,
+    _write_permission_scope,
     validate_database_read_target,
     validate_database_write_target,
 )
@@ -910,3 +913,180 @@ def test_neon_api_client_resolves_authoritative_metadata_without_network(
     assert metadata.primary_branch_id == PRIMARY_BRANCH_ID
     assert metadata.branch_id == REHEARSAL_BRANCH_ID
     assert metadata.endpoint_branch_id == REHEARSAL_BRANCH_ID
+
+
+def test_booking_scoped_writer_permissions_are_exact_and_other_operations_unchanged() -> None:
+    narrow = _write_permission_scope(BOOKING_MODEL_INPUT_WRITE_OPERATION, "import")
+    assert narrow is not None
+    assert narrow["companies"] == frozenset({"SELECT", "UPDATE"})
+    assert narrow["financial_models"] == frozenset({"SELECT", "INSERT", "UPDATE"})
+    assert narrow["financial_model_migration_assessments"] == frozenset({"SELECT", "INSERT"})
+    assert narrow["price_observations"] == frozenset({"SELECT"})
+    assert "dcf_projections" in narrow
+    assert "holdings" not in narrow and "portfolios" not in narrow
+    # No general reduction for another model import, a bootstrap, or app writes.
+    assert _write_permission_scope("native_model_input_import", "import") is None
+    assert _write_permission_scope("application_write", "application") is None
+    with pytest.raises(DatabaseWriteTargetError, match="write_permission_scope_mismatch"):
+        _write_permission_scope(BOOKING_MODEL_INPUT_WRITE_OPERATION, "application")
+
+
+def test_booking_table_acl_verification_checks_required_privileges_not_every_dml() -> None:
+    class FakeCursor:
+        def __init__(self) -> None:
+            self.table_scope: list[str] | None = None
+            self.restricted: set[tuple[str, str]] = set()
+            self._step = 0
+
+        def execute(self, _sql: str, params: Any = None) -> None:
+            self._step += 1
+            if params:
+                self.table_scope = params[0]
+
+        def fetchone(self) -> tuple[Any, ...]:
+            return (
+                DATABASE,
+                "scoped-bkng-role",
+                "203.0.113.20",
+                5432,
+                180000,
+                "public",
+                False,
+                True,
+                True,
+                False,
+                False,
+                False,
+            )
+
+        def fetchall(self) -> list[tuple[object, ...]]:
+            assert self.table_scope is not None
+            rows = []
+            for table in self.table_scope:
+                privileges = {"SELECT", "INSERT", "UPDATE", "DELETE"}
+                if table in {"companies", "financial_models", "financial_model_revisions"}:
+                    privileges.discard("DELETE")
+                if table not in ("companies", "financial_models"):
+                    privileges.discard("UPDATE")
+                if table not in (
+                    "financial_models",
+                    "financial_model_revisions",
+                    "financial_model_migration_assessments",
+                    "financial_model_outputs",
+                    "dcf_model_assumptions",
+                    "dcf_scenario_assumptions",
+                    "dcf_year_assumptions",
+                    "dcf_projections",
+                ):
+                    privileges.discard("INSERT")
+                privileges.difference_update(kind for key, kind in self.restricted if key == table)
+                rows.append(
+                    (
+                        table,
+                        True,
+                        *[
+                            privilege in privileges
+                            for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE")
+                        ],
+                    )
+                )
+            return rows
+
+        def close(self) -> None:
+            pass
+
+    cursor = FakeCursor()
+    info = SimpleNamespace(host=HOST, hostaddr="203.0.113.20", port=5432, dbname=DATABASE)
+    driver = SimpleNamespace(info=info, cursor=lambda: cursor)
+    fake = cast(
+        Connection,
+        SimpleNamespace(
+            engine=SimpleNamespace(url=make_url(REMOTE_URL)),
+            connection=SimpleNamespace(driver_connection=driver),
+        ),
+    )
+    scope = _write_permission_scope(BOOKING_MODEL_INPUT_WRITE_OPERATION, "import")
+    assert scope is not None
+    identity = _read_live_identity(
+        fake,
+        "import",
+        required_write_privileges=scope,
+    )
+    assert identity.missing_privileges == ()
+    assert identity.missing_tables == ()
+    assert set(cursor.table_scope or ()) == set(scope)
+
+    # Other importers require all DML on all mapped tables.
+    identity_full = _read_live_identity(fake, "import")
+    assert "companies:DELETE" in identity_full.missing_privileges
+    assert "price_observations:INSERT" in identity_full.missing_privileges
+
+    cursor.restricted.add(("companies", "UPDATE"))
+    narrowed = _read_live_identity(
+        fake,
+        "import",
+        required_write_privileges=scope,
+    )
+    assert "companies:UPDATE" in narrowed.missing_privileges
+    cursor.restricted.clear()
+    cursor.restricted.add(("financial_model_migration_assessments", "INSERT"))
+    narrowed = _read_live_identity(
+        fake,
+        "import",
+        required_write_privileges=scope,
+    )
+    assert "financial_model_migration_assessments:INSERT" in narrowed.missing_privileges
+
+
+def test_booking_write_guard_preserves_production_authorization_and_neon_validation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_resolved_dns(monkeypatch)
+    observed: list[dict[str, object]] = []
+
+    def inspected_identity(*_args: object, **kwargs: object) -> LiveDatabaseIdentity:
+        observed.append(kwargs)
+        return remote_identity()
+
+    monkeypatch.setattr(
+        "portfolio_api.database_write_target._read_live_identity", inspected_identity
+    )
+    guard = DatabaseWriteTargetGuard(
+        remote_settings(),
+        operation=BOOKING_MODEL_INPUT_WRITE_OPERATION,
+        operation_kind="import",
+        audit_sink=lambda _: None,
+    )
+    monkeypatch.setattr(
+        guard, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    connection = SimpleNamespace(info={}, engine=SimpleNamespace(url=make_url(REMOTE_URL)))
+    guard.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+    assert observed[0]["required_write_privileges"] == _write_permission_scope(
+        BOOKING_MODEL_INPUT_WRITE_OPERATION, "import"
+    )
+    assert "portfolio_database_write_target_guard" not in connection.info
+
+    denied = DatabaseWriteTargetGuard(
+        remote_settings(production_authorized=False),
+        operation=BOOKING_MODEL_INPUT_WRITE_OPERATION,
+        operation_kind="import",
+    )
+    monkeypatch.setattr(
+        denied, "neon_client", SimpleNamespace(read_target=lambda *_args: neon_target())
+    )
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        denied.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+
+    wrong_target = DatabaseWriteTargetGuard(
+        remote_settings(),
+        operation=BOOKING_MODEL_INPUT_WRITE_OPERATION,
+        operation_kind="import",
+    )
+    monkeypatch.setattr(
+        wrong_target,
+        "neon_client",
+        SimpleNamespace(read_target=lambda *_args: neon_target(endpoint_id="another-endpoint")),
+    )
+    with pytest.raises(DatabaseWriteTargetError, match="neon_configured_identity_mismatch"):
+        wrong_target.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]

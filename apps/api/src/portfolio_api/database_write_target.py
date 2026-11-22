@@ -36,6 +36,48 @@ AuditSink = Callable[[Mapping[str, Any]], None]
 _API_BASE = "https://console.neon.tech/api/v2"
 _AUDIT_INFO_KEY = "portfolio_database_write_target_guard"
 _OPERATION_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]{1,79}$")
+BOOKING_MODEL_INPUT_WRITE_OPERATION = "native_model_input_import_bkng"
+# Reviewed Booking-only initial UFCF model import. This is NOT a global
+# relaxation: all other application writers and model imports require their
+# existing full mapped-table DML checks.
+#
+# UPDATE on companies is required for SELECT ... FOR UPDATE in create_financial_model.
+# UPDATE on financial_models is required for its row lock/current_revision pointer.
+# Every inserted table needs SELECT for PostgreSQL RETURNING and ORM readback.
+_BOOKING_MODEL_IMPORT_PRIVILEGES: dict[str, frozenset[str]] = {
+    "companies": frozenset({"SELECT", "UPDATE"}),
+    "securities": frozenset({"SELECT"}),
+    "listings": frozenset({"SELECT"}),
+    "price_observations": frozenset({"SELECT"}),
+    "external_ingestion_runs": frozenset({"SELECT"}),
+    "price_regime_snapshots": frozenset({"SELECT"}),
+    "market_data_batches": frozenset({"SELECT"}),
+    "return_methodology_definitions": frozenset({"SELECT"}),
+    "financial_models": frozenset({"SELECT", "INSERT", "UPDATE"}),
+    "financial_model_revisions": frozenset({"SELECT", "INSERT"}),
+    "financial_model_migration_assessments": frozenset({"SELECT", "INSERT"}),
+    "financial_model_outputs": frozenset({"SELECT", "INSERT"}),
+    "dcf_model_assumptions": frozenset({"SELECT", "INSERT"}),
+    "dcf_scenario_assumptions": frozenset({"SELECT", "INSERT"}),
+    "dcf_year_assumptions": frozenset({"SELECT", "INSERT"}),
+    "dcf_projections": frozenset({"SELECT", "INSERT"}),
+}
+
+
+def _write_permission_scope(
+    operation: str, operation_kind: WriteOperationKind
+) -> dict[str, frozenset[str]] | None:
+    """Exact operation ID gates least-privilege checks; other writers remain unchanged."""
+    if operation != BOOKING_MODEL_INPUT_WRITE_OPERATION:
+        return None
+    if operation_kind != "import":
+        raise DatabaseWriteTargetError(
+            "write_permission_scope_mismatch",
+            "Booking model privilege scope is restricted to its importer.",
+        )
+    return _BOOKING_MODEL_IMPORT_PRIVILEGES
+
+
 _WRITE_KEYWORDS = frozenset(
     {
         "INSERT",
@@ -863,6 +905,7 @@ def _read_live_identity(
     *,
     read_only: bool = False,
     required_application_tables: tuple[str, ...] | None = None,
+    required_write_privileges: Mapping[str, frozenset[str]] | None = None,
 ) -> LiveDatabaseIdentity:
     url = connection.engine.url
     if url.host is None or url.database is None:
@@ -932,7 +975,29 @@ def _read_live_identity(
             )
             missing_owned_objects = tuple(str(row[0]) for row in cursor.fetchall())
         else:
-            table_names = _application_table_names(required_application_tables)
+            if required_write_privileges is not None:
+                if read_only or required_application_tables is not None:
+                    raise DatabaseWriteTargetError(
+                        "write_permission_scope_mismatch",
+                        "Write privilege policy cannot replace read-only or explicit table checks.",
+                    )
+                if not required_write_privileges:
+                    raise DatabaseWriteTargetError(
+                        "write_permission_scope_invalid",
+                        "A scoped writer must require at least one table.",
+                    )
+                table_names = _application_table_names(tuple(required_write_privileges))
+                allowed_permissions = {"SELECT", "INSERT", "UPDATE", "DELETE"}
+                if any(
+                    not required or not required <= allowed_permissions
+                    for required in required_write_privileges.values()
+                ):
+                    raise DatabaseWriteTargetError(
+                        "write_permission_scope_invalid",
+                        "A scoped writer requested invalid table privileges.",
+                    )
+            else:
+                table_names = _application_table_names(required_application_tables)
             cursor.execute(
                 """WITH expected(table_name) AS (
                        SELECT unnest(%s::text[])
@@ -970,13 +1035,21 @@ def _read_live_identity(
                 if not exists:
                     absent.append(str(table_name))
                     continue
-                required_privileges = [("SELECT", can_select)]
-                if not read_only:
-                    required_privileges.extend(
-                        (("INSERT", can_insert), ("UPDATE", can_update), ("DELETE", can_delete))
-                    )
-                for privilege, allowed in required_privileges:
-                    if not allowed:
+                granted = {
+                    "SELECT": can_select,
+                    "INSERT": can_insert,
+                    "UPDATE": can_update,
+                    "DELETE": can_delete,
+                }
+                required = (
+                    required_write_privileges[table_name]
+                    if required_write_privileges is not None
+                    else frozenset({"SELECT"})
+                    if read_only
+                    else frozenset(granted)
+                )
+                for privilege in sorted(required):
+                    if not granted[privilege]:
                         denied.append(f"{table_name}:{privilege}")
             missing_tables = tuple(absent)
             missing_privileges = tuple(denied)
@@ -1075,7 +1148,14 @@ class DatabaseWriteTargetGuard:
                     return
             connection.info.pop(_AUDIT_INFO_KEY, None)
         try:
-            identity = _read_live_identity(connection, self.operation_kind)
+            privilege_scope = _write_permission_scope(self.operation, self.operation_kind)
+            identity = (
+                _read_live_identity(
+                    connection, self.operation_kind, required_write_privileges=privilege_scope
+                )
+                if privilege_scope is not None
+                else _read_live_identity(connection, self.operation_kind)
+            )
             url = connection.engine.url
             neon_target: NeonTargetMetadata | None = None
             if url.host is not None and not _is_loopback(url.host):

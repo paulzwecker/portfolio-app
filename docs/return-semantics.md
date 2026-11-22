@@ -53,7 +53,7 @@ revision. New method versions are new rows; prior revisions and output rows keep
 their original identity. Imported legacy output snapshots keep their original
 number and are classified only for exact model keys with migration/parity evidence:
 `P-GOOGL`, `P-ASML`, `P-ISRG`, `P-MA`, `P-CPRT`, `P-UBER`, and `P-MSFT` as
-UFCF enterprise; `P-AMZN` and `P-HIMS` as UFCF enterprise H-model;
+UFCF enterprise; `P-AMZN`, `P-BKNG` and `P-HIMS` as UFCF enterprise H-model;
 `W-TOST` as owner cash flow; and `W-HDFC` as residual income. Other workbook keys
 remain `UNCLASSIFIED` even if a tab title looks familiar.
 

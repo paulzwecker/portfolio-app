@@ -11,8 +11,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -25,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from portfolio_api.database import create_database_engine
+from portfolio_api.database_write_target import BOOKING_MODEL_INPUT_WRITE_OPERATION
 from portfolio_api.domain import schemas, services
 from portfolio_api.domain.models import (
     Company,
@@ -64,7 +67,10 @@ MAPPING_VERSION = "legacy-native-input-v1"
 PORTFOLIO_DCF_MAPPING_VERSION = "portfolio-ufcf-dcf-2026-10-06-v1"
 PORTFOLIO_DCF_EXPLICIT_TAIL_MAPPING_VERSION = "portfolio-ufcf-tail-2026-10-09-v1"
 WATCHLIST_OWNER_CASH_MAPPING_VERSION = "watchlist-owner-cf-2026-10-09-v1"
+BOOKING_GORDON_RETURN_MAPPING_VERSION = "portfolio-bkng-gordon-return-2026-11-20-v1"
 EXPLICIT_UFCF_TAIL_MODEL_KEYS = frozenset({"P-AMZN", "P-HIMS", "P-MSFT"})
+# Terminal *return* convention is separate from how the Y6-Y10 UFCF path is generated.
+HMODEL_GORDON_RETURN_MODEL_KEYS = frozenset({"P-AMZN", "P-HIMS", "P-BKNG"})
 TOLERANCE = Decimal("0.0000001")
 SOURCE_DISPLAY_TOLERANCE = Decimal("0.0000005")
 SCENARIO_ORDER = ("BEAR", "BASE", "BULL")
@@ -120,6 +126,7 @@ EXPECTED_MODEL_KEYS = (
 PARITY_PROVEN_MODEL_KEYS = (
     "P-GOOGL",
     "P-AMZN",
+    "P-BKNG",
     "P-HIMS",
     "P-ISRG",
     "P-MA",
@@ -497,19 +504,43 @@ def _map_portfolio_dcf(workbook: Workbook, model_key: str, accepted_at: datetime
         source_references[f"year10_growth_target.{scenario}"] = _source_cell_evidence(
             workbook, model_key, address
         )
+    if model_key == "P-BKNG":
+        # SEC/Q3 inputs do not belong here: these are the baseline workbook's
+        # independently evidenced Gordon terminal cells for its return stream.
+        for scenario, address in {"BEAR": "AA200", "BASE": "AA201", "BULL": "AA202"}.items():
+            source_references[f"legacy_return_terminal.{scenario}"] = _source_cell_evidence(
+                workbook, model_key, address
+            )
+        # This separately labeled workbook layout is a 5-year Gordon DCF.
+        # Preserve its evidence, but never substitute its FVs for the published
+        # 10-year secular-fade output contract at L202:N202.
+        for scenario, terminal_cell, fv_cell in (
+            ("BEAR", "B120", "B125"),
+            ("BASE", "B155", "B160"),
+            ("BULL", "B190", "B195"),
+        ):
+            source_references[f"alternative_5y_gordon.{scenario}"] = "; ".join(
+                _source_cell_evidence(workbook, model_key, address)
+                for address in (terminal_cell, fv_cell)
+            )
     if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
         for scenario, column in {"BEAR": "B", "BASE": "C", "BULL": "D"}.items():
             source_references[f"explicit_ufcf_tail.{scenario}"] = "; ".join(
                 _source_cell_evidence(workbook, model_key, f"{column}{row}")
                 for row in range(206, 211)
             )
-    if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
+    if model_key in HMODEL_GORDON_RETURN_MODEL_KEYS:
+        tail_source = (
+            "explicit annual UFCF growth through Year 10"
+            if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS
+            else "a linear UFCF growth fade from Year 5 to the Year 10 target"
+        )
         return_semantics = (
-            "The source uses explicit annual UFCF growth through Year 10 and an H-model "
-            "terminal return stream: Year 10 UFCF plus a Gordon terminal value fading from "
-            "the Year 10 growth rate to perpetual growth. Fair value separately retains the "
-            "source's terminal growth premium. This enterprise return is not a shareholder-"
-            "distribution IRR and remains distinct from the standard legacy UFCF return stream."
+            f"The source uses {tail_source}. The Expected IRR stream uses Year 10 "
+            "UFCF plus its Gordon terminal value, without the 2.5 terminal-growth "
+            "premium used in scenario Fair Value. This enterprise return is not "
+            "a shareholder-distribution IRR and is distinct from the standard "
+            "legacy UFCF return stream."
         )
     elif owner_title_evidence:
         return_semantics = (
@@ -550,11 +581,13 @@ def _map_portfolio_dcf(workbook: Workbook, model_key: str, accepted_at: datetime
         legacy_return_semantics=return_semantics,
         legacy_return_basis=(
             "ENTERPRISE_UFCF_HMODEL_GORDON_TERMINAL_VS_IMPLIED_ENTERPRISE_COST"
-            if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS
+            if model_key in HMODEL_GORDON_RETURN_MODEL_KEYS
             else "ENTERPRISE_UFCF_TERMINAL_VALUE_VS_IMPLIED_ENTERPRISE_COST"
         ),
         return_methodology_code=(
-            UFCF_ENTERPRISE_HMODEL_IRR if model_key in {"P-AMZN", "P-HIMS"} else UFCF_ENTERPRISE_IRR
+            UFCF_ENTERPRISE_HMODEL_IRR
+            if model_key in HMODEL_GORDON_RETURN_MODEL_KEYS
+            else UFCF_ENTERPRISE_IRR
         ),
         expected_irr_comparability="NOT_COMPARABLE_TO_CANONICAL_SHAREHOLDER_IRR",
         mapping_version=mapping_version,
@@ -737,6 +770,19 @@ def _dcf_candidate_mapper(
     return mapper
 
 
+def _model_mappers_for(
+    model_key: str | None,
+) -> list[tuple[str, Callable[[Workbook, datetime], MappedModel]]]:
+    """Select exactly one reviewed model, or retain legacy full-scope assessment."""
+    mappers = _supported_model_mappers()
+    if model_key is None:
+        return mappers
+    matches = [pair for pair in mappers if pair[0] == model_key]
+    if len(matches) != 1:
+        raise ValueError(f"Unknown native-model source key: {model_key!r}")
+    return matches
+
+
 def _supported_model_mappers() -> list[tuple[str, Callable[[Workbook, datetime], MappedModel]]]:
     return [
         ("P-GOOGL", _map_googl),
@@ -750,6 +796,9 @@ def _supported_model_mappers() -> list[tuple[str, Callable[[Workbook, datetime],
 
 
 def _mapping_version_for(model_key: str) -> str:
+    if model_key == "P-BKNG":
+        # New semantic mapping must never replay an old source revision ID.
+        return BOOKING_GORDON_RETURN_MAPPING_VERSION
     if model_key in EXPLICIT_UFCF_TAIL_MODEL_KEYS:
         return PORTFOLIO_DCF_EXPLICIT_TAIL_MAPPING_VERSION
     if model_key in WATCHLIST_OWNER_CASH_MODEL_KEYS:
@@ -1278,17 +1327,20 @@ def _existing_assessment(
 
 
 def _existing_model(
-    session: Session, company_id: UUID, listing_id: UUID, mapped: MappedModel
+    session: Session,
+    company_id: UUID,
+    listing_id: UUID,
+    mapped: MappedModel,
+    *,
+    for_update: bool,
 ) -> FinancialModel | None:
-    return session.scalar(
-        select(FinancialModel)
-        .where(
-            FinancialModel.company_id == company_id,
-            FinancialModel.valuation_listing_id == listing_id,
-            FinancialModel.model_type == mapped.model_type,
-        )
-        .with_for_update()
+    statement = select(FinancialModel).where(
+        FinancialModel.company_id == company_id,
+        FinancialModel.valuation_listing_id == listing_id,
+        FinancialModel.model_type == mapped.model_type,
     )
+    # SELECT FOR UPDATE is a write lock and is not legal in read-only preflight.
+    return session.scalar(statement.with_for_update() if for_update else statement)
 
 
 def _current_application_state(session: Session, model: FinancialModel) -> dict[str, object]:
@@ -1356,6 +1408,7 @@ def import_native_model_inputs(
     *,
     accepted_at: datetime,
     apply: bool,
+    model_key: str | None = None,
 ) -> dict[str, Any]:
     if accepted_at.tzinfo is None or accepted_at.utcoffset() is None:
         raise ValueError("accepted_at must be timezone-aware")
@@ -1363,8 +1416,10 @@ def import_native_model_inputs(
     if workbook.sha256 != inventory_doc["source"]["sha256"]:
         raise ValueError("Workbook hash differs from the model migration inventory source snapshot")
     inventory = _legacy_inventory_rows()
+    selected_mappers = _model_mappers_for(model_key)
     results: list[dict[str, Any]] = []
-    for model_key, mapper in _supported_model_mappers():
+    for selected_key, mapper in selected_mappers:
+        model_key = selected_key
         try:
             mapped = mapper(workbook, accepted_at)
             row = inventory[model_key]
@@ -1417,7 +1472,7 @@ def import_native_model_inputs(
             continue
 
         source_revision_id = mapped.values.source_revision_id
-        existing_model = _existing_model(session, company.id, listing.id, mapped)
+        existing_model = _existing_model(session, company.id, listing.id, mapped, for_update=apply)
         if existing_model is not None:
             existing_revision = session.scalar(
                 select(FinancialModelRevision).where(
@@ -1490,6 +1545,7 @@ def import_native_model_inputs(
         "mapping_version": mapping_versions[0] if len(mapping_versions) == 1 else "MIXED",
         "mapping_versions": mapping_versions,
         "mode": "APPLIED" if apply else "DRY_RUN",
+        "selected_model_keys": [name for name, _ in selected_mappers],
         "workbook": f"reference/workbook/{workbook.path.name}",
         "workbook_sha256": workbook.sha256,
         "source_effective_date": None,
@@ -1508,7 +1564,7 @@ def import_native_model_inputs(
 
 
 def build_native_model_parity_report(
-    workbook: Workbook, *, assessed_at: datetime
+    workbook: Workbook, *, assessed_at: datetime, model_key: str | None = None
 ) -> dict[str, Any]:
     """Create a read-only source-parity receipt without querying application state."""
     if assessed_at.tzinfo is None or assessed_at.utcoffset() is None:
@@ -1517,8 +1573,10 @@ def build_native_model_parity_report(
     if workbook.sha256 != inventory_doc["source"]["sha256"]:
         raise ValueError("Workbook hash differs from the model migration inventory source snapshot")
     inventory = _legacy_inventory_rows()
+    selected_mappers = _model_mappers_for(model_key)
     results: list[dict[str, Any]] = []
-    for model_key, mapper in _supported_model_mappers():
+    for selected_key, mapper in selected_mappers:
+        model_key = selected_key
         try:
             mapped = mapper(workbook, assessed_at)
             report = _base_report(workbook, mapped, inventory[model_key])
@@ -1564,6 +1622,7 @@ def build_native_model_parity_report(
         "mapping_version": mapping_versions[0] if len(mapping_versions) == 1 else "MIXED",
         "mapping_versions": mapping_versions,
         "mode": "PARITY_ONLY",
+        "selected_model_keys": [name for name, _ in selected_mappers],
         "canonical_application_state": "NOT_QUERIED",
         "workbook": f"reference/workbook/{workbook.path.name}",
         "workbook_sha256": workbook.sha256,
@@ -1591,12 +1650,48 @@ def load_source_workbook(path: Path = DEFAULT_WORKBOOK) -> Workbook:
     return Workbook.read(path, lambda name: name in EXPECTED_MODEL_KEYS)
 
 
+def _private_model_report_path(path: Path, *, model_key: str | None) -> Path:
+    """Fail before DB operations if a selected model's report is unsafe."""
+    if model_key is None:
+        return path  # Preserve legacy broad-scope assessment behavior.
+    target = path.expanduser().resolve()
+    if target.is_relative_to(REPOSITORY_ROOT.resolve()):
+        raise ValueError("Scoped model reports must be stored outside the repository")
+    if target.exists():
+        raise ValueError("Refusing to overwrite an existing scoped model report")
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryFile(dir=target.parent):
+            pass  # Verify output directory is writable before a possible DB acceptance.
+    except OSError as error:
+        raise ValueError("Scoped model report directory is not writable") from error
+    return target
+
+
+def _write_model_report(path: Path, report: dict[str, Any], *, scoped: bool) -> None:
+    payload = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if scoped:
+        # Exclusive file creation and restrictive permissions: never replace
+        # an earlier source/canonical decision receipt.
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+    else:
+        path.write_text(payload, encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workbook", type=Path, default=DEFAULT_WORKBOOK)
     parser.add_argument("--output", type=Path, default=DEFAULT_REPORT)
     parser.add_argument(
-        "--apply", action="store_true", help="accept parity-passing model revisions"
+        "--model-key",
+        choices=EXPECTED_MODEL_KEYS,
+        help="Limit assessment or import to exactly one existing source model tab",
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="accept only the explicitly selected model"
     )
     parser.add_argument(
         "--parity-only",
@@ -1606,16 +1701,21 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.parity_only and args.apply:
         parser.error("--parity-only cannot be combined with --apply")
+    if args.apply and args.model_key is None:
+        parser.error("--apply requires exactly one explicit --model-key; broad imports are blocked")
+    try:
+        report_path = _private_model_report_path(args.output, model_key=args.model_key)
+    except ValueError as error:
+        parser.error(str(error))
 
     assessed_at = datetime.now(UTC)
     try:
         workbook = load_source_workbook(args.workbook)
         if args.parity_only:
-            report = build_native_model_parity_report(workbook, assessed_at=assessed_at)
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(
-                json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            report = build_native_model_parity_report(
+                workbook, assessed_at=assessed_at, model_key=args.model_key
             )
+            _write_model_report(report_path, report, scoped=args.model_key is not None)
             print(
                 f"Wrote parity-only native model report to {args.output}; "
                 f"parity_pass={len(report['parity_pass_model_keys'])}, "
@@ -1629,8 +1729,13 @@ def main(argv: list[str] | None = None) -> int:
     settings = Settings()
     engine = create_database_engine(
         settings,
-        write_operation="native_model_input_import",
+        write_operation=(
+            BOOKING_MODEL_INPUT_WRITE_OPERATION
+            if args.apply and args.model_key == "P-BKNG"
+            else "native_model_input_import"
+        ),
         write_operation_kind="import",
+        read_only=not args.apply,
     )
     if engine is None:
         print(
@@ -1641,12 +1746,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with Session(engine) as session, session.begin():
             report = import_native_model_inputs(
-                session, workbook, accepted_at=assessed_at, apply=args.apply
+                session,
+                workbook,
+                accepted_at=assessed_at,
+                apply=args.apply,
+                model_key=args.model_key,
             )
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(
-            json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        _write_model_report(report_path, report, scoped=args.model_key is not None)
     except Exception as error:
         print(f"Native model input import failed: {error}", file=sys.stderr)
         return 2
