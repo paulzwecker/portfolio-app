@@ -7,6 +7,8 @@ import asyncio
 import gzip
 import hashlib
 import json
+import os
+import tempfile
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -18,12 +20,15 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, aliased
 
 from portfolio_api.database import create_database_engine
+from portfolio_api.database_write_target import ACCEPTED_MODEL_PRICE_WRITE_OPERATION
 from portfolio_api.domain.models import (
     CashPosition,
     Company,
     CorporateAction,
     CurrentLifecycle,
     ExternalRawPayload,
+    FinancialModel,
+    FinancialModelRevision,
     FxObservation,
     HoldingPosition,
     HoldingSnapshot,
@@ -73,6 +78,7 @@ def active_market_listings(
     company_ids: set[UUID] | None = None,
     *,
     latest_snapshot: HoldingSnapshot | None = None,
+    include_listing_ids: set[UUID] | None = None,
 ) -> tuple[list[tuple[Listing, Security, Company]], set[UUID]]:
     lifecycle = {
         event.company_id: event.new_state
@@ -110,6 +116,7 @@ def active_market_listings(
         for listing, security, company in rows
         if (company is not None and lifecycle.get(company.id) in {"PORTFOLIO", "WATCHLIST"})
         or listing.id in held_ids
+        or (include_listing_ids is not None and listing.id in include_listing_ids)
     ]
     if company_ids is not None:
         selected = [
@@ -592,8 +599,11 @@ async def build_provider_import(
     company_ids: set[UUID] | None = None,
     fx_pairs: set[tuple[str, str]] | None = None,
     corporate_action_overlap_days: int = DEFAULT_CORPORATE_ACTION_OVERLAP_DAYS,
+    include_listing_ids: set[UUID] | None = None,
 ) -> dict[str, Any]:
-    selected, held_ids = active_market_listings(session, company_ids)
+    selected, held_ids = active_market_listings(
+        session, company_ids, include_listing_ids=include_listing_ids
+    )
     selection_issues: list[dict[str, str]] = []
     if listing_keys is not None:
         selected_by_key = {
@@ -715,8 +725,14 @@ async def build_provider_import(
         if plan:
             market_plans.append(plan)
 
-    base_currency, portfolio_pairs = portfolio_fx_requirements(session)
-    required_fx_pairs = set(fx_pairs) if fx_pairs is not None else portfolio_pairs
+    if fx_pairs is None:
+        base_currency, portfolio_pairs = portfolio_fx_requirements(session)
+        required_fx_pairs = set(portfolio_pairs)
+    else:
+        # A deliberately price-only scope must not fetch or even inspect
+        # unrelated portfolio currency requirements.
+        base_currency = None
+        required_fx_pairs = set(fx_pairs)
     if fx_pairs is None and base_currency is not None:
         required_fx_pairs.update(
             (mapping.currency, base_currency)
@@ -1025,6 +1041,87 @@ def _bulk_insert_rows(
     return inserted
 
 
+def _accepted_model_price_scope(
+    session: Session, model_id: UUID
+) -> tuple[UUID, UUID, UUID, str, set[tuple[str, str]]]:
+    """Bind a requested import to one accepted native revision and its exact listing."""
+    model = session.get(FinancialModel, model_id)
+    if model is None or model.current_revision_id is None:
+        raise ValueError("An accepted native model with a current revision is required")
+    revision = session.get(FinancialModelRevision, model.current_revision_id)
+    listing = session.get(Listing, model.valuation_listing_id)
+    security = session.get(Security, listing.security_id) if listing else None
+    company = session.get(Company, model.company_id)
+    if (
+        listing is None
+        or revision is None
+        or revision.model_id != model.id
+        or security is None
+        or company is None
+        or security.company_id != company.id
+        or company.is_demo
+        or security.is_demo
+        or listing.is_demo
+        or listing.currency != model.model_currency
+    ):
+        raise ValueError("Accepted model listing/company identity or currency is invalid")
+    return (
+        company.id,
+        listing.id,
+        revision.id,
+        model.model_currency,
+        {(listing.venue.casefold(), listing.ticker.casefold())},
+    )
+
+
+def _assert_accepted_model_price_plan(
+    report: dict[str, Any],
+    plans: list[dict[str, Any]],
+    listing_id: UUID,
+    model_currency: str,
+    end_date: date,
+) -> None:
+    """Never apply foreign listings, FX, actions, stale data, or partial provider results."""
+    if (
+        _has_import_gaps(report)
+        or report.get("selected_listing_count") != 1
+        or report.get("verified_listing_mapping_count") != 1
+        or len(plans) != 1
+        or len(report.get("market_data_batches", [])) != 1
+        or report.get("fx_batches")
+        or report.get("required_fx_pairs")
+    ):
+        raise ValueError("Accepted-model price preview has unresolved or out-of-scope data")
+    plan = plans[0]
+    if plan["fx"] or plan["actions"] or not plan["prices"]:
+        raise ValueError("Accepted-model price refresh requires price-only provider evidence")
+    rows = plan["prices"]
+    if any(
+        row["listing_id"] != listing_id
+        or row["currency"] != model_currency
+        or row["provider"] != YAHOO_PROVIDER_ID
+        or row["data_quality"] != "PASS"
+        or row["split_adjusted_close"] is None
+        or row["split_adjusted_close"] <= 0
+        for row in rows
+    ):
+        raise ValueError("Price data failed exact listing, USD, or canonical quality checks")
+    daily = [row for row in rows if row["price_kind"] == "DAILY_CLOSE"]
+    if not daily or max(row["market_date"].date() for row in daily) < end_date - timedelta(days=5):
+        raise ValueError("The last completed daily market observation is stale or absent")
+
+
+def _private_accepted_price_report(path: Path, report: dict[str, Any]) -> None:
+    """Exclusive, private receipt; never overwrite a previous ingest decision."""
+    target = path.expanduser().resolve()
+    if target.is_relative_to(REPOSITORY_PATH.resolve()) or target.exists():
+        raise ValueError("Accepted-model price reports need a new file outside the repository")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        stream.write(json.dumps(report, indent=2, sort_keys=True, default=str) + "\n")
+
+
 def run_cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1040,6 +1137,11 @@ def run_cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--lookback-days", type=int, default=DEFAULT_LOOKBACK_DAYS)
     parser.add_argument("--scope", choices=("active",), default="active")
     parser.add_argument(
+        "--accepted-model-id",
+        type=UUID,
+        help="Price-only scope for exactly one already accepted native model revision",
+    )
+    parser.add_argument(
         "--listing",
         action="append",
         help="Limit the import to an exact canonical VENUE:TICKER listing; may be repeated.",
@@ -1049,6 +1151,31 @@ def run_cli(argv: list[str] | None = None) -> int:
         parser.error("--lookback-days must be positive")
     if args.start_date is not None and args.start_date > args.end_date:
         parser.error("--start-date must be on or before --end-date")
+    if args.accepted_model_id is not None:
+        if (
+            args.listing
+            or args.scope != "active"
+            or args.start_date is not None
+            or args.lookback_days > 90
+        ):
+            parser.error(
+                "--accepted-model-id derives its one listing automatically and requires "
+                "--lookback-days <= 90, without other listing/scope flags"
+            )
+        today = datetime.now(UTC).date()
+        if args.end_date > today or args.end_date < today - timedelta(days=1):
+            parser.error("--accepted-model-id requires a current UTC end date")
+        if args.report is None:
+            parser.error("--accepted-model-id requires --report outside the repository")
+        target = args.report.expanduser().resolve()
+        if target.is_relative_to(REPOSITORY_PATH.resolve()) or target.exists():
+            parser.error("Scoped price report must be new and outside the repository")
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryFile(dir=target.parent):
+                pass  # Preflight receipt destination before any possible commit.
+        except OSError:
+            parser.error("Scoped price report directory is not writable")
     listing_keys: set[tuple[str, str]] | None = None
     if args.listing:
         listing_keys = set()
@@ -1059,8 +1186,13 @@ def run_cli(argv: list[str] | None = None) -> int:
             listing_keys.add((parts[0].casefold(), parts[1].casefold()))
     engine = create_database_engine(
         Settings(),
-        write_operation="market_data_provider_ingestion",
+        write_operation=(
+            ACCEPTED_MODEL_PRICE_WRITE_OPERATION
+            if args.apply and args.accepted_model_id is not None
+            else "market_data_provider_ingestion"
+        ),
         write_operation_kind="ingestion",
+        read_only=not args.apply,
     )
     if engine is None:
         parser.error("DATABASE_URL is required to resolve canonical listing identities")
@@ -1068,6 +1200,25 @@ def run_cli(argv: list[str] | None = None) -> int:
         crosswalk = load_yahoo_crosswalk(CROSSWALK_PATH)
         provider = YahooFinanceProvider(crosswalk)
         with Session(engine) as session:
+            company_ids = None
+            include_listing_ids = None
+            fx_pairs: set[tuple[str, str]] | None = None
+            scope = args.scope
+            selected_listing_id = None
+            selected_revision_id = None
+            model_currency = None
+            if args.accepted_model_id is not None:
+                (
+                    company_id,
+                    selected_listing_id,
+                    selected_revision_id,
+                    model_currency,
+                    listing_keys,
+                ) = _accepted_model_price_scope(session, args.accepted_model_id)
+                company_ids = {company_id}
+                include_listing_ids = {selected_listing_id}
+                fx_pairs = set()
+                scope = "listings"
             report = asyncio.run(
                 build_provider_import(
                     session,
@@ -1076,15 +1227,43 @@ def run_cli(argv: list[str] | None = None) -> int:
                     end_date=args.end_date,
                     start_date=args.start_date,
                     lookback_days=args.lookback_days,
-                    scope=args.scope,
+                    scope=scope,
                     listing_keys=listing_keys,
+                    company_ids=company_ids,
+                    fx_pairs=fx_pairs,
+                    include_listing_ids=include_listing_ids,
                 )
             )
             plans = report.pop("plans")
             report["planned_batches"] = len(plans)
+            if selected_listing_id is not None:
+                assert model_currency is not None
+                _assert_accepted_model_price_plan(
+                    report, plans, selected_listing_id, model_currency, args.end_date
+                )
+                report["accepted_model_id"] = str(args.accepted_model_id)
+                report["accepted_revision_id"] = str(selected_revision_id)
+                report["valuation_listing_id"] = str(selected_listing_id)
             if args.apply:
                 session.rollback()
                 with session.begin():
+                    # Recheck the accepted model identity after the provider fetch,
+                    # on the same physical DB target that will persist the batch.
+                    if args.accepted_model_id is not None:
+                        (
+                            updated_company_id,
+                            updated_listing_id,
+                            updated_revision_id,
+                            updated_currency,
+                            _,
+                        ) = _accepted_model_price_scope(session, args.accepted_model_id)
+                        if (
+                            selected_listing_id != updated_listing_id
+                            or company_ids != {updated_company_id}
+                            or model_currency != updated_currency
+                            or selected_revision_id != updated_revision_id
+                        ):
+                            raise ValueError("Accepted model/listing identity changed")
                     report = apply_provider_import(session, {**report, "plans": plans})
             else:
                 report["status"] = "DRY_RUN"
@@ -1092,8 +1271,11 @@ def run_cli(argv: list[str] | None = None) -> int:
     finally:
         engine.dispose()
     if args.report:
-        args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(output + "\n", encoding="utf-8")
+        if args.accepted_model_id is not None:
+            _private_accepted_price_report(args.report, report)
+        else:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(output + "\n", encoding="utf-8")
     print(output)
     return 2 if _has_import_gaps(report) else 0
 

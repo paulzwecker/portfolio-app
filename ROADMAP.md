@@ -14,6 +14,19 @@ mapping version exceeded its 40-character column. The proposed Alembic revision
 widens that column and the restricted-role CI regression now reads the stored receipt.
 Production migration and the subsequent Booking import remain pending.
 
+## Current slice — Booking verified price → native current valuation (November 22, 2026)
+
+Production already holds the reviewed BKNG DCF revision 1. The accepted
+historical output is PARTIAL because no canonical quote was present.
+The read-only native current-quote calculation already exists; price
+ingestion is the missing dependency. A bounded, accepted-model-only Yahoo
+price importer is in development with exact listing/revision selection,
+no FX/actions, immutable accepted model state and a private operator receipt.
+Live Yahoo source-only validation recovered the November 20 USD 144.91
+split-adjusted close. The quote is **not in canonical production** yet;
+isolated tests, PR CI and a guarded production operation remain gated.
+See [Booking price onboarding](docs/accepted-model-price-onboarding.md).
+
 ## Current priority — Booking native model baseline (November 20, 2026)
 
 After the user verified the aligned production release, the first

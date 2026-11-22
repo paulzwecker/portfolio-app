@@ -37,6 +37,23 @@ _API_BASE = "https://console.neon.tech/api/v2"
 _AUDIT_INFO_KEY = "portfolio_database_write_target_guard"
 _OPERATION_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]{1,79}$")
 BOOKING_MODEL_INPUT_WRITE_OPERATION = "native_model_input_import_bkng"
+ACCEPTED_MODEL_PRICE_WRITE_OPERATION = "market_data_provider_accepted_model_price"
+# One accepted native model, one exact listing, price only; no FX or corporate actions.
+# The caller must enforce that exact scope before any data mutation.
+_ACCEPTED_MODEL_PRICE_PRIVILEGES: dict[str, frozenset[str]] = {
+    "companies": frozenset({"SELECT"}),
+    "securities": frozenset({"SELECT"}),
+    "listings": frozenset({"SELECT"}),
+    "financial_models": frozenset({"SELECT"}),
+    "financial_model_revisions": frozenset({"SELECT"}),
+    "company_lifecycle_current": frozenset({"SELECT"}),
+    "lifecycle_events": frozenset({"SELECT"}),
+    "holding_snapshots": frozenset({"SELECT"}),
+    "holding_positions": frozenset({"SELECT"}),
+    "price_observations": frozenset({"SELECT", "INSERT"}),
+    "market_data_batches": frozenset({"SELECT", "INSERT", "UPDATE"}),
+    "external_raw_payloads": frozenset({"SELECT", "INSERT"}),
+}
 # Reviewed Booking-only initial UFCF model import. This is NOT a global
 # relaxation: all other application writers and model imports require their
 # existing full mapped-table DML checks.
@@ -68,6 +85,13 @@ def _write_permission_scope(
     operation: str, operation_kind: WriteOperationKind
 ) -> dict[str, frozenset[str]] | None:
     """Exact operation ID gates least-privilege checks; other writers remain unchanged."""
+    if operation == ACCEPTED_MODEL_PRICE_WRITE_OPERATION:
+        if operation_kind != "ingestion":
+            raise DatabaseWriteTargetError(
+                "write_permission_scope_mismatch",
+                "Accepted-model price permissions apply only to provider ingestion.",
+            )
+        return _ACCEPTED_MODEL_PRICE_PRIVILEGES
     if operation != BOOKING_MODEL_INPUT_WRITE_OPERATION:
         return None
     if operation_kind != "import":
