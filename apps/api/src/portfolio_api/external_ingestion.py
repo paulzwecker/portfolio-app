@@ -1210,7 +1210,8 @@ def _domain_status_for_yahoo(
     elif domain == ExternalDataDomain.CORPORATE_ACTIONS:
         targeted = int(report.get("selected_listing_count", 0) or 0)
         mapped = int(report.get("verified_listing_mapping_count", 0) or 0)
-        unverified_count = action_rows
+        verified_count = persisted.get("persistence", {}).get("verified_corporate_actions", 0)
+        unverified_count = action_rows - verified_count
         issue_count = (
             len(unresolved)
             + len(active_without_listing)

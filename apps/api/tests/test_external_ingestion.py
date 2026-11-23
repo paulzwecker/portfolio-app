@@ -138,6 +138,24 @@ def test_yahoo_provider_warnings_produce_partial_quality_report(
     assert outcome.report["domain_report"]["normalization_warnings"] == [warning]
 
 
+@pytest.mark.parametrize(
+    ("verified", "expected"), [(0, "PARTIAL"), (1, "PARTIAL"), (2, "COMPLETE")]
+)
+def test_reviewed_corporate_actions_on_repeat_refresh(verified: int, expected: str) -> None:
+    report = {
+        "selected_listing_count": 1,
+        "verified_listing_mapping_count": 1,
+        "market_data_batches": [{"accepted_subjects": 1, "corporate_action_rows": 2}],
+    }
+    outcome = _domain_status_for_yahoo(
+        ExternalDataDomain.CORPORATE_ACTIONS,
+        report,
+        {"persistence": {"verified_corporate_actions": verified}},
+    )
+    assert outcome.status == expected
+    assert outcome.report["domain_report"]["unverified_corporate_actions"] == 2 - verified
+
+
 def test_yahoo_retryable_subject_failure_is_persisted_on_domain_attempt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
