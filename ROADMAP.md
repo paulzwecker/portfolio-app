@@ -4,10 +4,9 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
-A portfolio-wide retrospective EUR security gain chart is implemented on a feature branch.
-The private replay reconciles current quantities and exited stocks. It publishes a dated series,
-marks pending dividends and preserves missing valuation days. Release requires the gain-history
-schema, private report publication and authenticated Portfolio readback.
+Portfolio gain history is published. The web proxy now validates the saved series
+against the same contract as the chart. Next verify the chart in the signed-in
+production Portfolio view after the proxy fix ships.
 
 Reviewed holding returns now replay private dated trades, split ratios and net dividend cash at a dated close and FX mark. The portfolio holdings view exposes the reviewed cutoff, gain and money-weighted return. Extend reviewed evidence coverage listing by listing.
 

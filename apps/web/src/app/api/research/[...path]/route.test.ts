@@ -21,6 +21,37 @@ beforeEach(() => {
   vi.stubEnv("OBSERVATION_PROPOSAL_REVIEWER_TOKEN", "");
 });
 
+const history = {
+  portfolio_id: id,
+  open_positions: 1,
+  closed_positions: 0,
+  provisional: [],
+  excluded: [],
+  points: [
+    { day: "2026-01-01", gain: null },
+    { day: "2026-01-02", gain: "-3.50" },
+  ],
+};
+
+it.each([
+  [history, 200],
+  [null, 200],
+  [{ ...history, points: [{ day: "2026-01-01", gain: "invalid" }] }, 503],
+  [{ ...history, portfolio_id: "22222222-2222-4222-8222-222222222222" }, 503],
+] as const)(
+  "validates the portfolio gain history response",
+  async (data, status) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(data)));
+    const path = ["portfolios", id, "gain-history"];
+    const response = await GET(
+      new Request("http://localhost/api/research/" + path.join("/")),
+      context(path),
+    );
+    expect(response.status).toBe(status);
+    if (status === 200) expect(await response.json()).toEqual(data);
+  },
+);
+
 it("forwards only known read operations and query parameters without caching", async () => {
   const mock = vi.fn().mockResolvedValue(Response.json([company]));
   vi.stubGlobal("fetch", mock);
