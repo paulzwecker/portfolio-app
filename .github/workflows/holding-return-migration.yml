@@ -1,4 +1,4 @@
-name: Reviewed holding-return migration
+name: Reviewed portfolio gain-history migration
 
 on:
   workflow_dispatch:
@@ -44,6 +44,7 @@ jobs:
       - name: Verify target and recovery, migrate and read back schema
         env:
           EXPECTED_CHECKOUT_SHA: ${{ github.sha }}
+          RECOVERY_USE_VERIFIED_BRANCH_HOST: "true"
           RECOVERY_BRANCH_ID: ${{ inputs.recovery_branch }}
           RECOVERY_ENDPOINT_ID: ${{ inputs.recovery_endpoint }}
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
@@ -57,14 +58,14 @@ jobs:
           APP_ENV: development
           DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
           PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
-          MIGRATION_CONFIRMATION: MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/ep-floral-cake-bae16liy/neondb/b93e1c7af602->c82d7a410f36
+          MIGRATION_CONFIRMATION: MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/ep-floral-cake-bae16liy/neondb/c82d7a410f36->7d390bce2851
         run: |
           set -euo pipefail
           : "${DATABASE_URL:?Missing direct production migration URL}"
           : "${RECOVERY_DATABASE_URL:?Missing direct recovery URL}"
           : "${NEON_API_KEY:?Missing Neon identity verification key}"
           # Only identical release revisions are retryable. Never advance a later schema.
-          test "$(apps/api/.venv/bin/python -c 'from portfolio_api.migrations import expected_heads; print(expected_heads() == {"c82d7a410f36"})')" = True
+          test "$(apps/api/.venv/bin/python -c 'from portfolio_api.migrations import expected_heads; print(expected_heads() == {"7d390bce2851"})')" = True
           report="$(mktemp)"
           trap 'rm -f "$report"' EXIT
           apps/api/.venv/bin/python -m portfolio_api.production_migration_preflight readonly > "$report"

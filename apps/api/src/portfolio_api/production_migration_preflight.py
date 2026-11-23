@@ -40,9 +40,9 @@ PROJECT_ID = "blue-pond-96398788"
 PRIMARY_BRANCH_ID = "br-square-butterfly-bacw0rn5"
 PRIMARY_ENDPOINT_ID = "ep-floral-cake-bae16liy"
 DATABASE_NAME = "neondb"
-# Reviewed schema step for holding return evidence; never permit a retired base or arbitrary head.
-PRODUCTION_BASE_REVISION = "b93e1c7af602"
-RELEASE_HEAD = "c82d7a410f36"
+# Reviewed schema step for portfolio gain history; never permit a retired base or arbitrary head.
+PRODUCTION_BASE_REVISION = "c82d7a410f36"
+RELEASE_HEAD = "7d390bce2851"
 CORE_READ_TABLES = ("companies",)
 MIGRATION_CONFIRMATION_PREFIX = "MIGRATE"
 INITIAL_BOOTSTRAP_CONFIRMATION_PREFIX = "INITIALIZE"
@@ -272,10 +272,30 @@ def _verify_recovery(
         raise ProductionMigrationPreflightError("recovery_branch_creation_time_missing")
     validate_recovery_window(created_at=created_at, expires_at=expires_at, now=now)
 
-    recovery = _read_settings_for_recovery(
-        primary, str(recovery_url), str(recovery_branch), str(recovery_endpoint)
-    )
     recovery_url_obj = make_url(str(recovery_url))
+    if os.environ.get("RECOVERY_USE_VERIFIED_BRANCH_HOST") == "true":
+        # Fresh clones inherit the recovery login. Select the host only from Neon's
+        # authenticated control plane, never from a dispatch-supplied hostname.
+        assert primary.neon_api_key is not None
+        target = NeonControlPlaneClient(primary.neon_api_key.get_secret_value()).read_target(
+            PROJECT_ID, str(recovery_branch), str(recovery_endpoint)
+        )
+        if (
+            target.branch_is_primary
+            or target.primary_branch_id != PRIMARY_BRANCH_ID
+            or target.branch_parent_id != PRIMARY_BRANCH_ID
+            or target.endpoint_branch_id != target.branch_id
+            or not target.endpoint_host.endswith(".neon.tech")
+            or target.endpoint_host.split(".")[0] != recovery_endpoint
+        ):
+            raise ProductionMigrationPreflightError("fresh_recovery_endpoint_mismatch")
+        recovery_url_obj = recovery_url_obj.set(host=target.endpoint_host)
+    recovery = _read_settings_for_recovery(
+        primary,
+        recovery_url_obj.render_as_string(hide_password=False),
+        str(recovery_branch),
+        str(recovery_endpoint),
+    )
     if recovery_url_obj.query.get("sslmode") != "verify-full" or "-pooler." in (
         recovery_url_obj.host or ""
     ):
