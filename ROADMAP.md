@@ -4,6 +4,9 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+On November 23 the September BKNG dividend was verified against the issuer filing.
+Refresh coverage now checks the stored review for each returned provider event, including replays.
+
 The one-time BKNG quote import was verified on November 22. The intraday
 worker now supports a single tracked company pilot and accepted-model listings.
 Next production milestone: verify a new session and a same-day repeat on the

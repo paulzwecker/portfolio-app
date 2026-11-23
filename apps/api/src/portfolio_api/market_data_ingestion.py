@@ -1016,7 +1016,27 @@ def apply_provider_import(session: Session, report: dict[str, Any]) -> dict[str,
             }
         )
     report["status"] = "PARTIAL" if _has_import_gaps(report) else "APPLIED"
-    report["persistence"] = {"batches": batch_results, "inserted_totals": totals}
+    # Include replayed batches: an action may have been reviewed since its first import.
+    actions = [row for plan in plans for row in plan["actions"]]
+    verified_count = 0
+    if actions:
+        source_ids = {row["source_action_id"] for row in actions}
+        verified_keys = set(
+            session.execute(
+                select(CorporateAction.listing_id, CorporateAction.source_action_id).where(
+                    CorporateAction.source_action_id.in_(source_ids),
+                    CorporateAction.verified.is_(True),
+                )
+            ).tuples()
+        )
+        verified_count = sum(
+            (row["listing_id"], row["source_action_id"]) in verified_keys for row in actions
+        )
+    report["persistence"] = {
+        "batches": batch_results,
+        "inserted_totals": totals,
+        "verified_corporate_actions": verified_count,
+    }
     return report
 
 
