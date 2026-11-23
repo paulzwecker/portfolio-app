@@ -1,0 +1,80 @@
+name: Reviewed holding-return migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      recovery_branch:
+        description: Fresh recovery branch ID (br-...)
+        required: true
+        type: string
+      recovery_endpoint:
+        description: Direct recovery compute ID (ep-...)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Serialize with the tracked market job while comparing production and its recovery point.
+concurrency:
+  group: production-tracked-market
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-migration
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Verify dispatched commit and install locked tooling
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          npm run setup
+      - name: Verify target and recovery, migrate and read back schema
+        env:
+          EXPECTED_CHECKOUT_SHA: ${{ github.sha }}
+          RECOVERY_BRANCH_ID: ${{ inputs.recovery_branch }}
+          RECOVERY_ENDPOINT_ID: ${{ inputs.recovery_endpoint }}
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: blue-pond-96398788
+          NEON_BRANCH_ID: br-square-butterfly-bacw0rn5
+          NEON_ENDPOINT_ID: ep-floral-cake-bae16liy
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_TARGET_DATABASE: neondb
+          APP_ENV: development
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "false"
+          PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
+          MIGRATION_CONFIRMATION: MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/ep-floral-cake-bae16liy/neondb/b93e1c7af602->c82d7a410f36
+        run: |
+          set -euo pipefail
+          : "${DATABASE_URL:?Missing direct production migration URL}"
+          : "${RECOVERY_DATABASE_URL:?Missing direct recovery URL}"
+          : "${NEON_API_KEY:?Missing Neon identity verification key}"
+          # Only identical release revisions are retryable. Never advance a later schema.
+          test "$(apps/api/.venv/bin/python -c 'from portfolio_api.migrations import expected_heads; print(expected_heads() == {"c82d7a410f36"})')" = True
+          report="$(mktemp)"
+          trap 'rm -f "$report"' EXIT
+          apps/api/.venv/bin/python -m portfolio_api.production_migration_preflight readonly > "$report"
+          required="$(jq -er '.migration_required' "$report")"
+          case "$required" in
+            true)
+              npm run db:production-preflight -- migration-preflight
+              DATABASE_PRODUCTION_WRITES_AUTHORIZED=true npm run db:migrate
+              ;;
+            false) ;;
+            *) exit 1 ;;
+          esac
+          npm run db:production-preflight -- schema-check
