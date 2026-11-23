@@ -22,6 +22,24 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
     `**/api/research/portfolios/${portfolioId}/overview`,
     (route) => route.fulfill({ json: overview }),
   );
+  await page.route(
+    `**/api/research/portfolios/${portfolioId}/gain-history`,
+    (route) =>
+      route.fulfill({
+        json: {
+          portfolio_id: portfolioId,
+          open_positions: 1,
+          closed_positions: 1,
+          excluded: [],
+          provisional: ["TEST"],
+          points: [
+            { day: "2024-01-01", gain: "-2.50" },
+            { day: "2024-01-02", gain: null },
+            { day: "2024-01-03", gain: "5.00" },
+          ],
+        },
+      }),
+  );
   for (const path of [
     "universe/ranking-summary",
     "universe/execution-pace-summary",
@@ -75,13 +93,16 @@ test("Portfolio presents 22 exact positions, cash and missing states on desktop 
   await expect(
     page.getByRole("button", { name: /Sector · unavailable/ }),
   ).toHaveCount(0);
-  await page
-    .getByText("Data coverage & performance availability", { exact: true })
-    .click();
   await expect(
-    page.getByRole("heading", {
-      name: "Historical portfolio performance is unavailable",
-    }),
+    page.getByRole("heading", { name: "Cumulative security gain / loss" }),
+  ).toBeVisible();
+  const slider = page.getByRole("slider", {
+    name: "Inspect a performance date",
+  });
+  await slider.focus();
+  await slider.press("ArrowLeft");
+  await expect(
+    page.getByText("Mark unavailable", { exact: true }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Holdings", exact: true }).click();

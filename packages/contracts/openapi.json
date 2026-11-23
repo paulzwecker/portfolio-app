@@ -15512,6 +15512,85 @@
         "title": "FxObservationRead",
         "type": "object"
       },
+      "GainHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_positions": {
+            "minimum": 0.0,
+            "title": "Closed Positions",
+            "type": "integer"
+          },
+          "excluded": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Excluded",
+            "type": "array"
+          },
+          "open_positions": {
+            "minimum": 0.0,
+            "title": "Open Positions",
+            "type": "integer"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/GainPoint"
+            },
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "provisional": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Provisional",
+            "type": "array"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "open_positions",
+          "closed_positions",
+          "provisional",
+          "excluded",
+          "points"
+        ],
+        "title": "GainHistory",
+        "type": "object"
+      },
+      "GainPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "gain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gain"
+          }
+        },
+        "required": [
+          "day",
+          "gain"
+        ],
+        "title": "GainPoint",
+        "type": "object"
+      },
       "GoogleSheetsAgentWorkPublishRead": {
         "additionalProperties": false,
         "properties": {
@@ -46652,6 +46731,57 @@
           }
         },
         "summary": "Post Portfolio",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/gain-history": {
+      "get": {
+        "operationId": "get_gain_history_v1_portfolios__portfolio_id__gain_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GainHistory"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Gain History V1 Portfolios  Portfolio Id  Gain History Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Gain History",
         "tags": [
           "Portfolio research"
         ]

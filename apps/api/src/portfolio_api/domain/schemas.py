@@ -246,6 +246,27 @@ class TargetRead(TargetCreate):
     strategic_cash_weight: FixedDecimal
 
 
+class GainPoint(Contract):
+    day: date
+    gain: FixedDecimal | None
+
+
+class GainHistory(Contract):
+    portfolio_id: UUID
+    open_positions: int = Field(ge=0)
+    closed_positions: int = Field(ge=0)
+    provisional: list[str]
+    excluded: list[str]
+    points: list[GainPoint] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def ordered(self) -> Self:
+        days = [p.day for p in self.points]
+        if days != sorted(set(days)):
+            raise ValueError("Expected unique chronological gain points")
+        return self
+
+
 class HoldingReturn(Contract):
     through: date
     currency: Currency

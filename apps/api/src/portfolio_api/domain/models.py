@@ -4549,3 +4549,14 @@ class HoldingReturnReview(Base):
     through: Mapped[date] = mapped_column(Date, primary_key=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     evidence: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
+class PortfolioGainHistory(Base):
+    """Private, reconciled retrospective series, versioned by publication time."""
+
+    __tablename__ = "portfolio_gain_histories"
+    portfolio_id: Mapped[UUID] = mapped_column(ForeignKey("portfolios.id"), primary_key=True)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), primary_key=True, default=now
+    )
+    report: Mapped[dict[str, object]] = mapped_column(JSON)

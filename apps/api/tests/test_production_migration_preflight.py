@@ -372,7 +372,7 @@ def test_migration_confirmation_binds_exact_target_and_revision_range() -> None:
         target=RELEASE_HEAD,
     ) == (
         "MIGRATE blue-pond-96398788/br-square-butterfly-bacw0rn5/"
-        "ep-floral-cake-bae16liy/neondb/b93e1c7af602->c82d7a410f36"
+        "ep-floral-cake-bae16liy/neondb/c82d7a410f36->7d390bce2851"
     )
 
 
@@ -646,8 +646,8 @@ def test_current_release_plan_rejects_retired_target_and_previous_confirmation()
         ProductionMigrationPreflightError, match="verified_neon_production_identity_required"
     ):
         validate_read_settings(retired)
-    assert PRODUCTION_BASE_REVISION == "b93e1c7af602"
-    assert RELEASE_HEAD == "c82d7a410f36"
+    assert PRODUCTION_BASE_REVISION == "c82d7a410f36"
+    assert RELEASE_HEAD == "7d390bce2851"
     # This runbook cannot migrate from the older, previously reviewed release.
     with pytest.raises(
         ProductionMigrationPreflightError, match="production_schema_head_requires_new_review"
