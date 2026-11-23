@@ -48,15 +48,10 @@ function GainChart({ history }: { history: History }) {
   const high = Math.max(0, ...amounts);
   const x = (i: number) => (1000 * i) / Math.max(1, points.length - 1);
   const y = (v: number) => 185 - (180 * (v - low)) / (high - low || 1);
-  let move = true;
   const line = points
     .map((p, i) => {
-      if (p.gain === null) {
-        move = true;
-        return "";
-      }
-      const command = move ? "M" : "L";
-      move = false;
+      if (p.gain === null) return "";
+      const command = i === 0 || points[i - 1].gain === null ? "M" : "L";
       return command + x(i).toFixed(2) + "," + y(Number(p.gain)).toFixed(2);
     })
     .join(" ");
