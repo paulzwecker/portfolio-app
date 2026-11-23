@@ -5,6 +5,7 @@ export type SortKey = "company" | "quantity" | "price" | "value" | "weight";
 export type SortDirection = "ascending" | "descending";
 
 export type PortfolioHoldingRow = {
+  reviewedReturn?: Overview["standalone_positions"][number]["reviewed_return"];
   listingId: string;
   companyId: string | null;
   companyName: string;
@@ -58,6 +59,7 @@ export function portfolioHoldingRows(
     const context = contextByListing.get(snapshotPosition.listing_id);
     const position = context?.position;
     return {
+      reviewedReturn: position?.reviewed_return,
       listingId: snapshotPosition.listing_id,
       companyId: context?.company?.company.id ?? null,
       companyName: context

@@ -41,6 +41,7 @@ from portfolio_api.domain.models import (
     FundamentalStatement,
     FxObservation,
     HoldingPosition,
+    HoldingReturnReview,
     HoldingSnapshot,
     Lifecycle,
     LifecycleEvent,
@@ -78,6 +79,7 @@ from portfolio_api.domain.models import (
     now,
 )
 from portfolio_api.estimate_momentum import ConsensusObservationPoint, calculate_estimate_momentum
+from portfolio_api.holding_return import reviewed_return
 from portfolio_api.market_data import calculate_price_history_metrics
 from portfolio_api.market_sessions import scheduled_session_review
 from portfolio_api.model_revision_evidence import (
@@ -183,6 +185,18 @@ def overview(
         raise ValueError("Portfolio valuation cutoff must be timezone-aware")
     cutoff = requested_cutoff.astimezone(UTC)
     item = services.portfolio(session, portfolio_id)
+    reviews = {
+        row.listing_id: row
+        for row in session.scalars(
+            select(HoldingReturnReview)
+            .where(
+                HoldingReturnReview.portfolio_id == portfolio_id,
+                HoldingReturnReview.recorded_at <= cutoff,
+                HoldingReturnReview.through <= cutoff.date(),
+            )
+            .order_by(HoldingReturnReview.through)
+        )
+    }
     snapshot = session.scalar(
         select(HoldingSnapshot)
         .where(
@@ -303,7 +317,11 @@ def overview(
                 fx_effective_at,
                 observation.observed_at if observation else None,
             )
+            review = reviews.get(listing.id)
             context = s.HoldingContext(
+                reviewed_return=reviewed_return(review.evidence, review.through, item.base_currency)
+                if review
+                else None,
                 listing_id=listing.id,
                 security_id=security.id,
                 ticker=listing.ticker,

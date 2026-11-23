@@ -246,7 +246,21 @@ class TargetRead(TargetCreate):
     strategic_cash_weight: FixedDecimal
 
 
+class HoldingReturn(Contract):
+    through: date
+    currency: Currency
+    shares: FixedDecimal
+    purchases: FixedDecimal
+    sales: FixedDecimal
+    dividends: FixedDecimal
+    market_value: FixedDecimal
+    gain: FixedDecimal
+    cumulative_return: FixedDecimal
+    annualized_money_weighted_return: FixedDecimal | None
+
+
 class HoldingContext(Contract):
+    reviewed_return: HoldingReturn | None = None
     listing_id: UUID
     security_id: UUID
     ticker: str

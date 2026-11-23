@@ -18848,6 +18848,16 @@
             ],
             "title": "Quantity"
           },
+          "reviewed_return": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldingReturn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "security_id": {
             "format": "uuid",
             "title": "Security Id",
@@ -18919,6 +18929,74 @@
           "base_market_value"
         ],
         "title": "HoldingContext",
+        "type": "object"
+      },
+      "HoldingReturn": {
+        "additionalProperties": false,
+        "properties": {
+          "annualized_money_weighted_return": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annualized Money Weighted Return"
+          },
+          "cumulative_return": {
+            "title": "Cumulative Return",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "dividends": {
+            "title": "Dividends",
+            "type": "string"
+          },
+          "gain": {
+            "title": "Gain",
+            "type": "string"
+          },
+          "market_value": {
+            "title": "Market Value",
+            "type": "string"
+          },
+          "purchases": {
+            "title": "Purchases",
+            "type": "string"
+          },
+          "sales": {
+            "title": "Sales",
+            "type": "string"
+          },
+          "shares": {
+            "title": "Shares",
+            "type": "string"
+          },
+          "through": {
+            "format": "date",
+            "title": "Through",
+            "type": "string"
+          }
+        },
+        "required": [
+          "through",
+          "currency",
+          "shares",
+          "purchases",
+          "sales",
+          "dividends",
+          "market_value",
+          "gain",
+          "cumulative_return",
+          "annualized_money_weighted_return"
+        ],
+        "title": "HoldingReturn",
         "type": "object"
       },
       "HoldingsAuthorityRead": {

@@ -8195,6 +8195,7 @@ export interface components {
             price_provider?: string | null;
             /** Quantity */
             quantity: string | null;
+            reviewed_return?: components["schemas"]["HoldingReturn"] | null;
             /**
              * Security Id
              * Format: uuid
@@ -8220,6 +8221,32 @@ export interface components {
             valuation_sync_status: "NOT_REQUIRED" | "SYNCHRONOUS" | "NON_SYNCHRONOUS" | "TIMING_UNKNOWN" | "UNAVAILABLE";
             /** Venue */
             venue: string;
+        };
+        /** HoldingReturn */
+        HoldingReturn: {
+            /** Annualized Money Weighted Return */
+            annualized_money_weighted_return: string | null;
+            /** Cumulative Return */
+            cumulative_return: string;
+            /** Currency */
+            currency: string;
+            /** Dividends */
+            dividends: string;
+            /** Gain */
+            gain: string;
+            /** Market Value */
+            market_value: string;
+            /** Purchases */
+            purchases: string;
+            /** Sales */
+            sales: string;
+            /** Shares */
+            shares: string;
+            /**
+             * Through
+             * Format: date
+             */
+            through: string;
         };
         /** HoldingsAuthorityRead */
         HoldingsAuthorityRead: {
