@@ -5,8 +5,9 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
 Portfolio gain history is published. The web proxy now validates the saved series
-against the same contract as the chart. Next verify the chart in the signed-in
-production Portfolio view after the proxy fix ships.
+against the same contract as the chart. The owner confirmed the signed-in chart.
+A separate weekday close workflow now supports the exact positive positions in one
+portfolio. After merge, configure the portfolio and validate coverage on the first production run.
 
 Reviewed holding returns now replay private dated trades, split ratios and net dividend cash at a dated close and FX mark. The portfolio holdings view exposes the reviewed cutoff, gain and money-weighted return. Extend reviewed evidence coverage listing by listing.
 
