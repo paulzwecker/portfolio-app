@@ -3189,17 +3189,26 @@ function isTarget(v: unknown) {
   );
 }
 function isReviewedHoldingReturn(v: unknown) {
-  return v === undefined || v === null || (
-    isRecord(v) && typeof v.through === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.through) &&
-    typeof v.currency === "string" && /^[A-Z]{3}$/.test(v.currency) &&
-    [v.shares, v.purchases, v.sales, v.dividends, v.market_value].every(decimal) &&
-    signedDecimal(v.gain) && signedDecimal(v.cumulative_return) &&
-    nullableSignedDecimal(v.annualized_money_weighted_return)
+  return (
+    v === undefined ||
+    v === null ||
+    (isRecord(v) &&
+      typeof v.through === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(v.through) &&
+      typeof v.currency === "string" &&
+      /^[A-Z]{3}$/.test(v.currency) &&
+      [v.shares, v.purchases, v.sales, v.dividends, v.market_value].every(
+        decimal,
+      ) &&
+      signedDecimal(v.gain) &&
+      signedDecimal(v.cumulative_return) &&
+      nullableSignedDecimal(v.annualized_money_weighted_return))
   );
 }
 function isPosition(p: unknown) {
   return (
-    isRecord(p) && isReviewedHoldingReturn(p.reviewed_return) &&
+    isRecord(p) &&
+    isReviewedHoldingReturn(p.reviewed_return) &&
     uuid(p.listing_id) &&
     uuid(p.security_id) &&
     string(p.ticker) &&
