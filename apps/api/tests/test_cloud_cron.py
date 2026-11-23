@@ -63,6 +63,7 @@ def test_default_cloud_scope_only_refreshes_market_and_preserves_proxy_routing(
         "allow_local_proxy_bypass": False,
         "cloud_incremental": True,
         "company_id": None,
+        "portfolio_id": None,
         "refresh_slot": None,
         "history_start": None,
     }

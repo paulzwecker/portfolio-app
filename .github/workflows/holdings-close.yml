@@ -1,0 +1,54 @@
+name: Holdings closing prices
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 17 * * 1-5"
+      timezone: America/New_York
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-tracked-market
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main' && vars.HOLDINGS_CLOSE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: tracked-market
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            apps/api
+            reference/market-data/providers
+            scripts
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install locked backend
+        run: |
+          python -m pip install uv==0.12.23
+          uv sync --locked --no-dev --project apps/api
+      - name: Refresh held listings
+        env:
+          PORTFOLIO_ID: ${{ vars.HOLDINGS_PORTFOLIO_ID }}
+          DATABASE_URL: ${{ secrets.MARKET_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.MARKET_NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ vars.NEON_BRANCH_ID }}
+          NEON_ENDPOINT_ID: ${{ vars.NEON_ENDPOINT_ID }}
+          DATABASE_TARGET_DATABASE: ${{ vars.DATABASE_TARGET_DATABASE }}
+          DATABASE_TARGET_ENVIRONMENT: production
+          DATABASE_PRODUCTION_WRITES_AUTHORIZED: "true"
+          CLOUD_INGESTION_ENABLED: "true"
+          RECURRING_OPERATIONS_ENABLED: "true"
+          PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
+        run: |
+          : "${PORTFOLIO_ID:?Configure the portfolio UUID}"
+          : "${DATABASE_URL:?Missing worker connection}"
+          : "${NEON_API_KEY:?Missing target verification key}"
+          apps/api/.venv/bin/python -m portfolio_api.cloud_cron --scope market-data --portfolio-id "$PORTFOLIO_ID" --refresh-slot holdings-close

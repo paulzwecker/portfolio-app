@@ -19,6 +19,8 @@ from portfolio_api.domain.models import (
     ExternalIngestionRun,
     FinancialModel,
     FxObservation,
+    HoldingPosition,
+    HoldingSnapshot,
     PriceObservation,
 )
 from portfolio_api.external_data import ExternalDataDomain
@@ -69,6 +71,7 @@ def run_cloud_incremental_refresh(
     at: datetime,
     *,
     company_id: UUID | None = None,
+    portfolio_id: UUID | None = None,
     refresh_slot: str | None = None,
     history_start: date | None = None,
     include_fx: bool = True,
@@ -99,12 +102,52 @@ def run_cloud_incremental_refresh(
         raise MarketDataBootstrapError("A historical market refresh requires a single company.")
     start = history_start or end - timedelta(days=CLOUD_CORRECTION_DAYS - 1)
     window_days = (end - start).days + 1
-    models = select(FinancialModel.valuation_listing_id).where(
-        FinancialModel.current_revision_id.is_not(None)
-    )
-    if company_id is not None:
-        models = models.where(FinancialModel.company_id == company_id)
-    model_listings = set(session.scalars(models))
+    if portfolio_id is not None:
+        if company_id is not None or history_start is not None:
+            raise MarketDataBootstrapError(
+                "Holdings close cannot be combined with company scope or backfill."
+            )
+        snapshot = session.scalar(
+            select(HoldingSnapshot)
+            .where(
+                HoldingSnapshot.portfolio_id == portfolio_id,
+                HoldingSnapshot.effective_at <= at,
+                HoldingSnapshot.recorded_at <= at,
+            )
+            .order_by(HoldingSnapshot.effective_at.desc(), HoldingSnapshot.recorded_at.desc())
+            .limit(1)
+        )
+        if snapshot is None or snapshot.completeness != "COMPLETE":
+            return {
+                "status": "BLOCKED",
+                "phase": "PREFLIGHT",
+                "failure_code": "COMPLETE_SNAPSHOT_REQUIRED",
+            }
+        positions = session.execute(
+            select(HoldingPosition.listing_id, HoldingPosition.quantity).where(
+                HoldingPosition.snapshot_id == snapshot.id
+            )
+        ).all()
+        if any(quantity is None for _, quantity in positions):
+            return {
+                "status": "BLOCKED",
+                "phase": "PREFLIGHT",
+                "failure_code": "UNKNOWN_HELD_QUANTITY",
+            }
+        listing_ids = {
+            listing_id
+            for listing_id, quantity in positions
+            if quantity is not None and quantity > 0
+        }
+        if not listing_ids:
+            return {"status": "NOT_APPLICABLE", "phase": "PREFLIGHT_EMPTY"}
+    else:
+        models = select(FinancialModel.valuation_listing_id).where(
+            FinancialModel.current_revision_id.is_not(None)
+        )
+        if company_id is not None:
+            models = models.where(FinancialModel.company_id == company_id)
+        listing_ids = set(session.scalars(models))
     company_scope = {company_id} if company_id is not None else None
     preview = preview_market_data_bootstrap(
         session,
@@ -114,7 +157,8 @@ def run_cloud_incremental_refresh(
         end_date=end,
         target_environment=settings.database_target_environment,
         company_id=company_id,
-        include_listing_ids=model_listings,
+        include_listing_ids=listing_ids,
+        exact_price_scope=portfolio_id is not None,
     )
     if preview["status"] != "READY":
         return {
@@ -124,8 +168,10 @@ def run_cloud_incremental_refresh(
             "preview": preview,
         }
     listing_rows, _held = active_market_listings(
-        session, company_scope, include_listing_ids=model_listings
+        session, company_scope, include_listing_ids=listing_ids
     )
+    if portfolio_id is not None:
+        listing_rows = [row for row in listing_rows if row[0].id in listing_ids]
     listing_keys = {(listing.venue, listing.ticker) for listing, _, _ in listing_rows}
     if len({(venue.casefold(), ticker.casefold()) for venue, ticker in listing_keys}) != len(
         listing_rows
@@ -331,6 +377,7 @@ def run_startup_refresh(
     allow_local_proxy_bypass: bool = True,
     cloud_incremental: bool = False,
     company_id: UUID | None = None,
+    portfolio_id: UUID | None = None,
     refresh_slot: str | None = None,
     history_start: date | None = None,
 ) -> dict[str, object]:
@@ -373,6 +420,7 @@ def run_startup_refresh(
                                 settings,
                                 checked_at,
                                 company_id=company_id,
+                                portfolio_id=portfolio_id,
                                 refresh_slot=refresh_slot,
                                 history_start=history_start,
                             )
@@ -382,13 +430,13 @@ def run_startup_refresh(
                                 "phase": "PREFLIGHT",
                                 "failure_code": "MARKET_SOURCE_INVALID",
                             }
-                        if report.get("phase") == "PREFLIGHT":
+                        if portfolio_id is None and report.get("phase") == "PREFLIGHT":
                             session.rollback()
                             diagnostic = record_cloud_market_preflight(
                                 session, report, checked_at, company_id=company_id
                             )
                             report["preflight_run_id"] = diagnostic["run_id"]
-                        elif report.get("phase") == "INGESTION":
+                        elif portfolio_id is None and report.get("phase") == "INGESTION":
                             resolve_cloud_market_preflights(
                                 session, checked_at, company_id=company_id
                             )

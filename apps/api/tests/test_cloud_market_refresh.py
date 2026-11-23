@@ -591,3 +591,39 @@ def test_model_only_company_refreshes_its_exact_listing_once(
         assert {p.listing_id for p in prices} == {listing_id}
         assert sum(p.price_kind == "CURRENT_QUOTE" for p in prices) == 1
         assert session.scalar(select(func.count()).select_from(FinancialModelRevision)) == 1
+
+
+@pytest.mark.integration
+def test_holdings_close_uses_exact_snapshot_listing_and_excludes_fx(
+    postgres_engine: Engine, market_scope: Path
+) -> None:
+    with Session(postgres_engine) as session, session.begin():
+        portfolio = session.scalars(select(Portfolio)).one()
+        portfolio_id = portfolio.id
+        listing = session.scalars(select(Listing)).one()
+        held_id = listing.id
+        session.add(
+            Listing(security_id=listing.security_id, venue="OTHER", ticker="SYNTH", currency="USD")
+        )
+
+    settings = Settings(
+        _env_file=None, database_url=None, database_target_environment="development"
+    )
+    scheduled = Mock(return_value={"status": "COMPLETE"})
+    with (
+        patch("portfolio_api.market_data_startup.run_scheduled", scheduled),
+        Session(postgres_engine) as session,
+    ):
+        result = run_cloud_incremental_refresh(
+            session, settings, datetime.now(UTC), portfolio_id=portfolio_id
+        )
+        assert result["status"] == "COMPLETE"
+        assert scheduled.call_args.kwargs["frozen_listing_ids"] == {held_id}
+        assert scheduled.call_args.kwargs["domains"] == [ExternalDataDomain.MARKET_DATA]
+        assert scheduled.call_args.kwargs["fx_pair_filter"] == set()
+
+    with Session(postgres_engine) as session:
+        result = run_cloud_incremental_refresh(
+            session, settings, datetime.now(UTC), portfolio_id=uuid4()
+        )
+        assert result["failure_code"] == "COMPLETE_SNAPSHOT_REQUIRED"

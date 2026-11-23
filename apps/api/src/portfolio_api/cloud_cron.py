@@ -91,7 +91,11 @@ def main(argv: list[str] | None = None) -> int:
         default="market-data",
         help="Market/FX by default. SEC-only also drains at most one queued SEC request.",
     )
-    parser.add_argument(
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument(
+        "--portfolio-id", type=UUID, help="Refresh prices for exact positive holdings."
+    )
+    target.add_argument(
         "--company-id", type=UUID, help="Limit a market-data cycle to one tracked company."
     )
     parser.add_argument("--refresh-slot", help="Stable identity for an intraday market cycle.")
@@ -99,7 +103,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.history_start and (args.company_id is None or args.scope != "market-data"):
         parser.error("--history-start requires a single company in the market-data scope")
-    if (args.company_id is not None or args.refresh_slot) and args.scope != "market-data":
+    if (
+        args.portfolio_id is not None or args.company_id is not None or args.refresh_slot
+    ) and args.scope != "market-data":
         parser.error("--company-id requires --scope market-data")
     settings = Settings()
     if not settings.cloud_ingestion_enabled:
@@ -117,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
                 allow_local_proxy_bypass=False,
                 cloud_incremental=True,
                 company_id=args.company_id,
+                portfolio_id=args.portfolio_id,
                 refresh_slot=args.refresh_slot,
                 history_start=args.history_start,
             )

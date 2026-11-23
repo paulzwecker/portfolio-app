@@ -267,6 +267,7 @@ def preview_market_data_bootstrap(
     company_id: UUID | None = None,
     include_listing_review: bool = False,
     include_listing_ids: set[UUID] | None = None,
+    exact_price_scope: bool = False,
 ) -> dict[str, Any]:
     """Build a data-free request inventory without calling the provider or writing rows."""
     _validate_date_window(start_date, end_date)
@@ -300,6 +301,13 @@ def preview_market_data_bootstrap(
         selected_rows, held_ids = active_market_listings(
             session, company_scope, include_listing_ids=include_listing_ids
         )
+    if exact_price_scope:
+        if include_listing_ids is None:
+            raise MarketDataBootstrapError("Exact price scope requires explicit listing IDs.")
+        selected_rows = [row for row in selected_rows if row[0].id in include_listing_ids]
+        if {row[0].id for row in selected_rows} != include_listing_ids:
+            raise MarketDataBootstrapError("Could not resolve every requested listing.")
+        held_ids = include_listing_ids
     lifecycle = _lifecycle_by_company(session)
     selected = _priority_ordered_listings(selected_rows, held_ids, lifecycle)
     mapped = 0
@@ -347,7 +355,11 @@ def preview_market_data_bootstrap(
                     else None,
                 }
             )
-    base_currency, required_fx_pairs = _fx_scope(session, listing_rows, company_id=company_id)
+    base_currency, required_fx_pairs = (
+        (None, set())
+        if exact_price_scope
+        else _fx_scope(session, listing_rows, company_id=company_id)
+    )
     canonical_import = (
         canonical_import_readiness(session) if target_environment == "production" else None
     )
@@ -365,7 +377,9 @@ def preview_market_data_bootstrap(
         "crosswalk_sha256": crosswalk_sha256,
         "target_environment": target_environment,
         "date_window": {"start": start_date.isoformat(), "end": end_date.isoformat()},
-        "listing_scope": "canonical PORTFOLIO/WATCHLIST listings plus exact held listings"
+        "listing_scope": "exact held listings"
+        if exact_price_scope
+        else "canonical PORTFOLIO/WATCHLIST listings plus exact held listings"
         + (" and accepted valuation listings" if include_listing_ids else ""),
         "company_scope": str(company_id) if company_id is not None else None,
         "canonical_import_readiness": canonical_import,

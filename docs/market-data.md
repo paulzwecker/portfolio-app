@@ -406,3 +406,16 @@ native values remain unavailable. Later ingestion cannot become historical knowl
 Both provider defaults remain unchanged. Production ECB source selection needs
 separate exact scope/recovery approval and existing guards; never relabel a Yahoo
 bootstrap checkpoint as ECB. No migration or accepted-data change is included.
+
+### Scheduled portfolio closing prices
+
+The Holdings closing prices workflow runs on weekdays at 17:30 New York time,
+including US holidays so European holdings can still refresh. Set repository
+variable `HOLDINGS_CLOSE_ENABLED=true` and set `HOLDINGS_PORTFOLIO_ID` to the
+target portfolio UUID in the tracked-market environment. It uses the same
+restricted market credentials as the tracked-company pilot. The latest effective
+snapshot must be complete. The worker freezes the positive listing quantities'
+identities and refreshes only those listings, using the existing provider
+correction window and normalized price kinds. FX has its own refresh scope.
+Verify the latest DAILY_CLOSE per listing against its exchange session after
+the first run. Disable the repository flag to pause the schedule.
