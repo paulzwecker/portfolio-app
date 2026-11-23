@@ -6,7 +6,7 @@ import argparse
 import json
 import time
 from collections.abc import MutableMapping
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select, text
@@ -70,6 +70,7 @@ def run_cloud_incremental_refresh(
     *,
     company_id: UUID | None = None,
     refresh_slot: str | None = None,
+    history_start: date | None = None,
     include_fx: bool = True,
 ) -> dict[str, object]:
     """Freeze and bound the existing scheduled importer to the reviewed market scope."""
@@ -94,7 +95,10 @@ def run_cloud_incremental_refresh(
     session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
     crosswalk, digest = _load_crosswalk(CROSSWALK_PATH)
     end = at.astimezone(UTC).date()
-    start = end - timedelta(days=CLOUD_CORRECTION_DAYS - 1)
+    if history_start is not None and company_id is None:
+        raise MarketDataBootstrapError("A historical market refresh requires a single company.")
+    start = history_start or end - timedelta(days=CLOUD_CORRECTION_DAYS - 1)
+    window_days = (end - start).days + 1
     models = select(FinancialModel.valuation_listing_id).where(
         FinancialModel.current_revision_id.is_not(None)
     )
@@ -132,7 +136,7 @@ def run_cloud_incremental_refresh(
             "failure_code": "AMBIGUOUS_CANONICAL_LISTING_KEYS",
         }
     pairs = {tuple(pair.split("/")) for pair in preview["required_fx_pairs"]}
-    if not include_fx:
+    if not include_fx or history_start is not None:
         pairs.clear()
     subject_count = len(listing_keys) + len(pairs)
     if subject_count > CLOUD_MAX_SUBJECTS:
@@ -154,7 +158,7 @@ def run_cloud_incremental_refresh(
         domains=domains,
         start_date=start,
         end_date=end,
-        lookback_days=CLOUD_CORRECTION_DAYS,
+        lookback_days=window_days,
         run_date=end,
         listing_key_filter=listing_keys,
         company_ids=company_scope,
@@ -167,10 +171,12 @@ def run_cloud_incremental_refresh(
     return {
         **result,
         "phase": "INGESTION",
-        "scope_version": "cloud-market-correction-v1",
+        "scope_version": (
+            "cloud-market-history-v1" if history_start else "cloud-market-correction-v1"
+        ),
         "subject_count": subject_count,
         "maximum_subjects": CLOUD_MAX_SUBJECTS,
-        "correction_days": CLOUD_CORRECTION_DAYS,
+        "correction_days": window_days,
         "provider_http_attempt_upper_bound": subject_count * (DEFAULT_YAHOO_RETRIES + 1),
         "maximum_attempts_per_domain": MAX_ATTEMPTS,
         "retry_cooldown_seconds": int(CLOUD_RETRY_COOLDOWN.total_seconds()),
@@ -326,6 +332,7 @@ def run_startup_refresh(
     cloud_incremental: bool = False,
     company_id: UUID | None = None,
     refresh_slot: str | None = None,
+    history_start: date | None = None,
 ) -> dict[str, object]:
     engine = create_database_engine(
         settings,
@@ -367,6 +374,7 @@ def run_startup_refresh(
                                 checked_at,
                                 company_id=company_id,
                                 refresh_slot=refresh_slot,
+                                history_start=history_start,
                             )
                         except MarketDataBootstrapError:
                             report = {

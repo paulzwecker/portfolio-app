@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
 from portfolio_api.database import create_database_engine
@@ -95,7 +95,10 @@ def main(argv: list[str] | None = None) -> int:
         "--company-id", type=UUID, help="Limit a market-data cycle to one tracked company."
     )
     parser.add_argument("--refresh-slot", help="Stable identity for an intraday market cycle.")
+    parser.add_argument("--history-start", type=date.fromisoformat)
     args = parser.parse_args(argv)
+    if args.history_start and (args.company_id is None or args.scope != "market-data"):
+        parser.error("--history-start requires a single company in the market-data scope")
     if (args.company_id is not None or args.refresh_slot) and args.scope != "market-data":
         parser.error("--company-id requires --scope market-data")
     settings = Settings()
@@ -115,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
                 cloud_incremental=True,
                 company_id=args.company_id,
                 refresh_slot=args.refresh_slot,
+                history_start=args.history_start,
             )
         except Exception as error:
             reports["market_data"] = {"status": "FAILED", "error_type": type(error).__name__}
