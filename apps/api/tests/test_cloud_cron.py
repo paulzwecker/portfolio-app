@@ -64,6 +64,7 @@ def test_default_cloud_scope_only_refreshes_market_and_preserves_proxy_routing(
         "cloud_incremental": True,
         "company_id": None,
         "refresh_slot": None,
+        "history_start": None,
     }
     factory.assert_not_called()
     cycle.assert_not_called()

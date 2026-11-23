@@ -12,6 +12,10 @@ worker now supports a single tracked company pilot and accepted-model listings.
 Next production milestone: verify a new session and a same-day repeat on the
 deployed company valuation page before expanding the recurring market scope.
 
+A manual tracked-market dispatch can backfill the configured company from an explicit
+start date. It uses the verified listing scope and excludes FX. Scheduled runs retain
+the normal 90-day window. Reconcile distinct sessions and reviewed actions after import.
+
 Historical migration notes follow. The Booking production attempt rolled back during the canonical price lookup.
 The Booking grant matrix now includes read access for refresh and regime metadata.
 A synthetic no-price PostgreSQL regression exercises the restricted writer in CI.

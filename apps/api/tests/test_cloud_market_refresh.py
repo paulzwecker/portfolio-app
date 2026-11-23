@@ -572,6 +572,20 @@ def test_model_only_company_refreshes_its_exact_listing_once(
             assert report["status"] == "COMPLETE"
             assert report["subject_count"] == 1
     assert transport.call_count == 2
+    start = at.date() - timedelta(days=800)
+    with Session(postgres_engine) as session:
+        history = run_cloud_incremental_refresh(
+            session,
+            settings,
+            at,
+            company_id=company_id,
+            refresh_slot="backfill",
+            history_start=start,
+        )
+        assert history["status"] == "COMPLETE"
+        assert history["correction_days"] == 801
+        assert history["subject_count"] == 1
+    assert transport.call_count == 3
     with Session(postgres_engine) as session:
         prices = session.scalars(select(PriceObservation)).all()
         assert {p.listing_id for p in prices} == {listing_id}

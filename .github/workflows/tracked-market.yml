@@ -1,6 +1,11 @@
 name: Tracked market refresh
 on:
   workflow_dispatch:
+    inputs:
+      history_start:
+        description: Optional YYYY-MM-DD start for a one-time history import of the configured company
+        type: string
+        required: false
   schedule:
     - cron: "45 9 * * 1-5"
       timezone: America/New_York
@@ -60,6 +65,7 @@ jobs:
       - name: Refresh configured market scope
         if: steps.session.outputs.slot != ''
         env:
+          HISTORY_START: ${{ inputs.history_start }}
           MARKET_SLOT: ${{ steps.session.outputs.slot }}
           MARKET_SCOPE: ${{ vars.TRACKED_MARKET_SCOPE }}
           DATABASE_URL: ${{ secrets.MARKET_DATABASE_URL }}
@@ -79,4 +85,5 @@ jobs:
           : "${NEON_API_KEY:?Missing target verification key}"
           args=(--scope market-data --refresh-slot "$MARKET_SLOT")
           if [[ "$MARKET_SCOPE" != all ]]; then args+=(--company-id "$MARKET_SCOPE"); fi
+          if [[ -n "$HISTORY_START" ]]; then args+=(--history-start "$HISTORY_START"); fi
           apps/api/.venv/bin/python -m portfolio_api.cloud_cron "${args[@]}"
