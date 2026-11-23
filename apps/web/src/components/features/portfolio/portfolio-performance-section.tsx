@@ -1,42 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { components } from "@portfolio/contracts";
+import { isGainHistory, type GainHistory } from "@/lib/domain-contracts";
 import { ChartContainer } from "@/components/app/chart-container";
 import { EmptyState, PendingOrError } from "@/components/app/empty-state";
 import { useResearch } from "@/hooks/use-research";
 
-type History = components["schemas"]["GainHistory"];
 const euros = new Intl.NumberFormat("en-IE", {
   style: "currency",
   currency: "EUR",
 });
 
-function isHistory(value: unknown): value is History | null {
-  if (value === null) return true;
-  if (typeof value !== "object") return false;
-  const h = value as Partial<History>;
-  return (
-    typeof h.portfolio_id === "string" &&
-    Number.isInteger(h.open_positions) &&
-    Number.isInteger(h.closed_positions) &&
-    Array.isArray(h.provisional) &&
-    h.provisional.every((s) => typeof s === "string") &&
-    Array.isArray(h.excluded) &&
-    h.excluded.every((s) => typeof s === "string") &&
-    Array.isArray(h.points) &&
-    h.points.length > 0 &&
-    h.points.every(
-      (p) =>
-        p &&
-        typeof p.day === "string" &&
-        (p.gain === null ||
-          (typeof p.gain === "string" && Number.isFinite(Number(p.gain)))),
-    )
-  );
-}
-
-function GainChart({ history }: { history: History }) {
+function GainChart({ history }: { history: GainHistory }) {
   const points = history.points;
   const [selected, setSelected] = useState<number | null>(null);
   const index = Math.min(selected ?? points.length - 1, points.length - 1);
@@ -152,7 +127,7 @@ function GainChart({ history }: { history: History }) {
 }
 
 export function PortfolioPerformanceSection({ id }: { id: string }) {
-  const state = useResearch(`portfolios/${id}/gain-history`, isHistory);
+  const state = useResearch(`portfolios/${id}/gain-history`, isGainHistory);
   return (
     <section id="portfolio-performance">
       {state.data === undefined ? (

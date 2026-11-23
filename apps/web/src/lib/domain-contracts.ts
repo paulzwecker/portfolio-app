@@ -3266,6 +3266,30 @@ function isCompanyPortfolioContext(v: unknown): v is CompanyPortfolioContext {
     ].includes(v.allocation_status as string)
   );
 }
+export type GainHistory = components["schemas"]["GainHistory"];
+
+export function isGainHistory(v: unknown): v is GainHistory | null {
+  if (v === null) return true;
+  return (
+    isRecord(v) &&
+    uuid(v.portfolio_id) &&
+    Number.isInteger(v.open_positions) &&
+    Number(v.open_positions) >= 0 &&
+    Number.isInteger(v.closed_positions) &&
+    Number(v.closed_positions) >= 0 &&
+    array(v.provisional, string) &&
+    array(v.excluded, string) &&
+    Array.isArray(v.points) &&
+    v.points.length > 0 &&
+    v.points.every(
+      (point: unknown) =>
+        isRecord(point) &&
+        timestamp(point.day) &&
+        nullableSignedDecimal(point.gain),
+    )
+  );
+}
+
 export function isOverview(v: unknown): v is Overview {
   if (!isRecord(v)) return false;
   if (

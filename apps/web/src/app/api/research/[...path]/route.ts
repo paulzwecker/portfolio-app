@@ -44,6 +44,7 @@ import {
   isOperationalJobRequestList,
   isRecurringOperationsStatus,
   isResearchAgentWorkEvents,
+  isGainHistory,
   isOverview,
   isPortfolios,
   isPortfolioLedgerAnchor,
@@ -452,6 +453,12 @@ function validRead(path: string, data: unknown): boolean {
   if (path.startsWith("companies/") && path.endsWith("/rankings"))
     return isCompanyRankings(data);
   if (path === "portfolios") return isPortfolios(data);
+  if (path.endsWith("/gain-history"))
+    return (
+      isGainHistory(data) &&
+      (data === null ||
+        data.portfolio_id.toLowerCase() === path.split("/")[1].toLowerCase())
+    );
   if (path.endsWith("/overview")) return isOverview(data);
   if (path.endsWith("/risk-assessments"))
     return isPortfolioRiskAssessments(data);
