@@ -2285,6 +2285,25 @@ def post_portfolio(value: s.PortfolioCreate, db: Db) -> s.PortfolioRead:
     return s.PortfolioRead.model_validate(operations.create_portfolio(db, value))
 
 
+@router.get("/portfolios/{portfolio_id}/gain-history", response_model=s.GainHistory | None)
+def get_gain_history(portfolio_id: UUID, db: Db) -> s.GainHistory | None:
+    from portfolio_api.domain.models import PortfolioGainHistory
+
+    operations.portfolio(db, portfolio_id)
+    row = db.scalar(
+        select(PortfolioGainHistory)
+        .where(PortfolioGainHistory.portfolio_id == portfolio_id)
+        .order_by(PortfolioGainHistory.recorded_at.desc())
+        .limit(1)
+    )
+    if row is None:
+        return None
+    history = s.GainHistory.model_validate(row.report)
+    if history.portfolio_id != portfolio_id:
+        raise ValueError("Published history identity mismatch")
+    return history
+
+
 @router.get("/portfolios/{portfolio_id}/overview", response_model=s.PortfolioOverview)
 def get_overview(
     portfolio_id: UUID,

@@ -309,25 +309,3 @@ export function PortfolioAllocationSection({
     </PageSection>
   );
 }
-
-export function PortfolioPerformanceSection() {
-  return (
-    <details
-      id="portfolio-performance"
-      className="rounded-xl border bg-card p-4"
-    >
-      <summary className="cursor-pointer text-sm font-medium">
-        Data coverage & performance availability
-      </summary>
-      <p className="my-3 text-sm text-muted-foreground">
-        Sector, geographic and business-model exposure are unavailable until
-        their classifications are recorded. Composition uses company, listing
-        and cash identities.
-      </p>
-      <EmptyState
-        title="Historical portfolio performance is unavailable"
-        description="The application does not yet have complete transaction and cash-flow history to calculate portfolio performance. Current holdings multiplied by historical prices would be a hypothetical price series, not realized portfolio performance, so it is not shown here."
-      />
-    </details>
-  );
-}

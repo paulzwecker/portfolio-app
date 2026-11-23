@@ -21,10 +21,20 @@ The page structure and interaction rationale are recorded in
    and cash weights in one composition view, the largest accepted target gaps,
    and source target revision. Sector, geography and business-model grouping
    remain unavailable until canonical classifications support them.
-4. **Performance** explicitly reports unavailable until transaction and
-   cash-flow history supports a genuine portfolio return series. Historical
-   prices applied to today's holdings would be a hypothetical series, not actual
-   portfolio performance.
+4. **Performance** displays the latest private retrospective security gain history for
+   this portfolio, or an empty state until one has been published. Dated net EUR
+   buys, sales and dividend settlements are combined with marked open shares.
+   Trades and dividend-unadjusted closes share a common split basis. Reference
+   prices and quote-units-per-EUR FX can carry for seven calendar days. Missing
+   marks break the entire line. Exits retain their realized gain, including later
+   dividend receipts. The chart reports included and excluded securities and
+   pending dividend reconciliations. Cash interest and transfers are out of scope.
+   The newest report is served by `GET /portfolios/{id}/gain-history`.
+   For publication, verify private source identity, ending quantities and reviewed
+   per-listing cutoff gains before appending the validated GainHistory JSON and
+   its matching portfolio ID to `portfolio_gain_histories` in a guarded release.
+   Prior reports remain available for recovery. Runtime access requires SELECT.
+
 5. **Decision context** is provided in the dedicated `/decisions` workspace,
    which compares allocation and targets, separates return comparability
    cohorts, explains recorded Execution Pace, and shows API-supplied cash and

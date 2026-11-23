@@ -22,10 +22,8 @@ import {
   rankingFor,
   sortedByWeight,
 } from "@/components/features/portfolio/decision-components";
-import {
-  PortfolioAllocationSection,
-  PortfolioPerformanceSection,
-} from "@/components/features/portfolio/portfolio-allocation-section";
+import { PortfolioAllocationSection } from "@/components/features/portfolio/portfolio-allocation-section";
+import { PortfolioPerformanceSection } from "./portfolio-performance-section";
 import { PortfolioHoldingsSection } from "@/components/features/portfolio/portfolio-holdings-section";
 import { PortfolioOverviewSection } from "@/components/features/portfolio/portfolio-overview-section";
 import {
@@ -263,6 +261,12 @@ export function PortfolioWorkspace({ id }: { id: string }) {
         >
           Allocation &amp; exposure
         </a>
+        <a
+          className="rounded-md px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          href="#portfolio-performance"
+        >
+          Performance
+        </a>
         <Link
           className="rounded-md px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           href="/portfolio/ledger"
@@ -272,6 +276,7 @@ export function PortfolioWorkspace({ id }: { id: string }) {
       </nav>
 
       <PortfolioOverviewSection overview={view} rows={rows} />
+      <PortfolioPerformanceSection id={id} />
       <PortfolioHoldingsSection
         overview={view}
         rows={rows}
@@ -288,7 +293,6 @@ export function PortfolioWorkspace({ id }: { id: string }) {
         </p>
       )}
       <PortfolioAllocationSection overview={view} />
-      <PortfolioPerformanceSection />
 
       <details
         ref={decisionDetailsRef}

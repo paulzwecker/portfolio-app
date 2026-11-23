@@ -2017,6 +2017,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/gain-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Gain History */
+        get: operations["get_gain_history_v1_portfolios__portfolio_id__gain_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/holding-snapshots": {
         parameters: {
             query?: never;
@@ -7187,6 +7204,34 @@ export interface components {
             source: string;
             /** Source Ref */
             source_ref: string | null;
+        };
+        /** GainHistory */
+        GainHistory: {
+            /** Closed Positions */
+            closed_positions: number;
+            /** Excluded */
+            excluded: string[];
+            /** Open Positions */
+            open_positions: number;
+            /** Points */
+            points: components["schemas"]["GainPoint"][];
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Provisional */
+            provisional: string[];
+        };
+        /** GainPoint */
+        GainPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Gain */
+            gain: string | null;
         };
         /** GoogleSheetsAgentWorkPublishRead */
         GoogleSheetsAgentWorkPublishRead: {
@@ -18908,6 +18953,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_gain_history_v1_portfolios__portfolio_id__gain_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GainHistory"] | null;
                 };
             };
             /** @description Validation Error */
