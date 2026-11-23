@@ -4,6 +4,8 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 [Architecture](docs/architecture/personal-universe.md) owns shared-platform boundaries.
 [Documentation index](docs/README.md) routes contracts and runbooks.
 
+Reviewed holding returns now replay private dated trades, split ratios and net dividend cash at a dated close and FX mark. The portfolio holdings view exposes the reviewed cutoff, gain and money-weighted return. Extend reviewed evidence coverage listing by listing.
+
 On November 23 the September BKNG dividend was verified against the issuer filing.
 Refresh coverage now checks the stored review for each returned provider event, including replays.
 

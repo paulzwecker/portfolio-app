@@ -172,9 +172,9 @@ test("the repository graph and owner marker bind the reviewed receipt migration"
       result.status,
     ),
   );
-  assert.equal(result.repository_head, "b93e1c7af602");
-  if (marker.revision === "d7b4a6c8e2f0")
-    assert.deepEqual(result.pending_revisions, ["b93e1c7af602"]);
+  assert.equal(result.repository_head, "c82d7a410f36");
+  if (marker.revision === "b93e1c7af602")
+    assert.deepEqual(result.pending_revisions, ["c82d7a410f36"]);
 });
 
 test("CLI review and deploy use standard exit semantics without cloud access", () => {

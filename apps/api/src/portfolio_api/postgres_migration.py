@@ -75,6 +75,7 @@ TABLE_GROUPS: dict[str, tuple[str, ...]] = {
         "portfolios",
         "holding_snapshots",
         "holding_positions",
+        "holding_return_reviews",
         "holding_cash_positions",
         "portfolio_ledger_candidates",
         "portfolio_ledger_reviews",

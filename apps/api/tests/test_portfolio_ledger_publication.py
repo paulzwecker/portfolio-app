@@ -447,13 +447,14 @@ def test_new_migration_parity_replay_and_downgrade_retain_accepted_ownership(
     from portfolio_api.database import Base
     from portfolio_api.migrations import alembic_config, expected_heads
 
-    assert expected_heads() == {"b93e1c7af602"}
+    assert expected_heads() == {"c82d7a410f36"}
     with storage_engine.begin() as connection:
         config = alembic_config()
         config.attributes["connection"] = connection
         before = set(inspect(connection).get_table_names())
         alembic_command.downgrade(config, "a832e94d6f10")
         assert set(inspect(connection).get_table_names()) == before - {
+            "holding_return_reviews",
             "portfolio_ledger_publications",
             "company_metric_definitions",
             "company_metric_observations",

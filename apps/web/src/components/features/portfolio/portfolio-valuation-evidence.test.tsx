@@ -6,6 +6,30 @@ import { PortfolioHoldingsSection } from "./portfolio-holdings-section";
 import { PortfolioOverviewSection } from "./portfolio-overview-section";
 
 describe("Portfolio valuation evidence", () => {
+  it("shows reviewed net return and its cutoff in desktop and mobile holdings", () => {
+    const overview = portfolioFixture();
+    overview.companies[0].positions[0].reviewed_return = {
+      through: "2024-12-31",
+      currency: "EUR",
+      shares: "4",
+      purchases: "40",
+      sales: "9",
+      dividends: "2",
+      market_value: "40",
+      gain: "11",
+      cumulative_return: "0.275",
+      annualized_money_weighted_return: null,
+    };
+    const html = renderToStaticMarkup(
+      <PortfolioHoldingsSection
+        overview={overview}
+        rows={portfolioHoldingRows(overview)}
+        onConfirmed={() => {}}
+      />,
+    );
+    expect(html.match(/Holding return 27.5%/g)).toHaveLength(2);
+    expect(html.match(/Cash dividends/g)).toHaveLength(2);
+  });
   it("discloses a native mark and indicative source without recomputing valuation", () => {
     const overview = portfolioFixture();
     const position = overview.companies[0].positions[0];

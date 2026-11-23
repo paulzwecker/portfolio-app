@@ -4538,3 +4538,14 @@ def protect_history(session: Session, flush_context: object, instances: object) 
                 and item.snapshot_id not in session.info.get("new_snapshot_ids", set())
             ):
                 raise ValueError("Cannot add positions to a historical snapshot")
+
+
+class HoldingReturnReview(Base):
+    """Private inputs for one retrospective holding-return reconciliation."""
+
+    __tablename__ = "holding_return_reviews"
+    portfolio_id: Mapped[UUID] = mapped_column(ForeignKey("portfolios.id"), primary_key=True)
+    listing_id: Mapped[UUID] = mapped_column(ForeignKey("listings.id"), primary_key=True)
+    through: Mapped[date] = mapped_column(Date, primary_key=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    evidence: Mapped[dict[str, object]] = mapped_column(JSON)

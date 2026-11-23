@@ -82,6 +82,68 @@ export function PortfolioHoldingsSection({
           <p className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground">
             Listing {row.listingId}
           </p>
+          {row.reviewedReturn && (
+            <details className="mt-2 text-xs">
+              <summary className="cursor-pointer font-medium text-primary">
+                Holding return {percent(row.reviewedReturn.cumulative_return)} ·{" "}
+                {marketDate(row.reviewedReturn.through)}
+              </summary>
+              <p className="mt-1">
+                Reviewed through {marketDate(row.reviewedReturn.through)}
+              </p>
+              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 tabular-nums">
+                {[
+                  ["Shares at close", quantity(row.reviewedReturn.shares)],
+                  [
+                    "Purchases",
+                    currency(
+                      row.reviewedReturn.purchases,
+                      row.reviewedReturn.currency,
+                    ),
+                  ],
+                  [
+                    "Sale proceeds",
+                    currency(
+                      row.reviewedReturn.sales,
+                      row.reviewedReturn.currency,
+                    ),
+                  ],
+                  [
+                    "Cash dividends",
+                    currency(
+                      row.reviewedReturn.dividends,
+                      row.reviewedReturn.currency,
+                    ),
+                  ],
+                  [
+                    "Closing value",
+                    currency(
+                      row.reviewedReturn.market_value,
+                      row.reviewedReturn.currency,
+                    ),
+                  ],
+                  [
+                    "Total gain / loss",
+                    currency(
+                      row.reviewedReturn.gain,
+                      row.reviewedReturn.currency,
+                    ),
+                  ],
+                  [
+                    "Annualized money-weighted return",
+                    percent(
+                      row.reviewedReturn.annualized_money_weighted_return,
+                    ),
+                  ],
+                ].map(([label, value]) => (
+                  <div key={label} className="contents">
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          )}
           {row.priceDate && (
             <p className="mt-1 text-[10px] text-muted-foreground">
               Price date {marketDate(row.priceDate)} · quote observed{" "}
