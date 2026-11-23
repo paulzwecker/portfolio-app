@@ -1,8 +1,8 @@
 {
   "contract": "production-schema-attestation-v1",
-  "revision": "b93e1c7af602",
-  "migration_history_sha256": "50c79a878b307b925fb9a366e5b42df2d43a9f8d0a7348c25e849573151d3327",
-  "verified_at": "2026-11-22T16:21:42.052Z",
+  "revision": "c82d7a410f36",
+  "migration_history_sha256": "420559a2004b66c74782bad22949af4654eb227eafdf87b955274bf2a7e0420c",
+  "verified_at": "2026-11-23T13:03:39.320Z",
   "target": {
     "project": "blue-pond-96398788",
     "branch": "br-square-butterfly-bacw0rn5",
