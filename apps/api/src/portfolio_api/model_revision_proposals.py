@@ -312,6 +312,20 @@ def _refresh_preview(
     else:
         try:
             if isinstance(proposal.method, s.AgentUfcfDcfProposalMethod):
+                market_price, _ = services._latest_model_market_price(session, model)
+                baseline = services.preview_financial_model_revision_calculation(
+                    session,
+                    model.id,
+                    s.FinancialModelRevisionCalculationPreviewCreate(
+                        **current_inputs.model_dump(),
+                        base_revision_id=proposal.base_revision_id,
+                    ),
+                    market_price=market_price,
+                )
+                current_outputs = _without_revision_ids(baseline.outputs.model_dump(mode="json"))
+                current_projections = _canonical_projection_rows(
+                    [row.model_dump(mode="json") for row in baseline.projections]
+                )
                 proposed_calculation = services.preview_financial_model_revision_calculation(
                     session,
                     model.id,
@@ -319,6 +333,7 @@ def _refresh_preview(
                         **proposed_inputs.model_dump(),
                         base_revision_id=proposal.base_revision_id,
                     ),
+                    market_price=market_price,
                 )
             elif isinstance(proposal.method, s.AgentOwnerCashFlowProposalMethod):
                 proposed_calculation = services.preview_owner_cash_flow_revision(
@@ -358,6 +373,19 @@ def _refresh_preview(
             )
             for change in services._additional_input_changes(current_outputs, proposed_outputs)
         ]
+
+        if isinstance(proposal.method, s.AgentUfcfDcfProposalMethod):
+            for before, after in zip(current_projections, proposed_projections, strict=True):
+                if before["forecast_year"] == 1 and (
+                    before["unlevered_free_cash_flow"] != after["unlevered_free_cash_flow"]
+                ):
+                    output_changes.append(
+                        s.ModelRevisionProposalDiff(
+                            field=f"{before['scenario']} Year 1 unlevered free cash flow",
+                            before=str(before["unlevered_free_cash_flow"]),
+                            after=str(after["unlevered_free_cash_flow"]),
+                        )
+                    )
 
     fingerprint_payload = {
         "proposal_id": str(candidate.id),

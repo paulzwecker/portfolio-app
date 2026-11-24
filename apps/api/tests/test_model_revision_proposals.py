@@ -437,6 +437,27 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
             headers=_headers(AGENT_TOKEN),
         )
         assert agent_preview.status_code == 401
+        if method_path == "dcf":
+            # The accepted snapshot has no quote. Both review columns must use
+            # one later observation even if prices change during the request.
+            from decimal import Decimal
+
+            from portfolio_api.financial_models import MarketPriceInput
+
+            quote = MarketPriceInput(uuid4(), Decimal("21"), currency, datetime.now(UTC), "FRESH")
+            with patch(
+                "portfolio_api.domain.services._latest_model_market_price",
+                return_value=(quote, None),
+            ) as lookup:
+                priced = client.post(
+                    f"/v1/model-revision-proposals/{candidate_id}/preview",
+                    headers=_headers(REVIEWER_TOKEN),
+                )
+            assert priced.status_code == 200, priced.text
+            lookup.assert_called_once()
+            for side in ("current_outputs", "proposed_outputs"):
+                assert priced.json()[side]["price_observation_id"] == str(quote.observation_id)
+                assert priced.json()[side]["expected_cash_flow_irr"] is not None
         preview = client.post(
             f"/v1/model-revision-proposals/{candidate_id}/preview",
             headers=_headers(REVIEWER_TOKEN),
