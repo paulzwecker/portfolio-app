@@ -127,3 +127,21 @@ proposal-role/workflow activation require separate verification. Current activat
 evidence belongs in the roadmap. Unattended review requires its own approved policy. Environments whose schema
 has not applied this migration fail closed through the existing database/API
 readiness behavior.
+
+## Booking capex review
+
+Export Booking's accepted model from the financial-model read API. Link a published
+Booking research revision that documents the FY2025 and Q3 2026 capex evidence.
+Prepare the draft locally using the existing backend environment:
+
+```sh
+python -m portfolio_api.booking_capex_challenge booking-model.json \
+  --research-revision-id "$BOOKING_RESEARCH_REVISION_ID" \
+  --authored-at "$PROPOSAL_AUTHORED_AT" > booking-proposal.json
+```
+
+Use private files outside the checkout. Reuse the same authored timestamp for
+replays. The producer checks revision 1 and the original 1.50% assumption, copies
+its native inputs and proposes 1.20% for base-case Year 1. The reviewer preview
+recalculates both UFCF cases with one market observation and the accepted return
+methodology. The review includes any Year 1 UFCF changes in model units.

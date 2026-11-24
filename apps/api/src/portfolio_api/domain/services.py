@@ -331,6 +331,8 @@ def preview_financial_model_revision_calculation(
     session: Session,
     model_id: UUID,
     value: s.FinancialModelRevisionCalculationPreviewCreate,
+    *,
+    market_price: MarketPriceInput | None = None,
 ) -> s.FinancialModelCalculationPreviewRead:
     model = session.scalar(select(FinancialModel).where(FinancialModel.id == model_id))
     if model is None:
@@ -340,7 +342,8 @@ def preview_financial_model_revision_calculation(
     current = session.get(FinancialModelRevision, model.current_revision_id)
     if current is None or current.model_id != model.id:
         raise DomainError("Current model revision is inconsistent; reload before previewing", 409)
-    market_price, _ = _latest_model_market_price(session, model)
+    if market_price is None:
+        market_price, _ = _latest_model_market_price(session, model)
     return_methodology_code = _revision_return_methodology_code(
         session, current.id, fallback="UFCF_ENTERPRISE_IRR"
     )

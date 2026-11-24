@@ -389,6 +389,20 @@ export function ModelRevisionProposalReview({
                         ? ` · based on revision ${preview.current_revision_number}`
                         : ""}
                     </p>
+                    {selected.proposal.method.methodology ===
+                      "UFCF_DCF_10Y_FADE" &&
+                      preview.status === "READY" && (
+                        <p className="text-sm">
+                          Comparison price ·{" "}
+                          {typeof preview.current_outputs?.current_price ===
+                          "string"
+                            ? `${selected.proposal.model_currency} ${Number(preview.current_outputs.current_price).toLocaleString(undefined, { maximumFractionDigits: 6 })}`
+                            : "Unavailable"}
+                          {typeof preview.current_outputs
+                            ?.price_effective_at === "string" &&
+                            ` · ${dateTime(preview.current_outputs.price_effective_at)}`}
+                        </p>
+                      )}
                     <ModelProposalDiffs
                       title="Assumption changes"
                       changes={preview.input_changes ?? []}
