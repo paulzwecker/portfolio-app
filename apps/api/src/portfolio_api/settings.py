@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     neon_branch_id: str | None = None
     neon_endpoint_id: str | None = None
     api_access_token: SecretStr | None = None
+    model_proposal_review_write_id: UUID | None = None
     model_proposal_agent_token: SecretStr | None = None
     model_proposal_agent_id: str | None = None
     model_proposal_reviewer_token: SecretStr | None = None

@@ -138,6 +138,40 @@ def test_model_proposal_roles_are_enforced_in_development_without_database() -> 
         assert reviewer_cannot_submit.status_code == 401
 
 
+def test_production_review_engine_requires_matching_proposal_and_reviewer() -> None:
+    allowed, other = uuid4(), uuid4()
+    settings = _settings().model_copy(
+        update={
+            "app_env": "production",
+            "database_target_environment": "production",
+            "model_proposal_review_write_id": allowed,
+        }
+    )
+    with (
+        patch("portfolio_api.domain.routes.create_database_engine", return_value=None) as scoped,
+        TestClient(create_app(settings)) as client,
+    ):
+        for action, body in [
+            ("preview", {}),
+            ("reject", {"decision_note": "test"}),
+            ("accept", {"preview_fingerprint": "a" * 64, "decision_note": "test"}),
+        ]:
+            path = f"/v1/model-revision-proposals/{allowed}/{action}"
+            assert client.post(path, headers=_headers(AGENT_TOKEN), json=body).status_code == 401
+            denied = client.post(
+                f"/v1/model-revision-proposals/{other}/{action}",
+                headers=_headers(REVIEWER_TOKEN),
+                json=body,
+            )
+            assert denied.status_code == 403
+            scoped.assert_not_called()
+            assert client.post(path, headers=_headers(REVIEWER_TOKEN), json=body).status_code == 503
+            scoped.assert_called_once_with(
+                settings, write_operation=f"model_proposal_review.{allowed}"
+            )
+            scoped.reset_mock()
+
+
 def test_reviewer_proposal_list_accepts_a_company_scope(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

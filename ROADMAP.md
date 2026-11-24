@@ -6,7 +6,8 @@ Updated 2026-11-20. [Product vision](docs/PRODUCT_VISION.md) owns the North Star
 
 Booking’s revision 1 capex challenge now has an inputs-only draft producer and a
 same-price UFCF reviewer preview. [Proposal workflow](docs/agent-model-revision-proposals.md).
-Production submission requires linked Booking research evidence.
+Booking evidence and its proposal are published. A single-proposal reviewer authorization
+allows the owner to preview and decide in the app.
 
 Portfolio gain history is published. The web proxy now validates the saved series
 against the same contract as the chart. The owner confirmed the signed-in chart.
