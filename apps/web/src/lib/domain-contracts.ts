@@ -4039,6 +4039,18 @@ export function isModelRevisionProposalPreviewRead(
   );
 }
 
+export function isModelRevisionProposalDetailRead(
+  value: unknown,
+): value is components["schemas"]["ModelRevisionProposalDetailRead"] {
+  return (
+    isModelRevisionProposalRead(value) &&
+    (!("reviewed_preview" in value) ||
+      value.reviewed_preview === null ||
+      (isModelRevisionProposalPreviewRead(value.reviewed_preview) &&
+        value.reviewed_preview.proposal_id === value.id))
+  );
+}
+
 export function isModelRevisionProposalDecisionRead(
   value: unknown,
 ): value is ModelRevisionProposalDecisionRead {

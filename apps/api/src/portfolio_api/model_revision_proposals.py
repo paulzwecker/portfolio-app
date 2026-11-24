@@ -646,11 +646,18 @@ def reject_model_revision_proposal(
     )
 
 
-def get_model_revision_proposal(session: Session, proposal_id: UUID) -> s.ModelRevisionProposalRead:
+def get_model_revision_proposal(
+    session: Session, proposal_id: UUID, *, reviewer: bool = False
+) -> s.ModelRevisionProposalDetailRead:
     item = session.get(AgentModelRevisionProposal, proposal_id)
     if item is None:
         raise services.DomainError("Model proposal not found", 404)
-    return _proposal_read(session, item)
+    preview = None
+    if reviewer and item.status in {"ACCEPTED", "REJECTED"} and item.preview_data:
+        preview = s.ModelRevisionProposalPreviewRead.model_validate(item.preview_data)
+    return s.ModelRevisionProposalDetailRead(
+        **_proposal_read(session, item).model_dump(), reviewed_preview=preview
+    )
 
 
 def list_model_revision_proposals(

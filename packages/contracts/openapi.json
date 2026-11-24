@@ -25563,6 +25563,134 @@
         "title": "ModelRevisionProposalDecisionRequest",
         "type": "object"
       },
+      "ModelRevisionProposalDetailRead": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Revision Id"
+          },
+          "conflicting_proposal_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Conflicting Proposal Ids",
+            "type": "array"
+          },
+          "content_fingerprint": {
+            "title": "Content Fingerprint",
+            "type": "string"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "producer_id": {
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/FinancialModelRevisionProposalV1-Output"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRevisionProposalPreviewRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "READY",
+              "CONFLICT",
+              "INVALID",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "producer_id",
+          "proposal",
+          "content_fingerprint",
+          "status",
+          "issue",
+          "accepted_revision_id",
+          "reviewer_id",
+          "decision_note",
+          "submitted_at",
+          "reviewed_at"
+        ],
+        "title": "ModelRevisionProposalDetailRead",
+        "type": "object"
+      },
       "ModelRevisionProposalDiff": {
         "additionalProperties": false,
         "properties": {
@@ -46296,7 +46424,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelRevisionProposalRead"
+                  "$ref": "#/components/schemas/ModelRevisionProposalDetailRead"
                 }
               }
             },

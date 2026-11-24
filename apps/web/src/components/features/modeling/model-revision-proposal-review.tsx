@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +10,13 @@ import { StatusIndicator } from "@/components/app/status-indicator";
 import { useResearch } from "@/hooks/use-research";
 import {
   isModelRevisionProposalDecisionRead,
+  isModelRevisionProposalDetailRead,
   isModelRevisionProposalList,
   isModelRevisionProposalPreviewRead,
   type ModelRevisionProposalPreviewRead,
   type ModelRevisionProposalRead,
 } from "@/lib/domain-contracts";
-import { dateTime } from "@/lib/display";
+import { dateTime, formatCurrency, formatPercent } from "@/lib/display";
 
 type Decision = "ACCEPT" | "REJECT";
 
@@ -26,6 +27,14 @@ function proposalStatus(
   if (proposal.status === "ACCEPTED" || proposal.status === "REJECTED")
     return proposal.status;
   return preview?.status ?? proposal.status;
+}
+
+function outputValue(
+  outputs: ModelRevisionProposalPreviewRead["current_outputs"],
+  key: string,
+) {
+  const value = outputs?.[key];
+  return typeof value === "string" ? value : null;
 }
 
 function ModelProposalDiffs({
@@ -57,9 +66,11 @@ function ModelProposalDiffs({
               >
                 <span className="break-words font-medium">{change.field}</span>
                 <span className="break-all text-muted-foreground sm:break-words">
+                  <span className="sm:hidden">Accepted: </span>
                   {change.before ?? "Unavailable"}
                 </span>
                 <span className="break-all sm:break-words">
+                  <span className="sm:hidden">Proposed: </span>
                   {change.after ?? "Unavailable"}
                 </span>
               </li>
@@ -84,27 +95,31 @@ export function ModelRevisionProposalReview({
   const [previewById, setPreviewById] = useState<
     Record<string, ModelRevisionProposalPreviewRead>
   >({});
-  const [proposalOverrides, setProposalOverrides] = useState<
-    Record<string, ModelRevisionProposalRead>
-  >({});
   const [decisionNote, setDecisionNote] = useState("");
   const [confirmDecision, setConfirmDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const proposals = useMemo(
-    () =>
-      (state.data ?? [])
-        .filter((item) => item.proposal.company_id === companyId)
-        .map((item) => proposalOverrides[item.id] ?? item),
-    [companyId, proposalOverrides, state.data],
+  const proposals = (state.data ?? []).filter(
+    (item) => item.proposal.company_id === companyId,
   );
   const selected =
     proposals.find((item) => item.id === selectedId) ?? proposals[0] ?? null;
-  const preview = selected ? (previewById[selected.id] ?? null) : null;
+  const terminal =
+    selected?.status === "ACCEPTED" || selected?.status === "REJECTED";
+  const receipt = useResearch(
+    `model-revision-proposals/${selected?.id}`,
+    isModelRevisionProposalDetailRead,
+    0,
+    terminal,
+  );
+  const preview = terminal
+    ? (receipt.data?.reviewed_preview ?? null)
+    : selected
+      ? (previewById[selected.id] ?? null)
+      : null;
   const status = selected ? proposalStatus(selected, preview) : null;
-  const terminal = status === "ACCEPTED" || status === "REJECTED";
   const canAccept =
     status === "READY" && Boolean(preview?.preview_fingerprint) && !terminal;
 
@@ -141,7 +156,7 @@ export function ModelRevisionProposalReview({
               : {}),
         },
       );
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => null);
       if (!response.ok) {
         const detail =
           typeof data === "object" && data !== null && "detail" in data
@@ -164,10 +179,6 @@ export function ModelRevisionProposalReview({
           throw new Error(
             "The review response did not match the model contract.",
           );
-        setProposalOverrides((current) => ({
-          ...current,
-          [selected.id]: data.proposal,
-        }));
         if (data.preview) {
           setPreviewById((current) => ({
             ...current,
@@ -175,24 +186,32 @@ export function ModelRevisionProposalReview({
           }));
         }
         setConfirmDecision(null);
-        setDecisionNote("");
+        if (data.status === "ACCEPTED" || data.status === "REJECTED")
+          setDecisionNote("");
         setMessage(
-          action === "accept"
-            ? data.status === "ACCEPTED"
-              ? "Accepted as a new immutable canonical model revision."
-              : (data.preview?.reason ??
-                "The proposal needs a refreshed preview.")
-            : "Proposal rejected; the review decision is retained.",
+          data.status === "PREVIEW_CHANGED"
+            ? "The calculation changed. Review the updated comparison and confirm again if you agree."
+            : (data.preview?.reason ?? ""),
         );
         if (action === "accept" && data.status === "ACCEPTED")
           window.dispatchEvent(new Event("portfolio:data-refreshed"));
         state.retry();
       }
     } catch (failure) {
+      setConfirmDecision(null);
+      setPreviewById((current) => {
+        const next = { ...current };
+        delete next[selected.id];
+        return next;
+      });
+      state.retry();
       setError(
         failure instanceof Error
-          ? failure.message
-          : "The model proposal review could not be completed.",
+          ? failure.message +
+              (action === "preview"
+                ? " Retry the preview."
+                : " Check the saved status before retrying.")
+          : "Check the saved status before retrying.",
       );
     } finally {
       setBusy(false);
@@ -248,6 +267,7 @@ export function ModelRevisionProposalReview({
                   <button
                     key={item.id}
                     type="button"
+                    disabled={busy}
                     aria-pressed={selected?.id === item.id}
                     onClick={() => selectProposal(item.id)}
                     className={`w-full rounded-md border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected?.id === item.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
@@ -299,6 +319,24 @@ export function ModelRevisionProposalReview({
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
+                {terminal && (
+                  <p role="status" className="rounded-md border p-3 text-sm">
+                    {selected.status === "ACCEPTED"
+                      ? "Acceptance recorded"
+                      : "Rejection recorded"}
+                    {selected.reviewed_at &&
+                      ` · ${dateTime(selected.reviewed_at)}`}
+                  </p>
+                )}
+                {terminal && receipt.error && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={receipt.retry}
+                  >
+                    Retry loading reviewed comparison
+                  </Button>
+                )}
                 <dl className="grid gap-3 rounded-md border bg-muted/20 p-3 text-xs sm:grid-cols-2 xl:grid-cols-3">
                   <Meta
                     label="Canonical base revision"
@@ -380,6 +418,11 @@ export function ModelRevisionProposalReview({
                     {preview?.reason ?? selected.issue}
                   </p>
                 )}
+                {terminal && receipt.data && !preview && (
+                  <p className="text-sm">
+                    No preview was recorded for this decision.
+                  </p>
+                )}
                 {preview && (
                   <div className="space-y-4 border-t pt-4">
                     <p className="text-xs text-muted-foreground">
@@ -407,6 +450,51 @@ export function ModelRevisionProposalReview({
                       title="Assumption changes"
                       changes={preview.input_changes ?? []}
                     />
+                    {selected.proposal.method.methodology ===
+                      "UFCF_DCF_10Y_FADE" &&
+                      preview.status === "READY" && (
+                        <ModelProposalDiffs
+                          title="Valuation impact at the comparison price"
+                          changes={[
+                            {
+                              field: "Weighted fair value per share",
+                              before: formatCurrency(
+                                outputValue(
+                                  preview.current_outputs,
+                                  "weighted_fv",
+                                ),
+                                selected.proposal.model_currency,
+                              ),
+                              after: formatCurrency(
+                                outputValue(
+                                  preview.proposed_outputs,
+                                  "weighted_fv",
+                                ),
+                                selected.proposal.model_currency,
+                              ),
+                            },
+                            {
+                              field: "Expected enterprise cash-flow IRR",
+                              before: formatPercent(
+                                outputValue(
+                                  preview.current_outputs,
+                                  "expected_cash_flow_irr",
+                                ),
+                                2,
+                                "Unavailable",
+                              ),
+                              after: formatPercent(
+                                outputValue(
+                                  preview.proposed_outputs,
+                                  "expected_cash_flow_irr",
+                                ),
+                                2,
+                                "Unavailable",
+                              ),
+                            },
+                          ]}
+                        />
+                      )}
                     <ModelProposalDiffs
                       title="Recalculated output changes"
                       changes={preview.output_changes ?? []}
@@ -518,7 +606,7 @@ export function ModelRevisionProposalReview({
                     )}
                   </div>
                 )}
-                {error && (
+                {error && !terminal && (
                   <p
                     role="alert"
                     className="rounded-md border border-destructive/40 p-3 text-sm"

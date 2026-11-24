@@ -93,7 +93,7 @@ import {
   isModelRevisionProposalDecisionRead,
   isModelRevisionProposalList,
   isModelRevisionProposalPreviewRead,
-  isModelRevisionProposalRead,
+  isModelRevisionProposalDetailRead,
   isObservationProposalList,
   isObservationProposalRead,
   isObservationProposalPreviewRead,
@@ -187,8 +187,10 @@ function validWrite(path: string, data: unknown): boolean {
     );
   if (path.startsWith("model-revision-proposals/")) {
     return path.endsWith("/preview")
-      ? isModelRevisionProposalPreviewRead(data)
-      : isModelRevisionProposalDecisionRead(data);
+      ? isModelRevisionProposalPreviewRead(data) &&
+          data.proposal_id === path.split("/")[1]?.toLowerCase()
+      : isModelRevisionProposalDecisionRead(data) &&
+          data.proposal.id === path.split("/")[1]?.toLowerCase();
   }
   if (observationProposalDecisionPath.test(path)) {
     return path.endsWith("/preview")
@@ -322,7 +324,10 @@ function validRead(path: string, data: unknown): boolean {
   if (observationProposalItemPath.test(path))
     return isObservationProposalRead(data);
   if (path.startsWith("model-revision-proposals/"))
-    return isModelRevisionProposalRead(data);
+    return (
+      isModelRevisionProposalDetailRead(data) &&
+      data.id === path.split("/")[1]?.toLowerCase()
+    );
   if (/^companies\/[0-9a-fA-F-]{36}\/job-requests$/.test(path))
     return (
       isOperationalJobRequestList(data) &&
@@ -917,6 +922,21 @@ async function proxy(request: Request, path: string[]) {
     });
     const data: unknown = await response.json();
     if (!response.ok) {
+      if (modelProposalReview && response.status === 409) {
+        const detail =
+          data && typeof data === "object" && "detail" in data
+            ? data.detail
+            : null;
+        const guidance =
+          detail ===
+          "Calculated market or model inputs changed during acceptance; preview again"
+            ? "The saved calculation differed from the preview. Refresh the preview and compare the results before confirming again."
+            : detail ===
+                "A current reviewer preview is required before accepting this proposal"
+              ? "The preview has expired. Refresh it before confirming again."
+              : "The proposal conflicts with its current state. Check the saved decision and refresh the preview if it is still pending.";
+        return Response.json({ detail: guidance }, { status: 409, headers });
+      }
       const message =
         response.status === 403 && ledgerBodyPath.test(joined)
           ? "Ledger writes require separate server-side owner authorization."

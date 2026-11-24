@@ -10658,6 +10658,42 @@ export interface components {
             /** Preview Fingerprint */
             preview_fingerprint: string;
         };
+        /** ModelRevisionProposalDetailRead */
+        ModelRevisionProposalDetailRead: {
+            /** Accepted Revision Id */
+            accepted_revision_id: string | null;
+            /** Conflicting Proposal Ids */
+            conflicting_proposal_ids?: string[];
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /** Decision Note */
+            decision_note: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue */
+            issue: string | null;
+            /** Producer Id */
+            producer_id: string;
+            proposal: components["schemas"]["FinancialModelRevisionProposalV1-Output"];
+            /** Reviewed At */
+            reviewed_at: string | null;
+            reviewed_preview?: components["schemas"]["ModelRevisionProposalPreviewRead"] | null;
+            /** Reviewer Id */
+            reviewer_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "READY" | "CONFLICT" | "INVALID" | "ACCEPTED" | "REJECTED";
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
         /** ModelRevisionProposalDiff */
         ModelRevisionProposalDiff: {
             /** After */
@@ -18666,7 +18702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModelRevisionProposalRead"];
+                    "application/json": components["schemas"]["ModelRevisionProposalDetailRead"];
                 };
             };
             /** @description Validation Error */
