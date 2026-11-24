@@ -18,7 +18,7 @@ from synthetic_financial_fixtures import (
     residual_income_fixture,
 )
 
-from portfolio_api.domain.models import FinancialModelRevision
+from portfolio_api.domain.models import FinancialModelRevision, PriceObservation
 from portfolio_api.domain.routes import session_for
 from portfolio_api.domain.schemas import FinancialModelRevisionProposalV1
 from portfolio_api.main import create_app
@@ -492,6 +492,32 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
             for side in ("current_outputs", "proposed_outputs"):
                 assert priced.json()[side]["price_observation_id"] == str(quote.observation_id)
                 assert priced.json()[side]["expected_cash_flow_irr"] is not None
+
+            with Session(postgres_engine) as db, db.begin():
+                db.add(
+                    PriceObservation(
+                        listing_id=UUID(listing["id"]),
+                        market_date=datetime.now(UTC),
+                        provider_close=Decimal("144.9400000000"),
+                        split_adjusted_close=Decimal("144.9400000000"),
+                        currency=currency,
+                        provider="fixture-provider",
+                        provider_symbol=listing["ticker"],
+                        adjustment_basis="Synthetic review quote",
+                        data_quality="PASS",
+                        source_ref="test-proposal-review:replacement-price",
+                    )
+                )
+            stale = client.post(
+                f"/v1/model-revision-proposals/{candidate_id}/accept",
+                headers=_headers(REVIEWER_TOKEN),
+                json={
+                    "preview_fingerprint": priced.json()["preview_fingerprint"],
+                    "decision_note": "The market observation has changed.",
+                },
+            )
+            assert stale.status_code == 200, stale.text
+            assert stale.json()["status"] == "PREVIEW_CHANGED"
         preview = client.post(
             f"/v1/model-revision-proposals/{candidate_id}/preview",
             headers=_headers(REVIEWER_TOKEN),
@@ -522,6 +548,9 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
         )
         assert revision.status_code == 200, revision.text
         revision_data = revision.json()
+        if method_path == "dcf":
+            for outputs in (preview.json()["proposed_outputs"], revision_data["outputs"]):
+                assert outputs["current_price"] == "144.940000000000000000"
         assert revision_data["revision_number"] == 2
         assert revision_data["actor"] == "IMPORT"
         assert revision_data["proposal_author_id"] == AGENT_ID
