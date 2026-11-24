@@ -37,6 +37,7 @@ from portfolio_api import portfolio_ledger_reviews as ledger_reviews
 from portfolio_api.agent_work_sheet_sync import publish_agent_work_feed
 from portfolio_api.attention import attention_feed
 from portfolio_api.company_sec_coverage import company_sec_coverage
+from portfolio_api.database import create_database_engine
 from portfolio_api.database_write_target import DatabaseWriteTargetError
 from portfolio_api.dcf_sensitivity import model_dcf_sensitivity
 from portfolio_api.decision_evaluation import company_decision_evaluation
@@ -170,6 +171,10 @@ router = APIRouter(prefix="/v1", tags=["Portfolio research"])
 
 def session_for(request: Request) -> Iterator[Session]:
     engine = cast(Engine | None, request.app.state.database_engine)
+    yield from _transaction(engine)
+
+
+def _transaction(engine: Engine | None) -> Iterator[Session]:
     if engine is None:
         raise HTTPException(503, "Database is unavailable; configure the local environment")
     with Session(engine, expire_on_commit=False) as session:
@@ -257,6 +262,33 @@ def model_proposal_reviewer_identity(
     token: str = Header(default="", alias="X-Model-Proposal-Token"),
 ) -> str:
     return model_proposal_auth.require_reviewer(request, token)
+
+
+def model_review_session_for(
+    request: Request,
+    proposal_id: UUID,
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+) -> Iterator[Session]:
+    settings = cast(Settings, request.app.state.settings)
+    if (
+        settings.database_target_environment != "production"
+        or settings.database_production_writes_authorized
+    ):
+        yield from session_for(request)
+        return
+    if settings.app_env != "production" or proposal_id != settings.model_proposal_review_write_id:
+        raise HTTPException(403, "Production review is not enabled for this proposal.")
+    engine = create_database_engine(
+        settings, write_operation=f"model_proposal_review.{proposal_id}"
+    )
+    try:
+        yield from _transaction(engine)
+    finally:
+        if engine is not None:
+            engine.dispose()
+
+
+ModelReviewDb = Annotated[Session, Depends(model_review_session_for, scope="function")]
 
 
 def model_proposal_reader_identity(
@@ -2013,7 +2045,7 @@ def get_model_revision_proposal(
 def post_model_revision_proposal_preview(
     proposal_id: UUID,
     reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
-    db: Db,
+    db: ModelReviewDb,
 ) -> s.ModelRevisionProposalPreviewRead:
     del reviewer_id
     return proposal_operations.preview_model_revision_proposal(db, proposal_id)
@@ -2027,7 +2059,7 @@ def post_model_revision_proposal_accept(
     proposal_id: UUID,
     value: s.ModelRevisionProposalDecisionRequest,
     reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
-    db: Db,
+    db: ModelReviewDb,
 ) -> s.ModelRevisionProposalDecisionRead:
     return proposal_operations.accept_model_revision_proposal(
         db, proposal_id, value, reviewer_id=reviewer_id
@@ -2042,7 +2074,7 @@ def post_model_revision_proposal_reject(
     proposal_id: UUID,
     value: s.ModelRevisionProposalRejectRequest,
     reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
-    db: Db,
+    db: ModelReviewDb,
 ) -> s.ModelRevisionProposalDecisionRead:
     return proposal_operations.reject_model_revision_proposal(
         db, proposal_id, value.decision_note, reviewer_id=reviewer_id

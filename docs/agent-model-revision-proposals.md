@@ -145,3 +145,9 @@ replays. The producer checks revision 1 and the original 1.50% assumption, copie
 its native inputs and proposes 1.20% for base-case Year 1. The reviewer preview
 recalculates both UFCF cases with one market observation and the accepted return
 methodology. The review includes any Year 1 UFCF changes in model units.
+
+For an individually authorized production review, set `MODEL_PROPOSAL_REVIEW_WRITE_ID`
+on the API to the proposal UUID and deploy. Only the reviewer-authenticated preview,
+accept and reject routes for that ID use this authorization. The standard production
+target checks and decision fingerprint still apply. Remove the setting and redeploy
+to withdraw the authorization. Keep general production writes disabled.

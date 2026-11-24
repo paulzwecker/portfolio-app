@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
+from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -188,6 +189,33 @@ def test_verified_production_identity_is_approved_and_audit_is_redacted(
     assert "url" not in audit and "host" not in audit and "password" not in audit
     assert REMOTE_URL not in str(audit)
     assert "synthetic-password" not in str(audit)
+
+
+def test_proposal_review_write_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_resolved_dns(monkeypatch)
+    settings = remote_settings(production_authorized=False)
+    settings.model_proposal_review_write_id = uuid4()
+    operation = f"model_proposal_review.{settings.model_proposal_review_write_id}"
+
+    def check(name: str, target: NeonTargetMetadata) -> None:
+        validate_database_write_target(
+            settings=settings,
+            identity=remote_identity(),
+            neon_target=target,
+            url=make_url(REMOTE_URL),
+            operation=name,
+            operation_kind="application",
+        )
+
+    check(operation, neon_target())
+    for other in ("api_request", f"model_proposal_review.{uuid4()}"):
+        with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+            check(other, neon_target())
+    with pytest.raises(DatabaseWriteTargetError, match="endpoint_host_mismatch"):
+        check(operation, neon_target(host="incorrect.example"))
+    settings.model_proposal_review_write_id = None
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        check(operation, neon_target())
 
 
 def test_read_only_production_target_needs_no_production_write_authorization(
