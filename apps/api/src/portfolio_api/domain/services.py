@@ -242,7 +242,7 @@ def _calculation_preview(
         status=calculation.status,
         model_currency=model_currency,
         price_observation_id=calculation.price_observation_id,
-        current_price=calculation.current_price,
+        current_price=rounded(calculation.current_price),
         price_effective_at=calculation.price_effective_at,
         price_status=calculation.price_status,
         price_unavailable_reason=calculation.price_unavailable_reason,
