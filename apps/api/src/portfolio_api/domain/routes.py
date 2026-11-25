@@ -28,6 +28,7 @@ from portfolio_api import candidate_pipeline as candidate_research
 from portfolio_api import company_agent_context as agent_context_ops
 from portfolio_api import company_observation_proposals as observation_proposal_ops
 from portfolio_api import company_observations as company_observation_ops
+from portfolio_api import earnings_inbox as earnings
 from portfolio_api import model_proposal_auth, observation_proposal_auth, observation_sheet_sync
 from portfolio_api import model_revision_proposals as proposal_operations
 from portfolio_api import portfolio_ledger as ledger
@@ -336,6 +337,15 @@ def post_google_sheets_observation_sync_check(
 ) -> observation_sheet_sync.ObservationSheetCheck:
     settings = cast(Settings, request.app.state.settings)
     return observation_sheet_sync.check_observation_inbox(db, settings)
+
+
+@router.get("/portfolios/{portfolio_id}/earnings-inbox", response_model=earnings.Inbox)
+def get_earnings_inbox(
+    portfolio_id: UUID,
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+    db: LedgerDb,
+) -> earnings.Inbox:
+    return earnings.earnings_inbox(db, portfolio_id)
 
 
 @router.get(

@@ -447,7 +447,7 @@ def test_new_migration_parity_replay_and_downgrade_retain_accepted_ownership(
     from portfolio_api.database import Base
     from portfolio_api.migrations import alembic_config, expected_heads
 
-    assert expected_heads() == {"7d390bce2851"}
+    assert expected_heads() == {"63ad18f0e52b"}
     with storage_engine.begin() as connection:
         config = alembic_config()
         config.attributes["connection"] = connection

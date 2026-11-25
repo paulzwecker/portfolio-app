@@ -2192,11 +2192,22 @@ class ResearchTriggerReferenceRead(Contract):
     detected_at: datetime
 
 
+class EarningsAssessment(Contract):
+    listing_id: UUID
+    base_revision_id: UUID
+    period_end: date
+    period: Annotated[str, Field(min_length=1, max_length=100)]
+    driver: Literal["revenue_growth", "ebit_margin", "capex_to_revenue"]
+    conclusion: Literal["CHANGE", "RETAIN", "INSUFFICIENT_EVIDENCE"]
+    comparable_period: Annotated[str, Field(min_length=1, max_length=240)]
+    accepted_base_year_one: Decimal
+
+
 class ResearchRevisionPublishContract(Contract):
     """Portable v1 publication contract for the external company research workflow."""
 
     contract_type: Literal["ResearchRevisionContractV1"]
-    contract_version: Literal["1.0.0", "1.1.0"]
+    contract_version: Literal["1.0.0", "1.1.0", "1.2.0"]
     company_id: UUID
     security_id: UUID | None = None
     stream_key: Annotated[str, Field(min_length=1, max_length=240)]
@@ -2212,6 +2223,7 @@ class ResearchRevisionPublishContract(Contract):
     forecasts: list[ResearchForecastInput] = Field(default_factory=list, max_length=500)
     assessments: list[ResearchAssessmentInput] = Field(default_factory=list, max_length=20)
     evidence: list[ResearchEvidenceInput] = Field(default_factory=list, max_length=100)
+    earnings_review: EarningsAssessment | None = None
     trigger_references: list[ResearchTriggerReferenceInput] = Field(
         default_factory=list, max_length=20
     )
@@ -2228,6 +2240,13 @@ class ResearchRevisionPublishContract(Contract):
 
     @model_validator(mode="after")
     def unique_content_and_publication_state(self) -> Self:
+        if self.earnings_review:
+            if self.contract_version != "1.2.0" or not self.source_reference.startswith("https://"):
+                raise ValueError("Earnings reviews require version 1.2.0 and an HTTPS publication")
+            if not any(
+                str(e.source_url) == self.source_reference and e.excerpt for e in self.evidence
+            ):
+                raise ValueError("Cite a passage from the reviewed publication")
         forecast_keys = [
             (row.metric, row.fiscal_year, row.fiscal_period, row.scenario) for row in self.forecasts
         ]
@@ -2239,7 +2258,7 @@ class ResearchRevisionPublishContract(Contract):
         trigger_ids = [row.trigger_id for row in self.trigger_references]
         if len(trigger_ids) != len(set(trigger_ids)):
             raise ValueError("A research revision cannot repeat a trigger reference")
-        if self.trigger_references and self.contract_version != "1.1.0":
+        if self.trigger_references and self.contract_version == "1.0.0":
             raise ValueError("Trigger references require ResearchRevisionContractV1 version 1.1.0")
         if self.trigger_references:
             if not self.source_reference.startswith("https://"):
@@ -2311,6 +2330,7 @@ class ResearchRevisionRead(Contract):
     status: ResearchRevisionStatus
     rationale: str
     uncertainty: str | None
+    earnings_review: EarningsAssessment | None = None
     content_fingerprint: str
     forecasts: list[ResearchForecastRead]
     assessments: list[ResearchAssessmentRead]

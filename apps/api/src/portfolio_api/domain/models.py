@@ -1129,6 +1129,7 @@ class ResearchRevision(Base):
     status: Mapped[str] = mapped_column(String(16))
     rationale: Mapped[str] = mapped_column(Text)
     uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    earnings_review: Mapped[dict[str, object] | None] = mapped_column(JSON(none_as_null=True))
     content_fingerprint: Mapped[str] = mapped_column(String(64))
 
 

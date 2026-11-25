@@ -154,7 +154,7 @@ test("invalid migration graphs cannot pass planning or production", () => {
     assert.throws(() => migrationGraph(invalid));
 });
 
-test("the repository graph and owner marker bind the reviewed gain-history migration", () => {
+test("the repository graph and owner marker identify the pending earnings review migration", () => {
   const directory = new URL(
     "../../apps/api/migrations/versions/",
     import.meta.url,
@@ -172,9 +172,14 @@ test("the repository graph and owner marker bind the reviewed gain-history migra
       result.status,
     ),
   );
-  assert.equal(result.repository_head, "7d390bce2851");
+  assert.equal(result.repository_head, "63ad18f0e52b");
   if (marker.revision === "c82d7a410f36")
-    assert.deepEqual(result.pending_revisions, ["7d390bce2851"]);
+    assert.deepEqual(result.pending_revisions, [
+      "7d390bce2851",
+      "63ad18f0e52b",
+    ]);
+  if (marker.revision === "7d390bce2851")
+    assert.deepEqual(result.pending_revisions, ["63ad18f0e52b"]);
 });
 
 test("CLI review and deploy use standard exit semantics without cloud access", () => {

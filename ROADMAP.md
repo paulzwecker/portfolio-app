@@ -10,9 +10,10 @@ Booking evidence and its proposal are published. A single-proposal reviewer auth
 allows the owner to preview and decide in the app. UFCF previews serialize the quote
 at the stored output precision so trailing zeros do not invalidate acceptance.
 
-The model review milestone restores the recorded decision and comparison on reload.
-On November 24 the live API still served PR #64 during Booking's confirmation (HTTP 409).
-Verify the deployed API commit before requesting another owner review.
+The owner confirmed the Booking decision and the app showed the accepted changes.
+The portfolio earnings inbox under Research uses the latest complete holdings snapshot.
+It links issuer evidence to the accepted DCF assumption, reviewer decision, and
+same-price enterprise IRR impact. See the [earnings review workflow](docs/earnings-review-inbox.md).
 
 Portfolio gain history is published. The web proxy now validates the saved series
 against the same contract as the chart. The owner confirmed the signed-in chart.

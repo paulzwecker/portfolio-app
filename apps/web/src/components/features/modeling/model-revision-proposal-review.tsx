@@ -91,7 +91,11 @@ export function ModelRevisionProposalReview({
     `model-revision-proposals?company_id=${encodeURIComponent(companyId)}&limit=100`,
     isModelRevisionProposalList,
   );
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (new URLSearchParams(window.location.search).get("proposal") ?? ""),
+  );
   const [previewById, setPreviewById] = useState<
     Record<string, ModelRevisionProposalPreviewRead>
   >({});

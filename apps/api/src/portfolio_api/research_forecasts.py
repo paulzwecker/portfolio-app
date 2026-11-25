@@ -31,9 +31,10 @@ from portfolio_api.research_trigger_links import (
 
 
 def _contract_fingerprint(value: s.ResearchRevisionPublishContract) -> str:
-    canonical = json.dumps(
-        value.model_dump(mode="json"), sort_keys=True, ensure_ascii=False, separators=(",", ":")
-    )
+    payload = value.model_dump(mode="json")
+    if value.earnings_review is None:
+        payload.pop("earnings_review")  # Preserve existing v1 publication fingerprints.
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -72,6 +73,10 @@ def publish_research_revision(
             )
         return duplicate, "ALREADY_PUBLISHED"
 
+    if value.earnings_review:
+        from portfolio_api.earnings_inbox import validate_assessment
+
+        validate_assessment(session, value.company_id, value.earnings_review, value.security_id)
     previous = session.scalar(
         select(ResearchRevision)
         .where(
@@ -117,6 +122,9 @@ def publish_research_revision(
         rationale=value.rationale,
         uncertainty=value.uncertainty,
         content_fingerprint=fingerprint,
+        earnings_review=value.earnings_review.model_dump(mode="json")
+        if value.earnings_review
+        else None,
     )
     session.add(revision)
     session.flush()
@@ -228,6 +236,9 @@ def research_revision_read(session: Session, revision: ResearchRevision) -> s.Re
         rationale=revision.rationale,
         uncertainty=revision.uncertainty,
         content_fingerprint=revision.content_fingerprint,
+        earnings_review=s.EarningsAssessment.model_validate(revision.earnings_review)
+        if revision.earnings_review
+        else None,
         forecasts=[s.ResearchForecastRead.model_validate(item) for item in forecasts],
         assessments=[s.ResearchAssessmentRead.model_validate(item) for item in assessments],
         evidence=[

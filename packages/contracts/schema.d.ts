@@ -2017,6 +2017,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/earnings-inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Earnings Inbox */
+        get: operations["get_earnings_inbox_v1_portfolios__portfolio_id__earnings_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/gain-history": {
         parameters: {
             query?: never;
@@ -5090,6 +5107,74 @@ export interface components {
             valuation_venue: string | null;
             /** Value */
             value: string | null;
+        };
+        /** EarningsAssessment */
+        "EarningsAssessment-Input": {
+            /** Accepted Base Year One */
+            accepted_base_year_one: number | string;
+            /**
+             * Base Revision Id
+             * Format: uuid
+             */
+            base_revision_id: string;
+            /** Comparable Period */
+            comparable_period: string;
+            /**
+             * Conclusion
+             * @enum {string}
+             */
+            conclusion: "CHANGE" | "RETAIN" | "INSUFFICIENT_EVIDENCE";
+            /**
+             * Driver
+             * @enum {string}
+             */
+            driver: "revenue_growth" | "ebit_margin" | "capex_to_revenue";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Period */
+            period: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+        };
+        /** EarningsAssessment */
+        "EarningsAssessment-Output": {
+            /** Accepted Base Year One */
+            accepted_base_year_one: string;
+            /**
+             * Base Revision Id
+             * Format: uuid
+             */
+            base_revision_id: string;
+            /** Comparable Period */
+            comparable_period: string;
+            /**
+             * Conclusion
+             * @enum {string}
+             */
+            conclusion: "CHANGE" | "RETAIN" | "INSUFFICIENT_EVIDENCE";
+            /**
+             * Driver
+             * @enum {string}
+             */
+            driver: "revenue_growth" | "ebit_margin" | "capex_to_revenue";
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /** Period */
+            period: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
         };
         /** EstimateMomentumPeriodRead */
         EstimateMomentumPeriodRead: {
@@ -8306,6 +8391,24 @@ export interface components {
              * @enum {string}
              */
             source: "OBSERVED_SNAPSHOT" | "ACCEPTED_LEDGER";
+        };
+        /** Inbox */
+        Inbox: {
+            /** Effective At */
+            effective_at: string | null;
+            /** Listing Count */
+            listing_count: number;
+            /** Modeled Count */
+            modeled_count: number;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Rows */
+            rows: components["schemas"]["Review"][];
+            /** Snapshot Id */
+            snapshot_id: string | null;
         };
         /** InvestmentThesisClaimInput */
         InvestmentThesisClaimInput: {
@@ -13018,7 +13121,8 @@ export interface components {
              * Contract Version
              * @enum {string}
              */
-            contract_version: "1.0.0" | "1.1.0";
+            contract_version: "1.0.0" | "1.1.0" | "1.2.0";
+            earnings_review?: components["schemas"]["EarningsAssessment-Input"] | null;
             /** Evidence */
             evidence?: components["schemas"]["ResearchEvidenceInput"][];
             /** External Revision Id */
@@ -13064,6 +13168,7 @@ export interface components {
             content_fingerprint: string;
             /** Contract Version */
             contract_version: string;
+            earnings_review?: components["schemas"]["EarningsAssessment-Output"] | null;
             /** Evidence */
             evidence: components["schemas"]["ResearchEvidenceRead"][];
             /** External Revision Id */
@@ -13734,6 +13839,60 @@ export interface components {
             title: string;
             /** Version */
             version: number;
+        };
+        /** Review */
+        Review: {
+            /** Company */
+            company: string;
+            /** Company Id */
+            company_id: string | null;
+            /** Comparison */
+            comparison?: string | null;
+            /**
+             * Crosses Hurdle
+             * @default false
+             */
+            crosses_hurdle: boolean;
+            /** Decision Note */
+            decision_note?: string | null;
+            /** Impact Bps */
+            impact_bps?: string | null;
+            /** Irr After */
+            irr_after?: string | null;
+            /** Irr Before */
+            irr_before?: string | null;
+            /** Listing */
+            listing: string;
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /**
+             * Outcome
+             * @default Awaiting assessment
+             */
+            outcome: string;
+            /** Passage */
+            passage?: string | null;
+            /** Period */
+            period?: string | null;
+            /** Price Status */
+            price_status?: string | null;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Revision Number */
+            revision_number: number | null;
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
         };
         /** RiskAssessmentEvidenceRead */
         RiskAssessmentEvidenceRead: {
@@ -18989,6 +19148,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_earnings_inbox_v1_portfolios__portfolio_id__earnings_inbox_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inbox"];
                 };
             };
             /** @description Validation Error */
