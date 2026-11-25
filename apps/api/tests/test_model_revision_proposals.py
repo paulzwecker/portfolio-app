@@ -433,12 +433,12 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
             replay = client.post("/v1/research-revisions", json=packet)
             assert replay.status_code == 200
             assert replay.json()["revision"]["id"] == first.json()["revision"]["id"]
-            stale = {
+            stale_packet = {
                 **packet,
                 "external_revision_id": "stale",
                 "earnings_review": {**packet["earnings_review"], "base_revision_id": str(uuid4())},
             }
-            assert client.post("/v1/research-revisions", json=stale).status_code == 409
+            assert client.post("/v1/research-revisions", json=stale_packet).status_code == 409
         method_inputs = copy.deepcopy(source["input"])
         method_inputs.pop("base_revision_id", None)
         method_inputs.pop("source_revision_id", None)
