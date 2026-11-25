@@ -391,6 +391,54 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
         assert created.status_code == 201, created.text
         model = created.json()
         current = model["current_revision"]
+        if method_path == "dcf":
+            source_url = "https://issuer.example.test/q3"
+            base = next(s for s in current["scenarios"] if s["scenario"] == "BASE")
+            growth = next(y for y in base["years"] if y["forecast_year"] == 1)["revenue_growth"]
+            packet: dict[str, Any] = {
+                "contract_type": "ResearchRevisionContractV1",
+                "contract_version": "1.2.0",
+                "company_id": company["id"],
+                "security_id": security["id"],
+                "stream_key": "earnings/q3/growth",
+                "external_revision_id": "q3/r1",
+                "author_id": "research",
+                "source_id": "issuer",
+                "source_reference": source_url,
+                "observed_at": datetime.now(UTC).isoformat(),
+                "rationale": "Growth on track.",
+                "assessments": [
+                    {"assessment_type": "BUSINESS_OUTLOOK", "narrative": "Growth on track."}
+                ],
+                "evidence": [
+                    {
+                        "source_name": "Q3 results",
+                        "source_url": source_url,
+                        "excerpt": "Sales grew.",
+                    }
+                ],
+                "earnings_review": {
+                    "listing_id": listing["id"],
+                    "base_revision_id": current["id"],
+                    "period_end": "2025-09-30",
+                    "period": "Q3 2025",
+                    "driver": "revenue_growth",
+                    "conclusion": "RETAIN",
+                    "comparable_period": "Annual guidance",
+                    "accepted_base_year_one": growth,
+                },
+            }
+            first = client.post("/v1/research-revisions", json=packet)
+            assert first.status_code == 201, first.text
+            replay = client.post("/v1/research-revisions", json=packet)
+            assert replay.status_code == 200
+            assert replay.json()["revision"]["id"] == first.json()["revision"]["id"]
+            stale = {
+                **packet,
+                "external_revision_id": "stale",
+                "earnings_review": {**packet["earnings_review"], "base_revision_id": str(uuid4())},
+            }
+            assert client.post("/v1/research-revisions", json=stale).status_code == 409
         method_inputs = copy.deepcopy(source["input"])
         method_inputs.pop("base_revision_id", None)
         method_inputs.pop("source_revision_id", None)

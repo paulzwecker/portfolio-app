@@ -1,3 +1,4 @@
+import { isEarningsInbox } from "@/lib/earnings-inbox";
 import {
   isLedgerPublicationPlan,
   isLedgerPublication,
@@ -164,7 +165,7 @@ const ledgerBodyPath = new RegExp(
   `^portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?)$`,
 );
 const readable = new RegExp(
-  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|market-data/bootstrap-scope|market-data/historical-bootstrap|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|model-revision-proposals|model-revision-proposals/${id}|company-observation-proposals|company-observation-proposals/${id}|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(agent-context|candidate-pipeline|research|thesis|risk-assessments|market-data|sec-coverage|refresh-options|job-requests|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/sensitivity|/return-hurdle|/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(overview|gain-history|risk-assessments|ledger/anchor|ledger/listings|ledger/ownership|ledger/candidates(?:/${id}(?:/publication-preview)?)?))$`,
+  `^(attention|candidate-pipeline|research-queue|research-queue/history|research-triggers|research-agent-operations/events|market-data/status|market-data/bootstrap-scope|market-data/historical-bootstrap|recurring-operations/status|operations/job-requests|operations/job-requests/${id}|universe|universe/score-summary|universe/ranking-summary|universe/execution-pace-summary|universe/market-summary|universe/estimate-momentum-summary|universe/model-output-summary|score-definitions|ranking-definitions|ranking-runs|ranking-runs/${id}|execution-pace-runs|execution-pace-runs/${id}|reported-fundamental-definitions|model-revision-proposals|model-revision-proposals/${id}|company-observation-proposals|company-observation-proposals/${id}|google-sheets-sync/(status|runs|candidates|candidates/${id})|google-sheets-risk-sync/(status|runs|candidates|candidates/${id})|google-sheets-research-sync/(status|runs|candidates|candidates/${id})|portfolios|research-revisions|investment-thesis-revisions|companies/${id}|companies/${id}/(agent-context|candidate-pipeline|research|thesis|risk-assessments|market-data|sec-coverage|refresh-options|job-requests|reported-fundamentals|financial-statements|source-documents|consensus-estimates|estimate-momentum|execution-pace|expected-return-history|expected-return-attribution|temporal-alignment|forecast-accuracy|decision-evaluation|scores/(current|history)|rankings|model-outputs/(current|history)|model-migration-status|financial-models|canonical-financial-models)|financial-models/${id}(/sensitivity|/return-hurdle|/contract|/revisions(/${id})?)?|canonical-financial-models/${id}(/contract(/(preview|import))?|/revisions/${id})?|listings/${id}/market-data|fx-observations|portfolios/${id}/(earnings-inbox|overview|gain-history|risk-assessments|ledger/anchor|ledger/listings|ledger/ownership|ledger/candidates(?:/${id}(?:/publication-preview)?)?))$`,
 );
 const writable = new RegExp(
   `^(operations/job-requests|operations/job-requests/${id}/retry|research-queue/${digest}/complete|research-triggers/refresh|research-revisions|investment-thesis-revisions|model-revision-proposals/${id}/(preview|accept|reject)|company-observation-proposals/${id}/(preview|accept|reject)|companies/${id}/(candidate-pipeline-revisions|lifecycle-transitions|score-assessments|source-documents|financial-models|financial-models/preview|canonical-financial-models/(owner-cash-flow|residual-income)(/preview)?)|financial-models/${id}/(revisions|revisions/preview|contract/(preview|import))|canonical-financial-models/${id}/(owner-cash-flow|residual-income)/revisions(/preview)?|canonical-financial-models/${id}/contract/(preview|import)|google-sheets-agent-operations/(DATA_UNIVERSE_STEWARD|PORTFOLIO_THESIS_SENTINEL|MODEL_ALLOCATION_STEWARD)/work/publish|google-sheets-sync/(connection-test|check|thesis-watch/publish|portfolio-state/publish|candidates/${id}/(preview|accept|reject))|google-sheets-risk-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|google-sheets-research-sync/(connection-test|check|candidates/${id}/(preview|accept|reject))|ranking-runs|execution-pace-runs|fx-observations|portfolios/${id}/holding-snapshots|portfolios/${id}/ledger/(preview|candidates(?:/${id}/(?:review|publish))?))$`,
@@ -281,6 +282,11 @@ function validWrite(path: string, data: unknown): boolean {
 }
 
 function validRead(path: string, data: unknown): boolean {
+  if (path.endsWith("/earnings-inbox"))
+    return (
+      isEarningsInbox(data) &&
+      data.portfolio_id === path.split("/")[1].toLowerCase()
+    );
   if (ledgerListingPath.test(path)) return isLedgerListingSearch(data);
   if (ledgerPublicationPreviewPath.test(path))
     return (
@@ -876,6 +882,7 @@ async function proxy(request: Request, path: string[]) {
     }
     const apiAccessToken = process.env.API_ACCESS_TOKEN;
     const modelProposalReview =
+      joined.endsWith("/earnings-inbox") ||
       joined === "model-revision-proposals" ||
       /^model-revision-proposals\/[0-9a-fA-F-]{36}(?:\/(?:preview|accept|reject))?$/.test(
         joined,

@@ -4,6 +4,7 @@ import {
 } from "@/components/features/research/research-workspace";
 
 const views = new Set<ResearchView>([
+  "earnings",
   "pipeline",
   "queue",
   "reviews",

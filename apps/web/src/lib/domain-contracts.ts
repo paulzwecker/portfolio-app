@@ -5164,7 +5164,7 @@ function isResearchRevision(value: unknown): value is ResearchRevision {
     string(value.stream_key) &&
     Number.isInteger(value.revision_number) &&
     Number(value.revision_number) > 0 &&
-    ["1.0.0", "1.1.0"].includes(value.contract_version as string) &&
+    ["1.0.0", "1.1.0", "1.2.0"].includes(value.contract_version as string) &&
     string(value.external_revision_id) &&
     nullableUuid(value.supersedes_revision_id) &&
     string(value.author_id) &&

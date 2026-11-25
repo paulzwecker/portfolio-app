@@ -1,0 +1,39 @@
+{
+  "contract_type": "ResearchRevisionContractV1",
+  "contract_version": "1.2.0",
+  "supersedes_revision_id": null,
+  "author_id": "portfolio-research-agent",
+  "source_id": "booking-holdings-investor-relations",
+  "source_reference": "https://www.bookingholdings.com/wp-content/uploads/2026/11/Q3-26-BKNG-Earnings-Release-Final.pdf",
+  "observed_at": "2026-11-25T06:00:00Z",
+  "status": "PUBLISHED",
+  "rationale": "Keep the base Year 1 revenue growth assumption at 8.7% pending the full-year GAAP revenue bridge. Booking reported Q3 revenue down 1% and adjusted revenue up 9%. The FTC adjustment reduced reported revenue by $900 million. Full-year adjusted revenue guidance is high single digits, with Q4 growth of 0–2%. The guidance and reported quarter alone do not establish a replacement annual GAAP growth rate.",
+  "uncertainty": "Revisit after full-year reported results and reconciliation to adjusted revenue.",
+  "forecasts": [],
+  "assessments": [
+    {
+      "assessment_type": "BUSINESS_OUTLOOK",
+      "status": "AVAILABLE",
+      "narrative": "Keep the base Year 1 revenue growth assumption at 8.7% pending the full-year GAAP revenue bridge. Booking reported Q3 revenue down 1% and adjusted revenue up 9%. The FTC adjustment reduced reported revenue by $900 million. Full-year adjusted revenue guidance is high single digits, with Q4 growth of 0–2%. The guidance and reported quarter alone do not establish a replacement annual GAAP growth rate."
+    }
+  ],
+  "evidence": [
+    {
+      "source_name": "Booking Holdings Q3 2026 earnings release",
+      "source_url": "https://www.bookingholdings.com/wp-content/uploads/2026/11/Q3-26-BKNG-Earnings-Release-Final.pdf",
+      "excerpt": "Revenue $8.9B (1%)\nAdjusted Revenue $9.8B 9%",
+      "note": "Quarterly year-over-year table on page 1. See the full-year adjusted outlook on page 3."
+    }
+  ],
+  "trigger_references": [],
+  "earnings_review": {
+    "period_end": "2026-09-30",
+    "period": "Q3 2026",
+    "driver": "revenue_growth",
+    "conclusion": "INSUFFICIENT_EVIDENCE",
+    "comparable_period": "FY2026 adjusted guidance versus annual model growth on reported revenue",
+    "accepted_base_year_one": "0.087"
+  },
+  "listing": "NASDAQ:BKNG",
+  "revision_number": 2
+}

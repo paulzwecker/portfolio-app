@@ -11,6 +11,7 @@ import { CandidatePipelinePanel } from "@/components/features/research/candidate
 import { GoogleSheetsAgentWorkFeed as AgentWorkFeed } from "@/components/features/research/agent-work-feed";
 import { PortfolioStatePublication } from "@/components/features/research/portfolio-state-publication";
 import { ProposalReviewPanel } from "@/components/features/research/proposal-review-panel";
+import { EarningsInboxPanel } from "./earnings-inbox-panel";
 import { ResearchQueuePanel } from "@/components/features/research/research-queue-panel";
 import {
   isCandidatePipelineQueue,
@@ -22,9 +23,11 @@ import {
 } from "@/lib/domain-contracts";
 import { useResearch } from "@/hooks/use-research";
 
-export type ResearchView = "pipeline" | "queue" | "reviews" | "changes";
+export type ResearchView =
+  "earnings" | "pipeline" | "queue" | "reviews" | "changes";
 
 const views: [ResearchView, string][] = [
+  ["earnings", "Earnings inbox"],
   ["pipeline", "Candidate Pipeline"],
   ["queue", "Review Queue"],
   ["reviews", "Agent proposals"],
@@ -205,6 +208,7 @@ export function ResearchWorkspace({
         ))}
       </nav>
 
+      {initialView === "earnings" && <EarningsInboxPanel />}
       {initialView === "pipeline" && (
         <CandidatePipelinePanel
           candidates={candidates.data}

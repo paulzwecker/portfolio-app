@@ -7930,6 +7930,147 @@
         "title": "DecisionSignalEvaluationRead",
         "type": "object"
       },
+      "EarningsAssessment-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_base_year_one": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Accepted Base Year One"
+          },
+          "base_revision_id": {
+            "format": "uuid",
+            "title": "Base Revision Id",
+            "type": "string"
+          },
+          "comparable_period": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Comparable Period",
+            "type": "string"
+          },
+          "conclusion": {
+            "enum": [
+              "CHANGE",
+              "RETAIN",
+              "INSUFFICIENT_EVIDENCE"
+            ],
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "driver": {
+            "enum": [
+              "revenue_growth",
+              "ebit_margin",
+              "capex_to_revenue"
+            ],
+            "title": "Driver",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "period": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Period",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "base_revision_id",
+          "period_end",
+          "period",
+          "driver",
+          "conclusion",
+          "comparable_period",
+          "accepted_base_year_one"
+        ],
+        "title": "EarningsAssessment",
+        "type": "object"
+      },
+      "EarningsAssessment-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_base_year_one": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Accepted Base Year One",
+            "type": "string"
+          },
+          "base_revision_id": {
+            "format": "uuid",
+            "title": "Base Revision Id",
+            "type": "string"
+          },
+          "comparable_period": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Comparable Period",
+            "type": "string"
+          },
+          "conclusion": {
+            "enum": [
+              "CHANGE",
+              "RETAIN",
+              "INSUFFICIENT_EVIDENCE"
+            ],
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "driver": {
+            "enum": [
+              "revenue_growth",
+              "ebit_margin",
+              "capex_to_revenue"
+            ],
+            "title": "Driver",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "period": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Period",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "base_revision_id",
+          "period_end",
+          "period",
+          "driver",
+          "conclusion",
+          "comparable_period",
+          "accepted_base_year_one"
+        ],
+        "title": "EarningsAssessment",
+        "type": "object"
+      },
       "EstimateMomentumPeriodRead": {
         "additionalProperties": false,
         "properties": {
@@ -19133,6 +19274,65 @@
           "cutover_at"
         ],
         "title": "HoldingsAuthorityRead",
+        "type": "object"
+      },
+      "Inbox": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "listing_count": {
+            "title": "Listing Count",
+            "type": "integer"
+          },
+          "modeled_count": {
+            "title": "Modeled Count",
+            "type": "integer"
+          },
+          "portfolio_id": {
+            "format": "uuid",
+            "title": "Portfolio Id",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Review"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          }
+        },
+        "required": [
+          "portfolio_id",
+          "snapshot_id",
+          "effective_at",
+          "listing_count",
+          "modeled_count",
+          "rows"
+        ],
+        "title": "Inbox",
         "type": "object"
       },
       "InvestmentThesisClaimInput": {
@@ -33383,10 +33583,21 @@
           "contract_version": {
             "enum": [
               "1.0.0",
-              "1.1.0"
+              "1.1.0",
+              "1.2.0"
             ],
             "title": "Contract Version",
             "type": "string"
+          },
+          "earnings_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsAssessment-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "evidence": {
             "items": {
@@ -33529,6 +33740,16 @@
           "contract_version": {
             "title": "Contract Version",
             "type": "string"
+          },
+          "earnings_review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsAssessment-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "evidence": {
             "items": {
@@ -35586,6 +35807,220 @@
           "recorded_at"
         ],
         "title": "ReturnMethodologyRead",
+        "type": "object"
+      },
+      "Review": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison"
+          },
+          "crosses_hurdle": {
+            "default": false,
+            "title": "Crosses Hurdle",
+            "type": "boolean"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "impact_bps": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact Bps"
+          },
+          "irr_after": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Irr After"
+          },
+          "irr_before": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Irr Before"
+          },
+          "listing": {
+            "title": "Listing",
+            "type": "string"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "outcome": {
+            "default": "Awaiting assessment",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "passage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passage"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "price_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Status"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "revision_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "listing_id",
+          "company_id",
+          "listing",
+          "company",
+          "revision_number",
+          "title"
+        ],
+        "title": "Review",
         "type": "object"
       },
       "RiskAssessmentEvidenceRead": {
@@ -46859,6 +47294,59 @@
           }
         },
         "summary": "Post Portfolio",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/earnings-inbox": {
+      "get": {
+        "operationId": "get_earnings_inbox_v1_portfolios__portfolio_id__earnings_inbox_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Inbox"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Earnings Inbox",
         "tags": [
           "Portfolio research"
         ]
