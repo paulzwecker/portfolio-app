@@ -1088,6 +1088,45 @@ it("keeps model proposal reviewer credentials server-side and permits an empty p
   expect(await returnedBody.text()).not.toContain("reviewer-secret-for-test");
 });
 
+it.each([
+  [
+    "A current reviewer preview is required before accepting this proposal",
+    "The preview has expired.",
+  ],
+  [
+    "Calculated market or model inputs changed during acceptance; preview again",
+    "The saved calculation differed",
+  ],
+  [
+    "internal-only diagnostic",
+    "The proposal conflicts with its current state.",
+  ],
+])(
+  "returns actionable reviewer guidance for a conflict",
+  async (detail, guidance) => {
+    vi.stubEnv("MODEL_PROPOSAL_REVIEWER_TOKEN", "synthetic-reviewer");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ detail }, { status: 409 })),
+    );
+    const path = ["model-revision-proposals", id, "accept"];
+    const response = await POST(
+      new Request(`http://localhost/api/research/${path.join("/")}`, {
+        method: "POST",
+        body: JSON.stringify({
+          preview_fingerprint: "a".repeat(64),
+          decision_note: "Reviewed",
+        }),
+      }),
+      context(path),
+    );
+    expect(response.status).toBe(409);
+    const message = (await response.json()).detail;
+    expect(message).toContain(guidance);
+    expect(message).not.toContain("internal-only");
+  },
+);
+
 it("fails closed when model proposal reviewer credentials are not configured", async () => {
   vi.stubEnv("MODEL_PROPOSAL_REVIEWER_TOKEN", "");
   const mock = vi.fn();

@@ -2022,7 +2022,7 @@ def get_model_revision_proposals(
 
 @router.get(
     "/model-revision-proposals/{proposal_id}",
-    response_model=s.ModelRevisionProposalRead,
+    response_model=s.ModelRevisionProposalDetailRead,
 )
 def get_model_revision_proposal(
     proposal_id: UUID,
@@ -2030,9 +2030,11 @@ def get_model_revision_proposal(
         tuple[model_proposal_auth.ProposalRole, str], Depends(model_proposal_reader_identity)
     ],
     db: Db,
-) -> s.ModelRevisionProposalRead:
-    proposal = proposal_operations.get_model_revision_proposal(db, proposal_id)
+) -> s.ModelRevisionProposalDetailRead:
     role, identity = reader
+    proposal = proposal_operations.get_model_revision_proposal(
+        db, proposal_id, reviewer=role == "REVIEWER"
+    )
     if role == "AGENT" and proposal.producer_id != identity:
         raise HTTPException(404, "Model proposal not found.")
     return proposal

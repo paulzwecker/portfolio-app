@@ -55,7 +55,10 @@ another preparation layer. If an owner gate blocks it, advance an independent re
 capability. Shared foundations may emerge early from demonstrated Portfolio needs.
 BUILD is the default. Commit coherent increments with focused tests and a concise
 active handoff. Reserve comprehensive tests and one cohesive PR for INTEGRATE at
-a completed major milestone. Freeze passing PRs for owner review. Verify relevant
+a completed major milestone. Accumulate smaller changes on the milestone branch
+and run focused checks there. Open the PR to `main` when the milestone is ready
+for release. Opening a draft PR to `main` also starts full CI. Keep the required
+release checks on the PR and on the merged commit used by Render. Freeze passing PRs for owner review. Verify relevant
 behavior, integration and security, then perform an independent second-pass review. Validate desktop/mobile
 for UI changes. Fix findings before declaring completion.
 

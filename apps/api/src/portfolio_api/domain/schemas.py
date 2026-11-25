@@ -3936,6 +3936,10 @@ class ModelRevisionProposalPreviewRead(Contract):
     previewed_at: datetime
 
 
+class ModelRevisionProposalDetailRead(ModelRevisionProposalRead):
+    reviewed_preview: ModelRevisionProposalPreviewRead | None = None
+
+
 class ModelRevisionProposalDecisionRequest(Contract):
     preview_fingerprint: Annotated[
         str, Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")

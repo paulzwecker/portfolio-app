@@ -10,6 +10,10 @@ Booking evidence and its proposal are published. A single-proposal reviewer auth
 allows the owner to preview and decide in the app. UFCF previews serialize the quote
 at the stored output precision so trailing zeros do not invalidate acceptance.
 
+The model review milestone restores the recorded decision and comparison on reload.
+On November 24 the live API still served PR #64 during Booking's confirmation (HTTP 409).
+Verify the deployed API commit before requesting another owner review.
+
 Portfolio gain history is published. The web proxy now validates the saved series
 against the same contract as the chart. The owner confirmed the signed-in chart.
 A separate weekday close workflow now supports the exact positive positions in one

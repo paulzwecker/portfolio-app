@@ -122,8 +122,8 @@ test("model proposal review previews and requires an explicit confirmed decision
     output_changes: [{ field: "weighted_fv", before: "120", after: "126" }],
     current_inputs: { base: { base_revenue: "100" } },
     proposed_inputs: { base: { base_revenue: "105" } },
-    current_outputs: { weighted_fv: "120" },
-    proposed_outputs: { weighted_fv: "126" },
+    current_outputs: { weighted_fv: "120", expected_cash_flow_irr: null },
+    proposed_outputs: { weighted_fv: "126", expected_cash_flow_irr: "0.15" },
     proposed_projections: [],
     preview_fingerprint: "b".repeat(64),
     previewed_at: "2026-10-16T10:03:00Z",
@@ -190,10 +190,22 @@ test("model proposal review previews and requires an explicit confirmed decision
       return route.fulfill({
         json: [proposalRead(accepted ? "ACCEPTED" : "PENDING")],
       });
+    if (pathname === `model-revision-proposals/${proposalId}`)
+      return route.fulfill({
+        json: {
+          ...proposalRead(accepted ? "ACCEPTED" : "PENDING"),
+          reviewed_preview: accepted ? preview : null,
+        },
+      });
     if (pathname === `model-revision-proposals/${proposalId}/preview`)
       return route.fulfill({ json: preview });
     if (pathname === `model-revision-proposals/${proposalId}/accept`) {
       acceptRequests += 1;
+      if (acceptRequests === 1)
+        return route.fulfill({
+          status: 409,
+          json: { detail: "The preview has expired." },
+        });
       accepted = true;
       return route.fulfill({
         json: {
@@ -237,9 +249,25 @@ test("model proposal review previews and requires an explicit confirmed decision
 
   await page.getByRole("button", { name: "Confirm acceptance" }).click();
   await expect(
-    page.getByText("Accepted as a new immutable canonical model revision."),
+    page.getByRole("alert").filter({ hasText: "The preview has expired." }),
   ).toBeVisible();
-  expect(acceptRequests).toBe(1);
+  await expect(accept).toBeDisabled();
+  await page.getByRole("button", { name: "Preview changes" }).click();
+  await accept.click();
+  await page.getByRole("button", { name: "Confirm acceptance" }).click();
+  await expect(page.getByText(/Acceptance recorded/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(/Acceptance recorded/)).toBeVisible();
+  const impact = page.getByRole("region", {
+    name: "Valuation impact at the comparison price",
+  });
+  await expect(impact.getByText("$126.00", { exact: false })).toBeVisible();
+  await expect(impact.getByText("15%", { exact: false })).toBeVisible();
+  await expect(impact.getByText("Unavailable", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("Reviewer note: Reviewed synthetic proposal."),
+  ).toBeVisible();
+  expect(acceptRequests).toBe(2);
   await expect(page.getByText(acceptedRevisionId)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Accept revision" }),

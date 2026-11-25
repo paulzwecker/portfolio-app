@@ -539,6 +539,16 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
         assert accepted.status_code == 200, accepted.text
         assert accepted.json()["status"] == "ACCEPTED"
         accepted_revision_id = accepted.json()["accepted_revision_id"]
+        detail_url = f"/v1/model-revision-proposals/{candidate_id}"
+        receipt = client.get(detail_url, headers=_headers(REVIEWER_TOKEN)).json()
+        assert receipt["accepted_revision_id"] == accepted_revision_id
+        assert receipt["reviewed_at"] and receipt["decision_note"]
+        saved = receipt["reviewed_preview"]
+        assert saved["preview_fingerprint"] == fingerprint
+        assert saved["proposed_outputs"] == preview.json()["proposed_outputs"]
+        assert (
+            client.get(detail_url, headers=_headers(AGENT_TOKEN)).json()["reviewed_preview"] is None
+        )
         revision = (
             client.get(
                 f"/v1/canonical-financial-models/{model['id']}/revisions/{accepted_revision_id}"
@@ -571,6 +581,12 @@ def test_agent_proposal_review_accept_replay_conflict_and_provenance(
         )
         assert rejected.status_code == 200, rejected.text
         assert rejected.json()["status"] == "REJECTED"
+        rejected_detail = client.get(
+            f"/v1/model-revision-proposals/{second.json()['proposal']['id']}",
+            headers=_headers(REVIEWER_TOKEN),
+        ).json()
+        assert rejected_detail["accepted_revision_id"] is None
+        assert rejected_detail["reviewed_preview"]["status"] == "CONFLICT"
         assert rejected.json()["proposal"]["reviewer_id"] == REVIEWER_ID
 
         with Session(postgres_engine) as db:

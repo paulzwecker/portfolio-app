@@ -151,3 +151,13 @@ on the API to the proposal UUID and deploy. Only the reviewer-authenticated prev
 accept and reject routes for that ID use this authorization. The standard production
 target checks and decision fingerprint still apply. Remove the setting and redeploy
 to withdraw the authorization. Keep general production writes disabled.
+
+## Decision readback
+
+The reviewer detail endpoint returns the last stored preview for a final decision.
+The queue stays lightweight and producer reads omit the reviewed comparison.
+The company review panel reloads the decision, reviewer note, accepted revision
+identity and historical preview from the API. A rejected proposal can have no
+preview. UFCF comparisons use the native weighted fair value per share and
+expected enterprise cash-flow IRR at the reviewed price. After a failed decision
+the panel reloads the saved status and requires a fresh preview for acceptance.
