@@ -15,6 +15,9 @@ The portfolio earnings inbox under Research uses the latest complete holdings sn
 It links issuer evidence to the accepted DCF assumption, reviewer decision, and
 same-price enterprise IRR impact. See the [earnings review workflow](docs/earnings-review-inbox.md).
 
+The holdings earnings publisher previews an exact reviewed batch and verifies inbox visibility
+before commit. Production publication of the first five assessments is pending.
+
 Portfolio gain history is published. The web proxy now validates the saved series
 against the same contract as the chart. The owner confirmed the signed-in chart.
 A separate weekday close workflow now supports the exact positive positions in one

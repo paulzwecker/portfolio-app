@@ -35839,6 +35839,18 @@
             ],
             "title": "Comparison"
           },
+          "comparison_price_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Price Date"
+          },
           "crosses_hurdle": {
             "default": false,
             "title": "Crosses Hurdle",

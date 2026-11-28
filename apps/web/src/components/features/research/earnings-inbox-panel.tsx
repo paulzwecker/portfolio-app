@@ -89,6 +89,8 @@ export function EarningsInboxPanel() {
                       → {(Number(r.irr_after) * 100).toFixed(2)}% (
                       {Number(r.impact_bps).toFixed(2)} bp)
                       {r.crosses_hurdle && " · Crosses 15% hurdle"}
+                      {r.comparison_price_date &&
+                        ` · Price as of ${r.comparison_price_date}`}
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground">

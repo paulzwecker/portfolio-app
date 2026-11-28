@@ -30,6 +30,8 @@ function row(v: unknown): v is Row {
       "price_status",
     ].every((k) => optional(v[k])) &&
     ["irr_before", "irr_after", "impact_bps"].every((k) => numeric(v[k])) &&
+    (v.comparison_price_date === undefined ||
+      optional(v.comparison_price_date)) &&
     optional(v.company_id) &&
     typeof v.crosses_hurdle === "boolean" &&
     (v.revision_number === null || count(v.revision_number))
