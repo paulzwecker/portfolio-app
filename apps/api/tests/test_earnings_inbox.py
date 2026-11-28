@@ -131,3 +131,22 @@ def test_irr_crossing_requires_comparable_preview(
     add_impact(row, proposal)
     assert row.impact_bps == expected
     assert row.crosses_hurdle == (expected is not None)
+
+
+def test_batch_rejects_an_assessment_outside_current_modeled_holdings() -> None:
+    from portfolio_api.earnings_inbox import Inbox
+    from portfolio_api.holding_earnings_publication import plan
+
+    inbox = Inbox(
+        portfolio_id=uuid4(),
+        snapshot_id=uuid4(),
+        effective_at=None,
+        listing_count=0,
+        modeled_count=0,
+        rows=[],
+    )
+    with Session(create_engine("sqlite://")) as db:
+        with pytest.raises(ValueError, match="modeled listing"):
+            plan(db, inbox, [{"listing": "NASDAQ:EXCLUDED"}])
+        with pytest.raises(ValueError, match="No assessments"):
+            plan(db, inbox, [])

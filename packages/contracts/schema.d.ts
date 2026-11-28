@@ -13848,6 +13848,8 @@ export interface components {
             company_id: string | null;
             /** Comparison */
             comparison?: string | null;
+            /** Comparison Price Date */
+            comparison_price_date?: string | null;
             /**
              * Crosses Hurdle
              * @default false

@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from pathlib import Path
 
 from portfolio_api.domain import schemas as s
@@ -31,6 +32,26 @@ def prepare(
     return packet
 
 
+def bind_assessment(
+    model: s.FinancialModelRead, assessment: dict[str, object]
+) -> s.ResearchRevisionPublishContract:
+    data = deepcopy(assessment)
+    listing = model.valuation_listing
+    if str(data.pop("listing")).upper() != f"{listing.venue}:{listing.ticker}".upper() or (
+        data.pop("revision_number") != model.current_revision.revision_number
+    ):
+        raise ValueError("Assessment targets another listing or model revision.")
+    data.update(company_id=str(model.company_id), security_id=str(listing.security_id))
+    review = data["earnings_review"]
+    if not isinstance(review, dict):
+        raise ValueError("Missing earnings review")
+    review.update(listing_id=str(listing.id), base_revision_id=str(model.current_revision_id))
+    source = hashlib.sha256(str(data["source_reference"]).encode()).hexdigest()[:24]
+    data["stream_key"] = f"earnings/{review['listing_id']}/{source}/{review['driver']}"
+    data.setdefault("external_revision_id", str(review["base_revision_id"]))
+    return prepare(model, data)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("model_export", type=Path)
@@ -38,18 +59,7 @@ def main() -> None:
     args = parser.parse_args()
     model = s.FinancialModelRead.model_validate_json(args.model_export.read_bytes())
     data = json.loads(args.assessment.read_bytes())
-    listing = model.valuation_listing
-    if data.pop("listing").upper() != f"{listing.venue}:{listing.ticker}".upper() or (
-        data.pop("revision_number") != model.current_revision.revision_number
-    ):
-        raise ValueError("Assessment targets another listing or model revision.")
-    data.update(company_id=str(model.company_id), security_id=str(listing.security_id))
-    review = data["earnings_review"]
-    review.update(listing_id=str(listing.id), base_revision_id=str(model.current_revision_id))
-    source = hashlib.sha256(data["source_reference"].encode()).hexdigest()[:24]
-    data["stream_key"] = f"earnings/{review['listing_id']}/{source}/{review['driver']}"
-    data.setdefault("external_revision_id", str(review["base_revision_id"]))
-    print(prepare(model, data).model_dump_json(indent=2))
+    print(bind_assessment(model, data).model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

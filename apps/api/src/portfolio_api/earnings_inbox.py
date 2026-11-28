@@ -52,6 +52,7 @@ class Review(s.Contract):
     impact_bps: Decimal | None = None
     crosses_hurdle: bool = False
     price_status: str | None = None
+    comparison_price_date: date | None = None
 
 
 class Inbox(s.Contract):
@@ -113,6 +114,9 @@ def add_impact(row: Review, proposal: AgentModelRevisionProposal) -> None:
     before, after = old.get("expected_cash_flow_irr"), new.get("expected_cash_flow_irr")
     if before is None or after is None:
         return
+    effective_at = new.get("price_effective_at")
+    if isinstance(effective_at, str) and effective_at == old.get("price_effective_at"):
+        row.comparison_price_date = datetime.fromisoformat(effective_at).date()
     row.irr_before, row.irr_after = Decimal(str(before)), Decimal(str(after))
     row.impact_bps = (row.irr_after - row.irr_before) * 10000
     row.crosses_hurdle = (row.irr_before >= HURDLE) != (row.irr_after >= HURDLE)
