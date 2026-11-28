@@ -172,14 +172,19 @@ test("the repository graph and owner marker identify the pending earnings review
       result.status,
     ),
   );
-  assert.equal(result.repository_head, "63ad18f0e52b");
-  if (marker.revision === "c82d7a410f36")
-    assert.deepEqual(result.pending_revisions, [
-      "7d390bce2851",
-      "63ad18f0e52b",
-    ]);
-  if (marker.revision === "7d390bce2851")
-    assert.deepEqual(result.pending_revisions, ["63ad18f0e52b"]);
+  assert.equal(result.repository_head, "29c47aaa5d71");
+  const releaseHistory = [
+    "c82d7a410f36",
+    "7d390bce2851",
+    "63ad18f0e52b",
+    "29c47aaa5d71",
+  ];
+  const attested = releaseHistory.indexOf(marker.revision);
+  assert.ok(attested >= 0);
+  assert.deepEqual(
+    result.pending_revisions,
+    releaseHistory.slice(attested + 1),
+  );
 });
 
 test("CLI review and deploy use standard exit semantics without cloud access", () => {

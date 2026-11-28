@@ -11,6 +11,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from synthetic_financial_fixtures import dcf_fixture
 
+from portfolio_api import earnings_release_agent as release_agent
 from portfolio_api import earnings_release_review as review
 from portfolio_api import earnings_release_source as source
 from portfolio_api.domain import models as m
@@ -22,7 +23,9 @@ from portfolio_api.main import create_app
 from portfolio_api.settings import Settings
 
 
-def test_sec_discovery_checks_listing_and_distinguishes_amendments(monkeypatch):
+def test_sec_discovery_checks_listing_and_distinguishes_amendments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     issuer = source.ISSUERS["NASDAQ:BKNG"]
     recent = dict(
         form=["8-K", "8-K/A", "8-K"],
@@ -42,7 +45,7 @@ def test_sec_discovery_checks_listing_and_distinguishes_amendments(monkeypatch):
 
 @pytest.mark.integration
 @pytest.mark.parametrize("decision", ["CHANGE", "INSUFFICIENT_EVIDENCE", "RETAIN"])
-def test_new_filing_review_and_replay(postgres_engine: Engine, decision: str):
+def test_new_filing_review_and_replay(postgres_engine: Engine, decision: str) -> None:
     settings = Settings(database_url=None, sec_user_agent="Test research contact")
     with (
         patch("portfolio_api.main.create_database_engine", return_value=postgres_engine),
@@ -131,14 +134,14 @@ def test_new_filing_review_and_replay(postgres_engine: Engine, decision: str):
         patch.object(
             source, "release_text", return_value=(filing.folder + "results.htm", result.passage)
         ),
-        patch.object(review.agent, "assess", return_value=result) as agent,
+        patch.object(release_agent, "assess", return_value=result) as agent,
     ):
         with Session(postgres_engine) as db, db.begin():
             review.check_release(db, settings, portfolio, listing)
         with Session(postgres_engine) as db, db.begin():
             review.check_release(db, settings, portfolio, listing)
             (draft,) = review.pending(db, portfolio)
-            assert db.get(m.FinancialModel, mid).current_revision_id == revision
+            assert db.get_one(m.FinancialModel, mid).current_revision_id == revision
             assert not db.scalars(select(m.AgentModelRevisionProposal)).all()
             preview = review_batch(
                 db, portfolio, BatchInput(snapshot_id=snapshot, assessments=[draft.assessment])
@@ -152,15 +155,13 @@ def test_new_filing_review_and_replay(postgres_engine: Engine, decision: str):
             assert len(db.scalars(select(m.AgentModelRevisionProposal)).all()) == int(
                 decision == "CHANGE"
             )
-            assert db.get(m.FinancialModel, mid).current_revision_id == revision
+            assert db.get_one(m.FinancialModel, mid).current_revision_id == revision
         agent.assert_called_once()
 
 
 @pytest.mark.parametrize("bad_quote, future_period", [(True, False), (False, True), (False, False)])
-def test_agent_validates_quoted_evidence_and_period(bad_quote, future_period):
+def test_agent_validates_quoted_evidence_and_period(bad_quote: bool, future_period: bool) -> None:
     from io import BytesIO
-
-    import portfolio_api.earnings_release_agent as agent
 
     passage = "Cash spending on equipment was unchanged from last year."
     content = dict(
@@ -174,7 +175,7 @@ def test_agent_validates_quoted_evidence_and_period(bad_quote, future_period):
         uncertainty="Annual timing may differ.",
     )
     envelope = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(content)}}]}
-    with patch.object(agent, "build_opener") as opener:
+    with patch.object(release_agent, "build_opener") as opener:
         opener.return_value.open.return_value = BytesIO(json.dumps(envelope).encode())
         settings = Settings(earnings_agent_model="fixture", earnings_agent_api_key="fixture")
         args = (
@@ -187,9 +188,9 @@ def test_agent_validates_quoted_evidence_and_period(bad_quote, future_period):
         )
         if bad_quote or future_period:
             with pytest.raises(ValueError, match="verified"):
-                agent.assess(*args)
+                release_agent.assess(*args)
         else:
-            assert agent.assess(*args).conclusion == "RETAIN"
+            assert release_agent.assess(*args).conclusion == "RETAIN"
     content.update(
         conclusion="CHANGE",
         replacement="0.49",
