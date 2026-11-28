@@ -218,6 +218,30 @@ def test_proposal_review_write_scope(monkeypatch: pytest.MonkeyPatch) -> None:
         check(operation, neon_target())
 
 
+def test_inbox_write_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_resolved_dns(monkeypatch)
+    settings = remote_settings(production_authorized=False)
+    settings.model_proposal_reviewer_id = "owner"
+    settings.model_proposal_reviewer_token = SecretStr("private-reviewer-token")
+
+    def check(operation: str) -> None:
+        validate_database_write_target(
+            settings=settings,
+            identity=remote_identity(),
+            neon_target=neon_target(),
+            url=make_url(REMOTE_URL),
+            operation=operation,
+            operation_kind="application",
+        )
+
+    check("reviewer_earnings_publication")
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        check("api_request")
+    settings.model_proposal_reviewer_token = None
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        check("reviewer_earnings_publication")
+
+
 def test_read_only_production_target_needs_no_production_write_authorization(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

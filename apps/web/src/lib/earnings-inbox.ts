@@ -49,3 +49,32 @@ export function isEarningsInbox(v: unknown): v is EarningsInbox {
     v.rows.every(row)
   );
 }
+
+type BatchResult = components["schemas"]["BatchResult"];
+export function isEarningsBatch(v: unknown): v is BatchResult {
+  return (
+    record(v) &&
+    typeof v.digest === "string" &&
+    /^[a-f0-9]{64}$/.test(v.digest) &&
+    Array.isArray(v.revision_ids) &&
+    v.revision_ids.every((id: unknown) => typeof id === "string") &&
+    Array.isArray(v.items) &&
+    v.items.length > 0 &&
+    v.items.every(
+      (item: unknown) =>
+        record(item) &&
+        typeof item.revision === "number" &&
+        typeof item.source === "string" &&
+        item.source.startsWith("https://") &&
+        [
+          "listing",
+          "conclusion",
+          "driver",
+          "accepted_value",
+          "comparable_period",
+          "rationale",
+          "passage",
+        ].every((k) => typeof item[k] === "string"),
+    )
+  );
+}

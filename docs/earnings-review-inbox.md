@@ -43,12 +43,8 @@ and period. Fetch the referenced issuer publication and compare its accounting
 basis and period with the accepted assumption before preparing the packet.
 An empty result means no eligible sources are recorded.
 
-For a console-free run, dispatch **Reviewed holding earnings** on main using the
-private `production-earnings` GitHub environment. Configure the standard Neon
-target variables, `PORTFOLIO_ID`, and environment secrets `DATABASE_URL`,
-`NEON_API_KEY` and `EARNINGS_ASSESSMENTS_JSON` (a JSON array of the reviewed
-assessment files in order). The workflow accepts only a snapshot UUID and an
-optional preview digest as visible dispatch inputs. Run preview first, apply the
-reviewed digest, then replay and verify the same revision IDs. Keep the private
-packet out of Git, logs and dispatch inputs. Use the existing holdings-close
-workflow separately for prices.
+In the signed-in app, open **Research → Earnings inbox → Publish earnings assessments**.
+Choose the private JSON file (one assessment or an array), preview its assumptions and issuer
+passages, then publish. The server checks the snapshot, revision and preview digest again and
+commits the batch together. Replaying the same packet returns its existing research revision.
+The inbox uses the existing reviewer credentials. No GitHub environment is involved.

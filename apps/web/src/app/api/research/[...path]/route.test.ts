@@ -1818,3 +1818,23 @@ it("cannot submit observation proposals via the reviewer-only web proxy", async 
   expect(submit.status).toBe(404);
   expect(mock).not.toHaveBeenCalled();
 });
+
+it.each(["preview", "publish"])(
+  "requires reviewer credentials for earnings %s",
+  async (action) => {
+    vi.stubEnv("MODEL_PROPOSAL_REVIEWER_TOKEN", "");
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const path = ["portfolios", id, "earnings-inbox", action];
+    const res = await POST(
+      new Request("http://localhost/api/research/" + path.join("/"), {
+        method: "POST",
+        headers: { Origin: "http://localhost" },
+        body: JSON.stringify({ snapshot_id: id, assessments: [{}] }),
+      }),
+      context(path),
+    );
+    expect(res.status).toBe(503);
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);
