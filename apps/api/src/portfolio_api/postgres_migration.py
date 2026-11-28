@@ -143,6 +143,7 @@ TABLE_GROUPS: dict[str, tuple[str, ...]] = {
         "source_document_batches",
         "source_documents",
         "research_revisions",
+        "earnings_release_drafts",
         "research_forecasts",
         "research_assessments",
         "research_evidence",
