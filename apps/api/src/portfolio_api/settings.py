@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     data_universe_read_token: SecretStr | None = None
     data_universe_read_company_ids: str | None = None
     cloud_ingestion_enabled: bool = False
+    earnings_agent_api_key: SecretStr | None = None
+    earnings_release_checks_enabled: bool = False
+    earnings_agent_model: str | None = None
     sec_user_agent: str | None = None
     fmp_api_key: SecretStr | None = None
     google_sheets_spreadsheet_id: str | None = None

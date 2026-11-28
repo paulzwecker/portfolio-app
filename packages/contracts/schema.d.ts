@@ -2034,6 +2034,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/check/{listing_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Issuer Release */
+        post: operations["check_issuer_release_v1_portfolios__portfolio_id__earnings_inbox_check__listing_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Release Drafts */
+        get: operations["get_release_drafts_v1_portfolios__portfolio_id__earnings_inbox_drafts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/drafts/{draft_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Release Draft */
+        post: operations["publish_release_draft_v1_portfolios__portfolio_id__earnings_inbox_drafts__draft_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/earnings-inbox/preview": {
         parameters: {
             query?: never;
@@ -3500,6 +3551,13 @@ export interface components {
              * @enum {string}
              */
             valuation_status: "VALUED" | "FX_UNAVAILABLE" | "BALANCE_UNAVAILABLE";
+        };
+        /** CheckResult */
+        CheckResult: {
+            /** Listing */
+            listing: string;
+            /** Message */
+            message: string;
         };
         /** CompanyAgentContextV1 */
         CompanyAgentContextV1: {
@@ -5162,6 +5220,38 @@ export interface components {
             valuation_venue: string | null;
             /** Value */
             value: string | null;
+        };
+        /** Draft */
+        Draft: {
+            /** Accession */
+            accession: string;
+            /** Assessment */
+            assessment: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Listing */
+            listing: string;
+            /** Replacement */
+            replacement: string | null;
+            /** Revision */
+            revision: number;
+            /** Source Url */
+            source_url: string;
+        };
+        /** DraftDecision */
+        DraftDecision: {
+            /** Digest */
+            digest: string;
+            /**
+             * Snapshot Id
+             * Format: uuid
+             */
+            snapshot_id: string;
         };
         /** EarningsAssessment */
         "EarningsAssessment-Input": {
@@ -13977,6 +14067,11 @@ export interface components {
             published_at?: string | null;
             /** Rationale */
             rationale?: string | null;
+            /**
+             * Release Check Available
+             * @default false
+             */
+            release_check_available: boolean;
             /** Reviewed At */
             reviewed_at?: string | null;
             /** Revision Number */
@@ -19273,6 +19368,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Inbox"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_issuer_release_v1_portfolios__portfolio_id__earnings_inbox_check__listing_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                portfolio_id: string;
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_release_drafts_v1_portfolios__portfolio_id__earnings_inbox_drafts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_release_draft_v1_portfolios__portfolio_id__earnings_inbox_drafts__draft_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                portfolio_id: string;
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
             /** @description Validation Error */

@@ -78,3 +78,23 @@ export function isEarningsBatch(v: unknown): v is BatchResult {
     )
   );
 }
+
+export function isReleaseDrafts(
+  v: unknown,
+): v is components["schemas"]["Draft"][] {
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (r) =>
+        record(r) &&
+        typeof r.id === "string" &&
+        typeof r.listing === "string" &&
+        typeof r.accession === "string" &&
+        typeof r.revision === "number" &&
+        record(r.assessment) &&
+        typeof r.source_url === "string" &&
+        r.source_url.startsWith("https://www.sec.gov/Archives/") &&
+        numeric(r.replacement),
+    )
+  );
+}

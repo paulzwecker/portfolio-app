@@ -52,3 +52,9 @@ it("shows cited decisions, same-price hurdle crossings, and issuerless coverage"
   expect(html).toContain("TEST:ETF");
   expect(html).not.toContain("/company/null");
 });
+
+it("offers the earnings release check from the holdings inbox", () => {
+  const html = renderToStaticMarkup(<EarningsInboxPanel />);
+  expect(html).toContain("Check for new releases");
+  expect(html).toContain("Issuer release drafts");
+});

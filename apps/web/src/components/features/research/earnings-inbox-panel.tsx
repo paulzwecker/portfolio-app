@@ -1,4 +1,5 @@
 "use client";
+import { ReleaseCheckPanel } from "./release-check-panel";
 import { EarningsPublicationForm } from "./earnings-publication-form";
 import Link from "next/link";
 import { useState } from "react";
@@ -51,6 +52,13 @@ export function EarningsInboxPanel() {
             {data.listing_count} held listings · {data.modeled_count} with an
             accepted DCF · Snapshot {data.effective_at?.slice(0, 10)}
           </p>
+          <ReleaseCheckPanel
+            key={id + data.snapshot_id + "-releases"}
+            portfolio={id}
+            snapshot={data.snapshot_id}
+            rows={data.rows}
+            refresh={inbox.retry}
+          />
           <EarningsPublicationForm
             key={id + data.snapshot_id}
             portfolio={id}
