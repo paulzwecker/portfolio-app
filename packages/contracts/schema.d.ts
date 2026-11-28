@@ -2034,6 +2034,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Earnings Batch */
+        post: operations["preview_earnings_batch_v1_portfolios__portfolio_id__earnings_inbox_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Earnings Batch */
+        post: operations["publish_earnings_batch_v1_portfolios__portfolio_id__earnings_inbox_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolios/{portfolio_id}/gain-history": {
         parameters: {
             query?: never;
@@ -3163,6 +3197,27 @@ export interface components {
             lookback_days: number;
             /** Total */
             total: number;
+        };
+        /** BatchInput */
+        BatchInput: {
+            /** Assessments */
+            assessments: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Snapshot Id
+             * Format: uuid
+             */
+            snapshot_id: string;
+        };
+        /** BatchResult */
+        BatchResult: {
+            /** Digest */
+            digest: string;
+            /** Items */
+            items: components["schemas"]["PreviewItem"][];
+            /** Revision Ids */
+            revision_ids: string[];
         };
         /**
          * CandidateGateEvidenceType
@@ -11826,6 +11881,27 @@ export interface components {
             /** Quantity */
             quantity: string | null;
         };
+        /** PreviewItem */
+        PreviewItem: {
+            /** Accepted Value */
+            accepted_value: string;
+            /** Comparable Period */
+            comparable_period: string;
+            /** Conclusion */
+            conclusion: string;
+            /** Driver */
+            driver: string;
+            /** Listing */
+            listing: string;
+            /** Passage */
+            passage: string;
+            /** Rationale */
+            rationale: string;
+            /** Revision */
+            revision: number;
+            /** Source */
+            source: string;
+        };
         /**
          * PriceHistoryAnalyticsRead
          * @description Price metrics and descriptive coverage over canonical daily observations.
@@ -12025,6 +12101,20 @@ export interface components {
             vs_dma_200: string | null;
             /** Vs Dma 50 */
             vs_dma_50: string | null;
+        };
+        /** PublishInput */
+        PublishInput: {
+            /** Assessments */
+            assessments: {
+                [key: string]: unknown;
+            }[];
+            /** Digest */
+            digest: string;
+            /**
+             * Snapshot Id
+             * Format: uuid
+             */
+            snapshot_id: string;
         };
         /** RankingCurrentRead */
         RankingCurrentRead: {
@@ -19183,6 +19273,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Inbox"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_earnings_batch_v1_portfolios__portfolio_id__earnings_inbox_preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_earnings_batch_v1_portfolios__portfolio_id__earnings_inbox_publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Model-Proposal-Token"?: string;
+            };
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResult"];
                 };
             };
             /** @description Validation Error */

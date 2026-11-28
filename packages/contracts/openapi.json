@@ -1116,6 +1116,63 @@
         "title": "AttentionFeedRead",
         "type": "object"
       },
+      "BatchInput": {
+        "additionalProperties": false,
+        "properties": {
+          "assessments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Assessments",
+            "type": "array"
+          },
+          "snapshot_id": {
+            "format": "uuid",
+            "title": "Snapshot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "assessments"
+        ],
+        "title": "BatchInput",
+        "type": "object"
+      },
+      "BatchResult": {
+        "additionalProperties": false,
+        "properties": {
+          "digest": {
+            "title": "Digest",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "revision_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Revision Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "digest",
+          "items",
+          "revision_ids"
+        ],
+        "title": "BatchResult",
+        "type": "object"
+      },
       "CandidateGateEvidenceType": {
         "enum": [
           "RESEARCH_REVISION",
@@ -29457,6 +29514,60 @@
         "title": "PositionInput",
         "type": "object"
       },
+      "PreviewItem": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_value": {
+            "title": "Accepted Value",
+            "type": "string"
+          },
+          "comparable_period": {
+            "title": "Comparable Period",
+            "type": "string"
+          },
+          "conclusion": {
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "driver": {
+            "title": "Driver",
+            "type": "string"
+          },
+          "listing": {
+            "title": "Listing",
+            "type": "string"
+          },
+          "passage": {
+            "title": "Passage",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing",
+          "revision",
+          "conclusion",
+          "driver",
+          "accepted_value",
+          "comparable_period",
+          "rationale",
+          "source",
+          "passage"
+        ],
+        "title": "PreviewItem",
+        "type": "object"
+      },
       "PriceHistoryAnalyticsRead": {
         "additionalProperties": false,
         "description": "Price metrics and descriptive coverage over canonical daily observations.",
@@ -30199,6 +30310,38 @@
           "source_ref"
         ],
         "title": "PriceRegimeRead",
+        "type": "object"
+      },
+      "PublishInput": {
+        "additionalProperties": false,
+        "properties": {
+          "assessments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Assessments",
+            "type": "array"
+          },
+          "digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "format": "uuid",
+            "title": "Snapshot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "assessments",
+          "digest"
+        ],
+        "title": "PublishInput",
         "type": "object"
       },
       "RankingCurrentRead": {
@@ -47359,6 +47502,132 @@
           }
         },
         "summary": "Get Earnings Inbox",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/preview": {
+      "post": {
+        "operationId": "preview_earnings_batch_v1_portfolios__portfolio_id__earnings_inbox_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Earnings Batch",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/publish": {
+      "post": {
+        "operationId": "publish_earnings_batch_v1_portfolios__portfolio_id__earnings_inbox_publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Earnings Batch",
         "tags": [
           "Portfolio research"
         ]

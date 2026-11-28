@@ -678,7 +678,14 @@ def validate_database_write_target(
             and settings.model_proposal_review_write_id is not None
             and operation == f"model_proposal_review.{settings.model_proposal_review_write_id}"
         )
-        if not (settings.database_production_writes_authorized or scoped_review):
+        scoped_earnings = (
+            settings.app_env == "production"
+            and operation_kind == "application"
+            and operation == "reviewer_earnings_publication"
+            and settings.model_proposal_reviewer_token is not None
+            and bool(settings.model_proposal_reviewer_id)
+        )
+        if not (settings.database_production_writes_authorized or scoped_review or scoped_earnings):
             raise DatabaseWriteTargetError(
                 "production_write_not_authorized",
                 "Set DATABASE_PRODUCTION_WRITES_AUTHORIZED=true after operator authorization.",

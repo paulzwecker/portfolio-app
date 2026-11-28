@@ -1,4 +1,5 @@
 "use client";
+import { EarningsPublicationForm } from "./earnings-publication-form";
 import Link from "next/link";
 import { useState } from "react";
 import { PendingOrError } from "@/components/app/empty-state";
@@ -50,6 +51,12 @@ export function EarningsInboxPanel() {
             {data.listing_count} held listings · {data.modeled_count} with an
             accepted DCF · Snapshot {data.effective_at?.slice(0, 10)}
           </p>
+          <EarningsPublicationForm
+            key={id + data.snapshot_id}
+            portfolio={id}
+            snapshot={data.snapshot_id}
+            refresh={inbox.retry}
+          />
           {!data.listing_count && <p>No positive holdings in this snapshot.</p>}
           {data.rows
             .filter((r) => r.url)
