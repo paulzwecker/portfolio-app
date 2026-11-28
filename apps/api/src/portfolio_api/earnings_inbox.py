@@ -25,6 +25,7 @@ from portfolio_api.domain.models import (
     SourceDocument,
 )
 from portfolio_api.domain.services import DomainError
+from portfolio_api.earnings_release_source import ISSUERS
 
 DOCUMENT_TYPES = ("10-K", "10-Q", "20-F", "ANNUAL_REPORT", "EARNINGS_RELEASE")
 HURDLE = Decimal("0.15")
@@ -35,6 +36,7 @@ class Review(s.Contract):
     company_id: UUID | None
     listing: str
     company: str
+    release_check_available: bool = False
     revision_number: int | None
     title: str
     url: str | None = None
@@ -204,6 +206,8 @@ def earnings_inbox(session: Session, portfolio_id: UUID) -> Inbox:
             listing=f"{listing.venue}:{listing.ticker}",
             company=company.name if company else listing.ticker,
             revision_number=revision.revision_number if revision else None,
+            release_check_available=revision is not None
+            and f"{listing.venue}:{listing.ticker}" in ISSUERS,
             title="No earnings publication recorded",
         )
         if company is None:

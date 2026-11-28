@@ -86,6 +86,36 @@ def _write_permission_scope(
     operation: str, operation_kind: WriteOperationKind
 ) -> dict[str, frozenset[str]] | None:
     """Exact operation ID gates least-privilege checks; other writers remain unchanged."""
+    if operation == "scheduled_earnings_drafts":
+        if operation_kind != "ingestion":
+            raise DatabaseWriteTargetError("write_permission_scope_mismatch", "Expected ingestion.")
+        return {
+            **{
+                name: frozenset({"SELECT"})
+                for name in (
+                    "portfolios",
+                    "holding_snapshots",
+                    "holding_positions",
+                    "companies",
+                    "securities",
+                    "listings",
+                    "company_provider_identifiers",
+                    "financial_models",
+                    "financial_model_revisions",
+                    "source_documents",
+                    "research_revisions",
+                    "research_evidence",
+                    "agent_model_revision_proposals",
+                    "dcf_model_assumptions",
+                    "dcf_scenario_assumptions",
+                    "dcf_year_assumptions",
+                    "dcf_tail_growth_assumptions",
+                    "dcf_projections",
+                    "financial_model_outputs",
+                )
+            },
+            "earnings_release_drafts": frozenset({"SELECT", "INSERT"}),
+        }
     if operation == CLOUD_MARKET_WRITE_OPERATION:
         if operation_kind != "ingestion":
             raise DatabaseWriteTargetError(
@@ -685,7 +715,19 @@ def validate_database_write_target(
             and settings.model_proposal_reviewer_token is not None
             and bool(settings.model_proposal_reviewer_id)
         )
-        if not (settings.database_production_writes_authorized or scoped_review or scoped_earnings):
+        scheduled_drafts = (
+            settings.app_env == "production"
+            and operation == "scheduled_earnings_drafts"
+            and operation_kind == "ingestion"
+            and settings.earnings_release_checks_enabled
+            and settings.recurring_operations_enabled
+        )
+        if not (
+            settings.database_production_writes_authorized
+            or scoped_review
+            or scoped_earnings
+            or scheduled_drafts
+        ):
             raise DatabaseWriteTargetError(
                 "production_write_not_authorized",
                 "Set DATABASE_PRODUCTION_WRITES_AUTHORIZED=true after operator authorization.",

@@ -1,6 +1,7 @@
 """Domain-oriented REST operations; session dependency commits each operation atomically."""
 
 from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, date, datetime, time
 from typing import Annotated, Literal, cast
 from uuid import UUID, uuid4
@@ -29,6 +30,7 @@ from portfolio_api import company_agent_context as agent_context_ops
 from portfolio_api import company_observation_proposals as observation_proposal_ops
 from portfolio_api import company_observations as company_observation_ops
 from portfolio_api import earnings_inbox as earnings
+from portfolio_api import earnings_release_review as release_review
 from portfolio_api import holding_earnings_publication as earnings_publication
 from portfolio_api import model_proposal_auth, observation_proposal_auth, observation_sheet_sync
 from portfolio_api import model_revision_proposals as proposal_operations
@@ -48,6 +50,7 @@ from portfolio_api.domain import schemas as s
 from portfolio_api.domain import services as operations
 from portfolio_api.domain.models import (
     Company,
+    EarningsReleaseDraft,
     ForecastAccuracyMetric,
     ForecastAccuracySourceType,
     FundamentalPeriodType,
@@ -278,10 +281,28 @@ def model_review_session_for(
     ):
         yield from session_for(request)
         return
-    if settings.app_env != "production" or proposal_id != settings.model_proposal_review_write_id:
+    if settings.app_env != "production":
         raise HTTPException(403, "Production review is not enabled for this proposal.")
+    release_proposal = proposal_id != settings.model_proposal_review_write_id
+    if release_proposal:
+        if request.app.state.database_engine is None:
+            raise HTTPException(403, "Production review is not enabled for this proposal.")
+        with contextmanager(ledger_session_for)(request) as reader:
+            linked = reader.scalar(
+                select(EarningsReleaseDraft.id).where(
+                    EarningsReleaseDraft.proposal_id == proposal_id,
+                    EarningsReleaseDraft.publication_id.is_not(None),
+                )
+            )
+            if linked is None:
+                raise HTTPException(403, "Production review is not enabled for this proposal.")
     engine = create_database_engine(
-        settings, write_operation=f"model_proposal_review.{proposal_id}"
+        settings,
+        write_operation=(
+            "reviewer_earnings_publication"
+            if release_proposal
+            else f"model_proposal_review.{proposal_id}"
+        ),
     )
     try:
         yield from _transaction(engine)
@@ -381,6 +402,45 @@ def publish_earnings_batch(
     db: Annotated[Session, Depends(earnings_publish_session, scope="function")],
 ) -> earnings_publication.BatchResult:
     return earnings_publication.review_batch(db, portfolio_id, value)
+
+
+@router.get("/portfolios/{portfolio_id}/earnings-inbox/drafts")
+def get_release_drafts(
+    portfolio_id: UUID,
+    reviewer_id: Annotated[str, Depends(model_proposal_reviewer_identity)],
+    db: LedgerDb,
+) -> list[release_review.Draft]:
+    return release_review.pending(db, portfolio_id)
+
+
+@router.post("/portfolios/{portfolio_id}/earnings-inbox/check/{listing_id}")
+def check_issuer_release(
+    portfolio_id: UUID,
+    listing_id: UUID,
+    request: Request,
+    db: Annotated[Session, Depends(earnings_publish_session, scope="function")],
+) -> release_review.CheckResult:
+    from urllib.error import URLError
+
+    try:
+        return release_review.check_release(
+            db, request.app.state.settings, portfolio_id, listing_id
+        )
+    except (URLError, TimeoutError, ValueError, KeyError) as error:
+        raise HTTPException(
+            503,
+            "Check the release source, evidence and agent configuration.",
+        ) from error
+
+
+@router.post("/portfolios/{portfolio_id}/earnings-inbox/drafts/{draft_id}/publish")
+def publish_release_draft(
+    portfolio_id: UUID,
+    draft_id: UUID,
+    value: release_review.DraftDecision,
+    db: Annotated[Session, Depends(earnings_publish_session, scope="function")],
+) -> UUID:
+    return release_review.publish_draft(db, portfolio_id, draft_id, value.snapshot_id, value.digest)
 
 
 @router.get(

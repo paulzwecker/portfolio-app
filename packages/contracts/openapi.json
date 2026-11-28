@@ -2116,6 +2116,25 @@
         "title": "CashValuation",
         "type": "object"
       },
+      "CheckResult": {
+        "additionalProperties": false,
+        "properties": {
+          "listing": {
+            "title": "Listing",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing",
+          "message"
+        ],
+        "title": "CheckResult",
+        "type": "object"
+      },
       "CompanyAgentContextV1": {
         "additionalProperties": false,
         "properties": {
@@ -7985,6 +8004,81 @@
           "reason"
         ],
         "title": "DecisionSignalEvaluationRead",
+        "type": "object"
+      },
+      "Draft": {
+        "additionalProperties": false,
+        "properties": {
+          "accession": {
+            "title": "Accession",
+            "type": "string"
+          },
+          "assessment": {
+            "additionalProperties": true,
+            "title": "Assessment",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "listing": {
+            "title": "Listing",
+            "type": "string"
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "listing",
+          "revision",
+          "accession",
+          "source_url",
+          "assessment",
+          "replacement"
+        ],
+        "title": "Draft",
+        "type": "object"
+      },
+      "DraftDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "format": "uuid",
+            "title": "Snapshot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "digest"
+        ],
+        "title": "DraftDecision",
         "type": "object"
       },
       "EarningsAssessment-Input": {
@@ -36128,6 +36222,11 @@
             ],
             "title": "Rationale"
           },
+          "release_check_available": {
+            "default": false,
+            "title": "Release Check Available",
+            "type": "boolean"
+          },
           "reviewed_at": {
             "anyOf": [
               {
@@ -47502,6 +47601,201 @@
           }
         },
         "summary": "Get Earnings Inbox",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/check/{listing_id}": {
+      "post": {
+        "operationId": "check_issuer_release_v1_portfolios__portfolio_id__earnings_inbox_check__listing_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Issuer Release",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/drafts": {
+      "get": {
+        "operationId": "get_release_drafts_v1_portfolios__portfolio_id__earnings_inbox_drafts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Draft"
+                  },
+                  "title": "Response Get Release Drafts V1 Portfolios  Portfolio Id  Earnings Inbox Drafts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Release Drafts",
+        "tags": [
+          "Portfolio research"
+        ]
+      }
+    },
+    "/v1/portfolios/{portfolio_id}/earnings-inbox/drafts/{draft_id}/publish": {
+      "post": {
+        "operationId": "publish_release_draft_v1_portfolios__portfolio_id__earnings_inbox_drafts__draft_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "portfolio_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Portfolio Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "draft_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draft Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Model-Proposal-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Model-Proposal-Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "uuid",
+                  "title": "Response Publish Release Draft V1 Portfolios  Portfolio Id  Earnings Inbox Drafts  Draft Id  Publish Post",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Release Draft",
         "tags": [
           "Portfolio research"
         ]

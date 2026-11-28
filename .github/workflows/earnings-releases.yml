@@ -1,0 +1,56 @@
+name: Held issuer earnings releases
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 18 * * 1-5"
+      timezone: America/New_York
+
+permissions:
+  contents: read
+
+concurrency:
+  group: held-issuer-earnings
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main' && vars.EARNINGS_RELEASE_CHECKS_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install locked backend
+        run: |
+          python -m pip install uv==0.12.23
+          uv sync --locked --no-dev --project apps/api
+      - name: Check held issuer releases
+        env:
+          PORTFOLIO_ID: ${{ vars.HOLDINGS_PORTFOLIO_ID }}
+          DATABASE_URL: ${{ secrets.EARNINGS_DRAFT_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.EARNINGS_NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ vars.NEON_BRANCH_ID }}
+          NEON_ENDPOINT_ID: ${{ vars.NEON_ENDPOINT_ID }}
+          DATABASE_TARGET_DATABASE: ${{ vars.DATABASE_TARGET_DATABASE }}
+          DATABASE_TARGET_ENVIRONMENT: production
+          APP_ENV: production
+          EARNINGS_AGENT_API_KEY: ${{ secrets.EARNINGS_AGENT_API_KEY }}
+          EARNINGS_AGENT_MODEL: ${{ vars.EARNINGS_AGENT_MODEL }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+          EARNINGS_RELEASE_CHECKS_ENABLED: "true"
+          CLOUD_INGESTION_ENABLED: "true"
+          RECURRING_OPERATIONS_ENABLED: "true"
+          PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
+        run: |
+          : "${PORTFOLIO_ID:?Configure the portfolio UUID}"
+          : "${DATABASE_URL:?Missing worker connection}"
+          : "${NEON_API_KEY:?Missing target verification key}"
+          # Settings validates the production API token even for offline CLI processes.
+          export API_ACCESS_TOKEN
+          API_ACCESS_TOKEN="$(openssl rand -hex 32)"
+          apps/api/.venv/bin/python -m portfolio_api.check_earnings_releases --portfolio "$PORTFOLIO_ID"

@@ -17,7 +17,7 @@ same-price enterprise IRR impact. See the [earnings review workflow](docs/earnin
 
 The holdings earnings publisher previews an exact reviewed batch and verifies inbox visibility
 before commit. The signed-in inbox now supports the same preview and publication flow.
-Production publication of the first five assessments is pending.
+The owner published the five initial assessments. The next release adds SEC discovery and cited drafts for those same modeled holdings. Production migration, manual verification and recurring activation are pending.
 
 Portfolio gain history is published. The web proxy now validates the saved series
 against the same contract as the chart. The owner confirmed the signed-in chart.

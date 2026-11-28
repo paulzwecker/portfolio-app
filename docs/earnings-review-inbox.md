@@ -48,3 +48,15 @@ Choose the private JSON file (one assessment or an array), preview its assumptio
 passages, then publish. The server checks the snapshot, revision and preview digest again and
 commits the batch together. Replaying the same packet returns its existing research revision.
 The inbox uses the existing reviewer credentials. No GitHub environment is involved.
+
+## Check new issuer releases
+
+Under Research → Earnings inbox, choose **Check for new releases**. Each issuer gets its own result. The check selects positive holdings in the latest complete snapshot with an accepted UFCF model. Initial coverage is NASDAQ:BKNG, NASDAQ:GOOGL, NASDAQ:AMZN, NYSE:MA and NASDAQ:MSFT. It verifies each ticker and exchange against SEC submissions and checks Item 2.02 filings and amendments from the five launch releases onward. It processes the oldest unseen release per issuer per check. An issuer-site launch assessment and its SEC accession refer to the same reviewed event.
+
+A new release goes to the configured OpenAI model with the three accepted base Year 1 ratios, the prior assessment rationale and primary exhibit text. Configure SEC_USER_AGENT with an operator contact, EARNINGS_AGENT_MODEL with a JSON-capable model, and EARNINGS_AGENT_API_KEY as a server secret. Verify the primary exhibit, quote, annual comparability and accounting basis before publishing. Each draft is bound to the listing, accession and accepted revision. Publishing a CHANGE creates a separate one-input proposal. Open its reviewer preview for same-price enterprise IRR and the 15% hurdle, then accept or reject. Publishing RETAIN or INSUFFICIENT_EVIDENCE completes the review.
+
+### Rollout and scheduled operation
+
+Review the additive migration from 63ad18f0e52b to 29c47aaa5d71 under the existing release process. Verify populated recovery and the live head before deploying the dependent API and web code. Downgrading this migration drops stored drafts and their proposal links. Preserve the table or restore from the verified backup if rollback after use is necessary.
+
+First run the signed-in manual check. After operator approval, configure the **Held issuer earnings releases** Actions workflow using the repository variables and secrets named in its YAML. Give its dedicated database role read access to the necessary portfolio/model tables, the row-lock privileges required on portfolios and financial_models, draft INSERT access, and the existing target-audit privileges. Avoid granting UPDATE on accepted model values or INSERT on revisions or proposals. Configure the SEC contact, model and provider secret in the job as well. The workflow uses the same discovery function as the app and runs weekdays at 18:15 New York time only when the repository variable EARNINGS_RELEASE_CHECKS_ENABLED is true. Workflow dispatch permits a supervised first run. Per-issuer failures yield a failed job and preserve successful drafts for other issuers.

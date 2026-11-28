@@ -4561,3 +4561,22 @@ class PortfolioGainHistory(Base):
         DateTime(timezone=True), primary_key=True, default=now
     )
     report: Mapped[dict[str, object]] = mapped_column(JSON)
+
+
+class EarningsReleaseDraft(Base):
+    __tablename__ = "earnings_release_drafts"
+    __table_args__ = (
+        UniqueConstraint(
+            "listing_id", "accession", "base_revision_id", name="uq_earnings_draft_event_base"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    listing_id: Mapped[UUID] = mapped_column(ForeignKey("listings.id"))
+    base_revision_id: Mapped[UUID] = mapped_column(ForeignKey("financial_model_revisions.id"))
+    accession: Mapped[str] = mapped_column(String(20))
+    assessment: Mapped[dict[str, object]] = mapped_column(JSON)
+    replacement: Mapped[Decimal | None] = mapped_column(Numeric(22, 12))
+    publication_id: Mapped[UUID | None] = mapped_column(ForeignKey("research_revisions.id"))
+    proposal_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_model_revision_proposals.id")
+    )

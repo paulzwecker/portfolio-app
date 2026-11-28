@@ -1142,3 +1142,26 @@ def test_booking_write_guard_preserves_production_authorization_and_neon_validat
     )
     with pytest.raises(DatabaseWriteTargetError, match="neon_configured_identity_mismatch"):
         wrong_target.verify_connection(connection, phase="preflight")  # type: ignore[arg-type]
+
+
+def test_scheduler_opt_in_is_limited_to_release_drafts(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_resolved_dns(monkeypatch)
+    settings = remote_settings(production_authorized=False)
+    settings.recurring_operations_enabled = True
+
+    def check(operation: str) -> None:
+        validate_database_write_target(
+            settings=settings,
+            identity=remote_identity(),
+            neon_target=neon_target(),
+            url=make_url(REMOTE_URL),
+            operation=operation,
+            operation_kind="ingestion",
+        )
+
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        check("scheduled_earnings_drafts")
+    settings.earnings_release_checks_enabled = True
+    check("scheduled_earnings_drafts")
+    with pytest.raises(DatabaseWriteTargetError, match="production_write_not_authorized"):
+        check("application_write")
